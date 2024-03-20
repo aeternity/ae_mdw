@@ -369,17 +369,39 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
-      {:ok, aetx} =
+      {:ok, aetx1} =
         :aec_spend_tx.new(%{
           sender_id: account_id,
           recipient_id: account_id,
-          amount: 2,
+          amount: 111,
           fee: 3,
           nonce: 4,
           payload: ""
         })
 
-      {:spend_tx, tx} = :aetx.specialize_type(aetx)
+      {:spend_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: account_id,
+          amount: 222,
+          fee: 3,
+          nonce: 4,
+          payload: ""
+        })
+
+      {:spend_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: account_id,
+          amount: 333,
+          fee: 3,
+          nonce: 4,
+          payload: ""
+        })
 
       store =
         empty_store()
@@ -387,23 +409,23 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {contract_pk, 1, 1, 0})
         )
-        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 0}))
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 0}, tx: aetx1))
         |> Store.put(
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {contract_pk, 1, 1, 1})
         )
-        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 1}))
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 1}, tx: aetx2))
         |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "hash1"))
         |> Store.put(
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {contract_pk, 3, 2, 0})
         )
-        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}))
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}, tx: aetx3))
         |> Store.put(
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {contract_pk, 1, 2, 1})
         )
-        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 1}))
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 1}, tx: aetx3))
         |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "hash2"))
         |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
         |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
@@ -413,43 +435,51 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          [
            get_tx_data: fn
              "hash1" ->
-               {"", :spend_tx, aetx, tx}
+               {"", :spend_tx, aetx1, tx1}
 
              "hash2" ->
-               {"", :spend_tx, aetx, tx}
+               {"", :spend_tx, aetx2, tx2}
            end,
            get_block_time: fn _block_hash ->
              456
            end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]},
-        {Format, [], [to_map: fn _state, _record, _tab -> %{} end]}
+        {:aetx_sign, [:passthrough], [serialize_for_client: fn :header, _aetx -> %{} end]}
       ] do
-        assert %{"prev" => nil, "data" => [tx1, tx2], "next" => next_url} =
+        assert %{"prev" => nil, "data" => [tx1] = data1, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{contract}/activities", direction: "forward", limit: 2)
+                 |> get("/v2/accounts/#{contract}/activities", direction: "forward", limit: 1)
                  |> json_response(200)
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
-                 "type" => "InternalContractCallEvent"
+                 "type" => "InternalContractCallEvent",
+                 "payload" => %{"internal_tx" => %{"amount" => 111}, "local_idx" => 0}
                } = tx1
+
+        assert %{"prev" => prev_url, "data" => [tx2], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
-                 "type" => "InternalContractCallEvent"
+                 "type" => "InternalContractCallEvent",
+                 "payload" => %{"internal_tx" => %{"amount" => 222}, "local_idx" => 1}
                } = tx2
 
-        assert %URI{query: query} = URI.parse(next_url)
-
-        assert %{"cursor" => _cursor, "direction" => "forward", "limit" => "2"} =
-                 URI.decode_query(query)
+        assert %{"data" => ^data1} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
       end
     end
 

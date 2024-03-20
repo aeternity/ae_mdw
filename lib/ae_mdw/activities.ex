@@ -119,6 +119,8 @@ defmodule AeMdw.Activities do
               nil -> {nil, nil, nil}
             end
 
+          txi_idx_cursor = if txi_cursor, do: {txi_cursor, local_idx_cursor}, else: nil
+
           ownership_only? = Map.get(filters, :ownership_only?, false)
           stream_types = Map.get(filters, :stream_types)
 
@@ -156,7 +158,7 @@ defmodule AeMdw.Activities do
                   direction,
                   account_pk,
                   txi_scope,
-                  txi_cursor
+                  txi_idx_cursor
                 ),
               :ext_calls =>
                 build_ext_contract_calls_stream(
@@ -164,7 +166,7 @@ defmodule AeMdw.Activities do
                   direction,
                   account_pk,
                   txi_scope,
-                  txi_cursor,
+                  txi_idx_cursor,
                   ownership_only?
                 ),
               :aex9 =>
@@ -462,7 +464,7 @@ defmodule AeMdw.Activities do
          _direction,
          _account_pk,
          _txi_scope,
-         _txi_cursor,
+         _txi_idx_cursor,
          true = _ownership_only?
        ),
        do: []
@@ -472,12 +474,13 @@ defmodule AeMdw.Activities do
          direction,
          account_pk,
          txi_scope,
-         txi_cursor,
+         txi_idx_cursor,
          false = _ownership_only?
        ),
-       do: build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor)
+       do:
+         build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_idx_cursor)
 
-  defp build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+  defp build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_idx_cursor) do
     0..@max_pos
     |> Enum.map(fn pos ->
       key_boundary =
@@ -490,10 +493,15 @@ defmodule AeMdw.Activities do
         end
 
       cursor =
-        case txi_cursor do
-          nil -> nil
-          txi_cursor when direction == :forward -> {account_pk, pos, txi_cursor, @min_int}
-          txi_cursor when direction == :backward -> {account_pk, pos, txi_cursor, @max_int}
+        case txi_idx_cursor do
+          nil ->
+            nil
+
+          {txi_cursor, local_idx_cursor} when direction == :forward ->
+            {account_pk, pos, txi_cursor, local_idx_cursor}
+
+          {txi_cursor, local_idx_cursor} when direction == :backward ->
+            {account_pk, pos, txi_cursor, local_idx_cursor}
         end
 
       state
@@ -506,7 +514,7 @@ defmodule AeMdw.Activities do
     |> Stream.dedup_by(fn {txi, {:int_contract_call, local_idx}} -> {txi, local_idx} end)
   end
 
-  defp build_int_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+  defp build_int_contract_calls_stream(state, direction, account_pk, txi_scope, txi_idx_cursor) do
     case Origin.tx_index(state, {:contract, account_pk}) do
       {:ok, create_txi} ->
         key_boundary =
@@ -519,10 +527,15 @@ defmodule AeMdw.Activities do
           end
 
         cursor =
-          case txi_cursor do
-            nil -> nil
-            txi_cursor when direction == :forward -> {create_txi, txi_cursor, @min_int}
-            txi_cursor when direction == :backward -> {create_txi, txi_cursor, @max_int}
+          case txi_idx_cursor do
+            nil ->
+              nil
+
+            {txi_cursor, local_idx_cursor} when direction == :forward ->
+              {create_txi, txi_cursor, local_idx_cursor}
+
+            {txi_cursor, local_idx_cursor} when direction == :backward ->
+              {create_txi, txi_cursor, local_idx_cursor}
           end
 
         state
