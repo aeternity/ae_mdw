@@ -220,6 +220,9 @@ defmodule AeMdwWeb.BlockchainSim do
         header = :aec_blocks.to_header(top_block)
         {:ok, block_hash} = :aec_headers.hash_header(header)
         block_hash
+      end,
+      ensure_activity: fn _type, fun ->
+        fun.()
       end
     ]
 
