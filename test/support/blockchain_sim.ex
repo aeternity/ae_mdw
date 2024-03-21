@@ -431,8 +431,7 @@ defmodule AeMdwWeb.BlockchainSim do
         nil ->
           [
             {:pointer, "account_pubkey", account_id},
-            {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)},
-            {:pointer, "custom key", {:data, "raw data pointer"}}
+            {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
           ]
 
         list ->
