@@ -55,7 +55,7 @@ log_level =
     "notice" -> :notice
     "info" -> :info
     "debug" -> :debug
-    _ -> nil
+    _level -> nil
   end
 
 if not is_nil(log_level) do
@@ -63,15 +63,21 @@ if not is_nil(log_level) do
     level: log_level
 end
 
+formatters = %{
+  "datadog" => :datadog,
+  "standard" => :standard
+}
+
 if env in [:test, :prod] do
   if System.get_env("ENABLE_TELEMETRY", "false") in ["true", "1"] do
     {:ok, hostname} = :inet.gethostname()
     host = System.get_env("TELEMETRY_STATSD_HOST") || to_string(hostname)
     port = String.to_integer(System.get_env("TELEMETRY_STATSD_PORT", "8125"))
-    formatter = System.get_env("TELEMETRY_STATSD_FORMAT", "datadog")
+    formatter_str = System.get_env("TELEMETRY_STATSD_FORMAT", "datadog")
+    formatter = Map.fetch!(formatters, formatter_str)
 
     config :ae_mdw, TelemetryMetricsStatsd,
-      formatter: String.to_atom(formatter),
+      formatter: String.to_existing_atom(formatter),
       host: host,
       port: port
   end

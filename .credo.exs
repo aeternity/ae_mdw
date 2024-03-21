@@ -22,6 +22,7 @@
         # In the latter case `**/*.{ex,exs}` will be used.
         #
         included: [
+          "config/",
           "lib/",
           "src/",
           "test/",
