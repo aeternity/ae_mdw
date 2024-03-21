@@ -46,6 +46,7 @@ end
 
 log_level =
   case System.get_env("LOG_LEVEL") do
+    "none" -> :none
     "emergency" -> :emergency
     "alert" -> :alert
     "critical" -> :critical
