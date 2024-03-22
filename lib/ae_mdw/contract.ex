@@ -346,6 +346,25 @@ defmodule AeMdw.Contract do
     Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
   end
 
+  def maybe_resolve_contract_pk(contract_or_name_pk) do
+    contract_or_name_pk
+    |> case do
+      <<217, 52, 92, _rest::binary>> = name_pk ->
+        "contract_pubkey"
+        |> :aec_chain.resolve_namehash(name_pk)
+        |> case do
+          {:ok, {:id, :contract, pubkey}} ->
+            pubkey
+
+          {:error, _} ->
+            raise "#__MODULE__.maybe_resolve_contract_pk: failed to resolve contract pubkey"
+        end
+
+      contract_pk ->
+        contract_pk
+    end
+  end
+
   #
   # Private functions
   #
