@@ -125,7 +125,12 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, signed_tx, block_hash) do
-    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
+    contract_pk =
+      tx_rec
+      |> :aect_call_tx.contract_id()
+      |> Db.id_pubkey()
+      |> Contract.maybe_resolve_contract_pk()
+
     txi = tx.tx_index
     fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, txi)
     call_info = format_call_info(signed_tx, contract_pk, block_hash, txi)
@@ -406,7 +411,11 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
-    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
+    contract_pk =
+      tx_rec
+      |> :aect_call_tx.contract_id()
+      |> Db.id_pubkey()
+      |> Contract.maybe_resolve_contract_pk()
 
     fun_arg_res =
       state
