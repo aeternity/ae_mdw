@@ -995,7 +995,7 @@ defmodule AeMdwWeb.NameControllerTest do
            proto_vsn: fn _height -> 1 end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> kb_time end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> kb_time end]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
                  conn
@@ -1009,7 +1009,8 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{
                  "name" => "1.chain",
                  "approximate_expire_time" => 123,
-                 "last_bid" => last_bid
+                 "last_bid" => last_bid,
+                 "name_fee" => 0
                } = Enum.at(auction_bids, 0)
 
         refute Map.has_key?(last_bid, "tx_index")
@@ -1218,7 +1219,7 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => _next} =
                  conn

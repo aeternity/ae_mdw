@@ -121,6 +121,7 @@ defmodule AeMdw.AuctionBids do
       |> Map.delete("tx_index")
 
     name_ttl = Names.expire_after(expire_height)
+    protocol = :aec_hard_forks.protocol_effective_at_height(last_gen)
 
     %{
       name: plain_name,
@@ -128,6 +129,7 @@ defmodule AeMdw.AuctionBids do
       auction_end: expire_height,
       approximate_expire_time:
         DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
+      name_fee: :aec_governance.name_claim_fee(plain_name, protocol),
       last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl)
     }
   end

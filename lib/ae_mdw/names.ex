@@ -563,6 +563,8 @@ defmodule AeMdw.Names do
       name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
+    protocol = :aec_hard_forks.protocol_effective_at_height(last_gen)
+
     opts = [{:expand?, false}, {:tx_hash?, true} | opts]
 
     name_hash =
@@ -591,6 +593,7 @@ defmodule AeMdw.Names do
         DbUtil.height_to_time(state, active, last_gen, last_micro_time),
       expire_height: expire,
       approximate_expire_time: DbUtil.height_to_time(state, expire, last_gen, last_micro_time),
+      name_fee: :aec_governance.name_claim_fee(plain_name, protocol),
       revoke: revoke && expand_txi_idx(state, revoke, opts),
       auction_timeout: auction_timeout,
       ownership: render_ownership(state, name)
