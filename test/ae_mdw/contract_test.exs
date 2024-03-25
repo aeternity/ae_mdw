@@ -92,4 +92,53 @@ defmodule AeMdw.ContractTest do
       end
     end
   end
+
+  describe "maybe_resolve_contract_pk/1" do
+    setup do
+      contract_pk = <<1::256>>
+
+      name_pk =
+        <<217, 52, 92, 99, 90, 59, 250, 112, 123, 114, 18, 135, 95, 95, 205, 71, 74, 160, 14, 22,
+          47, 119, 229, 124, 220, 96, 81, 40, 117, 5, 23, 138>>
+
+      %{contract_pk: contract_pk, name_pk: name_pk}
+    end
+
+    test "it returns contract_pk when name contains contract_pubkey pointer", %{
+      contract_pk: contract_pk,
+      name_pk: name_pk
+    } do
+      with_mocks [
+        {:aec_chain, [],
+         [
+           resolve_namehash: fn "contract_pubkey", ^name_pk ->
+             {:ok, {:id, :contract, contract_pk}}
+           end
+         ]}
+      ] do
+        assert ^contract_pk = Contract.maybe_resolve_contract_pk(name_pk)
+      end
+    end
+
+    test "it returns contract_pk when contract_pk is passed", %{
+      contract_pk: contract_pk
+    } do
+      assert ^contract_pk = Contract.maybe_resolve_contract_pk(contract_pk)
+    end
+
+    test "it returns :error when contract isn't resolved", %{
+      name_pk: name_pk
+    } do
+      with_mocks [
+        {:aec_chain, [],
+         [
+           resolve_namehash: fn "contract_pubkey", ^name_pk -> {:error, :state_trees} end
+         ]}
+      ] do
+        assert_raise RuntimeError,
+                     "Elixir.AeMdw.Contract.maybe_resolve_contract_pk: failed to resolve contract pubkey",
+                     fn -> Contract.maybe_resolve_contract_pk(name_pk) end
+      end
+    end
+  end
 end

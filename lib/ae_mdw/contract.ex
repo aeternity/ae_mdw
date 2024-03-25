@@ -360,7 +360,7 @@ defmodule AeMdw.Contract do
             pubkey
 
           {:error, _} ->
-            raise "#__MODULE__.maybe_resolve_contract_pk: failed to resolve contract pubkey"
+            raise "#{__MODULE__}.maybe_resolve_contract_pk: failed to resolve contract pubkey"
         end
 
       contract_pk ->
