@@ -48,10 +48,10 @@ defmodule AeMdw.Application do
     :ok = RocksDb.open(!persist)
 
     children = [
-      AeMdw.APM.Telemetry,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor,
-      AeMdw.Sync.Supervisor
+      AeMdw.Sync.Supervisor,
+      AeMdw.APM.Telemetry
     ]
 
     children =
