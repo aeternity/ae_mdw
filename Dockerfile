@@ -148,4 +148,8 @@ RUN useradd --uid 1000 --shell /bin/bash aeternity \
 ARG USER=aeternity
 USER ${USER}
 
+# Clear old logs
+RUN rm -rf /home/aeternity/node/ae_mdw/log
+RUN mkdir -p /home/aeternity/node/ae_mdw/log
+
 CMD ["/home/aeternity/node/bin/server"]
