@@ -58,10 +58,13 @@ log_level =
     _level -> nil
   end
 
-if not is_nil(log_level) do
-  config :logger,
-    level: log_level
-end
+enable_json_log = System.get_env("ENABLE_JSON_LOG", "false") in ["true", "1"]
+enable_console_log = System.get_env("ENABLE_CONSOLE_LOG", "false") in ["true", "1"]
+
+base_logger_backends = Application.get_env(:logger, :backends, [])
+
+logger_backends =
+  if enable_console_log, do: [:console | base_logger_backends], else: base_logger_backends
 
 formatters = %{
   "datadog" => :datadog,
@@ -82,10 +85,12 @@ if env in [:test, :prod] do
       port: port
   end
 
-  if System.get_env("ENABLE_JSON_LOG", "false") in ["true", "1"] do
+  if enable_json_log do
+    logger_backends = [LoggerJSON | logger_backends]
+
     config :logger,
       level: log_level || :info,
-      backends: [LoggerJSON]
+      backends: logger_backends
 
     formatter = System.get_env("JSON_LOG_FORMAT", "datadog")
     opts = [metadata: [:request_id], json_encoder: Jason]
@@ -103,4 +108,8 @@ if env in [:test, :prod] do
   if env == :prod do
     config :ae_mdw, AeMdwWeb.Endpoint, server: true
   end
+
+  config :logger,
+    level: log_level || :info,
+    backends: logger_backends
 end
