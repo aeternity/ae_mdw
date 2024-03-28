@@ -57,6 +57,8 @@ defmodule AeMdw.Contract do
   @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
   @type local_idx :: non_neg_integer()
   @type code() :: binary()
+  @type name_pubkey :: pubkey()
+  @type contract_pubkey :: pubkey()
   @opaque aecontract() :: tuple()
   @typep pubkey :: DBN.pubkey()
   @typep tx :: Node.tx()
@@ -344,6 +346,26 @@ defmodule AeMdw.Contract do
   @spec get_grouped_events(micro_block()) :: grouped_events()
   def get_grouped_events(micro_block) do
     Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
+  end
+
+  @spec maybe_resolve_contract_pk(name_pubkey() | contract_pubkey()) :: contract_pubkey()
+  def maybe_resolve_contract_pk(contract_or_name_pk) do
+    contract_or_name_pk
+    |> case do
+      <<217, 52, 92, _rest::binary>> = name_pk ->
+        "contract_pubkey"
+        |> :aec_chain.resolve_namehash(name_pk)
+        |> case do
+          {:ok, {:id, :contract, pubkey}} ->
+            pubkey
+
+          {:error, reason} ->
+            raise "#{__MODULE__}.maybe_resolve_contract_pk: failed to resolve contract pubkey with reason: #{inspect(reason)}"
+        end
+
+      contract_pk ->
+        contract_pk
+    end
   end
 
   #
