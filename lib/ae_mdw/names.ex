@@ -40,6 +40,7 @@ defmodule AeMdw.Names do
   @type ttl :: non_neg_integer()
   @type pointer :: term()
   @type pointers :: [pointer()]
+  @type raw_data_pointer :: {:data, binary()}
   @type query :: %{binary() => binary()}
 
   @typep state() :: State.t()

@@ -18,6 +18,16 @@ defmodule AeMdw.Db.Sync.NameTest do
 
   require Model
 
+  setup do
+    pointers = [
+      {:pointer, <<2::256>>, :aeser_id.create(:account, <<3::256>>)},
+      {:pointer, <<4::256>>, :aeser_id.create(:account, <<5::256>>)},
+      {:pointer, <<6::256>>, {:data, "raw data pointer"}}
+    ]
+
+    %{pointers: pointers}
+  end
+
   describe "name_claim_mutations/4" do
     test "includes origin mutations for auction name" do
       plain_name = "auction-name.chain"
@@ -115,17 +125,12 @@ defmodule AeMdw.Db.Sync.NameTest do
   end
 
   describe "update_mutations/4" do
-    test "updates name and expiration on ttl > 0" do
+    test "updates name and expiration on ttl > 0", %{pointers: pointers} do
       plain_name = new_name()
       block_index = {Enum.random(100_000..200_000), 1}
       txi = Enum.random(100_000_000..999_999_999)
       absolute_ttl = 100
       name_hash = :crypto.strong_rand_bytes(32)
-
-      pointers = [
-        {:pointer, <<2::256>>, :aeser_id.create(:account, <<3::256>>)},
-        {:pointer, <<4::256>>, :aeser_id.create(:account, <<5::256>>)}
-      ]
 
       {:ok, aetx} =
         :aens_update_tx.new(%{
@@ -156,17 +161,12 @@ defmodule AeMdw.Db.Sync.NameTest do
       end
     end
 
-    test "updates name and expiration on delta ttl > 0" do
+    test "updates name and expiration on delta ttl > 0", %{pointers: pointers} do
       plain_name = new_name()
       block_index = {height, _mbi} = {Enum.random(100_000..200_000), 1}
       txi = Enum.random(100_000_000..999_999_999)
       delta_ttl = 100
       name_hash = :crypto.strong_rand_bytes(32)
-
-      pointers = [
-        {:pointer, <<2::256>>, :aeser_id.create(:account, <<3::256>>)},
-        {:pointer, <<4::256>>, :aeser_id.create(:account, <<5::256>>)}
-      ]
 
       {:ok, aetx} =
         :aens_update_tx.new(%{
@@ -197,17 +197,12 @@ defmodule AeMdw.Db.Sync.NameTest do
       end
     end
 
-    test "ignores zero ttl and update when call is internal" do
+    test "ignores zero ttl and update when call is internal", %{pointers: pointers} do
       plain_name = new_name()
       block_index = {Enum.random(100_000..200_000), 1}
       txi = Enum.random(100_000_000..999_999_999)
       ttl = 0
       name_hash = :crypto.strong_rand_bytes(32)
-
-      pointers = [
-        {:pointer, <<2::256>>, :aeser_id.create(:account, <<3::256>>)},
-        {:pointer, <<4::256>>, :aeser_id.create(:account, <<5::256>>)}
-      ]
 
       {:ok, aetx} =
         :aens_update_tx.new(%{

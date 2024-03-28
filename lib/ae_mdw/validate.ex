@@ -4,13 +4,14 @@ defmodule AeMdw.Validate do
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Names
   alias :aeser_api_encoder, as: Enc
 
   @typep pubkey :: AE.Db.pubkey()
   @typep hash_str :: String.t()
   @typep hash_type :: :micro_block_hash | :key_block_hash
   @typep hash :: AE.Db.hash()
-  @typep id :: String.t() | {:id, atom(), pubkey()}
+  @typep id :: String.t() | {:id, atom(), pubkey()} | Names.raw_data_pointer()
   @typep tx_type :: AE.tx_type()
   @typep tx_group :: AE.tx_group()
   @typep tx_field :: atom()
@@ -37,6 +38,9 @@ defmodule AeMdw.Validate do
   end
 
   def id({:id, _tag, <<_pk::256>> = pk}),
+    do: {:ok, pk}
+
+  def id({:data, pk}) when is_binary(pk),
     do: {:ok, pk}
 
   def id(id),

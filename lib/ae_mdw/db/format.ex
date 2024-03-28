@@ -113,9 +113,10 @@ defmodule AeMdw.Db.Format do
     end)
   end
 
-  @spec enc_id(aeser_id() | nil) :: nil | String.t()
+  @spec enc_id(aeser_id() | Names.raw_data_pointer() | nil) :: nil | String.t()
   def enc_id(nil), do: nil
   def enc_id({:id, _type, _pk} = id), do: Enc.encode(:id_hash, id)
+  def enc_id({:data, binary}) when is_binary(binary), do: Enc.encode(:bytearray, binary)
 
   defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)

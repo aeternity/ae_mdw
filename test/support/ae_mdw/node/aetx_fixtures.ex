@@ -18,7 +18,10 @@ defmodule AeMdw.Node.AeTxFixtures do
         nonce: 1,
         name_id: :aeser_id.create(:name, name_hash),
         name_ttl: name_ttl,
-        pointers: [:aens_pointer.new("account_pubkey", account_id)],
+        pointers: [
+          :aens_pointer.new("account_pubkey", account_id),
+          :aens_pointer.new("account_pubkey_binary", "raw data pointer")
+        ],
         client_ttl: 0,
         fee: 17_780_000_000_000
       })
