@@ -359,8 +359,8 @@ defmodule AeMdw.Contract do
           {:ok, {:id, :contract, pubkey}} ->
             pubkey
 
-          {:error, _} ->
-            raise "#{__MODULE__}.maybe_resolve_contract_pk: failed to resolve contract pubkey"
+          {:error, reason} ->
+            raise "#{__MODULE__}.maybe_resolve_contract_pk: failed to resolve contract pubkey with reason: #{inspect(reason)}"
         end
 
       contract_pk ->
