@@ -235,9 +235,10 @@ defmodule AeMdw.AexnTransfers do
     with {:ok, cursor} <- deserialize_cursor(cursor_bin) do
       {create_txi, call_txi, pk1, pk2, token_id, log_idx} = cursor
 
-      cursor = case account_pk do
-        ^pk1 -> {create_txi, pk1, call_txi, pk2, token_id, log_idx}
-        ^pk2 -> {create_txi, pk2, call_txi, pk1, token_id, log_idx}
+      cursor =
+        case account_pk do
+          ^pk1 -> {create_txi, pk1, call_txi, pk2, token_id, log_idx}
+          ^pk2 -> {create_txi, pk2, call_txi, pk1, token_id, log_idx}
         end
 
       {:ok, {cursor, cursor}}
