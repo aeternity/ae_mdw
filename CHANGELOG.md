@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.72.0](https://www.github.com/aeternity/ae_mdw/compare/v1.71.0...v1.72.0) (2024-03-29)
+
+
+### Features
+
+* add config to allow logging to console ([#1702](https://www.github.com/aeternity/ae_mdw/issues/1702)) ([d98b960](https://www.github.com/aeternity/ae_mdw/commit/d98b9608a736678084e7e9cd726cc31cbfb9ff10))
+* allow none logger level configuration ([#1706](https://www.github.com/aeternity/ae_mdw/issues/1706)) ([84a6837](https://www.github.com/aeternity/ae_mdw/commit/84a683738436040c0a068946ed6f5d9c2e10c92f))
+* render name_fee on names/auctions ([#1711](https://www.github.com/aeternity/ae_mdw/issues/1711)) ([21a6b8d](https://www.github.com/aeternity/ae_mdw/commit/21a6b8d0961b859427e324f2d3764a257a7dc92a))
+
+
+### Bug Fixes
+
+* docker logs mount bad permissions ([#1717](https://www.github.com/aeternity/ae_mdw/issues/1717)) ([af232e4](https://www.github.com/aeternity/ae_mdw/commit/af232e4f74a2997d62b06393299ede33794c4ad5))
+* include local-idx cursor when paginating tx call activities ([#1707](https://www.github.com/aeternity/ae_mdw/issues/1707)) ([e0ba8ae](https://www.github.com/aeternity/ae_mdw/commit/e0ba8ae8bf2a5265ffe660345ce22d1a7e94a7b4))
+* randomly failing tests ([#1718](https://www.github.com/aeternity/ae_mdw/issues/1718)) ([41e74c1](https://www.github.com/aeternity/ae_mdw/commit/41e74c132bfa105846238110207c5e1271d32d07))
+* telemetry error when application starts ([#1716](https://www.github.com/aeternity/ae_mdw/issues/1716)) ([54b54ff](https://www.github.com/aeternity/ae_mdw/commit/54b54ff03f5015a98676e2c6ecfb57e3ba8f7640))
+* use right index when querying next Time record on stats ([#1714](https://www.github.com/aeternity/ae_mdw/issues/1714)) ([6aedb5b](https://www.github.com/aeternity/ae_mdw/commit/6aedb5bcfca640bc5674ed26ef61427e2517e463))
+
+
+### Miscellaneous
+
+* add credo checks on config files too ([#1704](https://www.github.com/aeternity/ae_mdw/issues/1704)) ([b009208](https://www.github.com/aeternity/ae_mdw/commit/b009208b5873fd35f1d5ab05a316c8d48c704a9d))
+
 ## [1.71.0](https://www.github.com/aeternity/ae_mdw/compare/v1.70.0...v1.71.0) (2024-03-19)
 
 
