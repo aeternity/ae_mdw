@@ -51,7 +51,7 @@ defmodule AeMdw.AexnTransfers do
   def fetch_contract_transfers(state, contract_pk, {nil, account_pk}, pagination, cursor) do
     case Origin.tx_index(state, {:contract, contract_pk}) do
       {:ok, create_txi} ->
-        with {:ok, cursors} <- deserialize_account_cursors(state, cursor) do
+        with {:ok, cursors} <- deserialize_account_cursors(state, cursor, account_pk) do
           key_boundary = key_boundary(create_txi, account_pk)
 
           paginated_transfers =
@@ -229,26 +229,18 @@ defmodule AeMdw.AexnTransfers do
     end
   end
 
-  defp deserialize_account_cursors(_state, nil), do: {:ok, {nil, nil}}
+  defp deserialize_account_cursors(_state, nil, _account_pk), do: {:ok, {nil, nil}}
 
-  defp deserialize_account_cursors(state, cursor_bin) do
+  defp deserialize_account_cursors(_state, cursor_bin, account_pk) do
     with {:ok, cursor} <- deserialize_cursor(cursor_bin) do
       {create_txi, call_txi, pk1, pk2, token_id, log_idx} = cursor
-      cursor = {create_txi, pk1, call_txi, pk2, token_id, log_idx}
 
-      if State.exists?(state, Model.AexnContractFromTransfer, cursor) do
-        {:ok,
-         {
-           cursor,
-           {create_txi, pk2, call_txi, pk1, token_id, log_idx}
-         }}
-      else
-        {:ok,
-         {
-           cursor,
-           cursor
-         }}
-      end
+      cursor = case account_pk do
+        ^pk1 -> {create_txi, pk1, call_txi, pk2, token_id, log_idx}
+        ^pk2 -> {create_txi, pk2, call_txi, pk1, token_id, log_idx}
+        end
+
+      {:ok, {cursor, cursor}}
     end
   end
 
