@@ -588,7 +588,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert ^next_aex9_transfers =
                Enum.sort_by(next_aex9_transfers, &Map.fetch!(&1, "block_height"))
 
-      assert next_aex9_transfers |> List.first() |> Map.fetch!("block_height") >= aex9_transfers |> List.last() |> Map.fetch!("block_height") 
+      assert next_aex9_transfers |> List.first() |> Map.fetch!("block_height") >=
+               aex9_transfers |> List.last() |> Map.fetch!("block_height")
 
       assert Enum.all?(next_aex9_transfers, &aex9_valid_sender_transfer?(sender_id, &1))
 
@@ -750,14 +751,19 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
-      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^aex141_transfers =
+               Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
       assert Enum.all?(aex141_transfers, &aex141_valid_sender_transfer?(sender_id, &1))
 
       assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") <=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -785,7 +791,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -826,7 +834,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert length(next_aex141_transfers) == 3
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -869,14 +879,19 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
-      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^aex141_transfers =
+               Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
       assert Enum.all?(aex141_transfers, &aex141_valid_recipient_transfer?(recipient_id, &1))
 
       assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") <=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -904,7 +919,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -945,7 +962,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert length(next_aex141_transfers) == 3
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -989,7 +1008,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
-      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^aex141_transfers =
+               Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
 
       assert Enum.all?(
                aex141_transfers,
@@ -1000,9 +1021,11 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
 
-      assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height")<=
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") <=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
 
       assert Enum.all?(
@@ -1038,7 +1061,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -1085,14 +1110,19 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
-      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^aex141_transfers =
+               Enum.sort_by(aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
       assert Enum.all?(aex141_transfers, &aex141_valid_contract_transfer?(contract_id, &1))
 
       assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"), :desc)
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") <=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
@@ -1120,7 +1150,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_aex141_transfers)
-      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
+
+      assert ^next_aex141_transfers =
+               Enum.sort_by(next_aex141_transfers, &Map.fetch!(&1, "block_height"))
 
       assert next_aex141_transfers |> List.first() |> Map.fetch!("block_height") >=
                aex141_transfers |> List.last() |> Map.fetch!("block_height")
