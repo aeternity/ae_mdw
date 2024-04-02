@@ -80,7 +80,7 @@ if env in [:test, :prod] do
     formatter = Map.fetch!(formatters, formatter_str)
 
     config :ae_mdw, TelemetryMetricsStatsd,
-      formatter: String.to_existing_atom(formatter),
+      formatter: formatter,
       host: host,
       port: port
   end
