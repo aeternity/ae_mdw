@@ -54,9 +54,9 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       mutation = WriteFieldsMutation.new(:spend_tx, spend_tx, block_index, txi)
 
       with_mocks [
-        {Name, [],
+        {Name, [:passthrough],
          [
-           ptr_resolve: fn _store, _block_index, _name_hash ->
+           ptr_resolve: fn _store, _block_index, _name_hash, "account_pubkey" ->
              {:ok, Validate.id!(@fake_account2)}
            end
          ]}

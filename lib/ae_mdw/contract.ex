@@ -3,6 +3,8 @@ defmodule AeMdw.Contract do
   AE smart contracts type (signatures) and previous calls information based on direct chain info.
   """
 
+  alias AeMdw.Blocks
+  alias AeMdw.Db.Name
   alias AeMdw.EtsCache
   alias AeMdw.Log
   alias AeMdw.Node
@@ -215,13 +217,14 @@ defmodule AeMdw.Contract do
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  @spec call_tx_info(tx(), DBN.pubkey(), block_hash()) :: {fun_arg_res_or_error(), call()}
-  def call_tx_info(tx_rec, contract_pk, block_hash) do
+  @spec call_tx_info(tx(), DBN.pubkey(), DBN.pubkey(), block_hash()) ::
+          {fun_arg_res_or_error(), call()}
+  def call_tx_info(tx_rec, contract_pk, contract_or_name_pk, block_hash) do
     {:ok, {type_info, _compiler_vsn, _source_hash}} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
 
-    case :aec_chain.get_contract_call(contract_pk, call_id, block_hash) do
+    case :aec_chain.get_contract_call(contract_or_name_pk, call_id, block_hash) do
       {:ok, call} ->
         case :aect_call.return_type(call) do
           :ok ->
@@ -244,7 +247,7 @@ defmodule AeMdw.Contract do
 
       {:error, reason} ->
         Log.error(
-          "call_tx_info error reason=#{inspect(reason)} params=#{inspect([contract_pk, call_id, block_hash])}"
+          "call_tx_info error reason=#{inspect(reason)} params=#{inspect([contract_or_name_pk, call_id, block_hash])}"
         )
 
         {{:error, reason}, nil}
@@ -348,19 +351,20 @@ defmodule AeMdw.Contract do
     Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
   end
 
-  @spec maybe_resolve_contract_pk(name_pubkey() | contract_pubkey()) :: contract_pubkey()
-  def maybe_resolve_contract_pk(contract_or_name_pk) do
+  @spec maybe_resolve_contract_pk(name_pubkey() | contract_pubkey(), Blocks.block_hash()) ::
+          contract_pubkey()
+  def maybe_resolve_contract_pk(contract_or_name_pk, block_hash) do
     contract_or_name_pk
     |> case do
       <<217, 52, 92, _rest::binary>> = name_pk ->
-        "contract_pubkey"
-        |> :aec_chain.resolve_namehash(name_pk)
+        block_hash
+        |> Name.ptr_resolve(name_pk, "contract_pubkey")
         |> case do
-          {:ok, {:id, :contract, pubkey}} ->
-            pubkey
+          {:ok, contract_pk} ->
+            contract_pk
 
           {:error, reason} ->
-            raise "#{__MODULE__}.maybe_resolve_contract_pk: failed to resolve contract pubkey with reason: #{inspect(reason)}"
+            raise "Contract not resolved: #{inspect(contract_or_name_pk)} with reason #{inspect(reason)}"
         end
 
       contract_pk ->

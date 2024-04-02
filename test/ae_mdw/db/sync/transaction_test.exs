@@ -145,7 +145,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       with_mocks [
         {Contract, [:passthrough],
          [
-           call_tx_info: fn _tx, ^contract_pk, _block_hash ->
+           call_tx_info: fn _tx, ^contract_pk, ^contract_pk, _block_hash ->
              {
                fun_args_res("create_pair"),
                call_rec("create_pair")

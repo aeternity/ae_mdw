@@ -33,7 +33,6 @@ defmodule AeMdwWeb.TxControllerTest do
           108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
 
       contract_pk = :aeser_api_encoder.encode(:contract_pubkey, contract_pk_raw)
-      contract_id = :aeser_id.create(:contract, contract_pk)
 
       name_pk_raw =
         <<217, 52, 92, 99, 90, 59, 250, 112, 123, 114, 18, 135, 95, 95, 205, 71, 74, 160, 14, 22,
@@ -56,11 +55,8 @@ defmodule AeMdwWeb.TxControllerTest do
                       [
                         {:aec_chain, [:passthrough],
                          [
-                           get_contract_call: fn ^contract_pk, _call_id, _block_hash ->
+                           get_contract_call: fn ^name_pk_raw, _call_id, _block_hash ->
                              {:ok, call_rec("mint")}
-                           end,
-                           resolve_namehash: fn "contract_pubkey", ^name_pk_raw ->
-                             {:ok, contract_id}
                            end
                          ]},
                         {AeMdwContract, [:passthrough],
@@ -76,6 +72,10 @@ defmodule AeMdwWeb.TxControllerTest do
                                "compiler_version" => 8,
                                "source_hash" => Base.encode64("some_hash")
                              }
+                           end,
+                           maybe_resolve_contract_pk: fn
+                             ^name_pk_raw, _block ->
+                               contract_pk_raw
                            end
                          ]}
                       ] do
@@ -110,7 +110,7 @@ defmodule AeMdwWeb.TxControllerTest do
           )
           |> Store.put(
             Model.Field,
-            Model.field(index: {:contract_call_tx, nil, name_pk, 1})
+            Model.field(index: {:contract_call_tx, nil, contract_pk_raw, 1})
           )
           |> Store.put(
             Model.ContractCall,

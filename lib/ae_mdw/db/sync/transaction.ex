@@ -120,7 +120,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     contract_pk =
       tx
       |> :aect_create_tx.contract_pubkey()
-      |> Contract.maybe_resolve_contract_pk()
 
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
@@ -175,9 +174,14 @@ defmodule AeMdw.Db.Sync.Transaction do
       |> :aect_call_tx.contract_id()
       |> Db.id_pubkey()
 
-    contract_pk = Contract.maybe_resolve_contract_pk(contract_or_name_pk)
+    contract_pk =
+      Contract.maybe_resolve_contract_pk(
+        contract_or_name_pk,
+        block_hash
+      )
 
-    {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
+    {fun_arg_res, call_rec} =
+      Contract.call_tx_info(tx, contract_pk, contract_or_name_pk, block_hash)
 
     events_mutations =
       SyncContract.events_mutations(

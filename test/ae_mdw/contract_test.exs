@@ -88,12 +88,13 @@ defmodule AeMdw.ContractTest do
            get_contract_call: fn ^contract_pk, ^call_id, ^block_hash -> {:ok, call} end
          ]}
       ] do
-        assert {:error, ^call} = Contract.call_tx_info(call_tx, contract_pk, block_hash)
+        assert {:error, ^call} =
+                 Contract.call_tx_info(call_tx, contract_pk, contract_pk, block_hash)
       end
     end
   end
 
-  describe "maybe_resolve_contract_pk/1" do
+  describe "maybe_resolve_contract_pk/2" do
     setup do
       contract_pk = <<1::256>>
 
@@ -101,43 +102,71 @@ defmodule AeMdw.ContractTest do
         <<217, 52, 92, 99, 90, 59, 250, 112, 123, 114, 18, 135, 95, 95, 205, 71, 74, 160, 14, 22,
           47, 119, 229, 124, 220, 96, 81, 40, 117, 5, 23, 138>>
 
-      %{contract_pk: contract_pk, name_pk: name_pk}
+      fake_mb = "mh_2XGZtE8jxUs2NymKHsytkaLLrk6KY2t2w1FjJxtAUqYZn8Wsdd"
+
+      success_mock =
+        {:aens, [],
+         [
+           resolve_hash: fn "contract_pubkey", ^name_pk, _block ->
+             {:ok, {:id, :contract, contract_pk}}
+           end
+         ]}
+
+      fail_mock =
+        {:aens, [],
+         [
+           resolve_hash: fn "contract_pubkey", ^name_pk, _block ->
+             {:error, :name_not_resolved}
+           end
+         ]}
+
+      common_mocks = [
+        {:aec_db, [],
+         [
+           get_block_state: fn _block_hash -> {:ok, %{}} end
+         ]},
+        {:aec_trees, [],
+         [
+           ns: fn _ -> {:ok, %{}} end
+         ]}
+      ]
+
+      %{
+        contract_pk: contract_pk,
+        name_pk: name_pk,
+        fake_mb: fake_mb,
+        success_mocks: [success_mock | common_mocks],
+        fail_mocks: [fail_mock | common_mocks]
+      }
     end
 
     test "it returns contract_pk when name contains contract_pubkey pointer", %{
       contract_pk: contract_pk,
-      name_pk: name_pk
+      name_pk: name_pk,
+      fake_mb: fake_mb,
+      success_mocks: success_mocks
     } do
-      with_mocks [
-        {:aec_chain, [],
-         [
-           resolve_namehash: fn "contract_pubkey", ^name_pk ->
-             {:ok, {:id, :contract, contract_pk}}
-           end
-         ]}
-      ] do
-        assert ^contract_pk = Contract.maybe_resolve_contract_pk(name_pk)
+      with_mocks(success_mocks) do
+        assert ^contract_pk = Contract.maybe_resolve_contract_pk(name_pk, fake_mb)
       end
     end
 
     test "it returns contract_pk when contract_pk is passed", %{
-      contract_pk: contract_pk
+      contract_pk: contract_pk,
+      fake_mb: fake_mb
     } do
-      assert ^contract_pk = Contract.maybe_resolve_contract_pk(contract_pk)
+      assert ^contract_pk = Contract.maybe_resolve_contract_pk(contract_pk, fake_mb)
     end
 
     test "it returns :error when contract isn't resolved", %{
-      name_pk: name_pk
+      name_pk: name_pk,
+      fake_mb: fake_mb,
+      fail_mocks: fail_mocks
     } do
-      with_mocks [
-        {:aec_chain, [],
-         [
-           resolve_namehash: fn "contract_pubkey", ^name_pk -> {:error, :state_trees} end
-         ]}
-      ] do
+      with_mocks fail_mocks do
         assert_raise RuntimeError,
-                     "Elixir.AeMdw.Contract.maybe_resolve_contract_pk: failed to resolve contract pubkey",
-                     fn -> Contract.maybe_resolve_contract_pk(name_pk) end
+                     "Contract not resolved: #{inspect(name_pk)} with reason :name_not_resolved",
+                     fn -> Contract.maybe_resolve_contract_pk(name_pk, fake_mb) end
       end
     end
   end

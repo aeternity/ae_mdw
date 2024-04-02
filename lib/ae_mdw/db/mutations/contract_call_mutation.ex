@@ -44,14 +44,13 @@ defmodule AeMdw.Db.ContractCallMutation do
   @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
-          contract_pk: contract_or_name_pk,
+          contract_pk: contract_pk,
           txi: txi,
           fun_arg_res: fun_arg_res,
           call_rec: call_rec
         },
         state
       ) do
-    contract_pk = Contract.maybe_resolve_contract_pk(contract_or_name_pk)
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     state = DBContract.call_write(state, create_txi, txi, fun_arg_res)
