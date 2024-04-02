@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.72.1](https://www.github.com/aeternity/ae_mdw/compare/v1.72.0...v1.72.1) (2024-04-02)
+
+
+### Bug Fixes
+
+* avoid converting to atom on runtime metrics formatter ([#1722](https://www.github.com/aeternity/ae_mdw/issues/1722)) ([1023ae1](https://www.github.com/aeternity/ae_mdw/commit/1023ae1bd4ad7ba69baec77d6d525313437c068b))
+
+
+### Testing
+
+* change tests using nonexisting column ([#1720](https://www.github.com/aeternity/ae_mdw/issues/1720)) ([7fcc55d](https://www.github.com/aeternity/ae_mdw/commit/7fcc55d0937c67a96a4198e2c34ad666c56c068a))
+
 ## [1.72.0](https://www.github.com/aeternity/ae_mdw/compare/v1.71.0...v1.72.0) (2024-03-29)
 
 
