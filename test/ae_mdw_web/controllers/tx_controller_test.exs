@@ -221,10 +221,6 @@ defmodule AeMdwWeb.TxControllerTest do
           |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
 
-        # |> Store.put(
-        #   Model.ContractCall,
-        #   Model.contract_call(index: {txi4, txi5}, fun: "mint", args: args))
-
         assert %{"data" => [tx1], "next" => next_url} =
                  conn
                  |> with_store(store)

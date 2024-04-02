@@ -117,9 +117,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_hash: block_hash,
          tx_events: tx_events
        }) do
-    contract_pk =
-      tx
-      |> :aect_create_tx.contract_pubkey()
+    contract_pk = :aect_create_tx.contract_pubkey(tx)
 
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
