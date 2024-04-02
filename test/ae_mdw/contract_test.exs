@@ -127,7 +127,7 @@ defmodule AeMdw.ContractTest do
          ]},
         {:aec_trees, [],
          [
-           ns: fn _ -> {:ok, %{}} end
+           ns: fn _ns_tree -> {:ok, %{}} end
          ]}
       ]
 
