@@ -329,4 +329,22 @@ defmodule AeMdw.Db.Util do
     |> :aec_db.get_header()
     |> :aec_headers.time_in_msecs()
   end
+
+  @spec network_date_interval(state()) :: {Date.t(), Date.t()}
+  def network_date_interval(state) do
+    case State.prev(state, Model.Time, nil) do
+      {:ok, {end_time, _end_tx_index}} ->
+        {:ok, {start_time, _start_tx_index}} = State.next(state, Model.Time, nil)
+
+        [start_date, end_date] =
+          [start_time, end_time]
+          |> Enum.map(&DateTime.to_date(DateTime.from_unix!(div(&1, 1_000))))
+
+        {start_date, end_date}
+
+      :none ->
+        {:ok, start_date} = Date.new(2018, 12, 11)
+        {start_date, start_date}
+    end
+  end
 end
