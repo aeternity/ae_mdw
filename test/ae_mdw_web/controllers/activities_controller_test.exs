@@ -1393,7 +1393,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
            end,
            get_aexn_type: fn _state, ^contract_pk -> :aex9 end
          ]},
-        {Contract, [],
+        {Contract, [:passthrough],
          call_rec: fn _signed_tx, ^contract_pk, _block_hash -> {:error, :nocallrec} end},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
         {:aetx_sign, [],

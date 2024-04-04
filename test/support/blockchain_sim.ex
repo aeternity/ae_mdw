@@ -17,7 +17,7 @@ defmodule AeMdwWeb.BlockchainSim do
   @type account_name() :: atom()
   @type tx_type() :: AeMdw.Node.tx_type()
 
-  defmacro with_blockchain(initial_balances, blocks, do: body) do
+  defmacro with_blockchain(initial_balances, blocks, extra_mocks \\ [], do: body) do
     aec_db =
       :exports
       |> :aec_db.module_info()
@@ -94,7 +94,8 @@ defmodule AeMdwWeb.BlockchainSim do
             []
         end
 
-      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock}] ++ ga_mocks ++ pf_mocks do
+      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock}] ++
+                        ga_mocks ++ pf_mocks ++ unquote(extra_mocks) do
         var!(blocks) = mock_blocks
         var!(transactions) = mock_transactions
         var!(accounts) = mock_accounts
@@ -118,7 +119,9 @@ defmodule AeMdwWeb.BlockchainSim do
         :name_revoke_tx,
         :ga_attach_tx,
         :ga_meta_tx,
-        :paying_for_tx
+        :paying_for_tx,
+        :contract_create_tx,
+        :contract_call_tx
       ]
     end
   end
@@ -539,5 +542,39 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aec_paying_for_tx.new()
+  end
+
+  defp create_aetx({:contract_create_tx, account_name, args}, accounts) do
+    %{
+      owner_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      code: :erlang.list_to_binary(['o', 'k']),
+      vm_version: 7,
+      abi_version: 3,
+      deposit: 1_000,
+      amount: 123,
+      gas: 25_000,
+      gas_price: 1_000_000_000,
+      call_data: :erlang.list_to_binary(['o', 'k']),
+      fee: 100
+    }
+    |> Map.merge(args)
+    |> :aect_create_tx.new()
+  end
+
+  defp create_aetx({:contract_call_tx, account_name, args}, accounts) do
+    %{
+      caller_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      contract_id: <<2::256>>,
+      abi_version: 3,
+      fee: 100,
+      amount: 123,
+      gas: 25_000,
+      gas_price: 1_000_000_000,
+      call_data: :erlang.list_to_binary(['o', 'k'])
+    }
+    |> Map.merge(args)
+    |> :aect_call_tx.new()
   end
 end

@@ -2,6 +2,7 @@ defmodule AeMdwWeb.TxControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Contract, as: AeMdwContract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -10,7 +11,10 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.TestSamples, as: TS
 
   import AeMdwWeb.BlockchainSim,
-    only: [with_blockchain: 3, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
+    only: [with_blockchain: 3, with_blockchain: 4, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
+
+  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 1]
+  import AeMdw.Util.Encoding
 
   import Mock
 
@@ -23,6 +27,119 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "/v2/txs" do
+    test "it returns 200", %{conn: conn, store: store} do
+      contract_pk_raw =
+        <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
+          108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
+
+      contract_pk = :aeser_api_encoder.encode(:contract_pubkey, contract_pk_raw)
+
+      name_pk_raw =
+        <<217, 52, 92, 99, 90, 59, 250, 112, 123, 114, 18, 135, 95, 95, 205, 71, 74, 160, 14, 22,
+          47, 119, 229, 124, 220, 96, 81, 40, 117, 5, 35, 138>>
+
+      name_id = :aeser_id.create(:name, name_pk_raw)
+      name_pk = :aeser_api_encoder.encode(:name, name_pk_raw)
+      account_pk = "ak_2efCW9ghEkHDvubPWxQhpMvyPAzdT4BmVjdowNca9L49TBnrmp"
+
+      with_blockchain %{alice: 10_000, bob: 20_000},
+                      [
+                        mb1: [
+                          tx1: tx(:oracle_register_tx, :alice, %{}),
+                          tx2: tx(:oracle_register_tx, :bob, %{}),
+                          tx3: spend_tx(:alice, :bob, 3_000),
+                          tx4: tx(:contract_create_tx, :alice, %{}),
+                          tx5: tx(:contract_call_tx, :bob, %{contract_id: name_id})
+                        ]
+                      ],
+                      [
+                        {:aec_chain, [:passthrough],
+                         [
+                           get_contract_call: fn ^name_pk_raw, _call_id, _block_hash ->
+                             {:ok, call_rec("mint")}
+                           end
+                         ]},
+                        {AeMdwContract, [:passthrough],
+                         [
+                           get_info: fn ^contract_pk ->
+                             info = {0, 8, :base64.encode("some_hash")}
+                             {:ok, info}
+                           end,
+                           get_init_call_details: fn _tx, _block_hash ->
+                             %{
+                               "contract_id" => encode_contract(name_pk),
+                               "args" => [],
+                               "compiler_version" => 8,
+                               "source_hash" => Base.encode64("some_hash")
+                             }
+                           end,
+                           maybe_resolve_contract_pk: fn
+                             ^name_pk_raw, _block ->
+                               contract_pk_raw
+                           end
+                         ]}
+                      ] do
+        %{txs: [signed_tx1, signed_tx2, _signed_tx3, signed_tx4, signed_tx5]} = blocks[:mb1]
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+        tx_hash4 = :aetx_sign.hash(signed_tx4)
+        encoded_tx_hash4 = Enc.encode(:tx_hash, tx_hash4)
+        tx_hash5 = :aetx_sign.hash(signed_tx5)
+        encoded_tx_hash5 = Enc.encode(:tx_hash, tx_hash5)
+
+        args = [
+          %{type: :address, value: account_pk},
+          %{type: :int, value: 70_000_000_000_000_000_000}
+        ]
+
+        store =
+          store
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1, block_index: {0, 0}))
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: tx_hash2, block_index: {0, 0}))
+          |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, 3}))
+          |> Store.put(Model.Tx, Model.tx(index: 3, id: tx_hash4, block_index: {0, 0}))
+          |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, 4}))
+          |> Store.put(Model.Tx, Model.tx(index: 4, id: tx_hash5, block_index: {0, 0}))
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, 1})
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_call_tx, nil, contract_pk_raw, 1})
+          )
+          |> Store.put(
+            Model.ContractCall,
+            Model.contract_call(index: {1, 4}, fun: "mint", args: args)
+          )
+
+        assert %{"data" => data, "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs", limit: 10, direction: "backward")
+                 |> json_response(200)
+
+        assert length(data) == 4
+
+        assert [
+                 %{
+                   "hash" => ^encoded_tx_hash5,
+                   "tx" => %{"type" => "ContractCallTx", "contract_id" => ^name_pk}
+                 },
+                 %{
+                   "hash" => ^encoded_tx_hash4,
+                   "tx" => %{"type" => "ContractCreateTx"}
+                 },
+                 %{"hash" => ^encoded_tx_hash2},
+                 %{"hash" => ^encoded_tx_hash1}
+               ] = data
+      end
+    end
+
     test "it filters by type", %{conn: conn, store: store} do
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [

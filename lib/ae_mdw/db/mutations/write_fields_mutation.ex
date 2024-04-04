@@ -70,14 +70,22 @@ defmodule AeMdw.Db.WriteFieldsMutation do
     end)
   end
 
-  defp resolve_pubkey(state, id, :spend_tx, :recipient_id, block_index) do
+  defp resolve_pubkey(state, id, type, field, block_index)
+       when type == :spend_tx and field == :recipient_id
+       when type == :contract_call_tx and field == :contract_id do
+    pointee =
+      case type do
+        :spend_tx -> "account_pubkey"
+        :contract_call_tx -> "contract_pubkey"
+      end
+
     with {:name, name_hash} <- :aeser_id.specialize(id),
-         {:ok, account_pk} <- Name.ptr_resolve(state, block_index, name_hash) do
-      account_pk
+         {:ok, contract_pk} <- Name.ptr_resolve(state, block_index, name_hash, pointee) do
+      contract_pk
     else
       {:error, :name_revoked} ->
         Log.warn(
-          "Revoked name used on spend! id: #{inspect(id)}, block_index: #{inspect(block_index)}"
+          "Revoked name used on contract call! id: #{inspect(id)}, block_index: #{inspect(block_index)}"
         )
 
         Name.last_update_pointee_pubkey(state, id)

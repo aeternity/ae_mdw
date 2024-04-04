@@ -167,12 +167,19 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_events: tx_events,
          tx_hash: tx_hash
        }) do
-    contract_pk =
+    contract_or_name_pk =
       tx
       |> :aect_call_tx.contract_id()
       |> Db.id_pubkey()
 
-    {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
+    contract_pk =
+      Contract.maybe_resolve_contract_pk(
+        contract_or_name_pk,
+        block_hash
+      )
+
+    {fun_arg_res, call_rec} =
+      Contract.call_tx_info(tx, contract_pk, contract_or_name_pk, block_hash)
 
     events_mutations =
       SyncContract.events_mutations(

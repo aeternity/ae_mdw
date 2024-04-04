@@ -125,10 +125,16 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, signed_tx, block_hash) do
-    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
+    contract_or_name_pk =
+      tx_rec
+      |> :aect_call_tx.contract_id()
+      |> Db.id_pubkey()
+
+    contract_pk = Contract.maybe_resolve_contract_pk(contract_or_name_pk, block_hash)
+
     txi = tx.tx_index
     fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, txi)
-    call_info = format_call_info(signed_tx, contract_pk, block_hash, txi)
+    call_info = format_call_info(signed_tx, contract_or_name_pk, block_hash, txi)
     call_details = Map.merge(call_info, fun_arg_res)
     update_in(tx, [:tx], &Map.merge(&1, call_details))
   end
@@ -406,7 +412,12 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
-    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
+    contract_or_name_pk =
+      tx_rec
+      |> :aect_call_tx.contract_id()
+      |> Db.id_pubkey()
+
+    contract_pk = Contract.maybe_resolve_contract_pk(contract_or_name_pk, block_hash)
 
     fun_arg_res =
       state
@@ -415,7 +426,7 @@ defmodule AeMdw.Db.Format do
 
     call_details =
       signed_tx
-      |> format_call_info(contract_pk, block_hash, txi)
+      |> format_call_info(contract_or_name_pk, block_hash, txi)
       |> Map.merge(fun_arg_res)
 
     aexn_type = DbContract.get_aexn_type(state, contract_pk)

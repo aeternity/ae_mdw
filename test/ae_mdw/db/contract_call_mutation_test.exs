@@ -2,11 +2,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.Aex9
+  alias AeMdw.Contract
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.EtsCache
   alias AeMdw.Stats
   alias AeMdw.Validate
 
@@ -18,6 +20,45 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   @burn_caller_pk <<234, 90, 164, 101, 3, 211, 169, 40, 246, 51, 6, 203, 132, 12, 34, 114, 203,
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
+
+  describe "calling a contract" do
+    test "it create call contract mutation", %{store: store} do
+      contract_pk =
+        <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
+          108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
+
+      call_txi = 1_000_002
+      assert {account_pk, mutation} = contract_call_mutation("mint", call_txi, contract_pk)
+      assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
+
+      account_pk = :aeser_api_encoder.encode(:account_pubkey, account_pk)
+
+      ct_info =
+        {{}, "6.1.0",
+         <<2, 103, 8, 248, 133, 237, 74, 109, 39, 26, 123, 35, 66, 194, 182, 216, 94, 206, 24,
+           202, 187, 242, 135, 194, 61, 67, 179, 242, 70, 76, 63, 199>>}
+
+      EtsCache.put(Contract, contract_pk, ct_info)
+
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
+
+      create_txi = call_txi - 1
+
+      args = [
+        %{type: :address, value: account_pk},
+        %{type: :int, value: 70_000_000_000_000_000_000}
+      ]
+
+      assert {:ok, Model.contract_call(index: {^create_txi, ^call_txi}, fun: "mint", args: ^args)} =
+               Store.get(store, Model.ContractCall, {call_txi - 1, call_txi})
+    end
+  end
 
   describe "aex9 presence" do
     test "add aex9 presence after a mint", %{store: store} do

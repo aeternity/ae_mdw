@@ -55,12 +55,23 @@ defmodule AeMdw.Db.Name do
     plain_name
   end
 
-  @spec ptr_resolve(state(), Blocks.block_index(), binary()) ::
+  @spec ptr_resolve(state(), Blocks.block_index(), binary(), binary()) ::
           {:ok, binary()} | {:error, :name_revoked}
-  def ptr_resolve(state, block_index, name_hash) do
-    with {:ok, account_id} <-
-           :aens.resolve_hash("account_pubkey", name_hash, ns_tree!(state, block_index)) do
-      {:ok, Validate.id(account_id)}
+  def ptr_resolve(state, block_index, name_hash, pointer_key) do
+    with {:ok, id} <-
+           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(state, block_index)),
+         {_type, specialized_id} <- :aeser_id.specialize(id) do
+      {:ok, specialized_id}
+    end
+  end
+
+  @spec ptr_resolve(Blocks.block_hash(), binary(), binary()) ::
+          {:ok, binary()} | {:error, :name_revoked}
+  def ptr_resolve(block_hash, name_hash, pointer_key) do
+    with {:ok, id} <-
+           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(block_hash)),
+         {_type, specialized_id} <- :aeser_id.specialize(id) do
+      {:ok, specialized_id}
     end
   end
 
@@ -310,6 +321,11 @@ defmodule AeMdw.Db.Name do
     state
     |> State.fetch!(Model.Block, block_index)
     |> Model.block(:hash)
+    |> ns_tree!()
+  end
+
+  defp ns_tree!(block_hash) do
+    block_hash
     |> :aec_db.get_block_state()
     |> :aec_trees.ns()
   end
