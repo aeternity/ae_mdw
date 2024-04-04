@@ -59,8 +59,9 @@ defmodule AeMdw.Db.Name do
           {:ok, binary()} | {:error, :name_revoked}
   def ptr_resolve(state, block_index, name_hash, pointer_key) do
     with {:ok, id} <-
-           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(state, block_index)) do
-      Validate.id(id)
+           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(state, block_index)),
+         {_type, specialized_id} <- :aeser_id.specialize(id) do
+      {:ok, specialized_id}
     end
   end
 
@@ -68,8 +69,9 @@ defmodule AeMdw.Db.Name do
           {:ok, binary()} | {:error, :name_revoked}
   def ptr_resolve(block_hash, name_hash, pointer_key) do
     with {:ok, id} <-
-           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(block_hash)) do
-      Validate.id(id)
+           :aens.resolve_hash(pointer_key, name_hash, ns_tree!(block_hash)),
+         {_type, specialized_id} <- :aeser_id.specialize(id) do
+      {:ok, specialized_id}
     end
   end
 
