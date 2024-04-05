@@ -15,6 +15,15 @@ defmodule AeMdwWeb.OracleController do
 
   @spec oracle(Conn.t(), map()) :: Conn.t()
   def oracle(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => id}) do
+    with opts <- [{:v3, true} | opts],
+         {:ok, oracle_pk} <- Validate.id(id, [:oracle_pubkey]),
+         {:ok, oracle} <- Oracles.fetch(state, oracle_pk, opts) do
+      format_json(conn, oracle)
+    end
+  end
+
+  @spec oracle_v2(Conn.t(), map()) :: Conn.t()
+  def oracle_v2(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => id}) do
     with {:ok, oracle_pk} <- Validate.id(id, [:oracle_pubkey]),
          {:ok, oracle} <- Oracles.fetch(state, oracle_pk, opts) do
       format_json(conn, oracle)
@@ -41,6 +50,24 @@ defmodule AeMdwWeb.OracleController do
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
   def oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      opts: opts,
+      scope: scope,
+      query: query
+    } = assigns
+
+    with opts <- [{:v3?, true} | opts],
+         {:ok, paginated_oracles} <-
+           Oracles.fetch_oracles(state, pagination, scope, query, cursor, opts) do
+      Util.render(conn, paginated_oracles)
+    end
+  end
+
+  @spec oracles_v2(Conn.t(), map()) :: Conn.t()
+  def oracles_v2(%Conn{assigns: assigns} = conn, _params) do
     %{
       state: state,
       pagination: pagination,

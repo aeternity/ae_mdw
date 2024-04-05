@@ -1,17 +1,73 @@
 schemas:
+  OracleTx:
+    properties:
+      block_hash: string
+      block_height: integer
+      hash: string
+      micro_index: integer
+      micro_time: integer
+      signatures:
+        type: array
+        items:
+          type: string
+        tx:
+          type: object
+          properties:
+            fee: integer
+            nonce: integer
+            oracle_id: string
+            oracle_ttl:
+              type: object
+              properties:
+                type: string
+                value: integer
+            ttl: integer
+            type: string
+            version: integer
+            tx_hash: string
   Oracle:
     example:
       active: false
       active_from: 4660
       expire_height: 6894
       extends:
-        - 11025
+        - hash: "mh_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
+          micro_index: 1
+          micro_time: 1587577771376
+          signatures:
+            - "sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
+          tx:
+            fee: 20000
+            nonce: 1
+            oracle_id: "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
+            oracle_ttl:
+              type: "delta"
+              value: 100
+            ttl: 1587577871376
+            type: "OracleExtendTx"
+            version: 1
+            tx_hash: "th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
       format:
         query: string
         response: string
       oracle: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
       query_fee: 20000
-      register: 11023
+      register:
+        hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
+        micro_index: 0
+        micro_time: 1587577771376
+        signatures:
+          - sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
+        tx:
+            fee: 20000
+            nonce: 1
+            oracle_id: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
+            oracle_ttl:
+                type: "delta"
+                value: 100
+            ttl: 1587577871376
+            type: "OracleRegisterTx"
+            version: 1
       register_time: 1587577771376
     properties:
       active:
@@ -27,9 +83,11 @@ schemas:
         description: The block time in which the oracle was registered
         type: integer
       extends:
-        description: The tx indexes when the oracle has been extended
+        description: The transaction hashes where the oracle has been extended
         type: array
         items:
+          - type: "#/components/schemas/OracleTx"
+        format:
           type: object
           description: The oracle's query and response formats
           example:
@@ -52,8 +110,8 @@ schemas:
         description: The query fee
         type: integer
       register:
-        description: The tx index when the oracle is registered
-        type: integer
+        description: The tx where the oracle is registered
+        type: "#/components/schemas/OracleTx"
     required:
       - register
       - query_fee

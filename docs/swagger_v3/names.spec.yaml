@@ -1,4 +1,30 @@
 schemas:
+  NameTx:
+  properties:
+    block_hash: string
+    block_height: integer
+    hash: string
+    micro_index: integer
+    micro_time: integer
+    signatures:
+      type: array
+      items:
+        type: string
+      tx:
+        type: object
+        properties:
+          fee: integer
+          nonce: integer
+          oracle_id: string
+          oracle_ttl:
+            type: object
+            properties:
+              type: string
+              value: integer
+          ttl: integer
+          type: string
+          version: integer
+          tx_hash: string
   Name:
     description: Name
     type: object
@@ -41,8 +67,24 @@ schemas:
         type: string
         example: trustwallet.chain
       revoke:
-        type: integer
-        example: 60680160
+        type: "#/components/schemas/NameTx"
+        example:
+            block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+            block_height: 45784
+            hash: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+            micro_index: 2
+            micro_time: 1687575562705
+            signatures:
+              - sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
+            tx:
+              account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao,
+              fee: 16660000000000,
+              name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain,
+              name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff,
+              nonce: 4,
+              ttl: 2762,
+              type: NameRevokeTx,
+              version: 1
   Auction:
     description: Auction
     type: object
@@ -272,7 +314,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
-  /names/{id}/auction:
+  /names/auctions/{id}:
     get:
       deprecated: false
       description: Get name auction
@@ -294,13 +336,50 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Auction'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
         '400':
           description: Bad request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /names/auctions/{id}/claims:
+    get:
+      deprecated: false
+      description: Get name auction claims
+      operationId: get_name_auction_claims
+      parameters:
+        - name: id
+          in: path
+          description: The name
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the name auction claims
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NameClaim'
         '404':
           description: Not Found
           content:

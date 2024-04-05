@@ -57,6 +57,8 @@ defmodule AeMdwWeb.Router do
       get "/micro-blocks/:hash/transactions", TxController, :micro_block_txs
 
       get "/transactions", TxController, :txs
+      get "/transactions/count", TxController, :count
+      get "/transactions/count/:id", TxController, :count_id
       get "/transactions/:hash", TxController, :tx
 
       get "/oracles", OracleController, :oracles
@@ -92,9 +94,6 @@ defmodule AeMdwWeb.Router do
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
       get "/statistics/names", StatsController, :names_statistics
-
-      get "/transactions/count", TxController, :count
-      get "/transactions/count/:id", TxController, :count_id
 
       get "/transfers", TransferController, :transfers
       get "/contracts/logs", ContractController, :logs
@@ -180,8 +179,8 @@ defmodule AeMdwWeb.Router do
           AexnTokenController,
           :aex9_token_balance_history
 
-      get "/oracles", OracleController, :oracles
-      get "/oracles/:id", OracleController, :oracle
+      get "/oracles", OracleController, :oracles_v2
+      get "/oracles/:id", OracleController, :oracle_v2
       get "/oracles/:id/queries", OracleController, :oracle_queries
       get "/oracles/:id/responses", OracleController, :oracle_responses
 
@@ -245,13 +244,13 @@ defmodule AeMdwWeb.Router do
     get "/contracts/calls/:direction", ContractController, :calls
     get "/contracts/calls/:scope_type/:range", ContractController, :calls
 
-    get "/oracle/:id", OracleController, :oracle
+    get "/oracle/:id", OracleController, :oracle_v2
     get "/oracles/inactive", OracleController, :inactive_oracles
     get "/oracles/active", OracleController, :active_oracles
-    get "/oracles", OracleController, :oracles
+    get "/oracles", OracleController, :oracles_v2
     get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
     get "/oracles/active/gen/:range", OracleController, :active_oracles
-    get "/oracles/gen/:range", OracleController, :oracles
+    get "/oracles/gen/:range", OracleController, :oracles_v2
 
     get "/transfers/:scope_type/:range", TransferController, :transfers
     get "/transfers/:direction", TransferController, :transfers
