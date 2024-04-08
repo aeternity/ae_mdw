@@ -464,7 +464,10 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{"data" => [oracle1, oracle2], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/oracles/#{encoded_oracle_pk}/queries", direction: "forward", limit: 2)
+                 |> get("/v2/oracles/#{encoded_oracle_pk}/queries",
+                   direction: "forward",
+                   limit: 2
+                 )
                  |> json_response(200)
 
         assert %{

@@ -260,7 +260,10 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
       ] do
         assert %{"data" => data, "next" => next} =
                  conn
-                 |> get("/v2/entities/nft_auction", direction: "forward", contract: marketplace_id)
+                 |> get("/v2/entities/nft_auction",
+                   direction: "forward",
+                   contract: marketplace_id
+                 )
                  |> json_response(200)
 
         assert Enum.count(data) == @default_limit

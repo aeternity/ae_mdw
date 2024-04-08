@@ -482,13 +482,13 @@ defmodule AeMdwWeb.BlockchainSim do
     %{
       owner_id: Map.fetch!(accounts, account_name),
       nonce: 1,
-      code: :erlang.list_to_binary(['o', 'k']),
+      code: :erlang.list_to_binary([~c"o", ~c"k"]),
       auth_fun: <<1::256>>,
       vm_version: 7,
       abi_version: 3,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k']),
+      call_data: :erlang.list_to_binary([~c"o", ~c"k"]),
       fee: 100
     }
     |> Map.merge(args)
@@ -548,14 +548,14 @@ defmodule AeMdwWeb.BlockchainSim do
     %{
       owner_id: Map.fetch!(accounts, account_name),
       nonce: 1,
-      code: :erlang.list_to_binary(['o', 'k']),
+      code: :erlang.list_to_binary([~c"o", ~c"k"]),
       vm_version: 7,
       abi_version: 3,
       deposit: 1_000,
       amount: 123,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k']),
+      call_data: :erlang.list_to_binary([~c"o", ~c"k"]),
       fee: 100
     }
     |> Map.merge(args)
@@ -572,7 +572,7 @@ defmodule AeMdwWeb.BlockchainSim do
       amount: 123,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k'])
+      call_data: :erlang.list_to_binary([~c"o", ~c"k"])
     }
     |> Map.merge(args)
     |> :aect_call_tx.new()

@@ -573,7 +573,10 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v3/aex9/#{contract_id}/transfers", direction: "forward", sender: sender_id)
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 direction: "forward",
+                 sender: sender_id
+               )
                |> json_response(200)
 
       assert @default_limit = length(aex9_transfers)

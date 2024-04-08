@@ -141,6 +141,7 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
+  @spec hc_contracts() :: [Db.pubkey()]
   def hc_contracts do
     :aec_hard_forks.protocols()
     |> Enum.flat_map(fn {protocol, _height} ->

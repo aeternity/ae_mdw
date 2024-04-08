@@ -688,7 +688,12 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "inactive", by: by, direction: direction, limit: limit)
+                 |> get("/v2/names",
+                   state: "inactive",
+                   by: by,
+                   direction: direction,
+                   limit: limit
+                 )
                  |> json_response(200)
 
         assert ^limit = length(names)

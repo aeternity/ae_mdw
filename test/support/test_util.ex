@@ -25,7 +25,7 @@ defmodule AeMdw.TestUtil do
 
   def all_keys(state, table), do: state |> Collection.stream(table, nil) |> Enum.to_list()
 
-  @spec handle_input((() -> Conn.t())) :: Conn.t() | String.t()
+  @spec handle_input((-> Conn.t())) :: Conn.t() | String.t()
   def handle_input(f) do
     try do
       f.()
