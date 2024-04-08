@@ -47,8 +47,8 @@ defmodule AeMdw.Db.OriginTest do
            lima_contracts: fn ->
              [%{pubkey: Validate.id!(@contract_id1), amount: 2_448_618_414_302_482_322}]
            end,
-           hc_seed_contracts: fn 5, "ae_mainnet" ->
-             {:ok, [{"calls", []}, {"contracts", [%{"pubkey" => @contract_id2}]}]}
+           contracts: fn _ ->
+             [{"calls", []}, {"contracts", [%{"pubkey" => @contract_id2}]}]
            end
          ]}
       ] do
@@ -76,8 +76,8 @@ defmodule AeMdw.Db.OriginTest do
            lima_contracts: fn ->
              [%{pubkey: Validate.id!(@contract_id1), amount: 2_448_618_414_302_482_322}]
            end,
-           hc_seed_contracts: fn 5, "ae_mainnet" ->
-             {:ok, %{"calls" => [], "contracts" => [%{"pubkey" => @contract_id2}]}}
+           contracts: fn
+             _ -> %{"calls" => [], "contracts" => [%{"pubkey" => @contract_id2}]}
            end
          ]}
       ] do

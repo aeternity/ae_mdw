@@ -6,8 +6,8 @@ runs:
   steps:
     - uses: erlef/setup-beam@v1
       with:
-        otp-version: 23.3.4.17
-        elixir-version: 1.13.4
+        otp-version: 26.2.3
+        elixir-version: 1.16.2
         version-type: strict
 
     - name: Get Mdw dependencies

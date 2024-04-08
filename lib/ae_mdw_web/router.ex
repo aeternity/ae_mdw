@@ -279,7 +279,7 @@ defmodule AeMdwWeb.Router do
     get "/totalstats/:direction", StatsController, :total_stats
     get "/totalstats/:scope_type/:range", StatsController, :total_stats
 
-    if Application.get_env(:ae_mdw, :enable_livedashboard, false) do
+    if Application.compile_env(:ae_mdw, :enable_livedashboard, false) do
       import Phoenix.LiveDashboard.Router
 
       scope "/" do

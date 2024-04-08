@@ -38,7 +38,7 @@ defmodule AeMdw.Db.Status do
 
   defp node_status do
     {node_syncing?, node_progress} =
-      with {node_syncing?, node_progress, _height} <- :aec_sync.sync_progress() do
+      with {node_syncing?, node_progress, _height, _chain_id} <- :aec_sync.sync_progress() do
         {node_syncing?, node_progress}
       end
 

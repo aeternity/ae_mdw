@@ -12,7 +12,7 @@ defmodule AeMdw.Log do
 
   @spec warn(String.t()) :: :ok
   def warn(msg),
-    do: Logger.warn(msg)
+    do: Logger.warning(msg)
 
   @spec error(String.t() | exception()) :: :ok
   def error(msg) when is_binary(msg),

@@ -40,7 +40,12 @@ defmodule AeMdw.Db.IntTransfer do
   def block_rewards_mutations(key_block) do
     height = :aec_blocks.height(key_block)
     delay = :aec_governance.beneficiary_reward_delay()
-    dev_benefs = Enum.map(:aec_dev_reward.beneficiaries(), &elem(&1, 0))
+
+    dev_benefs =
+      for {protocol, _height} <- :aec_hard_forks.protocols(),
+          {pk, _} <- :aec_dev_reward.beneficiaries(protocol) do
+        pk
+      end
 
     {devs_rewards, miners_rewards} =
       key_block

@@ -12,9 +12,9 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-bullseye-20210902-slim
 #
-ARG ELIXIR_VERSION=1.13.4
-ARG OTP_VERSION=23.3.4.18
-ARG DEBIAN_VERSION=bullseye-20220801-slim
+ARG ELIXIR_VERSION=1.16.2
+ARG OTP_VERSION=26.2.3
+ARG DEBIAN_VERSION=bullseye-20240311-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
@@ -42,7 +42,7 @@ WORKDIR /home/aeternity/node
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
 ENV NODEROOT=/home/aeternity/node/local
-ARG NODE_VERSION=6.12.0
+ARG NODE_VERSION=6.13.0
 ARG NODE_URL=https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
