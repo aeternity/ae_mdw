@@ -7,6 +7,8 @@ defmodule AeMdwWeb.StatsControllerTest do
 
   require Model
 
+  @milliseconds_per_day 24 * 3_600 * 1_000
+
   describe "total_stats" do
     test "it includes last_tx_hash", %{conn: conn, store: store} do
       tx_hash = <<0::256>>
@@ -75,12 +77,15 @@ defmodule AeMdwWeb.StatsControllerTest do
       conn: conn,
       store: store
     } do
-      st1_index = {{:transactions, :all}, :day, 1_000}
-      st2_index = {{:transactions, :all}, :day, 2_000}
-      st3_index = {{:transactions, :all}, :day, 3_000}
+      st1_index = {{:transactions, :all}, :day, 29}
+      st2_index = {{:transactions, :all}, :day, 30}
+      st3_index = {{:transactions, :all}, :day, 31}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
@@ -92,15 +97,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/transactions", limit: 2)
                |> json_response(200)
 
-      assert %{"start_date" => "1978-03-20", "count" => 3} = st1
-      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
+      assert %{"start_date" => "1970-02-01", "count" => 3} = st1
+      assert %{"start_date" => "1970-01-31", "count" => 5} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1972-09-27", "count" => 1} = st3
+      assert %{"start_date" => "1970-01-30", "count" => 1} = st3
+      assert %{"start_date" => "1970-01-29", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -109,14 +115,17 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
 
     test "it returns the count of transactions filtered by a tx type", %{conn: conn, store: store} do
-      st1_index = {{:transactions, :all}, :day, 500}
-      st2_index = {{:transactions, :oracle_register_tx}, :day, 500}
-      st3_index = {{:transactions, :spend_tx}, :day, 1_000}
-      st4_index = {{:transactions, :spend_tx}, :day, 2_000}
-      st5_index = {{:transactions, :spend_tx}, :day, 3_000}
+      st1_index = {{:transactions, :all}, :day, 0}
+      st2_index = {{:transactions, :oracle_register_tx}, :day, 0}
+      st3_index = {{:transactions, :spend_tx}, :day, 0}
+      st4_index = {{:transactions, :spend_tx}, :day, 1}
+      st5_index = {{:transactions, :spend_tx}, :day, 3}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 1))
@@ -134,15 +143,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"start_date" => "1972-09-27", "count" => 1} = st1
-      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
+      assert %{"start_date" => "1970-01-01", "count" => 1} = st1
+      assert %{"start_date" => "1970-01-02", "count" => 5} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1978-03-20", "count" => 3} = st3
+      assert %{"start_date" => "1970-01-03", "count" => 0} = st3
+      assert %{"start_date" => "1970-01-04", "count" => 3} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -155,12 +165,15 @@ defmodule AeMdwWeb.StatsControllerTest do
            conn: conn,
            store: store
          } do
-      st1_index = {{:transactions, :all}, :week, 0}
-      st2_index = {{:transactions, :all}, :week, 1_000}
-      st3_index = {{:transactions, :all}, :week, 2_000}
+      st1_index = {{:transactions, :all}, :week, 2}
+      st2_index = {{:transactions, :all}, :week, 3}
+      st3_index = {{:transactions, :all}, :week, 4}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
@@ -172,15 +185,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/transactions", limit: 2, interval_by: "week")
                |> json_response(200)
 
-      assert %{"start_date" => "2008-05-01", "count" => 3} = st1
-      assert %{"start_date" => "1989-03-02", "count" => 5} = st2
+      assert %{"start_date" => "1970-01-29", "count" => 3} = st1
+      assert %{"start_date" => "1970-01-22", "count" => 5} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-01", "count" => 1} = st3
+      assert %{"start_date" => "1970-01-15", "count" => 1} = st3
+      assert %{"start_date" => "1970-01-08", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -194,12 +208,16 @@ defmodule AeMdwWeb.StatsControllerTest do
            store: store
          } do
       st1_index = {{:transactions, :all}, :month, 0}
-      st2_index = {{:transactions, :all}, :month, 12}
-      st3_index = {{:transactions, :all}, :month, 24}
-      st4_index = {{:transactions, :all}, :month, 36}
+      st2_index = {{:transactions, :all}, :month, 2}
+      st3_index = {{:transactions, :all}, :month, 3}
+      st4_index = {{:transactions, :all}, :month, 4}
+      {network_start_time, network_end_time} = network_time_interval()
+      network_end_time = network_end_time + 100 * @milliseconds_per_day
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
@@ -212,16 +230,53 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
                |> json_response(200)
 
-      assert %{"start_date" => "1973-01-01", "count" => 8} = st1
-      assert %{"start_date" => "1972-01-01", "count" => 3} = st2
+      assert %{"start_date" => "1970-05-01", "count" => 8} = st1
+      assert %{"start_date" => "1970-04-01", "count" => 3} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1971-01-01", "count" => 5} = st3
-      assert %{"start_date" => "1970-01-01", "count" => 1} = st4
+      assert %{"start_date" => "1970-03-01", "count" => 5} = st3
+      assert %{"start_date" => "1970-02-01", "count" => 0} = st4
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "when no transactions, it returns all periods with count = 0",
+         %{
+           conn: conn,
+           store: store
+         } do
+      {network_start_time, network_end_time} = network_time_interval()
+      network_end_time = network_end_time + 100 * @milliseconds_per_day
+
+      store =
+        store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
+
+      conn = with_store(conn, store)
+
+      assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
+               |> json_response(200)
+
+      assert %{"start_date" => "1970-05-01", "count" => 0} = st1
+      assert %{"start_date" => "1970-04-01", "count" => 0} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"start_date" => "1970-03-01", "count" => 0} = st3
+      assert %{"start_date" => "1970-02-01", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -235,13 +290,16 @@ defmodule AeMdwWeb.StatsControllerTest do
       conn: conn,
       store: store
     } do
-      st1_index = {{:blocks, :all}, :day, 1}
-      st2_index = {{:blocks, :all}, :day, 365}
-      st3_index = {{:blocks, :all}, :day, 366}
-      st4_index = {{:blocks, :all}, :day, 730}
+      st1_index = {{:blocks, :all}, :day, 27}
+      st2_index = {{:blocks, :all}, :day, 28}
+      st3_index = {{:blocks, :all}, :day, 29}
+      st4_index = {{:blocks, :all}, :day, 30}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
@@ -254,16 +312,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/blocks", limit: 2)
                |> json_response(200)
 
-      assert %{"start_date" => "1972-01-01", "count" => 2} = st1
-      assert %{"start_date" => "1971-01-02", "count" => 3} = st2
+      assert %{"start_date" => "1970-02-01", "count" => 0} = st1
+      assert %{"start_date" => "1970-01-31", "count" => 2} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1971-01-01", "count" => 5} = st3
-      assert %{"start_date" => "1970-01-02", "count" => 1} = st4
+      assert %{"start_date" => "1970-01-30", "count" => 3} = st3
+      assert %{"start_date" => "1970-01-29", "count" => 5} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -272,14 +330,17 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
 
     test "it returns the count of blocks filtered by a block type", %{conn: conn, store: store} do
-      st1_index = {{:blocks, :all}, :day, 500}
-      st2_index = {{:blocks, :key}, :day, 500}
-      st3_index = {{:blocks, :micro}, :day, 1}
-      st4_index = {{:blocks, :micro}, :day, 2}
-      st5_index = {{:blocks, :micro}, :day, 366}
+      st1_index = {{:blocks, :all}, :day, 0}
+      st2_index = {{:blocks, :key}, :day, 1}
+      st3_index = {{:blocks, :micro}, :day, 0}
+      st4_index = {{:blocks, :micro}, :day, 1}
+      st5_index = {{:blocks, :micro}, :day, 3}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 1))
@@ -297,15 +358,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-02", "count" => 1} = st1
-      assert %{"start_date" => "1970-01-03", "count" => 5} = st2
+      assert %{"start_date" => "1970-01-01", "count" => 1} = st1
+      assert %{"start_date" => "1970-01-02", "count" => 5} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1971-01-02", "count" => 3} = st3
+      assert %{"start_date" => "1970-01-03", "count" => 0} = st3
+      assert %{"start_date" => "1970-01-04", "count" => 3} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -348,11 +410,14 @@ defmodule AeMdwWeb.StatsControllerTest do
            store: store
          } do
       st1_index = {{:blocks, :all}, :week, 0}
-      st2_index = {{:blocks, :all}, :week, 1_000}
-      st3_index = {{:blocks, :all}, :week, 2_000}
+      st2_index = {{:blocks, :all}, :week, 1}
+      st3_index = {{:blocks, :all}, :week, 2}
+      {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
@@ -364,15 +429,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/blocks", limit: 2, interval_by: "week")
                |> json_response(200)
 
-      assert %{"start_date" => "2008-05-01", "count" => 3} = st1
-      assert %{"start_date" => "1989-03-02", "count" => 5} = st2
+      assert %{"start_date" => "1970-01-29", "count" => 0} = st1
+      assert %{"start_date" => "1970-01-22", "count" => 0} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-01", "count" => 1} = st3
+      assert %{"start_date" => "1970-01-15", "count" => 3} = st3
+      assert %{"start_date" => "1970-01-08", "count" => 5} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -428,5 +494,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v2/stats")
                |> json_response(200)
     end
+  end
+
+  defp network_time_interval do
+    start_time = DateTime.new!(Date.new!(1970, 1, 1), Time.new!(0, 0, 0))
+    end_time = DateTime.new!(Date.new!(1970, 2, 1), Time.new!(0, 0, 0))
+
+    {
+      DateTime.to_unix(start_time) * 1_000,
+      DateTime.to_unix(end_time) * 1_000
+    }
   end
 end
