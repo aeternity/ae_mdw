@@ -34,6 +34,7 @@ defmodule AeMdw.Db.StateTest do
         Enum.map(1..10, fn _i ->
           contract_pk = :crypto.strong_rand_bytes(32)
           Aex9BalancesCache.put(contract_pk, block_index, @next_hash, balances)
+          contract_pk
         end)
 
       Aex9BalancesCache.put(ct_pk, block_index, @next_hash, balances)

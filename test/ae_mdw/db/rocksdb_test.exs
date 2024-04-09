@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.RocksDbTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDb
@@ -25,6 +25,8 @@ defmodule AeMdw.Db.RocksDbTest do
 
       assert :ok = RocksDb.dirty_put(Model.Block, key, value)
       assert {:ok, ^value} = RocksDb.get(Model.Block, key)
+      assert :ok = RocksDb.dirty_delete(Model.Block, key)
+      assert :not_found = RocksDb.get(Model.Block, key)
     end
 
     test "deletes multiple key-values without a transaction (A)" do
@@ -147,6 +149,8 @@ defmodule AeMdw.Db.RocksDbTest do
       assert :ok = RocksDb.put(txn, Model.Block, key, value)
       RocksDb.transaction_commit(txn)
       assert {:ok, ^value} = RocksDb.get(Model.Block, key)
+      assert :ok = RocksDb.dirty_delete(Model.Block, key)
+      assert :not_found = RocksDb.get(Model.Block, key)
     end
 
     test "persists a transaction with a multiple changes" do
@@ -165,6 +169,8 @@ defmodule AeMdw.Db.RocksDbTest do
 
       Enum.each(kv_list, fn {key, value} ->
         assert {:ok, ^value} = RocksDb.get(Model.Block, key)
+        assert :ok = RocksDb.dirty_delete(Model.Block, key)
+        assert :not_found = RocksDb.get(Model.Block, key)
       end)
     end
   end

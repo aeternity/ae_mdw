@@ -67,8 +67,12 @@ defmodule AeMdw.Db.OriginTest do
       with_mocks [
         {:aeu_env, [:passthrough],
          [
-           find_config: fn ["chain", "hard_forks"], [:user_config] ->
-             {:ok, %{"5" => 0}}
+           find_config: fn
+             ["chain", "hard_forks"], [:user_config] ->
+               {:ok, %{"5" => 0}}
+
+             ["sync", "peer_analytics"], [:user_config, :schema_default, {:value, false}] ->
+               {:ok, false}
            end
          ]},
         {:aec_fork_block_settings, [],

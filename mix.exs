@@ -161,7 +161,7 @@ defmodule AeMdw.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:websockex, "~> 0.4.3"},
       {:tesla, "~> 1.5"},
-      {:dialyxir, "~> 1.2", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
@@ -187,10 +187,7 @@ defmodule AeMdw.MixProject do
       plt_add_apps: [:mix],
       plt_core_path: "priv/plts",
       plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
-      flags: [
-        :unmatched_returns,
-        :race_conditions
-      ]
+      flags: [:unmatched_returns]
     ]
   end
 end
