@@ -701,8 +701,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, nil}
 
       %{store: store} =
-        Contract.aexn_creation_write(
-          conn.assigns.state,
+        conn.assigns.state
+        |> Contract.aexn_creation_write(
           :aex9,
           aexn_meta_info,
           contract_pk,
@@ -729,8 +729,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aexn_meta_info = {:format_error, :format_error, nil}
 
       %{store: store} =
-        Contract.aexn_creation_write(
-          conn.assigns.state,
+        conn.assigns.state
+        |> Contract.aexn_creation_write(
           :aex9,
           aexn_meta_info,
           contract_pk,

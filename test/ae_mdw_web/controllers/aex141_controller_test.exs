@@ -404,7 +404,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
 
     test "sorts contracts by symbol", %{conn: conn} do
-      assert %{"data" => contracts} = conn |> get("/v2/aex141", by: "symbol") |> json_response(200)
+      assert %{"data" => contracts} =
+               conn |> get("/v2/aex141", by: "symbol") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -422,8 +423,10 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
              end)
     end
+
     test "sorts v3 contracts by symbol", %{conn: conn} do
-      assert %{"data" => contracts} = conn |> get("/v3/aex141", by: "symbol") |> json_response(200)
+      assert %{"data" => contracts} =
+               conn |> get("/v3/aex141", by: "symbol") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -442,6 +445,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                assert match?({:ok, <<_pk::256>>}, Validate.id(tx_hash))
              end)
     end
+
     Enum.each(["v2", "v3"], fn api_version ->
       test "filters #{api_version} contracts by name prefix", %{conn: conn} do
         prefix = "some-nft-1410"
@@ -472,7 +476,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       test "when invalid filters in #{api_version}, it returns an error", %{conn: conn} do
         assert %{"error" => _error_msg} =
-                 conn |> get("/#{unquote(api_version)}/aex141", by: "unknown") |> json_response(400)
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "unknown")
+                 |> json_response(400)
       end
     end)
   end
