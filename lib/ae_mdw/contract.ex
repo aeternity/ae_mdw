@@ -227,6 +227,9 @@ defmodule AeMdw.Contract do
     case :aec_chain.get_contract_call(contract_or_name_pk, call_id, block_hash) do
       {:ok, call} ->
         case :aect_call.return_type(call) do
+          :error ->
+            {:error, call}
+
           :ok ->
             {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
             fun = to_string(fun)
@@ -241,8 +244,17 @@ defmodule AeMdw.Contract do
 
             {fun_arg_res, call}
 
-          _error_or_invalid ->
-            {:error, call}
+          :revert ->
+            {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
+            fun = to_string(fun)
+
+            fun_arg_res = %{
+              function: fun,
+              arguments: args,
+              result: :invalid
+            }
+
+            {fun_arg_res, call}
         end
 
       {:error, reason} ->
