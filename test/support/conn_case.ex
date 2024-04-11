@@ -17,6 +17,7 @@ defmodule AeMdwWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias AeMdw.Db.NullStore
   alias AeMdw.Sync.MemStoreCreator
   alias Phoenix.ConnTest
 
@@ -42,7 +43,7 @@ defmodule AeMdwWeb.ConnCase do
     if Map.get(tags, :integration, false) or Map.get(tags, :skip_store, false) do
       {:ok, conn: ConnTest.build_conn()}
     else
-      {:ok, conn: ConnTest.build_conn(), store: MemStoreCreator.create()}
+      {:ok, conn: ConnTest.build_conn(), store: MemStoreCreator.create(NullStore.new())}
     end
   end
 end
