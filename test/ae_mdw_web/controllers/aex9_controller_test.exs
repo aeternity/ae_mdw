@@ -24,6 +24,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       Enum.reduce(100..125, MemStore.new(NullStore.new()), fn i, store ->
         meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
         txi = 1_000 - i
+        decoded_tx_hash = <<txi::256>>
 
         m_aex9 =
           Model.aexn_contract(
@@ -36,6 +37,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         m_aex9_balance = Model.aex9_contract_balance(index: <<i::256>>, amount: txi + 20)
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
+        m_tx = Model.tx(index: txi, id: decoded_tx_hash)
 
         store
         |> Store.put(Model.AexnContract, m_aex9)
@@ -43,6 +45,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         |> Store.put(Model.Aex9ContractBalance, m_aex9_balance)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(Model.Tx, m_tx)
       end)
 
     {:ok, conn: with_store(build_conn(), store)}

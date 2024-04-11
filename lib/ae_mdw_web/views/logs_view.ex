@@ -13,8 +13,8 @@ defmodule AeMdwWeb.LogsView do
 
   @type opts :: %{aexn_args: boolean(), custom_args: boolean()}
 
-  @spec render_log(State.t(), AeMdw.Contracts.log(), opts()) :: map()
-  def render_log(state, {create_txi, call_txi, log_idx} = index, encode_args) do
+  @spec render_log(State.t(), AeMdw.Contracts.log(), opts(), boolean()) :: map()
+  def render_log(state, {create_txi, call_txi, log_idx} = index, encode_args, v3?) do
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
@@ -50,6 +50,15 @@ defmodule AeMdwWeb.LogsView do
       block_hash: encode(:micro_block_hash, block_hash),
       log_idx: log_idx
     })
+    |> maybe_remove_logs_txis(v3?)
+  end
+
+  defp maybe_remove_logs_txis(log, true) do
+    Map.drop(log, [:contract_txi, :call_txi, :ext_caller_contract_txi])
+  end
+
+  defp maybe_remove_logs_txis(log, false) do
+    log
   end
 
   defp render_remote_log_fields(_state, nil) do

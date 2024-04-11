@@ -664,7 +664,11 @@ defmodule AeMdw.Activities do
   @spec render_payload(state(), Db.pubkey(), height(), txi(), activity_value()) ::
           {activity_type(), map()}
   defp render_payload(state, _account_pk, _height, txi, {:field, tx_type, _tx_pos}) do
-    tx = state |> Txs.fetch!(txi) |> Map.delete("tx_index")
+    tx =
+      state
+      |> Txs.fetch!(txi)
+      |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+      |> Map.delete("tx_index")
 
     {"#{Node.tx_name(tx_type)}Event", tx}
   end

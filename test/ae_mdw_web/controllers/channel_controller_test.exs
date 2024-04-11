@@ -103,7 +103,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
           |> Store.put(Model.InactiveChannelActivation, Model.activation(index: {3, channel_pk3}))
 
         assert %{"data" => [channel3, channel2] = channels, "next" => next_url} =
-                 conn |> with_store(store) |> get("/v2/channels", limit: 2) |> json_response(200)
+                 conn |> with_store(store) |> get("/v3/channels", limit: 2) |> json_response(200)
 
         assert %{
                  "channel" => ^channel_id3,
@@ -241,7 +241,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
         assert %{"data" => [channel3], "next" => nil} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels", state: "inactive")
+                 |> get("/v3/channels", state: "inactive")
                  |> json_response(200)
 
         assert %{
@@ -269,14 +269,14 @@ defmodule AeMdwWeb.ChannelControllerTest do
 
     test "when no channels, it returns empty data", %{conn: conn, store: store} do
       assert %{"data" => []} =
-               conn |> with_store(store) |> get("/v2/channels") |> json_response(200)
+               conn |> with_store(store) |> get("/v3/channels") |> json_response(200)
     end
 
     test "when no invalid cursor, it returns error", %{conn: conn, store: store} do
       assert %{"error" => "invalid cursor: foo"} =
                conn
                |> with_store(store)
-               |> get("/v2/channels", cursor: "foo")
+               |> get("/v3/channels", cursor: "foo")
                |> json_response(400)
     end
   end
@@ -374,7 +374,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels/#{active_channel_id}")
+                 |> get("/v3/channels/#{active_channel_id}")
                  |> json_response(200)
 
         state_hash = encode(:state, state_hash2)
@@ -401,7 +401,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels/#{inactive_channel_id}")
+                 |> get("/v3/channels/#{inactive_channel_id}")
                  |> json_response(200)
       end
     end
@@ -501,7 +501,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels/#{active_channel_id}",
+                 |> get("/v3/channels/#{active_channel_id}",
                    block_hash: encode(:micro_block_hash, micro_block_hash)
                  )
                  |> json_response(200)
@@ -529,7 +529,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels/#{inactive_channel_id}",
+                 |> get("/v3/channels/#{inactive_channel_id}",
                    block_hash: encode(:micro_block_hash, micro_block_hash)
                  )
                  |> json_response(200)
@@ -543,7 +543,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
       assert %{"error" => ^msg} =
                conn
                |> with_store(store)
-               |> get("/v2/channels/#{channel_id}")
+               |> get("/v3/channels/#{channel_id}")
                |> json_response(404)
     end
 
@@ -554,7 +554,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
       assert %{"error" => "invalid id: kh_123"} =
                conn
                |> with_store(store)
-               |> get("/v2/channels/#{encode(:channel, channel_pk)}", block_hash: "kh_123")
+               |> get("/v3/channels/#{encode(:channel, channel_pk)}", block_hash: "kh_123")
                |> json_response(400)
     end
   end
@@ -649,7 +649,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
         assert %{"data" => [update3, update2] = updates, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/channels/#{encode(:channel, channel_pk)}/updates", limit: 2)
+                 |> get("/v3/channels/#{encode(:channel, channel_pk)}/updates", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -704,7 +704,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> with_store(store)
-               |> get("/v2/channels/#{encoded_channel_id}/updates")
+               |> get("/v3/channels/#{encoded_channel_id}/updates")
                |> json_response(404)
     end
 
@@ -715,7 +715,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> with_store(store)
-               |> get("/v2/channels/#{invalid_id}/updates")
+               |> get("/v3/channels/#{invalid_id}/updates")
                |> json_response(400)
     end
   end

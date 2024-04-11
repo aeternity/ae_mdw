@@ -1,6 +1,7 @@
 defmodule AeMdw.AexnTokensTest do
   use ExUnit.Case
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.AexnTokens
   alias AeMdw.Database
   alias AeMdw.Db.Model
@@ -19,6 +20,8 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = <<9_123_456::256>>
       aex9_meta_info = {name, symbol, decimals} = {"Token1", "TK1", 18}
       txi = 1_123_456_789
+      decoded_tx_hash = <<txi::256>>
+      tx_hash = Enc.encode(:tx_hash, decoded_tx_hash)
       extensions = ["ext1", "ext2"]
       state = State.new()
 
@@ -30,7 +33,10 @@ defmodule AeMdw.AexnTokensTest do
           extensions: extensions
         )
 
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+
       Database.dirty_write(Model.AexnContract, m_aexn)
+      Database.dirty_write(Model.Tx, m_tx)
 
       contract_id = encode_contract(contract_pk)
 
@@ -43,7 +49,16 @@ defmodule AeMdw.AexnTokensTest do
                contract_txi: ^txi,
                contract_id: ^contract_id,
                extensions: ^extensions
-             } = render_contract(state, m_aex9)
+             } = render_contract(state, m_aex9, false)
+
+      assert %{
+               name: ^name,
+               symbol: ^symbol,
+               decimals: ^decimals,
+               contract_tx_hash: ^tx_hash,
+               contract_id: ^contract_id,
+               extensions: ^extensions
+             } = render_contract(state, m_aex9, true)
     end
 
     test "returns a AEX-141 contract meta info" do
@@ -53,6 +68,9 @@ defmodule AeMdw.AexnTokensTest do
         {name, symbol, base_url, type} = {"AE Boots", "Boot", "http://someurl.com", :url}
 
       txi = 2_123_456_789
+      decoded_tx_hash = <<txi::256>>
+      tx_hash = Enc.encode(:tx_hash, decoded_tx_hash)
+
       extensions = ["some-extension", "other-extension", "yet-another-extension"]
       state = State.new()
 
@@ -64,7 +82,10 @@ defmodule AeMdw.AexnTokensTest do
           extensions: extensions
         )
 
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+
       Database.dirty_write(Model.AexnContract, m_aexn)
+      Database.dirty_write(Model.Tx, m_tx)
 
       contract_id = encode_contract(contract_pk)
 
@@ -78,7 +99,17 @@ defmodule AeMdw.AexnTokensTest do
                contract_id: ^contract_id,
                metadata_type: ^type,
                extensions: ^extensions
-             } = render_contract(state, m_aex141)
+             } = render_contract(state, m_aex141, false)
+
+      assert %{
+               name: ^name,
+               symbol: ^symbol,
+               base_url: ^base_url,
+               contract_tx_hash: ^tx_hash,
+               contract_id: ^contract_id,
+               metadata_type: ^type,
+               extensions: ^extensions
+             } = render_contract(state, m_aex141, true)
     end
 
     test "returns input error on AEX9 not found" do

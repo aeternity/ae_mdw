@@ -55,7 +55,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{"data" => [block]} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks", limit: 1)
+                 |> get("/v3/key-blocks", limit: 1)
                  |> json_response(200)
 
         assert %{
@@ -97,7 +97,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{"data" => [block]} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks", limit: 1, scope: "gen:#{kbi}")
+                 |> get("/v3/key-blocks", limit: 1, scope: "gen:#{kbi}")
                  |> json_response(200)
 
         assert %{
@@ -153,7 +153,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{"data" => [block3, block2, block1]} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+                 |> get("/v3/key-blocks/#{encoded_hash}/micro-blocks")
                  |> json_response(200)
 
         assert %{
@@ -187,7 +187,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{"error" => ^error_msg} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+                 |> get("/v3/key-blocks/#{encoded_hash}/micro-blocks")
                  |> json_response(404)
       end
     end
@@ -198,7 +198,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+               |> get("/v3/key-blocks/#{encoded_hash}/micro-blocks")
                |> json_response(400)
     end
   end
@@ -233,7 +233,7 @@ defmodule AeMdwWeb.BlockControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks/#{kbi}")
+                 |> get("/v3/key-blocks/#{kbi}")
                  |> json_response(200)
       end
     end
@@ -278,7 +278,7 @@ defmodule AeMdwWeb.BlockControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/key-blocks/#{encoded_hash}")
+                 |> get("/v3/key-blocks/#{encoded_hash}")
                  |> json_response(200)
       end
     end
@@ -294,7 +294,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> with_store(store)
-               |> get("/v2/key-blocks/#{encoded_hash}")
+               |> get("/v3/key-blocks/#{encoded_hash}")
                |> json_response(404)
     end
   end
@@ -344,7 +344,7 @@ defmodule AeMdwWeb.BlockControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/micro-blocks/#{encoded_hash}")
+                 |> get("/v3/micro-blocks/#{encoded_hash}")
                  |> json_response(200)
       end
     end
@@ -396,7 +396,7 @@ defmodule AeMdwWeb.BlockControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/micro-blocks/#{encoded_hash}")
+                 |> get("/v3/micro-blocks/#{encoded_hash}")
                  |> json_response(200)
       end
     end
@@ -412,7 +412,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> with_store(store)
-               |> get("/v2/micro-blocks/#{encoded_hash}")
+               |> get("/v3/micro-blocks/#{encoded_hash}")
                |> json_response(404)
     end
   end

@@ -4,6 +4,7 @@ defmodule AeMdwWeb.ContractController do
   alias AeMdw.Contracts
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.LogsView
+  alias AeMdwWeb.CallsView
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
@@ -32,11 +33,26 @@ defmodule AeMdwWeb.ContractController do
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
+    v3? = true
 
     with {:ok, encode_args} <- valid_args_params(query),
          {:ok, {prev_cursor, logs, next_cursor}} <-
            Contracts.fetch_logs(state, pagination, scope, query, cursor) do
-      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
+      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args, v3?))
+
+      Util.render(conn, prev_cursor, logs, next_cursor)
+    end
+  end
+
+  @spec logs_v2(Conn.t(), map()) :: Conn.t()
+  def logs_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
+    v3? = false
+
+    with {:ok, encode_args} <- valid_args_params(query),
+         {:ok, {prev_cursor, logs, next_cursor}} <-
+           Contracts.fetch_logs(state, pagination, scope, query, cursor) do
+      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args, v3?))
 
       Util.render(conn, prev_cursor, logs, next_cursor)
     end
@@ -45,9 +61,24 @@ defmodule AeMdwWeb.ContractController do
   @spec calls(Conn.t(), map()) :: Conn.t()
   def calls(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
+    v3? = true
 
-    with {:ok, calls} <- Contracts.fetch_calls(state, pagination, scope, query, cursor) do
-      Util.render(conn, calls)
+    with {:ok, {prev_cursor, calls, next_cursor}} <-
+           Contracts.fetch_calls(state, pagination, scope, query, cursor) do
+      calls = Enum.map(calls, &CallsView.render_call(&1, v3?))
+      Util.render(conn, prev_cursor, calls, next_cursor)
+    end
+  end
+
+  @spec calls_v2(Conn.t(), map()) :: Conn.t()
+  def calls_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
+    v3? = false
+
+    with {:ok, {prev_cursor, calls, next_cursor}} <-
+           Contracts.fetch_calls(state, pagination, scope, query, cursor) do
+      calls = Enum.map(calls, &CallsView.render_call(&1, v3?))
+      Util.render(conn, prev_cursor, calls, next_cursor)
     end
   end
 

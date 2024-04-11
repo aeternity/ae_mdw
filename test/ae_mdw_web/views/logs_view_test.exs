@@ -102,7 +102,7 @@ defmodule AeMdwWeb.LogsViewTest do
     ]
   end
 
-  describe "render_log/3" do
+  describe "render_log/4" do
     test "formats logs from aex9 events", %{
       aex9_logs: logs,
       dex_logs: dex_logs,
@@ -134,7 +134,15 @@ defmodule AeMdwWeb.LogsViewTest do
           } =
             store
             |> State.new()
-            |> LogsView.render_log(contract_log_index, %{aexn_args: true})
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true}, false)
+
+          v3_log =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true}, true)
+
+          refute Map.has_key?(v3_log, :contract_txi)
+          refute Map.has_key?(v3_log, :call_txi)
 
           assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
           assert contract_tx_hash == encode_to_hash(state, create_txi)
@@ -187,7 +195,7 @@ defmodule AeMdwWeb.LogsViewTest do
           } =
             store
             |> State.new()
-            |> LogsView.render_log(contract_log_index, %{aexn_args: true})
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true}, false)
 
           assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
           assert contract_tx_hash == encode_to_hash(state, create_txi)
@@ -200,6 +208,14 @@ defmodule AeMdwWeb.LogsViewTest do
           assert height == @height
           assert mbi == @mbi
           assert mb_hash == encode(:micro_block_hash, @mb_hash)
+
+          v3_version =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true}, true)
+
+          refute Map.has_key?(v3_version, :contract_txi)
+          refute Map.has_key?(v3_version, :call_txi)
         end)
       end
     end
@@ -259,7 +275,7 @@ defmodule AeMdwWeb.LogsViewTest do
           } =
             store
             |> State.new()
-            |> LogsView.render_log(contract_log_index, %{custom_args: true})
+            |> LogsView.render_log(contract_log_index, %{custom_args: true}, false)
 
           assert args == expected_args[event_name]
 
@@ -271,6 +287,14 @@ defmodule AeMdwWeb.LogsViewTest do
           assert height == @height
           assert mbi == @mbi
           assert mb_hash == encode(:micro_block_hash, @mb_hash)
+
+          v3_version =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{custom_args: true}, true)
+
+          refute Map.has_key?(v3_version, :contract_txi)
+          refute Map.has_key?(v3_version, :call_txi)
         end)
       end
     end
@@ -355,7 +379,11 @@ defmodule AeMdwWeb.LogsViewTest do
                  ext_caller_contract_tx_hash: nil,
                  ext_caller_contract_id: nil,
                  parent_contract_id: nil
-               } = LogsView.render_log(state, log1, %{})
+               } = LogsView.render_log(state, log1, %{}, false)
+
+        v3_log1 = LogsView.render_log(state, log1, %{}, true)
+        refute Map.has_key?(v3_log1, :contract_txi)
+        refute Map.has_key?(v3_log1, :call_txi)
 
         assert %{
                  contract_id: ^contract_id,
@@ -371,7 +399,11 @@ defmodule AeMdwWeb.LogsViewTest do
                  ext_caller_contract_tx_hash: ^remote_tx_hash,
                  ext_caller_contract_id: ^remote_id,
                  parent_contract_id: nil
-               } = LogsView.render_log(state, log2, %{})
+               } = LogsView.render_log(state, log2, %{}, false)
+
+        v3_log2 = LogsView.render_log(state, log2, %{}, true)
+        refute Map.has_key?(v3_log2, :contract_txi)
+        refute Map.has_key?(v3_log2, :call_txi)
 
         assert {:ok, {_prev, [log3], _next}} =
                  Contracts.fetch_logs(
@@ -396,7 +428,11 @@ defmodule AeMdwWeb.LogsViewTest do
                  ext_caller_contract_tx_hash: nil,
                  ext_caller_contract_id: nil,
                  parent_contract_id: ^contract_id
-               } = LogsView.render_log(state, log3, %{})
+               } = LogsView.render_log(state, log3, %{}, false)
+
+        v3_log3 = LogsView.render_log(state, log3, %{}, true)
+        refute Map.has_key?(v3_log3, :contract_txi)
+        refute Map.has_key?(v3_log3, :call_txi)
       end
     end
   end

@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.AexnViewTest do
   use ExUnit.Case
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
@@ -18,13 +19,12 @@ defmodule AeMdwWeb.AexnViewTest do
       contract_id = encode_contract(contract_pk)
       aex9_meta_info = {name, symbol, decimals} = {"Token1", "TK1", 18}
       txi = 1_123_456_789
+      decoded_tx_hash = <<txi::256>>
+      tx_hash = Enc.encode(:tx_hash, decoded_tx_hash)
+
       extensions = ["ext1", "ext2"]
 
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> Stats.decrement_aex9_holders(contract_pk)
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
 
       m_aex9 =
         Model.aexn_contract(
@@ -34,6 +34,13 @@ defmodule AeMdwWeb.AexnViewTest do
           extensions: extensions
         )
 
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> Stats.decrement_aex9_holders(contract_pk)
+        |> State.put(Model.Tx, m_tx)
+
       assert %{
                name: ^name,
                symbol: ^symbol,
@@ -42,7 +49,16 @@ defmodule AeMdwWeb.AexnViewTest do
                contract_id: ^contract_id,
                extensions: ^extensions,
                holders: 0
-             } = AexnView.render_contract(state, m_aex9)
+             } = AexnView.render_contract(state, m_aex9, false)
+
+      assert %{
+               name: ^name,
+               symbol: ^symbol,
+               decimals: ^decimals,
+               contract_tx_hash: ^tx_hash,
+               contract_id: ^contract_id,
+               extensions: ^extensions
+             } = AexnView.render_contract(state, m_aex9, true)
     end
   end
 end

@@ -192,7 +192,7 @@ defmodule AeMdwWeb.Aex9Controller do
   defp by_contract_reply(%Conn{assigns: %{state: state}} = conn, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, m_aex9} <- AexnTokens.fetch_contract(state, {:aex9, contract_pk}) do
-      format_json(conn, %{data: render_contract(state, m_aex9)})
+      format_json(conn, %{data: render_contract(state, m_aex9, false)})
     end
   end
 
@@ -201,7 +201,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
     with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil) do
-      format_json(conn, render_contracts(state, aex9_tokens))
+      format_json(conn, render_contracts(state, aex9_tokens, false))
     end
   end
 
@@ -210,7 +210,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
     with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :symbol, nil) do
-      format_json(conn, render_contracts(state, aex9_tokens))
+      format_json(conn, render_contracts(state, aex9_tokens, false))
     end
   end
 

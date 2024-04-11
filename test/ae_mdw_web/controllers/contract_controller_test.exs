@@ -82,7 +82,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   end
 
   describe "fetch_logs/5" do
-    test "renders all saved contract logs with limit=100", %{
+    test "v2 renders all saved contract logs with limit=100", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk,
@@ -153,7 +153,78 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns paginated contract logs by desc call txi", %{conn: conn, store: store} do
+    test "v3 renders all saved contract logs with limit=100", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk,
+      aex9_contract_pk: aex9_contract_pk,
+      aex141_contract_pk: aex141_contract_pk
+    } do
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs?limit=100&aexn-args=true")
+                 |> json_response(200)
+
+        assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
+                 length(@aex141_events) + 1 == length(logs)
+
+        state = State.new(store)
+
+        contracts_txi = [
+          Origin.tx_index!(state, {:contract, contract_pk}),
+          Origin.tx_index!(state, {:contract, aex9_contract_pk}),
+          Origin.tx_index!(state, {:contract, aex141_contract_pk})
+        ]
+
+        Enum.each(logs, fn %{
+                             "contract_tx_hash" => contract_tx_hash,
+                             "contract_id" => contract_id,
+                             "ext_caller_contract_tx_hash" => contract_tx_hash,
+                             "ext_caller_contract_id" => contract_id,
+                             "parent_contract_id" => nil,
+                             "call_tx_hash" => call_tx_hash,
+                             "args" => args,
+                             "data" => data,
+                             "event_hash" => event_hash,
+                             "event_name" => event_name,
+                             "height" => height,
+                             "micro_index" => micro_index,
+                             "block_hash" => block_hash,
+                             "log_idx" => log_idx
+                           } ->
+          create_txi = tx_hash_to_txi(contract_tx_hash)
+          call_txi = tx_hash_to_txi(call_tx_hash)
+
+          assert create_txi == call_txi - 100 or create_txi in contracts_txi
+          assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
+          assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
+          assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
+
+          if event_name == "Burn" do
+            [account, value] = args
+            assert String.starts_with?(account, "ak") and value == call_txi
+          else
+            assert args == [to_string(call_txi)]
+          end
+
+          assert data == "0x" <> Integer.to_string(call_txi, 16)
+
+          assert event_hash in @event_hashes or event_name in @aex9_events or
+                   event_name in @aex141_events
+
+          assert height == @log_kbi
+          assert micro_index == @log_mbi
+          assert block_hash == encode(:micro_block_hash, @log_block_hash)
+          assert log_idx == rem(call_txi, 5)
+        end)
+      end
+    end
+
+    test "v2 returns paginated contract logs by desc call txi", %{conn: conn, store: store} do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
@@ -202,7 +273,61 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns paginated contract logs by asc call txi", %{conn: conn, store: store} do
+    test "v3 returns paginated contract logs by desc call txi", %{conn: conn, store: store} do
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs")
+                 |> json_response(200)
+
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"], :desc)
+        last_log_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(last_log_tx_hash) == @last_log_txi
+
+        Enum.each(logs, fn %{
+                             "call_tx_hash" => call_tx_hash,
+                             "height" => height,
+                             "micro_index" => micro_index,
+                             "block_hash" => block_hash
+                           } ->
+          call_txi = tx_hash_to_txi(call_tx_hash)
+          assert call_txi in @log_txis
+          assert height == @log_kbi
+          assert micro_index == @log_mbi
+          assert block_hash == encode(:micro_block_hash, @log_block_hash)
+        end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_tx_hash"], :desc)
+        call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @last_log_txi - 10
+
+        assert Enum.all?(next_logs, fn %{
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
+    end
+
+    test "v2 returns paginated contract logs by asc call txi", %{conn: conn, store: store} do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
@@ -250,7 +375,61 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns contract logs filtered by contract", %{
+    test "v3 returns paginated contract logs by asc call txi", %{conn: conn, store: store} do
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs", direction: :forward)
+                 |> json_response(200)
+
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi
+
+        assert Enum.all?(logs, fn %{
+                                    "call_tx_hash" => call_tx_hash,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + 10
+
+        assert Enum.all?(next_logs, fn %{
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
+    end
+
+    test "v2 returns contract logs filtered by contract", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -306,75 +485,145 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns logs with event names for AEX-9 events", %{
+    test "v3 returns contract logs filtered by contract", %{
       conn: conn,
       store: store,
-      aex9_contract_pk: contract_pk
+      contract_pk: contract_pk
     } do
       contract_id = encode_contract(contract_pk)
 
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        assert %{"data" => logs} =
+        assert %{"data" => logs, "next" => next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+                 |> get("/v3/contracts/logs", contract: contract_id, direction: :forward)
                  |> json_response(200)
 
-        assert length(logs) == length(@aex9_events)
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + @mixed_logs_amount
 
         assert Enum.all?(logs, fn %{
                                     "contract_id" => ct_id,
+                                    "call_tx_hash" => call_tx_hash,
                                     "height" => height,
                                     "micro_index" => micro_index,
-                                    "block_hash" => block_hash,
-                                    "event_hash" => event_hash,
-                                    "event_name" => event_name
+                                    "block_hash" => block_hash
                                   } ->
-                 ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
-                   block_hash == encode(:micro_block_hash, @log_block_hash) and
-                   event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
-                   event_name in @aex9_events
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
                end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + @mixed_logs_amount + 10
+
+        assert Enum.all?(next_logs, fn %{
+                                         "contract_id" => ct_id,
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
       end
     end
 
-    test "returns logs with event names for AEX-141 events", %{
-      conn: conn,
-      store: store,
-      aex141_contract_pk: contract_pk
-    } do
-      contract_id = encode_contract(contract_pk)
+    Enum.each(["v2", "v3"], fn api_version ->
+      test "#{api_version} returns logs with event names for AEX-9 events", %{
+        conn: conn,
+        store: store,
+        aex9_contract_pk: contract_pk
+      } do
+        contract_id = encode_contract(contract_pk)
 
-      with_mocks [
-        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
-      ] do
-        assert %{"data" => logs} =
-                 conn
-                 |> with_store(store)
-                 |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
-                 |> json_response(200)
+        with_mocks [
+          {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+        ] do
+          assert %{"data" => logs} =
+                   conn
+                   |> with_store(store)
+                   |> get("/#{unquote(api_version)}/contracts/logs",
+                     contract: contract_id,
+                     direction: :forward
+                   )
+                   |> json_response(200)
 
-        assert length(logs) == length(@aex141_events)
+          assert length(logs) == length(@aex9_events)
 
-        assert Enum.all?(logs, fn %{
-                                    "contract_id" => ct_id,
-                                    "height" => height,
-                                    "micro_index" => micro_index,
-                                    "block_hash" => block_hash,
-                                    "event_hash" => event_hash,
-                                    "event_name" => event_name
-                                  } ->
-                 ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
-                   block_hash == encode(:micro_block_hash, @log_block_hash) and
-                   event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
-                   event_name in @aex141_events
-               end)
+          assert Enum.all?(logs, fn %{
+                                      "contract_id" => ct_id,
+                                      "height" => height,
+                                      "micro_index" => micro_index,
+                                      "block_hash" => block_hash,
+                                      "event_hash" => event_hash,
+                                      "event_name" => event_name
+                                    } ->
+                   ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                     block_hash == encode(:micro_block_hash, @log_block_hash) and
+                     event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                     event_name in @aex9_events
+                 end)
+        end
       end
-    end
 
-    test "returns contract logs filtered by data", %{
+      test "#{api_version} returns logs with event names for AEX-141 events", %{
+        conn: conn,
+        store: store,
+        aex141_contract_pk: contract_pk
+      } do
+        contract_id = encode_contract(contract_pk)
+
+        with_mocks [
+          {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+        ] do
+          assert %{"data" => logs} =
+                   conn
+                   |> with_store(store)
+                   |> get("/#{unquote(api_version)}/contracts/logs",
+                     contract: contract_id,
+                     direction: :forward
+                   )
+                   |> json_response(200)
+
+          assert length(logs) == length(@aex141_events)
+
+          assert Enum.all?(logs, fn %{
+                                      "contract_id" => ct_id,
+                                      "height" => height,
+                                      "micro_index" => micro_index,
+                                      "block_hash" => block_hash,
+                                      "event_hash" => event_hash,
+                                      "event_name" => event_name
+                                    } ->
+                   ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                     block_hash == encode(:micro_block_hash, @log_block_hash) and
+                     event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                     event_name in @aex141_events
+                 end)
+        end
+      end
+    end)
+
+    test "v2 returns contract logs filtered by data", %{
       conn: conn,
       store: store
     } do
@@ -431,7 +680,70 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns contract logs filtered by data of a contract", %{
+    test "v3 returns contract logs filtered by data", %{
+      conn: conn,
+      store: store
+    } do
+      data_prefix = "0x#{Integer.to_string(@first_log_txi, 16)}" |> String.slice(0, 5)
+
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs", data: data_prefix, direction: :forward)
+                 |> json_response(200)
+
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi
+
+        assert Enum.all?(logs, fn %{
+                                    "data" => data,
+                                    "call_tx_hash" => call_tx_hash,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + 10
+
+        assert Enum.all?(next_logs, fn %{
+                                         "data" => data,
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
+    end
+
+    test "v2 returns contract logs filtered by data of a contract", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -494,7 +806,76 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns contract logs filtered by event", %{
+    test "v3 returns contract logs filtered by data of a contract", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+      # data = "0xF4270"
+      first_txi = @first_log_txi + 47
+      data_prefix = ("0x" <> Integer.to_string(first_txi, 16)) |> String.slice(0, 6)
+      limit = 6
+
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs", data: data_prefix, direction: :forward, limit: 6)
+                 |> json_response(200)
+
+        assert length(logs) == limit
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == first_txi
+
+        assert Enum.all?(logs, fn %{
+                                    "data" => data,
+                                    "contract_id" => ct_id,
+                                    "call_tx_hash" => call_tx_hash,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 String.starts_with?(data, data_prefix) and ct_id == contract_id and
+                   call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert length(next_logs) == limit
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_tx_hash"])
+        next_call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(next_call_tx_hash) == first_txi + limit
+
+        assert Enum.all?(next_logs, fn %{
+                                         "data" => data,
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
+    end
+
+    test "v2 returns contract logs filtered by event", %{
       conn: conn,
       store: store
     } do
@@ -527,7 +908,43 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "returns contract logs filtered by contract and event", %{
+    test "v3 returns contract logs filtered by event", %{
+      conn: conn,
+      store: store
+    } do
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/contracts/logs", event: @evt2_ctor_name, direction: :forward)
+                 |> json_response(200)
+
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + @evt1_amount
+
+        assert Enum.all?(logs, fn %{
+                                    "event_hash" => event_hash,
+                                    "event_name" => nil,
+                                    "call_tx_hash" => call_tx_hash,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 event_hash == Base.hex_encode32(@evt2_hash) and
+                   call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+      end
+    end
+
+    test "v2 returns contract logs filtered by contract and event", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -593,10 +1010,83 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  conn |> with_store(store) |> get(prev_logs) |> json_response(200)
       end
     end
+
+    test "v3 returns contract logs filtered by contract and event", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get(
+                   "/v3/contracts/logs",
+                   contract: contract_id,
+                   event: @evt1_ctor_name,
+                   direction: :forward
+                 )
+                 |> json_response(200)
+
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + @mixed_logs_amount
+
+        assert Enum.all?(logs, fn %{
+                                    "contract_id" => ct_id,
+                                    "call_tx_hash" => call_tx_hash,
+                                    "height" => height,
+                                    "event_hash" => event_hash,
+                                    "event_name" => event_name,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_tx_hash"])
+        call_tx_hash = hd(next_logs)["call_tx_hash"]
+        assert tx_hash_to_txi(call_tx_hash) == @first_log_txi + @mixed_logs_amount + 10
+
+        assert Enum.all?(next_logs, fn %{
+                                         "contract_id" => ct_id,
+                                         "call_tx_hash" => call_tx_hash,
+                                         "height" => height,
+                                         "event_hash" => event_hash,
+                                         "event_name" => event_name,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi = tx_hash_to_txi(call_tx_hash)
+
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
+    end
   end
 
   describe "fetch_calls/5" do
-    test "renders all saved internal calls with limit=100", %{
+    test "v2 renders all saved internal calls with limit=100", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -655,7 +1145,67 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end)
     end
 
-    test "returns paginated contract calls by desc call txi", %{conn: conn, store: store} do
+    test "v3 renders all saved internal calls with limit=100", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      assert %{"data" => calls, "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", limit: 100)
+               |> json_response(200)
+
+      assert length(calls) == @mixed_calls_amount + @contract_calls_amount + 2
+
+      state = State.new(store)
+      contract_create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+      Enum.each(calls, fn %{
+                            "contract_tx_hash" => contract_tx_hash,
+                            "contract_id" => contract_id,
+                            "call_tx_hash" => call_tx_hash,
+                            "function" => function,
+                            "internal_tx" => internal_tx,
+                            "height" => height,
+                            "micro_index" => micro_index,
+                            "block_hash" => block_hash,
+                            "local_idx" => local_idx
+                          } ->
+        contract_txi = tx_hash_to_txi(contract_tx_hash)
+        call_txi = tx_hash_to_txi(call_tx_hash)
+
+        assert contract_txi == call_txi - 100 or contract_txi == contract_create_txi
+        assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
+        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, contract_txi}))
+        assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
+
+        if call_tx_hash == hd(calls)["call_tx_hash"] do
+          assert function == "Call.amount"
+          assert internal_tx["payload"] == "ba_Q2FsbC5hbW91bnTau3mT"
+        else
+          assert function == @call_function
+          assert internal_tx["payload"] == "ba_Q2hhaW4uc3BlbmRFa4Tl"
+        end
+
+        assert Map.delete(internal_tx, "payload") == %{
+                 "amount" => 1_000_000_000_000_000_000,
+                 "fee" => 0,
+                 "nonce" => 0,
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
+                 "type" => "SpendTx",
+                 "version" => 1
+               }
+
+        assert height == @call_kbi
+        assert micro_index == @call_mbi
+        assert block_hash == encode(:micro_block_hash, @call_block_hash)
+        assert local_idx in 0..1
+      end)
+    end
+
+    test "v2 returns paginated contract calls by desc call txi", %{conn: conn, store: store} do
       assert %{"data" => calls, "next" => next} =
                conn
                |> with_store(store)
@@ -699,7 +1249,57 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
 
-    test "returns paginated contract calls by asc call txi", %{conn: conn, store: store} do
+    test "v3 returns paginated contract calls by desc call txi", %{conn: conn, store: store} do
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls")
+               |> json_response(200)
+
+      assert @default_limit = length(calls)
+      assert ^calls = Enum.sort_by(calls, & &1["call_tx_hash"], :desc)
+      call_tx_hash = hd(calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == @last_call_txi
+
+      assert Enum.all?(calls, fn %{
+                                   "call_tx_hash" => call_tx_hash,
+                                   "height" => height,
+                                   "micro_index" => micro_index,
+                                   "block_hash" => block_hash
+                                 } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               call_txi in @call_txis and height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_calls)
+      assert ^next_calls = Enum.sort_by(next_calls, & &1["call_tx_hash"], :desc)
+      call_tx_hash = hd(next_calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == @last_call_txi - 5
+
+      assert Enum.all?(next_calls, fn %{
+                                        "call_tx_hash" => call_tx_hash,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               call_txi in @call_txis and height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
+
+    test "v2 returns paginated contract calls by asc call txi", %{conn: conn, store: store} do
       assert %{"data" => calls, "next" => next} =
                conn
                |> with_store(store)
@@ -743,7 +1343,57 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
 
-    test "returns internal calls filtered by contract", %{
+    test "v3 returns paginated contract calls by asc call txi", %{conn: conn, store: store} do
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", direction: :forward)
+               |> json_response(200)
+
+      assert @default_limit = length(calls)
+      assert ^calls = Enum.sort_by(calls, & &1["call_tx_hash"])
+      call_tx_hash = hd(calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == @first_call_txi
+
+      assert Enum.all?(calls, fn %{
+                                   "call_tx_hash" => call_tx_hash,
+                                   "height" => height,
+                                   "micro_index" => micro_index,
+                                   "block_hash" => block_hash
+                                 } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               call_txi in @call_txis and height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_calls)
+      assert ^next_calls = Enum.sort_by(next_calls, & &1["call_tx_hash"])
+      call_tx_hash = hd(next_calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == @first_call_txi + 5
+
+      assert Enum.all?(next_calls, fn %{
+                                        "call_tx_hash" => call_tx_hash,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               call_txi in @call_txis and height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
+
+    test "v2 returns internal calls filtered by contract", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -822,7 +1472,91 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
 
-    test "returns internal calls filtered by contract and SpendTx recipient_id", %{
+    test "v3 returns internal calls filtered by contract", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", contract: contract_id, direction: :forward)
+               |> json_response(200)
+
+      assert @default_limit == length(calls)
+      assert ^calls = Enum.sort_by(calls, & &1["call_tx_hash"])
+      call_tx_hash = hd(calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == @first_call_txi + div(@mixed_calls_amount, 2)
+
+      state = State.new(store)
+      contract_create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+      Enum.each(calls, fn %{
+                            "contract_tx_hash" => contract_tx_hash,
+                            "contract_id" => ct_id,
+                            "call_tx_hash" => call_tx_hash,
+                            "function" => function,
+                            "internal_tx" => internal_tx,
+                            "height" => height,
+                            "micro_index" => micro_index,
+                            "block_hash" => block_hash,
+                            "local_idx" => local_idx
+                          } ->
+        contract_txi = tx_hash_to_txi(contract_tx_hash)
+        call_txi = tx_hash_to_txi(call_tx_hash)
+
+        assert contract_txi == contract_create_txi
+        assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
+        assert ct_id == contract_id
+        assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
+        assert function == @call_function
+
+        assert internal_tx == %{
+                 "amount" => 1_000_000_000_000_000_000,
+                 "fee" => 0,
+                 "nonce" => 0,
+                 "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
+                 "type" => "SpendTx",
+                 "version" => 1
+               }
+
+        assert height == @call_kbi
+        assert micro_index == @call_mbi
+        assert block_hash == encode(:micro_block_hash, @call_block_hash)
+        assert local_idx in 0..1
+      end)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_calls)
+      assert ^next_calls = Enum.sort_by(next_calls, & &1["call_tx_hash"])
+      call_tx_hash = hd(next_calls)["call_tx_hash"]
+      assert tx_hash_to_txi(call_tx_hash) == tx_hash_to_txi(hd(calls)["call_tx_hash"]) + 5
+
+      assert Enum.all?(next_calls, fn %{
+                                        "contract_id" => ct_id,
+                                        "call_tx_hash" => call_tx_hash,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               ct_id == contract_id and call_txi in @call_txis and height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
+
+    test "v2 returns internal calls filtered by contract and SpendTx recipient_id", %{
       conn: conn,
       store: store,
       contract_pk: contract_pk
@@ -878,7 +1612,64 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end)
     end
 
-    test "returns internal calls filtered by SpendTx recipient_id", %{
+    test "v3 returns internal calls filtered by contract and SpendTx recipient_id", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+      expected_call_txi = @first_call_txi + div(@mixed_calls_amount, 2)
+      recipient_id = encode_account(<<expected_call_txi::256>>)
+
+      assert %{"data" => calls, "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", contract: contract_id, recipient_id: recipient_id)
+               |> json_response(200)
+
+      state = State.new(store)
+      contract_create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+      Enum.each(calls, fn %{
+                            "contract_tx_hash" => contract_tx_hash,
+                            "contract_id" => ct_id,
+                            "call_tx_hash" => call_tx_hash,
+                            "function" => function,
+                            "internal_tx" => internal_tx,
+                            "height" => height,
+                            "micro_index" => micro_index,
+                            "block_hash" => block_hash,
+                            "local_idx" => local_idx
+                          } ->
+        contract_txi = tx_hash_to_txi(contract_tx_hash)
+        call_txi = tx_hash_to_txi(call_tx_hash)
+
+        assert contract_txi == contract_create_txi
+        assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
+        assert ct_id == contract_id
+        assert call_txi == expected_call_txi
+        assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
+        assert function == @call_function
+
+        assert internal_tx == %{
+                 "amount" => 1_000_000_000_000_000_000,
+                 "fee" => 0,
+                 "nonce" => 0,
+                 "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
+                 "type" => "SpendTx",
+                 "version" => 1
+               }
+
+        assert height == @call_kbi
+        assert micro_index == @call_mbi
+        assert block_hash == encode(:micro_block_hash, @call_block_hash)
+        assert local_idx in 0..1
+      end)
+    end
+
+    test "v2 returns internal calls filtered by SpendTx recipient_id", %{
       conn: conn,
       store: store
     } do
@@ -933,7 +1724,63 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end)
     end
 
-    test "returns internal calls filtered by function prefix", %{
+    test "v3 returns internal calls filtered by SpendTx recipient_id", %{
+      conn: conn,
+      store: store
+    } do
+      expected_call_txi = @first_call_txi + 1
+      recipient_id = encode_account(<<expected_call_txi::256>>)
+
+      assert %{"data" => calls, "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", recipient_id: recipient_id)
+               |> json_response(200)
+
+      state = State.new(store)
+      contract_pk = Origin.pubkey(state, {:contract, expected_call_txi - 100})
+      contract_create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+      Enum.each(calls, fn %{
+                            "contract_tx_hash" => contract_tx_hash,
+                            "contract_id" => ct_id,
+                            "call_tx_hash" => call_tx_hash,
+                            "function" => function,
+                            "internal_tx" => internal_tx,
+                            "height" => height,
+                            "micro_index" => micro_index,
+                            "block_hash" => block_hash,
+                            "local_idx" => local_idx
+                          } ->
+        contract_txi = tx_hash_to_txi(contract_tx_hash)
+        call_txi = tx_hash_to_txi(call_tx_hash)
+
+        assert contract_txi == contract_create_txi
+        assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
+        assert ct_id == encode_contract(contract_pk)
+        assert call_txi == expected_call_txi
+        assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
+        assert function == @call_function
+
+        assert internal_tx == %{
+                 "amount" => 1_000_000_000_000_000_000,
+                 "fee" => 0,
+                 "nonce" => 0,
+                 "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
+                 "type" => "SpendTx",
+                 "version" => 1
+               }
+
+        assert height == @call_kbi
+        assert micro_index == @call_mbi
+        assert block_hash == encode(:micro_block_hash, @call_block_hash)
+        assert local_idx in 0..1
+      end)
+    end
+
+    test "v2 returns internal calls filtered by function prefix", %{
       conn: conn,
       store: store
     } do
@@ -980,7 +1827,58 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
 
-    test "returns internal calls filtered by function and contract", %{
+    test "v3 returns internal calls filtered by function prefix", %{
+      conn: conn,
+      store: store
+    } do
+      fname_prefix = "Chain.sp"
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", function: fname_prefix)
+               |> json_response(200)
+
+      assert Enum.all?(calls, fn %{
+                                   "function" => function,
+                                   "call_tx_hash" => call_tx_hash,
+                                   "height" => height,
+                                   "micro_index" => micro_index,
+                                   "block_hash" => block_hash
+                                 } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               String.starts_with?(function, fname_prefix) and call_txi in @call_txis and
+                 height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert 10 = length(calls)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert Enum.all?(next_calls, fn %{
+                                        "function" => function,
+                                        "call_tx_hash" => call_tx_hash,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+
+               String.starts_with?(function, fname_prefix) and call_txi in @call_txis and
+                 height == @call_kbi and
+                 micro_index == @call_mbi and
+                 block_hash == encode(:micro_block_hash, @call_block_hash)
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
+
+    test "v2 returns internal calls filtered by function and contract", %{
       conn: conn,
       contract_pk: contract_pk,
       store: store
@@ -1024,6 +1922,66 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                                         "micro_index" => micro_index,
                                         "block_hash" => block_hash
                                       } ->
+               assert String.starts_with?(function, fname_prefix)
+               assert call_txi in @call_txis and contract_txi == create_txi
+               assert height == @call_kbi
+
+               assert micro_index == @call_mbi and
+                        assert(block_hash == encode(:micro_block_hash, @call_block_hash))
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
+
+    test "v3 returns internal calls filtered by function and contract", %{
+      conn: conn,
+      contract_pk: contract_pk,
+      store: store
+    } do
+      fname_prefix = "Chain.sp"
+      contract_id = encode_contract(contract_pk)
+      create_txi = Origin.tx_index!(State.new(store), {:contract, contract_pk})
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/contracts/calls", function: fname_prefix, contract: contract_id)
+               |> json_response(200)
+
+      assert Enum.each(calls, fn %{
+                                   "function" => function,
+                                   "call_tx_hash" => call_tx_hash,
+                                   "contract_tx_hash" => contract_tx_hash,
+                                   "height" => height,
+                                   "micro_index" => micro_index,
+                                   "block_hash" => block_hash
+                                 } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+               contract_txi = tx_hash_to_txi(contract_tx_hash)
+               assert String.starts_with?(function, fname_prefix)
+               assert call_txi in @call_txis and contract_txi == create_txi
+               assert height == @call_kbi
+
+               assert micro_index == @call_mbi and
+                        assert(block_hash == encode(:micro_block_hash, @call_block_hash))
+             end)
+
+      assert 10 = length(calls)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert Enum.each(next_calls, fn %{
+                                        "function" => function,
+                                        "call_tx_hash" => call_tx_hash,
+                                        "contract_tx_hash" => contract_tx_hash,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               call_txi = tx_hash_to_txi(call_tx_hash)
+               contract_txi = tx_hash_to_txi(contract_tx_hash)
                assert String.starts_with?(function, fname_prefix)
                assert call_txi in @call_txis and contract_txi == create_txi
                assert height == @call_kbi
@@ -1794,5 +2752,14 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     extra_mutation = IntCallsMutation.new(extra_ct_pk, not_spend_txi, not_spend_int_calls)
 
     change_store(store, mixed_ct_mutations ++ contract_mutations ++ [extra_mutation])
+  end
+
+  defp tx_hash_to_txi(tx_hash) do
+    <<txi::256>> =
+      tx_hash
+      |> Enc.decode()
+      |> elem(1)
+
+    txi
   end
 end
