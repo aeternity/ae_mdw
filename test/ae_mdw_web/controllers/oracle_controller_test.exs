@@ -4,6 +4,7 @@ defmodule AeMdwWeb.OracleControllerTest do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Store
   alias AeMdw.Db.Util, as: DbUtil
@@ -37,7 +38,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   }
 
   setup_all do
-    store = MemStoreCreator.create()
+    store = MemStoreCreator.create(NullStore.new())
     oracle_pk1 = :crypto.strong_rand_bytes(32)
     oracle_pk2 = :crypto.strong_rand_bytes(32)
     oracle_pk3 = :crypto.strong_rand_bytes(32)
