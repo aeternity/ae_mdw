@@ -18,6 +18,12 @@ defmodule AeMdw.Db.StateTest do
   @kb_hash :crypto.strong_rand_bytes(32)
   @next_hash :crypto.strong_rand_bytes(32)
 
+  setup do
+    global_state_ref = :persistent_term.get(:global_state, nil)
+    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
+
   describe "commit_db" do
     test "persists db-only aex9 tasks and saves results into database" do
       ct_pk = :crypto.strong_rand_bytes(32)

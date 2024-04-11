@@ -9,6 +9,11 @@ defmodule AeMdw.Db.BlocksStatisticsMutationTest do
 
   require Model
 
+  setup do
+    global_state_ref = :persistent_term.get(:global_state, nil)
+    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
   describe "execute/2" do
     test "it creates a statistic per day/week/month" do
       index1 = {:names_activated, :day, 8}

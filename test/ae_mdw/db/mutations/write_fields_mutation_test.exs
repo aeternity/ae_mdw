@@ -20,6 +20,11 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
   @fake_account2 "ak_2nF3Lh7djksbWLzXoNo6x59hnkyBezK8yjR53GPFgha3VdM1K8"
   @fake_mb "mh_2XGZtE8jxUs2NymKHsytkaLLrk6KY2t2w1FjJxtAUqYZn8Wsdd"
 
+  setup do
+    global_state_ref = :persistent_term.get(:global_state, nil)
+    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
   describe "execute/1" do
     test "when tx_type = :spend_tx and id is a name, it fetches the block from the store" do
       block_index = {12, 3}

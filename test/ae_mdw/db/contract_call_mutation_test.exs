@@ -21,6 +21,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   @burn_caller_pk <<234, 90, 164, 101, 3, 211, 169, 40, 246, 51, 6, 203, 132, 12, 34, 114, 203,
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
 
+  setup do
+    global_state_ref = :persistent_term.get(:global_state, nil)
+    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
   describe "calling a contract" do
     test "it create call contract mutation", %{store: store} do
       contract_pk =

@@ -10,6 +10,11 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
   import AeMdw.Node.AeTxFixtures
 
+  setup do
+    global_state_ref = :persistent_term.get(:global_state, nil)
+    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
   describe "update" do
     test "deactives a name by ttl 0", %{store: store} do
       owner_pk = <<123_456::256>>
