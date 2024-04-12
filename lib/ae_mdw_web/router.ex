@@ -56,6 +56,8 @@ defmodule AeMdwWeb.Router do
       get "/micro-blocks/:hash", BlockController, :micro_block
       get "/micro-blocks/:hash/transactions", TxController, :micro_block_txs
 
+      get "/transactions/count", TxController, :count
+      get "/transactions/count/:id", TxController, :count_id
       get "/transactions", TxController, :txs
       get "/transactions/:hash", TxController, :tx
 
@@ -92,9 +94,6 @@ defmodule AeMdwWeb.Router do
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
       get "/statistics/names", StatsController, :names_statistics
-
-      get "/transactions/count", TxController, :count
-      get "/transactions/count/:id", TxController, :count_id
 
       get "/transfers", TransferController, :transfers
       get "/contracts/logs", ContractController, :logs

@@ -1739,7 +1739,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^tx_index =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count")
+               |> get("/v3/transactions/count")
                |> json_response(200)
     end
 
@@ -1749,7 +1749,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert 101 =
                conn
-               |> get("/v2/txs/count", scope: "txi:#{first_txi}-#{last_txi}")
+               |> get("/v3/transactions/count", scope: "txi:#{first_txi}-#{last_txi}")
                |> json_response(200)
     end
 
@@ -1765,7 +1765,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 100 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", scope: "gen:#{first_gen}-#{last_gen}")
+               |> get("/v3/transactions/count", scope: "gen:#{first_gen}-#{last_gen}")
                |> json_response(200)
     end
 
@@ -1782,19 +1782,19 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^count =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", type: "oracle_register")
+               |> get("/v3/transactions/count", type: "oracle_register")
                |> json_response(200)
 
       assert ^count =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", tx_type: "oracle_register")
+               |> get("/v3/transactions/count", tx_type: "oracle_register")
                |> json_response(200)
 
       assert 0 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", tx_type: "oracle_response")
+               |> get("/v3/transactions/count", tx_type: "oracle_response")
                |> json_response(200)
     end
 
@@ -1811,7 +1811,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^count =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", tx_type: "oracle_register")
+               |> get("/v3/transactions/count", tx_type: "oracle_register")
                |> json_response(200)
     end
 
@@ -1834,7 +1834,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 5 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", id: account_id, type: "spend")
+               |> get("/v3/transactions/count", id: account_id, type: "spend")
                |> json_response(200)
     end
   end
@@ -1859,7 +1859,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 15 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", id: enc_address)
+               |> get("/v3/transactions/count", id: enc_address)
                |> json_response(200)
     end
 
@@ -1884,7 +1884,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 14 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count", id: enc_address)
+               |> get("/v3/transactions/count", id: enc_address)
                |> json_response(200)
     end
 
@@ -1907,7 +1907,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 5 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count/#{enc_address}", type: "spend")
+               |> get("/v3/transactions/count/#{enc_address}", type: "spend")
                |> json_response(200)
     end
 
@@ -1940,7 +1940,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 12 =
                conn
                |> with_store(store)
-               |> get("/v2/txs/count/#{enc_address}", type_group: "contract")
+               |> get("/v3/transactions/count/#{enc_address}", type_group: "contract")
                |> json_response(200)
     end
 
@@ -1974,7 +1974,7 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{"data" => 3} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash)
+                 |> get("/v3/transactions/count", mb_hash: encoded_mb_hash)
                  |> json_response(200)
       end
     end
@@ -2012,7 +2012,7 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{"data" => 2} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash, type: "contract_call")
+                 |> get("/v3/transactions/count", mb_hash: encoded_mb_hash, type: "contract_call")
                  |> json_response(200)
       end
     end
@@ -2040,7 +2040,7 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{"error" => ^error_msg} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash)
+                 |> get("/v3/transactions/count", mb_hash: encoded_mb_hash)
                  |> json_response(404)
       end
     end
@@ -2050,7 +2050,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/txs/count", type: "oracle_foo")
+               |> get("/v3/transactions/count", type: "oracle_foo")
                |> json_response(400)
     end
 
@@ -2059,7 +2059,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/txs/count", id: "foo")
+               |> get("/v3/transactions/count", id: "foo")
                |> json_response(400)
     end
 
@@ -2068,7 +2068,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/txs/count/foo", type: "oracle_query")
+               |> get("/v3/transactions/count/foo", type: "oracle_query")
                |> json_response(400)
     end
 
@@ -2077,7 +2077,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/txs/count/foo", type_group: "oracle")
+               |> get("/v3/transactions/count/foo", type_group: "oracle")
                |> json_response(400)
     end
 
@@ -2087,7 +2087,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/txs/count", id: id, scope: "gen:1-2")
+               |> get("/v3/transactions/count", id: id, scope: "gen:1-2")
                |> json_response(400)
     end
   end
