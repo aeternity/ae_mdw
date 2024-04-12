@@ -3204,8 +3204,5 @@
   "produces": [
     "application/json"
   ],
-  "schemes": [
-    "https"
-  ],
   "swagger": "2.0"
 }
