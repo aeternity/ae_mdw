@@ -10,21 +10,21 @@ schemas:
         type: array
         items:
           type: string
-        tx:
-          type: object
-          properties:
-            fee: integer
-            nonce: integer
-            oracle_id: string
-            oracle_ttl:
-              type: object
-              properties:
-                type: string
-                value: integer
-            ttl: integer
-            type: string
-            version: integer
-            tx_hash: string
+      tx:
+        type: object
+        properties:
+          fee: integer
+          nonce: integer
+          oracle_id: string
+          oracle_ttl:
+            type: object
+            properties:
+              type: string
+              value: integer
+          ttl: integer
+          type: string
+          version: integer
+          tx_hash: string
   Oracle:
     example:
       active: false
