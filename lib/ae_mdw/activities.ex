@@ -667,7 +667,6 @@ defmodule AeMdw.Activities do
     tx =
       state
       |> Txs.fetch!(txi)
-      |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
       |> Map.delete("tx_index")
 
     {"#{Node.tx_name(tx_type)}Event", tx}

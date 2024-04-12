@@ -100,7 +100,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi, "tx_hash" => ^tx_hash1}
+                 "payload" => %{"micro_index" => ^mbi}
                } = tx1
 
         assert %{
@@ -108,14 +108,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi, "tx_hash" => ^tx_hash2}
+                 "payload" => %{"micro_index" => ^mbi}
                } = tx2
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi, "tx_hash" => ^tx_hash3}
+                 "payload" => %{"micro_index" => ^mbi}
                } = tx3
       end
     end
@@ -273,7 +273,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi, "tx_hash" => ^tx_hash1}
+                 "payload" => %{"micro_index" => ^mbi}
                } = tx1
 
         assert %{
@@ -281,7 +281,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi, "tx_hash" => ^tx_hash2}
+                 "payload" => %{"micro_index" => ^mbi}
                } = tx2
       end
     end
