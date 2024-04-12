@@ -5,7 +5,6 @@ defmodule AeMdw.Aex9 do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
-  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -40,13 +39,14 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
-  @spec fetch_balances(State.t(), pubkey(), boolean()) :: {:ok, amounts()} | {:error, Error.t()}
-  def fetch_balances(state, contract_pk, top?) do
+  @spec fetch_balances(State.t(), State.t(), pubkey(), boolean()) ::
+          {:ok, amounts()} | {:error, Error.t()}
+  def fetch_balances(state, async_state, contract_pk, top?) do
     if top? do
       {amounts, _height} = Db.aex9_balances!(contract_pk, true)
       amounts
     else
-      state = get_store_state(state, contract_pk)
+      state = get_store_state(state, async_state, contract_pk)
 
       state
       |> Collection.stream(Model.Aex9EventBalance, {contract_pk, <<>>})
@@ -178,10 +178,10 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_amount(State.t(), pubkey(), pubkey()) ::
+  @spec fetch_amount(State.t(), State.t(), pubkey(), pubkey()) ::
           {:ok, {number(), txi()}} | {:error, Error.t()}
-  def fetch_amount(state, contract_pk, account_pk) do
-    state = get_store_state(state, contract_pk, account_pk)
+  def fetch_amount(state, async_state, contract_pk, account_pk) do
+    state = get_store_state(state, async_state, contract_pk, account_pk)
 
     case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
       {:ok, Model.aex9_event_balance(amount: amount, txi: call_txi)} ->
@@ -195,10 +195,10 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_amount_and_keyblock(State.t(), pubkey(), pubkey()) ::
+  @spec fetch_amount_and_keyblock(State.t(), State.t(), pubkey(), pubkey()) ::
           {:ok, {number(), Db.height_hash()}} | {:error, Error.t()}
-  def fetch_amount_and_keyblock(state, contract_pk, account_pk) do
-    with {:ok, {amount, call_txi}} <- fetch_amount(state, contract_pk, account_pk) do
+  def fetch_amount_and_keyblock(state, async_state, contract_pk, account_pk) do
+    with {:ok, {amount, call_txi}} <- fetch_amount(state, async_state, contract_pk, account_pk) do
       kbi = DbUtil.txi_to_gen(state, call_txi)
       Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, {kbi, -1})
 
@@ -286,9 +286,7 @@ defmodule AeMdw.Aex9 do
   #
   # Private functions
   #
-  defp get_store_state(state, contract_pk, account_pk \\ <<>>) do
-    async_state = State.new(AsyncStore.instance())
-
+  defp get_store_state(state, async_state, contract_pk, account_pk \\ <<>>) do
     case State.next(async_state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
       {:ok, {^contract_pk, _account_pk}} -> async_state
       _other -> state

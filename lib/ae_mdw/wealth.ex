@@ -13,9 +13,9 @@ defmodule AeMdw.Wealth do
 
   require Model
 
-  @spec fetch_balances() :: [tuple()]
-  def fetch_balances() do
-    AsyncStore.instance()
+  @spec fetch_balances(AsyncStore.t()) :: [tuple()]
+  def fetch_balances(%AsyncStore{} = async_store) do
+    async_store
     |> State.new()
     |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
     |> Enum.map(fn {balance, pubkey} -> %{balance: balance, account: encode_account(pubkey)} end)

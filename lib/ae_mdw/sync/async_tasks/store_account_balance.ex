@@ -4,6 +4,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreAccountBalance do
   """
   @behaviour AeMdw.Sync.AsyncTasks.Work
 
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.WealthRank
   alias AeMdw.Log
@@ -21,7 +22,8 @@ defmodule AeMdw.Sync.AsyncTasks.StoreAccountBalance do
         with {:value, trees} <- :aec_db.find_block_state_partial(block_hash, true, [:accounts]),
              accounts_tree <- :aec_trees.accounts(trees),
              balances <- get_balances(accounts_tree, account_set) do
-          WealthRank.update_balances(balances)
+          async_store = AsyncStore.instance()
+          WealthRank.update_balances(async_store, balances)
         end
       end)
 

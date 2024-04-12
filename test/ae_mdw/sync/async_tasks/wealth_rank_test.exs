@@ -12,9 +12,11 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRankTest do
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
 
-      assert :ok = WealthRank.update_balances([{account_pk, amount}])
+      table = :insert_balance_for_new_account
+      AsyncStore.init(table)
+      async_store = AsyncStore.instance(table)
 
-      async_store = AsyncStore.instance()
+      assert :ok = WealthRank.update_balances(async_store, [{account_pk, amount}])
 
       assert {:ok, Model.balance_account(index: {^amount, ^account_pk})} =
                AsyncStore.get(async_store, Model.BalanceAccount, {amount, account_pk})
@@ -27,9 +29,16 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRankTest do
       amount12 = Enum.random(100_000_000..999_999_999)
       amount21 = Enum.random(100_000_000..999_999_999)
 
-      assert :ok = WealthRank.update_balances([{account_pk1, amount11}, {account_pk2, amount21}])
+      table = :insert_balance_without_duplicates
 
-      async_store = AsyncStore.instance()
+      AsyncStore.init(table)
+      async_store = AsyncStore.instance(table)
+
+      assert :ok =
+               WealthRank.update_balances(async_store, [
+                 {account_pk1, amount11},
+                 {account_pk2, amount21}
+               ])
 
       assert {:ok, Model.balance_account(index: {^amount11, ^account_pk1})} =
                AsyncStore.get(async_store, Model.BalanceAccount, {amount11, account_pk1})
@@ -40,7 +49,7 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRankTest do
       assert :not_found =
                AsyncStore.get(async_store, Model.BalanceAccount, {amount12, account_pk1})
 
-      assert :ok = WealthRank.update_balances([{account_pk1, amount12}])
+      assert :ok = WealthRank.update_balances(async_store, [{account_pk1, amount12}])
 
       assert :not_found =
                AsyncStore.get(async_store, Model.BalanceAccount, {amount11, account_pk1})

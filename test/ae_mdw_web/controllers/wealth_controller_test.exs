@@ -18,9 +18,12 @@ defmodule AeMdwWeb.WealthControllerTest do
       balance2 = 100
       a2 = <<2::256>>
       account2 = encode_account(a2)
+      table = :wealth_controller_test
+
+      AsyncStore.init(table)
 
       store =
-        AsyncStore.instance()
+        AsyncStore.instance(table)
         |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance2, a2}))
         |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance1, a1}))
 
@@ -29,7 +32,7 @@ defmodule AeMdwWeb.WealthControllerTest do
                %{"balance" => balance2, "account" => account2}
              ] ==
                conn
-               |> with_store(store)
+               |> with_async_store(store)
                |> get("/v2/wealth")
                |> json_response(200)
     end
