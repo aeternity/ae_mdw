@@ -15,6 +15,8 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks.WealthRank
 
+  @typep internal_state() :: %{async_store: AsyncStore.t(), last_db_kbi: AeMdw.Blocks.height()}
+
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
     GenServer.start_link(__MODULE__, %{async_store: AsyncStore.instance()}, name: __MODULE__)
@@ -25,7 +27,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
     GenServer.start_link(__MODULE__, %{async_store: async_store}, name: __MODULE__)
   end
 
-  @spec init(AsyncStore.t()) :: {:ok, %{last_db_kbi: AeMdw.Blocks.height()}}
+  @spec init(%{async_store: AsyncStore.t()}) :: {:ok, internal_state()}
   @impl GenServer
   def init(%{async_store: %AsyncStore{} = async_store}) do
     {:ok, %{last_db_kbi: 0, async_store: async_store}}

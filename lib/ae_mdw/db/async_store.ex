@@ -19,7 +19,7 @@ defmodule AeMdw.Db.AsyncStore do
   @typep key() :: Database.key()
   @typep record() :: Database.record()
   @typep table() :: Database.table()
-  @opaque t() :: %__MODULE__{tid: :single_async_store}
+  @type t() :: %__MODULE__{tid: :single_async_store}
 
   @spec init(atom()) :: :ok
   def init(t_id \\ @table_id) do
