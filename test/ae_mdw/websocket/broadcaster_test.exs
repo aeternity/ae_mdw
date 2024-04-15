@@ -632,7 +632,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     |> Enum.map(fn client ->
       Task.async(fn ->
         Process.send_after(client, {key, self()}, 100)
-        assert_receive message, 300
+        assert_receive %{"payload" => _payload} = message, 300
         assert MapSet.subset?(MapSet.new(payload), MapSet.new(message["payload"]))
         assert MapSet.subset?(MapSet.new(msg_without_payload), MapSet.new(message))
       end)
