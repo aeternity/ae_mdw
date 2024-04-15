@@ -179,8 +179,8 @@ defmodule AeMdwWeb.Router do
           AexnTokenController,
           :aex9_token_balance_history
 
-      get "/oracles", OracleController, :oracles
-      get "/oracles/:id", OracleController, :oracle
+      get "/oracles", OracleController, :oracles_v2
+      get "/oracles/:id", OracleController, :oracle_v2
       get "/oracles/:id/queries", OracleController, :oracle_queries
       get "/oracles/:id/responses", OracleController, :oracle_responses
 
@@ -244,13 +244,13 @@ defmodule AeMdwWeb.Router do
     get "/contracts/calls/:direction", ContractController, :calls
     get "/contracts/calls/:scope_type/:range", ContractController, :calls
 
-    get "/oracle/:id", OracleController, :oracle
+    get "/oracle/:id", OracleController, :oracle_v2
     get "/oracles/inactive", OracleController, :inactive_oracles
     get "/oracles/active", OracleController, :active_oracles
-    get "/oracles", OracleController, :oracles
+    get "/oracles", OracleController, :oracles_v2
     get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
     get "/oracles/active/gen/:range", OracleController, :active_oracles
-    get "/oracles/gen/:range", OracleController, :oracles
+    get "/oracles/gen/:range", OracleController, :oracles_v2
 
     get "/transfers/:scope_type/:range", TransferController, :transfers
     get "/transfers/:direction", TransferController, :transfers

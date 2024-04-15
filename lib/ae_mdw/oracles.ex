@@ -382,6 +382,12 @@ defmodule AeMdw.Oracles do
 
   defp expand_bi_txi_idx(state, {_bi, {txi, _idx}}, opts) do
     cond do
+      Keyword.get(opts, :v3?, false) ->
+        state
+        |> Txs.fetch!(txi)
+        |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+        |> Map.drop(["tx_index"])
+
       Keyword.get(opts, :expand?, false) ->
         Txs.fetch!(state, txi)
 
