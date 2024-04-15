@@ -23,7 +23,8 @@ defmodule AeMdwWeb.WealthControllerTest do
       AsyncStore.init(table)
 
       store =
-        AsyncStore.instance(table)
+        table
+        |> AsyncStore.instance()
         |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance2, a2}))
         |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance1, a1}))
 
