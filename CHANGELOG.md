@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.73.0](https://www.github.com/aeternity/ae_mdw/compare/v1.72.1...v1.73.0) (2024-04-15)
+
+
+### Features
+
+* add raw data pointers support for ceres ([#1708](https://www.github.com/aeternity/ae_mdw/issues/1708)) ([f220f48](https://www.github.com/aeternity/ae_mdw/commit/f220f4805c580172287fe0d32e8be10949a681db))
+* include 0 count statistics throughout the network lifespan ([#1724](https://www.github.com/aeternity/ae_mdw/issues/1724)) ([dc7e145](https://www.github.com/aeternity/ae_mdw/commit/dc7e1450f144b45d46ef3c36070cf1d9606cdf43))
+* resolve aens name to contract address when calling contract ([#1710](https://www.github.com/aeternity/ae_mdw/issues/1710)) ([65575cb](https://www.github.com/aeternity/ae_mdw/commit/65575cb6b6a224cbd1035cca8a386a2c0cef27bd))
+
+
+### Bug Fixes
+
+* move transactions count to v3 properly ([#1712](https://www.github.com/aeternity/ae_mdw/issues/1712)) ([df59b68](https://www.github.com/aeternity/ae_mdw/commit/df59b68ae697eb310cce769247d344a1da18b34f))
+* update names and oracles to v3 ([#1725](https://www.github.com/aeternity/ae_mdw/issues/1725)) ([8f9af21](https://www.github.com/aeternity/ae_mdw/commit/8f9af21e0f13da86a98fb75e01c51e562e0e775a))
+* use tx hash instead of index in v3 api version ([#1727](https://www.github.com/aeternity/ae_mdw/issues/1727)) ([e4e0f00](https://www.github.com/aeternity/ae_mdw/commit/e4e0f000e47bdc1b9b07c91634a58e0aa130e2db))
+
+
+### Miscellaneous
+
+* remove schemes from swagger v1 file ([#1715](https://www.github.com/aeternity/ae_mdw/issues/1715)) ([587844b](https://www.github.com/aeternity/ae_mdw/commit/587844b66b426980c810f909ae76371823a12381))
+
 ### [1.72.1](https://www.github.com/aeternity/ae_mdw/compare/v1.72.0...v1.72.1) (2024-04-02)
 
 
