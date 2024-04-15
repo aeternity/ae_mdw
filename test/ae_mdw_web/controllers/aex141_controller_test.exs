@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.Aex141ControllerTest do
   use ExUnit.Case, async: false
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.AexnContracts
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -167,6 +168,10 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       contract_id = encode_contract(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
       limit_txi = txi + 1
+      decoded_tx_hash = <<txi::256>>
+      tx_hash = Enc.encode(:tx_hash, decoded_tx_hash)
+      decoded_limit_tx_hash = <<limit_txi::256>>
+      limit_tx_hash = Enc.encode(:tx_hash, decoded_limit_tx_hash)
 
       meta_info =
         {name, symbol, base_url, _type} =
@@ -194,12 +199,17 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+      m_limit_tx = Model.tx(index: limit_txi, id: decoded_limit_tx_hash)
+
       store =
         state.store
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
         |> Store.put(Model.Stat, m_owners_count)
+        |> Store.put(Model.Tx, m_tx)
+        |> Store.put(Model.Tx, m_limit_tx)
 
       assert %{
                "name" => ^name,
@@ -217,7 +227,27 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  "limit_txi" => ^limit_txi,
                  "limit_log_idx" => 1
                }
-             } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
+             } =
+               conn |> with_store(store) |> get("/v2/aex141/#{contract_id}") |> json_response(200)
+
+      assert %{
+               "name" => ^name,
+               "symbol" => ^symbol,
+               "base_url" => ^base_url,
+               "metadata_type" => "url",
+               "nfts_amount" => 6,
+               "nft_owners" => 4,
+               "contract_tx_hash" => ^tx_hash,
+               "contract_id" => ^contract_id,
+               "extensions" => ^extensions,
+               "limits" => %{
+                 "token_limit" => 200,
+                 "template_limit" => 100,
+                 "limit_tx_hash" => ^limit_tx_hash,
+                 "limit_log_idx" => 1
+               }
+             } =
+               conn |> with_store(store) |> get("/v3/aex141/#{contract_id}") |> json_response(200)
     end
 
     test "returns a contract without token and template limit", %{
@@ -227,6 +257,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       contract_id = encode_contract(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
       limit_txi = txi + 1
+      decoded_tx_hash = <<txi::256>>
+      tx_hash = Enc.encode(:tx_hash, decoded_tx_hash)
 
       meta_info =
         {name, symbol, base_url, _type} =
@@ -254,12 +286,15 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+
       store =
         state.store
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
         |> Store.put(Model.Stat, m_owners_count)
+        |> Store.put(Model.Tx, m_tx)
 
       assert %{
                "name" => ^name,
@@ -273,6 +308,20 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "extensions" => ^extensions,
                "limits" => nil
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
+
+      assert %{
+               "name" => ^name,
+               "symbol" => ^symbol,
+               "base_url" => ^base_url,
+               "metadata_type" => "url",
+               "nfts_amount" => 6,
+               "nft_owners" => 4,
+               "contract_tx_hash" => ^tx_hash,
+               "contract_id" => ^contract_id,
+               "extensions" => ^extensions,
+               "limits" => nil
+             } =
+               conn |> with_store(store) |> get("/v3/aex141/#{contract_id}") |> json_response(200)
     end
   end
 
@@ -285,6 +334,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
             {"some-nft-#{i}", "SAEX#{i}", "http://some-url.com", :url}
 
           txi = 1_000 + i
+          decoded_tx_hash = <<txi::256>>
 
           m_aex141 =
             Model.aexn_contract(
@@ -299,18 +349,21 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           m_aexn_tx =
             Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
 
+          m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+
           store
           |> Store.put(Model.AexnContract, m_aex141)
           |> Store.put(Model.AexnContractName, m_aexn_name)
           |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
           |> Store.put(Model.AexnContractCreation, m_aexn_tx)
+          |> Store.put(Model.Tx, m_tx)
         end)
 
       {:ok, conn: with_store(conn, store)}
     end
 
     test "sorts contracts by name", %{conn: conn} do
-      assert %{"data" => contracts} = conn |> get("/aex141", by: "name") |> json_response(200)
+      assert %{"data" => contracts} = conn |> get("/v2/aex141", by: "name") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -329,8 +382,30 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              end)
     end
 
+    test "sorts v3 contracts by name", %{conn: conn} do
+      assert %{"data" => contracts} = conn |> get("/v3/aex141", by: "name") |> json_response(200)
+
+      assert length(contracts) > 0
+
+      names = contracts |> Enum.map(fn %{"name" => name} -> name end)
+      assert ^names = Enum.sort(names, :desc)
+
+      assert Enum.all?(contracts, fn %{
+                                       "name" => name,
+                                       "symbol" => symbol,
+                                       "contract_tx_hash" => tx_hash,
+                                       "contract_id" => contract_id
+                                     } ->
+               assert is_binary(name) and is_binary(symbol) and is_binary(tx_hash)
+
+               assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
+               assert match?({:ok, <<_pk::256>>}, Validate.id(tx_hash))
+             end)
+    end
+
     test "sorts contracts by symbol", %{conn: conn} do
-      assert %{"data" => contracts} = conn |> get("/aex141", by: "symbol") |> json_response(200)
+      assert %{"data" => contracts} =
+               conn |> get("/v2/aex141", by: "symbol") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -349,37 +424,63 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              end)
     end
 
-    test "filters contracts by name prefix", %{conn: conn} do
-      prefix = "some-nft-1410"
-
+    test "sorts v3 contracts by symbol", %{conn: conn} do
       assert %{"data" => contracts} =
-               conn
-               |> get("/aex141", by: "name", prefix: prefix)
-               |> json_response(200)
-
-      assert length(contracts) > 0
-      assert Enum.all?(contracts, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
-    end
-
-    test "filters contracts by symbol prefix", %{conn: conn} do
-      prefix = "SAEX1410"
-
-      assert %{"data" => contracts} =
-               conn
-               |> get("/aex141", by: "symbol", prefix: prefix)
-               |> json_response(200)
+               conn |> get("/v3/aex141", by: "symbol") |> json_response(200)
 
       assert length(contracts) > 0
 
-      assert Enum.all?(contracts, fn %{"symbol" => symbol} ->
-               String.starts_with?(symbol, prefix)
+      symbols = contracts |> Enum.map(fn %{"symbol" => symbol} -> symbol end)
+      assert ^symbols = Enum.sort(symbols, :desc)
+
+      assert Enum.all?(contracts, fn %{
+                                       "name" => name,
+                                       "symbol" => symbol,
+                                       "contract_tx_hash" => tx_hash,
+                                       "contract_id" => contract_id
+                                     } ->
+               assert is_binary(name) and is_binary(symbol) and is_binary(tx_hash)
+
+               assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
+               assert match?({:ok, <<_pk::256>>}, Validate.id(tx_hash))
              end)
     end
 
-    test "when invalid filters, it returns an error", %{conn: conn} do
-      assert %{"error" => _error_msg} =
-               conn |> get("/aex141", by: "unknown") |> json_response(400)
-    end
+    Enum.each(["v2", "v3"], fn api_version ->
+      test "filters #{api_version} contracts by name prefix", %{conn: conn} do
+        prefix = "some-nft-1410"
+
+        assert %{"data" => contracts} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "name", prefix: prefix)
+                 |> json_response(200)
+
+        assert length(contracts) > 0
+        assert Enum.all?(contracts, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
+      end
+
+      test "filters #{api_version} contracts by symbol prefix", %{conn: conn} do
+        prefix = "SAEX1410"
+
+        assert %{"data" => contracts} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "symbol", prefix: prefix)
+                 |> json_response(200)
+
+        assert length(contracts) > 0
+
+        assert Enum.all?(contracts, fn %{"symbol" => symbol} ->
+                 String.starts_with?(symbol, prefix)
+               end)
+      end
+
+      test "when invalid filters in #{api_version}, it returns an error", %{conn: conn} do
+        assert %{"error" => _error_msg} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "unknown")
+                 |> json_response(400)
+      end
+    end)
   end
 
   describe "nft_metadata" do
@@ -397,7 +498,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
          ]}
       ] do
         assert %{"data" => %{"url" => ^url}} =
-                 conn |> get("/aex141/#{contract_id}/metadata/#{123}") |> json_response(200)
+                 conn |> get("/v3/aex141/#{contract_id}/metadata/#{123}") |> json_response(200)
       end
     end
 

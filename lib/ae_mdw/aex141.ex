@@ -3,6 +3,7 @@ defmodule AeMdw.Aex141 do
   Returns NFT info interacting with AEX-141 contracts or from transfer history.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Db.Model
@@ -131,8 +132,8 @@ defmodule AeMdw.Aex141 do
     end
   end
 
-  @spec fetch_limits(State.t(), pubkey()) :: limits() | nil
-  def fetch_limits(state, contract_pk) do
+  @spec fetch_limits(State.t(), pubkey(), boolean()) :: limits() | nil
+  def fetch_limits(state, contract_pk, v3?) do
     Model.nft_contract_limits(
       token_limit: token_limit,
       template_limit: template_limit,
@@ -145,12 +146,20 @@ defmodule AeMdw.Aex141 do
       end
 
     if token_limit != nil or template_limit != nil do
-      %{
+      response = %{
         token_limit: token_limit,
         template_limit: template_limit,
         limit_txi: txi,
         limit_log_idx: log_idx
       }
+
+      if v3? do
+        response
+        |> Map.put(:limit_tx_hash, Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+        |> Map.delete(:limit_txi)
+      else
+        response
+      end
     end
   end
 

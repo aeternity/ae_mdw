@@ -4,6 +4,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.Db.State
   alias AeMdw.Validate
   alias AeMdw.Stats
 
@@ -87,7 +88,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
             )
           end)
         end)
-        |> Store.put(Model.Tx, Model.tx(index: txi))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)
@@ -112,6 +113,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         {name, symbol, _url, _type} = meta_info
         txi = 3_000 - i
+        decoded_tx_hash = <<txi::256>>
 
         m_aexn =
           Model.aexn_contract(
@@ -126,11 +128,14 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         m_aexn_creation =
           Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
 
+        m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+
         store
         |> Store.put(Model.AexnContract, m_aexn)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
         |> Store.put(Model.AexnContractCreation, m_aexn_creation)
+        |> Store.put(Model.Tx, m_tx)
       end)
 
     store =
@@ -463,195 +468,206 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex141_tokens" do
-    test "gets aex141 tokens backwards by name", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn |> get("/v2/aex141") |> json_response(200)
+    Enum.each(["v2", "v3"], fn api_version ->
+      key = if api_version == "v2", do: "contract_txi", else: "contract_tx_hash"
 
-      aex141_names = aex141_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
+      test "gets #{api_version} aex141 tokens backwards by name", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn |> get("/#{unquote(api_version)}/aex141") |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_names = Enum.sort(aex141_names)
+        aex141_names =
+          aex141_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_names = Enum.sort(aex141_names)
 
-      next_aex141_names =
-        next_aex141_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_names = Enum.sort(next_aex141_names)
-      assert Enum.at(aex141_names, @default_limit - 1) >= Enum.at(next_aex141_names, 0)
+        next_aex141_names =
+          next_aex141_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_names = Enum.sort(next_aex141_names)
+        assert Enum.at(aex141_names, @default_limit - 1) >= Enum.at(next_aex141_names, 0)
 
-    test "gets aex141 tokens forwards by name", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn
-               |> get("/v2/aex141", direction: "forward")
-               |> json_response(200)
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      aex141_names = Enum.map(aex141_tokens, fn %{"name" => name} -> name end)
+      test "gets #{api_version} aex141 tokens forwards by name", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", direction: "forward")
+                 |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_names = Enum.sort(aex141_names)
+        aex141_names = Enum.map(aex141_tokens, fn %{"name" => name} -> name end)
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_names = Enum.sort(aex141_names)
 
-      next_aex141_names = Enum.map(next_aex141_tokens, fn %{"name" => name} -> name end)
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_names = Enum.sort(next_aex141_names)
-      assert Enum.at(aex141_names, @default_limit - 1) <= Enum.at(next_aex141_names, 0)
+        next_aex141_names = Enum.map(next_aex141_tokens, fn %{"name" => name} -> name end)
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_names = Enum.sort(next_aex141_names)
+        assert Enum.at(aex141_names, @default_limit - 1) <= Enum.at(next_aex141_names, 0)
 
-    test "gets aex141 tokens filtered by name prefix", %{conn: conn} do
-      prefix = "some-nft"
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      assert %{"data" => aex141_tokens} =
-               conn
-               |> get("/v2/aex141", prefix: prefix)
-               |> json_response(200)
+      test "gets #{api_version} aex141 tokens filtered by name prefix", %{conn: conn} do
+        prefix = "some-nft"
 
-      assert length(aex141_tokens) > 0
+        assert %{"data" => aex141_tokens} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", prefix: prefix)
+                 |> json_response(200)
 
-      assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
-               String.starts_with?(name, prefix)
-             end)
-    end
+        assert length(aex141_tokens) > 0
 
-    test "gets aex141 tokens with big name filtered by name prefix", %{conn: conn} do
-      name_prefix = "big"
+        assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
+                 String.starts_with?(name, prefix)
+               end)
+      end
 
-      assert %{"data" => aex141_tokens} =
-               conn
-               |> get("/v2/aex141", prefix: name_prefix)
-               |> json_response(200)
+      test "gets #{api_version} aex141 tokens with big name filtered by name prefix", %{
+        conn: conn
+      } do
+        name_prefix = "big"
 
-      assert length(aex141_tokens) > 0
+        assert %{"data" => aex141_tokens} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", prefix: name_prefix)
+                 |> json_response(200)
 
-      assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
-               String.starts_with?(name, name_prefix) and String.length(name) > 200
-             end)
-    end
+        assert length(aex141_tokens) > 0
 
-    test "gets aex141 tokens backwards by symbol", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn |> get("/v2/aex141", by: "symbol") |> json_response(200)
+        assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
+                 String.starts_with?(name, name_prefix) and String.length(name) > 200
+               end)
+      end
 
-      aex141_symbols =
-        aex141_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
+      test "gets #{api_version} aex141 tokens backwards by symbol", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "symbol")
+                 |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_symbols = Enum.sort(aex141_symbols)
+        aex141_symbols =
+          aex141_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_symbols = Enum.sort(aex141_symbols)
 
-      next_aex141_symbols =
-        next_aex141_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_symbols = Enum.sort(next_aex141_symbols)
-      assert Enum.at(aex141_symbols, @default_limit - 1) >= Enum.at(next_aex141_symbols, 0)
+        next_aex141_symbols =
+          next_aex141_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_symbols = Enum.sort(next_aex141_symbols)
+        assert Enum.at(aex141_symbols, @default_limit - 1) >= Enum.at(next_aex141_symbols, 0)
 
-    test "gets aex141 tokens forwards by symbol", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn
-               |> get("/v2/aex141", direction: "forward", by: "symbol")
-               |> json_response(200)
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      aex141_symbols = Enum.map(aex141_tokens, fn %{"symbol" => symbol} -> symbol end)
+      test "gets #{api_version} aex141 tokens forwards by symbol", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", direction: "forward", by: "symbol")
+                 |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_symbols = Enum.sort(aex141_symbols)
+        aex141_symbols = Enum.map(aex141_tokens, fn %{"symbol" => symbol} -> symbol end)
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_symbols = Enum.sort(aex141_symbols)
 
-      next_aex141_symbols = Enum.map(next_aex141_tokens, fn %{"symbol" => symbol} -> symbol end)
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_symbols = Enum.sort(next_aex141_symbols)
-      assert Enum.at(aex141_symbols, @default_limit - 1) <= Enum.at(next_aex141_symbols, 0)
+        next_aex141_symbols = Enum.map(next_aex141_tokens, fn %{"symbol" => symbol} -> symbol end)
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_symbols = Enum.sort(next_aex141_symbols)
+        assert Enum.at(aex141_symbols, @default_limit - 1) <= Enum.at(next_aex141_symbols, 0)
 
-    test "gets aex141 tokens backwards by creation", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn |> get("/v2/aex141", by: "creation") |> json_response(200)
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      aex141_txs = aex141_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+      test "gets #{api_version} aex141 tokens backwards by creation", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "creation")
+                 |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_txs = Enum.sort(aex141_txs)
+        aex141_txs = aex141_tokens |> Enum.map(& &1[unquote(key)]) |> Enum.reverse()
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_txs = Enum.sort(aex141_txs)
 
-      next_aex141_txs = next_aex141_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
-      assert Enum.at(aex141_txs, @default_limit - 1) >= Enum.at(next_aex141_txs, 0)
+        next_aex141_txs = next_aex141_tokens |> Enum.map(& &1[unquote(key)]) |> Enum.reverse()
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
+        assert Enum.at(aex141_txs, @default_limit - 1) >= Enum.at(next_aex141_txs, 0)
 
-    test "gets aex141 tokens forwards by creation", %{conn: conn} do
-      assert %{"data" => aex141_tokens, "next" => next} =
-               conn
-               |> get("/v2/aex141", direction: "forward", by: "creation")
-               |> json_response(200)
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      aex141_txs = Enum.map(aex141_tokens, & &1["contract_txi"])
+      test "gets #{api_version} aex141 tokens forwards by creation", %{conn: conn} do
+        assert %{"data" => aex141_tokens, "next" => next} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", direction: "forward", by: "creation")
+                 |> json_response(200)
 
-      assert @default_limit = length(aex141_tokens)
-      assert ^aex141_txs = Enum.sort(aex141_txs)
+        aex141_txs = Enum.map(aex141_tokens, & &1[unquote(key)])
 
-      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
-               conn |> get(next) |> json_response(200)
+        assert @default_limit = length(aex141_tokens)
+        assert ^aex141_txs = Enum.sort(aex141_txs)
 
-      next_aex141_txs = Enum.map(next_aex141_tokens, & &1["contract_txi"])
+        assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_aex141_tokens)
-      assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
-      assert Enum.at(aex141_txs, @default_limit - 1) <= Enum.at(next_aex141_txs, 0)
+        next_aex141_txs = Enum.map(next_aex141_tokens, & &1[unquote(key)])
 
-      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
-    end
+        assert @default_limit = length(next_aex141_tokens)
+        assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
+        assert Enum.at(aex141_txs, @default_limit - 1) <= Enum.at(next_aex141_txs, 0)
 
-    test "gets aex141 tokens filtered by symbol prefix", %{conn: conn} do
-      prefix = "NFT"
+        assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+      end
 
-      assert %{"data" => aex141_tokens} =
-               conn
-               |> get("/v2/aex141", by: "symbol", prefix: prefix)
-               |> json_response(200)
+      test "gets #{api_version} aex141 tokens filtered by symbol prefix", %{conn: conn} do
+        prefix = "NFT"
 
-      assert length(aex141_tokens) > 0
+        assert %{"data" => aex141_tokens} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", by: "symbol", prefix: prefix)
+                 |> json_response(200)
 
-      assert Enum.all?(aex141_tokens, fn %{"symbol" => symbol} ->
-               String.starts_with?(symbol, prefix)
-             end)
-    end
+        assert length(aex141_tokens) > 0
 
-    test "returns an error when invalid cursor", %{conn: conn} do
-      cursor = "blah"
-      error_msg = "invalid cursor: #{cursor}"
+        assert Enum.all?(aex141_tokens, fn %{"symbol" => symbol} ->
+                 String.starts_with?(symbol, prefix)
+               end)
+      end
 
-      assert %{"error" => ^error_msg} =
-               conn
-               |> get("/v2/aex141", cursor: cursor)
-               |> json_response(400)
-    end
+      test "returns an error when invalid cursor in #{api_version}", %{conn: conn} do
+        cursor = "blah"
+        error_msg = "invalid cursor: #{cursor}"
+
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> get("/#{unquote(api_version)}/aex141", cursor: cursor)
+                 |> json_response(400)
+      end
+    end)
   end
 
   describe "aex9_token" do
@@ -685,8 +701,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, nil}
 
       %{store: store} =
-        Contract.aexn_creation_write(
-          conn.assigns.state,
+        conn.assigns.state
+        |> Contract.aexn_creation_write(
           :aex9,
           aexn_meta_info,
           contract_pk,
@@ -696,6 +712,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
             "ext2"
           ]
         )
+        |> State.put(Model.Tx, Model.tx(index: 12_345_678, id: <<12_345_678::256>>))
 
       contract_id = encode_contract(contract_pk)
 
@@ -712,14 +729,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aexn_meta_info = {:format_error, :format_error, nil}
 
       %{store: store} =
-        Contract.aexn_creation_write(
-          conn.assigns.state,
+        conn.assigns.state
+        |> Contract.aexn_creation_write(
           :aex9,
           aexn_meta_info,
           contract_pk,
           {12_345_678, -1},
           ["ext1"]
         )
+        |> State.put(Model.Tx, Model.tx(index: 12_345_678, id: <<12_345_678::256>>))
 
       contract_id = encode_contract(contract_pk)
 

@@ -3,6 +3,7 @@ defmodule AeMdwWeb.AexnView do
   Renders data for balance(s) endpoints.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
@@ -115,7 +116,7 @@ defmodule AeMdwWeb.AexnView do
     do_render_event_balance(state, contract_pk, account_pk, txi, log_idx, amount)
   end
 
-  @spec render_contract(State.t(), Model.aexn_contract()) :: aexn_contract()
+  @spec render_contract(State.t(), Model.aexn_contract(), boolean()) :: aexn_contract()
   def render_contract(
         state,
         Model.aexn_contract(
@@ -123,7 +124,8 @@ defmodule AeMdwWeb.AexnView do
           txi_idx: {txi, _idx},
           meta_info: {name, symbol, decimals},
           extensions: extensions
-        )
+        ),
+        v3?
       ) do
     initial_supply =
       case State.get(state, Model.Aex9InitialSupply, contract_pk) do
@@ -139,17 +141,24 @@ defmodule AeMdwWeb.AexnView do
 
     num_holders = Aex9.fetch_holders_count(state, contract_pk)
 
-    %{
+    response = %{
       name: name,
       symbol: symbol,
       decimals: decimals,
-      contract_txi: txi,
       contract_id: encode_contract(contract_pk),
       extensions: extensions,
       initial_supply: initial_supply,
       event_supply: event_supply,
       holders: num_holders
     }
+
+    case v3? do
+      true ->
+        Map.put(response, :contract_tx_hash, Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+
+      false ->
+        Map.put(response, :contract_txi, txi)
+    end
   end
 
   def render_contract(
@@ -159,7 +168,8 @@ defmodule AeMdwWeb.AexnView do
           txi_idx: {txi, _idx},
           meta_info: {name, symbol, base_url, metadata_type},
           extensions: extensions
-        )
+        ),
+        v3?
       ) do
     %{
       name: name,
@@ -169,14 +179,15 @@ defmodule AeMdwWeb.AexnView do
       contract_id: encode_contract(contract_pk),
       metadata_type: metadata_type,
       extensions: extensions,
-      limits: Aex141.fetch_limits(state, contract_pk)
+      limits: Aex141.fetch_limits(state, contract_pk, v3?)
     }
+    |> maybe_put_contract_tx_hash(state, txi, v3?)
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
   end
 
-  @spec render_contracts(State.t(), [Model.aexn_contract()]) :: [aexn_contract()]
-  def render_contracts(state, aexn_contracts) do
-    Enum.map(aexn_contracts, &render_contract(state, &1))
+  @spec render_contracts(State.t(), [Model.aexn_contract()], boolean()) :: [aexn_contract()]
+  def render_contracts(state, aexn_contracts, v3?) do
+    Enum.map(aexn_contracts, &render_contract(state, &1, v3?))
   end
 
   @spec sender_transfer_to_map(State.t(), account_transfer_key()) :: map()
@@ -317,6 +328,16 @@ defmodule AeMdwWeb.AexnView do
       json
     else
       Map.put(json, :call_txi, call_txi)
+    end
+  end
+
+  defp maybe_put_contract_tx_hash(data, state, txi, v3?) do
+    if v3? do
+      data
+      |> Map.put(:contract_tx_hash, Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+      |> Map.delete(:contract_txi)
+    else
+      data
     end
   end
 end

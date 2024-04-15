@@ -32,6 +32,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       kb_hash = TS.key_block_hash(0)
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+      decoded_tx_hash1 = TS.tx_hash(0)
+      decoded_tx_hash2 = TS.tx_hash(1)
+      decoded_tx_hash3 = TS.tx_hash(2)
+
+      [tx_hash1, tx_hash2, tx_hash3] =
+        [decoded_tx_hash1, decoded_tx_hash2, decoded_tx_hash3]
+        |> Enum.map(&Enc.encode(:tx_hash, &1))
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -48,11 +55,20 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       store =
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
-        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 1, block_index: {height, mbi}, id: decoded_tx_hash1)
+        )
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
-        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 2, block_index: {height, mbi}, id: decoded_tx_hash2)
+        )
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 3}))
-        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 3, block_index: {height, mbi}, id: decoded_tx_hash3)
+        )
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
@@ -194,6 +210,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       kb_hash = TS.key_block_hash(0)
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+      decoded_tx_hash1 = TS.tx_hash(0)
+      decoded_tx_hash2 = TS.tx_hash(1)
+
+      [tx_hash1, tx_hash2] =
+        [decoded_tx_hash1, decoded_tx_hash2]
+        |> Enum.map(&Enc.encode(:tx_hash, &1))
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -210,10 +232,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       store =
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
-        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 1, block_index: {height, mbi}, id: decoded_tx_hash1)
+        )
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 2, account_pk, 1}))
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
-        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 2, block_index: {height, mbi}, id: decoded_tx_hash2)
+        )
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
