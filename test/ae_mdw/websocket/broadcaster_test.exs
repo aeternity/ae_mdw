@@ -64,7 +64,9 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             Model.block(index: {2, -1}, hash: Validate.id!(kb_hash2), tx_index: 0)
           )
 
+        global_state = :persistent_term.get(:global_state, nil)
         :persistent_term.put(:global_state, state)
+        on_exit(fn -> :persistent_term.put(:global_state, global_state) end)
 
         clients =
           for _i <- 1..3 do
@@ -142,7 +144,9 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             Model.block(index: {2, 0}, hash: Validate.id!(mb_hash2), tx_index: 2)
           )
 
+        global_state = :persistent_term.get(:global_state, nil)
         :persistent_term.put(:global_state, state)
+        on_exit(fn -> :persistent_term.put(:global_state, global_state) end)
 
         clients =
           for _i <- 1..3 do
