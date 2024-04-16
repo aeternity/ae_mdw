@@ -635,19 +635,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     clients
     |> Enum.map(fn client ->
       Task.async(fn ->
-        message =
-          Enum.reduce_while(1..5, false, fn _i, _acc ->
-            Process.send_after(client, {key, self()}, 100)
-
-            receive do
-              nil -> {:cont, false}
-              %{"payload" => %{"hash" => ^hash}} = message -> {:halt, message}
-            after
-              300 ->
-                {:cont, false}
-            end
-          end)
-
+        message = websocket_receive_message(client, key, hash)
         assert message, "expected message: #{inspect(msg)} was never received"
         assert MapSet.subset?(MapSet.new(payload), MapSet.new(message["payload"]))
         assert MapSet.subset?(MapSet.new(msg_without_payload), MapSet.new(message))
@@ -685,6 +673,20 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end)
     end)
     |> Task.await_many()
+  end
+
+  defp websocket_receive_message(client, key, hash) do
+    Enum.reduce_while(1..5, false, fn _i, _acc ->
+      Process.send_after(client, {key, self()}, 100)
+
+      receive do
+        nil -> {:cont, false}
+        %{"payload" => %{"hash" => ^hash}} = message -> {:halt, message}
+      after
+        300 ->
+          {:cont, false}
+      end
+    end)
   end
 
   defp encode(type, pk), do: :aeser_api_encoder.encode(type, pk)
