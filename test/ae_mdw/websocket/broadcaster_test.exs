@@ -629,14 +629,14 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     if key == :objs, do: Enum.each(clients, &WsClient.delete_objects/1)
   end
 
-  defp assert_websocket_receive(clients, key, %{"payload" => payload} = msg) do
+  defp assert_websocket_receive(clients, key, %{"payload" => %{"hash" => hash} = payload} = msg) do
     msg_without_payload = Map.delete(msg, "payload")
 
     clients
     |> Enum.map(fn client ->
       Task.async(fn ->
         Process.send_after(client, {key, self()}, 100)
-        assert_receive %{"payload" => _payload} = message, 300
+        assert_receive %{"payload" => %{"hash" => ^hash}} = message, 500
         assert MapSet.subset?(MapSet.new(payload), MapSet.new(message["payload"]))
         assert MapSet.subset?(MapSet.new(msg_without_payload), MapSet.new(message))
       end)
