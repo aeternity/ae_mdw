@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.74.0](https://www.github.com/aeternity/ae_mdw/compare/v1.73.0...v1.74.0) (2024-04-18)
+
+
+### Features
+
+* add reverted calls migration to update fun/args ([#1731](https://www.github.com/aeternity/ae_mdw/issues/1731)) ([d58d752](https://www.github.com/aeternity/ae_mdw/commit/d58d75286151d1060b28ad5613320e1f78ebb525))
+
+
+### Bug Fixes
+
+* remove hardcoded node log level in favor of aeternity.yaml config ([#1729](https://www.github.com/aeternity/ae_mdw/issues/1729)) ([8b34e16](https://www.github.com/aeternity/ae_mdw/commit/8b34e16f4a05e5c1a2e98e1d4786ac44d28c5c4a))
+* store function name for reverted contract calls ([#1728](https://www.github.com/aeternity/ae_mdw/issues/1728)) ([0294ba6](https://www.github.com/aeternity/ae_mdw/commit/0294ba6d73e0f9daf96a27d67b32450c6c0979b2))
+
 ## [1.73.0](https://www.github.com/aeternity/ae_mdw/compare/v1.72.1...v1.73.0) (2024-04-15)
 
 
