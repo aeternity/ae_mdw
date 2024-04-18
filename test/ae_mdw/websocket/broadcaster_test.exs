@@ -157,7 +157,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     #     unsubscribe_all(clients)
     #   end
     # end
-  # end
+  end
 
   describe "broadcast_txs" do
     test "broadcasts node and mdw transactions only once", %{clients: clients} do
