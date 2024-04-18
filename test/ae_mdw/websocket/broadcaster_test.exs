@@ -112,7 +112,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end
     end
 
-    # TODO: temporary commented out, fails randomly in CI
+    # Temporary commented out, fails randomly in CI
     # test "broadcasts node and mdw microblock for v2" do
     #   with_blockchain %{alice: 10_000, bob: 5_000, charlie: 2_000},
     #     mb0: [
