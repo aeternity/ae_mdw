@@ -64,9 +64,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             Model.block(index: {2, -1}, hash: Validate.id!(kb_hash2), tx_index: 0)
           )
 
-        global_state = :persistent_term.get(:global_state, nil)
         :persistent_term.put(:global_state, state)
-        on_exit(fn -> :persistent_term.put(:global_state, global_state) end)
 
         clients =
           for _i <- 1..3 do
@@ -144,9 +142,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             Model.block(index: {2, 0}, hash: Validate.id!(mb_hash2), tx_index: 2)
           )
 
-        global_state = :persistent_term.get(:global_state, nil)
         :persistent_term.put(:global_state, state)
-        on_exit(fn -> :persistent_term.put(:global_state, global_state) end)
 
         clients =
           for _i <- 1..3 do
@@ -629,14 +625,14 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     if key == :objs, do: Enum.each(clients, &WsClient.delete_objects/1)
   end
 
-  defp assert_websocket_receive(clients, key, %{"payload" => %{"hash" => hash} = payload} = msg) do
+  defp assert_websocket_receive(clients, key, %{"payload" => payload} = msg) do
     msg_without_payload = Map.delete(msg, "payload")
 
     clients
     |> Enum.map(fn client ->
       Task.async(fn ->
-        message = websocket_receive_message(client, key, hash)
-        assert message, "expected message: #{inspect(msg)} was never received"
+        Process.send_after(client, {key, self()}, 100)
+        assert_receive message, 300
         assert MapSet.subset?(MapSet.new(payload), MapSet.new(message["payload"]))
         assert MapSet.subset?(MapSet.new(msg_without_payload), MapSet.new(message))
       end)
@@ -673,20 +669,6 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end)
     end)
     |> Task.await_many()
-  end
-
-  defp websocket_receive_message(client, key, hash) do
-    Enum.reduce_while(1..5, false, fn _i, _acc ->
-      Process.send_after(client, {key, self()}, 100)
-
-      receive do
-        nil -> {:cont, false}
-        %{"payload" => %{"hash" => ^hash}} = message -> {:halt, message}
-      after
-        300 ->
-          {:cont, false}
-      end
-    end)
   end
 
   defp encode(type, pk), do: :aeser_api_encoder.encode(type, pk)
