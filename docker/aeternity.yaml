@@ -29,3 +29,7 @@ chain:
 
 fork_management:
     network_id: ae_mainnet
+
+logging:
+  level: warning
+

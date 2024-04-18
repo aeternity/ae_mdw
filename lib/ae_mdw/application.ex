@@ -34,7 +34,6 @@ defmodule AeMdw.Application do
     :persistent_term.put({:ae_mdw, :build_revision}, build_rev)
 
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
-    :lager.set_loglevel(:lager_console_backend, :error)
 
     init(:meta)
     init_public(:contract_cache)
