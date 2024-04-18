@@ -43,7 +43,7 @@ defmodule AeMdw.Db.IntTransfer do
 
     dev_benefs =
       for {protocol, _height} <- :aec_hard_forks.protocols(),
-          {pk, _} <- :aec_dev_reward.beneficiaries(protocol) do
+          {pk, _share} <- :aec_dev_reward.beneficiaries(protocol) do
         pk
       end
 
