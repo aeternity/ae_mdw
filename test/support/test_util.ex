@@ -4,7 +4,6 @@ defmodule AeMdw.TestUtil do
   """
   alias AeMdw.Collection
   alias AeMdw.Database
-  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
