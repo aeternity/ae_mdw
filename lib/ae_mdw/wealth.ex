@@ -14,7 +14,7 @@ defmodule AeMdw.Wealth do
   require Model
 
   @spec fetch_balances(AsyncStore.t()) :: [tuple()]
-  def fetch_balances(%AsyncStore{} = async_store) do
+  def fetch_balances(async_store) do
     async_store
     |> State.new()
     |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})

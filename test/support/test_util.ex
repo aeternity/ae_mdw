@@ -42,7 +42,7 @@ defmodule AeMdw.TestUtil do
   end
 
   @spec with_async_store(Conn.t(), Store.t()) :: Conn.t()
-  def with_async_store(conn, %AsyncStore{} = async_store) do
+  def with_async_store(conn, async_store) do
     Conn.assign(conn, :async_state, State.new(async_store))
   end
 

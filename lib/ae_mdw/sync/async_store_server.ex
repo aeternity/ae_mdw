@@ -23,13 +23,13 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @spec start_link(%{async_store: AsyncStore.t()}) :: GenServer.on_start()
-  def start_link(%{async_store: %AsyncStore{} = async_store}) do
+  def start_link(%{async_store: async_store}) do
     GenServer.start_link(__MODULE__, %{async_store: async_store}, name: __MODULE__)
   end
 
   @spec init(%{async_store: AsyncStore.t()}) :: {:ok, internal_state()}
   @impl GenServer
-  def init(%{async_store: %AsyncStore{} = async_store}) do
+  def init(%{async_store: async_store}) do
     {:ok, %{last_db_kbi: 0, async_store: async_store}}
   end
 
@@ -46,7 +46,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   @impl GenServer
   def handle_cast(
         {:write_mutations, mutations, done_fn},
-        %{async_store: %AsyncStore{} = async_store} = state
+        %{async_store: async_store} = state
       ) do
     async_state = State.new(async_store)
 
@@ -63,7 +63,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   def handle_call(
         {:write_store, db_state1},
         _from,
-        %{async_store: %AsyncStore{} = async_store} = state
+        %{async_store: async_store} = state
       ) do
     {top_keys, store} = WealthRank.prune_balance_ranking(async_store)
 

@@ -59,7 +59,7 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
   end
 
   @spec update_balances(AsyncStore.t(), balances()) :: :ok
-  def update_balances(%AsyncStore{} = async_store, balances) do
+  def update_balances(async_store, balances) do
     async_store =
       if AsyncStore.next(async_store, Model.BalanceAccount, nil) == :none do
         init_wealth_store(async_store)
