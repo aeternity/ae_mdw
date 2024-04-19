@@ -8,6 +8,7 @@ defmodule AeMdw.Migrations.ReindexRevertedContractCalls do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.ContractCallMutation
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Node.Db
 
   import Bitwise
@@ -24,7 +25,19 @@ defmodule AeMdw.Migrations.ReindexRevertedContractCalls do
       |> Stream.take_while(&match?({:contract_call_tx, @field_pos, "<unknown>", _txi}, &1))
       |> Stream.map(fn {:contract_call_tx, @field_pos, "<unknown>", txi} ->
         Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-        {block_hash, :contract_call_tx, _signed_tx, tx} = Db.get_tx_data(tx_hash)
+        {block_hash, tx_type, _signed_tx, tx} = Db.get_tx_data(tx_hash)
+
+        tx =
+          if tx_type == :contract_call_tx do
+            tx
+          else
+            inner_signed_tx = InnerTx.signed_tx(tx_type, tx)
+
+            {_inner_tx_type, inner_tx} =
+              inner_signed_tx |> :aetx_sign.tx() |> :aetx.specialize_type()
+
+            inner_tx
+          end
 
         contract_or_name_pk =
           tx
