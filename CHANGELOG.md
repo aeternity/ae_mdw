@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.74.1](https://www.github.com/aeternity/ae_mdw/compare/v1.74.0...v1.74.1) (2024-04-22)
+
+
+### Bug Fixes
+
+* add support for paying_for txs on contract calls migration ([#1734](https://www.github.com/aeternity/ae_mdw/issues/1734)) ([881c994](https://www.github.com/aeternity/ae_mdw/commit/881c994827e336c469ee2f4263cf87627f2d9d0c))
+
 ## [1.74.0](https://www.github.com/aeternity/ae_mdw/compare/v1.73.0...v1.74.0) (2024-04-18)
 
 
