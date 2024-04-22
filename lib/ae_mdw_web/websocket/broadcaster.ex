@@ -35,7 +35,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   @impl GenServer
   def init(%{state: state}), do: {:ok, %{internal_state: state}}
 
-  @spec broadcast_key_block(Db.key_block(), version(), source(), count(), count()) :: :ok
+  @spec broadcast_key_block(
+          GenServer.server(),
+          Db.key_block(),
+          version(),
+          source(),
+          count(),
+          count()
+        ) :: :ok
   def broadcast_key_block(name \\ __MODULE__, block, version, source, mb_count, txs_count) do
     header = :aec_blocks.to_header(block)
     {:ok, hash} = :aec_headers.hash_header(header)
@@ -54,7 +61,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     :ok
   end
 
-  @spec broadcast_micro_block(Db.micro_block(), source()) :: :ok
+  @spec broadcast_micro_block(GenServer.server(), Db.micro_block(), source()) :: :ok
   def broadcast_micro_block(name \\ __MODULE__, block, source) do
     header = :aec_blocks.to_header(block)
     {:ok, hash} = :aec_headers.hash_header(header)
@@ -73,7 +80,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     :ok
   end
 
-  @spec broadcast_txs(Db.micro_block(), source()) :: :ok
+  @spec broadcast_txs(GenServer.server(), Db.micro_block(), source()) :: :ok
   def broadcast_txs(name \\ __MODULE__, block, source) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 

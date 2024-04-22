@@ -188,10 +188,10 @@ defmodule AeMdwWeb.BlockchainSim do
       find_tx_location: fn tx_hash ->
         micro_block =
           Enum.find_value(mock_blocks, fn
-            {_name, {:mic_block, _, txs, _} = micro_block} ->
+            {_name, {:mic_block, _header, txs, _pof} = micro_block} ->
               Enum.any?(txs, fn tx -> :aetx_sign.hash(tx) == tx_hash end) && micro_block
 
-            _ ->
+            _another_type_of_block ->
               false
           end)
 
