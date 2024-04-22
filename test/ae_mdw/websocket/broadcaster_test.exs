@@ -190,7 +190,6 @@ defmodule AeMdw.Websocket.BroadcasterTest do
 
         assert_websocket_receive(clients, :subs, ["MicroBlocks"])
         assert_receive_micro_blocks(name, clients, blocks, :mdw)
-        # unsubscribe_all(clients)
       end
     end
   end
