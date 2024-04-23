@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.74.2](https://www.github.com/aeternity/ae_mdw/compare/v1.74.1...v1.74.2) (2024-04-23)
+
+
+### Miscellaneous
+
+* update node to version 6.13 ([#1732](https://www.github.com/aeternity/ae_mdw/issues/1732)) ([0828e4b](https://www.github.com/aeternity/ae_mdw/commit/0828e4b65cf634cb475debf741cdeb6dcc6ac70e))
+
 ### [1.74.1](https://www.github.com/aeternity/ae_mdw/compare/v1.74.0...v1.74.1) (2024-04-22)
 
 
