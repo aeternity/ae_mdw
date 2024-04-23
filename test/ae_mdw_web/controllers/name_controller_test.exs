@@ -1749,6 +1749,128 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "names_count" do
+    setup %{conn: conn, store: store} do
+      first_owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      {:account_pubkey, first_owner_pk} = Enc.decode(first_owner_id)
+      second_owner_id = "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+      {:account_pubkey, second_owner_pk} = Enc.decode(second_owner_id)
+
+      key_hash = <<0::256>>
+      owner_pk = fn i -> if rem(i, 2) == 0, do: first_owner_pk, else: second_owner_pk end
+
+      store =
+        1..11
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(index: plain_name)
+
+          owner =
+            Model.owner(index: {owner_pk.(i), plain_name})
+
+          owner_deactivation =
+            Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
+
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.ActiveNameOwner, owner)
+          |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
+          |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+
+      store =
+        12..25
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(index: plain_name)
+
+          owner =
+            Model.owner(index: {owner_pk.(i), plain_name})
+
+          owner_deactivation =
+            Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
+
+          store
+          |> Store.put(Model.InactiveName, name)
+          |> Store.put(Model.InactiveNameOwner, owner)
+          |> Store.put(Model.InactiveNameOwnerDeactivation, owner_deactivation)
+          |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<123::256>>))
+
+      %{conn: conn, store: store, first_owner: first_owner_id, second_owner: second_owner_id}
+    end
+
+    test "get names count", %{conn: conn, store: store} do
+      assert 25 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count")
+               |> json_response(200)
+    end
+
+    test "get active names count", %{conn: conn, store: store} do
+      assert 11 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", state: "active")
+               |> json_response(200)
+    end
+
+    test "get inactive names count", %{conn: conn, store: store} do
+      assert 14 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", state: "inactive")
+               |> json_response(200)
+    end
+
+    test "get names count by owner", %{
+      conn: conn,
+      store: store,
+      first_owner: first_owner,
+      second_owner: second_owner
+    } do
+      assert 12 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: first_owner)
+               |> json_response(200)
+
+      assert 13 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: second_owner)
+               |> json_response(200)
+    end
+
+    test "get active names count by owner", %{conn: conn, store: store, first_owner: first_owner} do
+      assert 5 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: first_owner, state: "active")
+               |> json_response(200)
+    end
+
+    test "get inactive names count by owner", %{
+      conn: conn,
+      store: store,
+      first_owner: first_owner
+    } do
+      assert 7 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: first_owner, state: "inactive")
+               |> json_response(200)
+    end
+  end
+
   describe "name" do
     test "get active name info with pointers", %{conn: conn, store: store} do
       name = "bigname123456.chain"

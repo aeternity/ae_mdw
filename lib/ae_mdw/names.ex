@@ -72,6 +72,16 @@ defmodule AeMdw.Names do
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
 
+  @spec count_names(state(), query()) :: non_neg_integer()
+  def count_names(state, query) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      filters
+      |> build_height_streamer(state, nil, nil, nil)
+      |> then(fn streamer -> streamer.(:backward) end)
+      |> Enum.count()
+    end
+  end
+
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
           {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
@@ -381,6 +391,7 @@ defmodule AeMdw.Names do
          scope,
          cursor
        ) do
+    IO.inspect({owner_pk, state, scope, cursor}, label: "build_height_streamer")
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
@@ -403,6 +414,8 @@ defmodule AeMdw.Names do
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
+    IO.inspect({owner_pk, state, scope, cursor}, label: "build_height_streamer")
+
     fn direction ->
       state
       |> Collection.stream(@table_inactive_owner_deactivation, direction, key_boundary, cursor)
@@ -415,6 +428,8 @@ defmodule AeMdw.Names do
   defp build_height_streamer(%{owned_by: owner_pk}, state, _order_by, scope, cursor) do
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
+
+    IO.inspect({owner_pk, state, scope, cursor}, label: "build_height_streamer")
 
     fn direction ->
       active_stream =

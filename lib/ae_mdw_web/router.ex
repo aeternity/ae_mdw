@@ -89,6 +89,7 @@ defmodule AeMdwWeb.Router do
       get "/minerstats", StatsController, :miners
 
       get "/names", NameController, :names
+      get "/names/count", NameController, :names_count
       get "/names/auctions", NameController, :auctions
       get "/names/auctions/:id", NameController, :auction
       get "/names/auctions/:id/claims", NameController, :auction_claims

@@ -171,6 +171,12 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+  @spec names_count(Conn.t(), map()) :: Conn.t()
+  def names_count(%Conn{assigns: %{state: state, query: query}} = conn, _params) do
+    count = Names.count_names(state, query)
+    format_json(conn, count)
+  end
+
   @spec names_v2(Conn.t(), map()) :: Conn.t()
   def names_v2(%Conn{assigns: assigns} = conn, _params) do
     %{
