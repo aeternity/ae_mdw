@@ -15,15 +15,22 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks.WealthRank
 
+  @typep internal_state() :: %{async_store: AsyncStore.t(), last_db_kbi: AeMdw.Blocks.height()}
+
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{async_store: AsyncStore.instance()}, name: __MODULE__)
   end
 
-  @spec init(:ok) :: {:ok, %{last_db_kbi: AeMdw.Blocks.height()}}
+  @spec start_link(%{async_store: AsyncStore.t()}) :: GenServer.on_start()
+  def start_link(%{async_store: async_store}) do
+    GenServer.start_link(__MODULE__, %{async_store: async_store}, name: __MODULE__)
+  end
+
+  @spec init(%{async_store: AsyncStore.t()}) :: {:ok, internal_state()}
   @impl GenServer
-  def init(:ok) do
-    {:ok, %{last_db_kbi: 0}}
+  def init(%{async_store: async_store}) do
+    {:ok, %{last_db_kbi: 0, async_store: async_store}}
   end
 
   @spec write_mutations([Mutation.t()], fun()) :: :ok
@@ -37,8 +44,11 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @impl GenServer
-  def handle_cast({:write_mutations, mutations, done_fn}, state) do
-    async_state = State.new(AsyncStore.instance())
+  def handle_cast(
+        {:write_mutations, mutations, done_fn},
+        %{async_store: async_store} = state
+      ) do
+    async_state = State.new(async_store)
 
     mutations
     |> Enum.reject(&is_nil/1)
@@ -50,17 +60,21 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @impl GenServer
-  def handle_call({:write_store, db_state1}, _from, state) do
-    {top_keys, store} = WealthRank.prune_balance_ranking(AsyncStore.instance())
+  def handle_call(
+        {:write_store, db_state1},
+        _from,
+        %{async_store: async_store} = state
+      ) do
+    {top_keys, store} = WealthRank.prune_balance_ranking(async_store)
 
     db_state2 =
       store
       |> AsyncStore.mutations()
       |> Enum.reduce(db_state1, &Mutation.execute/2)
 
-    AsyncStore.clear(AsyncStore.instance())
+    AsyncStore.clear(async_store)
 
-    _store = WealthRank.restore_ranking(AsyncStore.instance(), top_keys)
+    _store = WealthRank.restore_ranking(async_store, top_keys)
 
     {:reply, db_state2, state}
   end

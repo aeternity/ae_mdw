@@ -18,7 +18,12 @@ defmodule AeMdw.Sync.MemStoreCreator do
 
   @spec create() :: MemStore.t()
   def create do
-    GenServer.call(__MODULE__, :create)
+    GenServer.call(__MODULE__, {:create, DbStore.new()})
+  end
+
+  @spec create(fallback_store :: AeMdw.Db.Store.t()) :: MemStore.t()
+  def create(fallback_store) do
+    GenServer.call(__MODULE__, {:create, fallback_store})
   end
 
   @spec commit(MemStore.t()) :: :ok
@@ -27,8 +32,8 @@ defmodule AeMdw.Sync.MemStoreCreator do
   end
 
   @impl true
-  def handle_call(:create, _from, %{stores: stores} = state) do
-    sync_store = MemStore.new(DbStore.new())
+  def handle_call({:create, fallback_store}, _from, %{stores: stores} = state) do
+    sync_store = MemStore.new(fallback_store)
     created_at = System.monotonic_time(:second)
     stores = [%{store: sync_store, created_at: created_at} | stores]
 

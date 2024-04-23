@@ -48,7 +48,7 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  @spec handle_input(Conn.t(), (() -> Conn.t())) :: Conn.t()
+  @spec handle_input(Conn.t(), (-> Conn.t())) :: Conn.t()
   def handle_input(conn, f) do
     try do
       f.()

@@ -145,9 +145,11 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
-  def balances(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"contract_id" => contract_id}) do
+  def balances(%Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn, %{
+        "contract_id" => contract_id
+      }) do
     with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
-         {:ok, amounts} <- Aex9.fetch_balances(state, contract_pk, top?(opts)) do
+         {:ok, amounts} <- Aex9.fetch_balances(state, async_state, contract_pk, top?(opts)) do
       hash_tuple = DBN.top_height_hash(top?(opts))
       format_json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
     end
@@ -214,7 +216,11 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp balance_reply(%Conn{assigns: %{state: state, opts: opts}} = conn, contract_pk, account_pk) do
+  defp balance_reply(
+         %Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn,
+         contract_pk,
+         account_pk
+       ) do
     {amount, {type, height, hash}} =
       if top?(opts) do
         case DBN.aex9_balance(contract_pk, account_pk, top?(opts)) do
@@ -225,7 +231,7 @@ defmodule AeMdwWeb.Aex9Controller do
             {:error, ErrInput.Aex9BalanceNotAvailable.exception(value: reason)}
         end
       else
-        case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
+        case Aex9.fetch_amount_and_keyblock(state, async_state, contract_pk, account_pk) do
           {:ok, {amount, kb_height_hash}} ->
             {amount, kb_height_hash}
 
@@ -265,12 +271,15 @@ defmodule AeMdwWeb.Aex9Controller do
     format_json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
   end
 
-  defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk) do
+  defp account_balances_reply(
+         %Conn{assigns: %{state: state, async_state: async_state}} = conn,
+         account_pk
+       ) do
     balances =
       state
       |> Contract.aex9_search_contracts(account_pk)
       |> Enum.flat_map(fn contract_pk ->
-        case Aex9.fetch_amount(state, contract_pk, account_pk) do
+        case Aex9.fetch_amount(state, async_state, contract_pk, account_pk) do
           {:ok, {amount, call_txi}} ->
             [{amount, call_txi, contract_pk}]
 

@@ -47,8 +47,8 @@ defmodule AeMdw.Db.OriginTest do
            lima_contracts: fn ->
              [%{pubkey: Validate.id!(@contract_id1), amount: 2_448_618_414_302_482_322}]
            end,
-           hc_seed_contracts: fn 5, "ae_mainnet" ->
-             {:ok, [{"calls", []}, {"contracts", [%{"pubkey" => @contract_id2}]}]}
+           contracts: fn _protocol ->
+             [{"calls", []}, {"contracts", [%{"pubkey" => @contract_id2}]}]
            end
          ]}
       ] do
@@ -67,8 +67,12 @@ defmodule AeMdw.Db.OriginTest do
       with_mocks [
         {:aeu_env, [:passthrough],
          [
-           find_config: fn ["chain", "hard_forks"], [:user_config] ->
-             {:ok, %{"5" => 0}}
+           find_config: fn
+             ["chain", "hard_forks"], [:user_config] ->
+               {:ok, %{"5" => 0}}
+
+             ["sync", "peer_analytics"], [:user_config, :schema_default, {:value, false}] ->
+               {:ok, false}
            end
          ]},
         {:aec_fork_block_settings, [],
@@ -76,8 +80,8 @@ defmodule AeMdw.Db.OriginTest do
            lima_contracts: fn ->
              [%{pubkey: Validate.id!(@contract_id1), amount: 2_448_618_414_302_482_322}]
            end,
-           hc_seed_contracts: fn 5, "ae_mainnet" ->
-             {:ok, %{"calls" => [], "contracts" => [%{"pubkey" => @contract_id2}]}}
+           contracts: fn
+             _protocol -> %{"calls" => [], "contracts" => [%{"pubkey" => @contract_id2}]}
            end
          ]}
       ] do

@@ -19,6 +19,8 @@ defmodule AeMdw.DatabaseTest do
       ])
 
       assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
+      assert :ok = Database.dirty_delete(Model.Block, key)
+      assert :not_found == Database.fetch(Model.Block, key)
     end
 
     test "persists multiple mutations within a transaction" do
@@ -37,6 +39,8 @@ defmodule AeMdw.DatabaseTest do
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
+        assert :ok = Database.dirty_delete(Model.Block, key)
+        assert :not_found == Database.fetch(Model.Block, key)
       end)
     end
 
@@ -61,6 +65,8 @@ defmodule AeMdw.DatabaseTest do
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
+        assert :ok = Database.dirty_delete(Model.Block, key)
+        assert :not_found == Database.fetch(Model.Block, key)
       end)
     end
 
@@ -86,6 +92,8 @@ defmodule AeMdw.DatabaseTest do
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
+        assert :ok = Database.dirty_delete(Model.Block, key)
+        assert :not_found == Database.fetch(Model.Block, key)
       end)
     end
   end

@@ -21,15 +21,15 @@ defmodule AeMdw.Db.AsyncStore do
   @typep table() :: Database.table()
   @opaque t() :: %__MODULE__{tid: :single_async_store}
 
-  @spec init() :: :ok
-  def init do
-    EtsCache.new(@table_id, @ttl_minutes, :ordered_set)
+  @spec init(atom()) :: :ok
+  def init(t_id \\ @table_id) do
+    EtsCache.new(t_id, @ttl_minutes, :ordered_set)
     :ok
   end
 
-  @spec instance() :: t()
-  def instance do
-    %__MODULE__{tid: @table_id}
+  @spec instance(atom()) :: t()
+  def instance(t_id \\ @table_id) do
+    %__MODULE__{tid: t_id}
   end
 
   @spec mutations(t()) :: [Mutation.t()]

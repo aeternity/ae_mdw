@@ -2,6 +2,7 @@ defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
   use Plug.ErrorHandler
 
+  alias AeMdwWeb.Plugs.AsyncStatePlug
   alias AeMdwWeb.Plugs.StatePlug
   alias AeMdwWeb.Plugs.DeprecationLoggerPlug
   alias AeMdwWeb.Plugs.JSONFormatterPlug
@@ -32,6 +33,7 @@ defmodule AeMdwWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug StatePlug
+    plug AsyncStatePlug
     plug JSONFormatterPlug
     plug Plug.RequestId
     plug RequestSpan
@@ -277,7 +279,7 @@ defmodule AeMdwWeb.Router do
     get "/totalstats/:direction", StatsController, :total_stats
     get "/totalstats/:scope_type/:range", StatsController, :total_stats
 
-    if Application.get_env(:ae_mdw, :enable_livedashboard, false) do
+    if Application.compile_env(:ae_mdw, :enable_livedashboard, false) do
       import Phoenix.LiveDashboard.Router
 
       scope "/" do

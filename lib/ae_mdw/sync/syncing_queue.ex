@@ -9,7 +9,7 @@ defmodule AeMdw.Sync.SyncingQueue do
 
   use GenServer
 
-  @type task_fn :: (() -> :ok)
+  @type task_fn :: (-> :ok)
 
   @spec start_link(term()) :: {:ok, pid()}
   def start_link(_opts) do

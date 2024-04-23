@@ -58,13 +58,13 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
     end
   end
 
-  @spec update_balances(balances()) :: :ok
-  def update_balances(balances) do
+  @spec update_balances(AsyncStore.t(), balances()) :: :ok
+  def update_balances(async_store, balances) do
     async_store =
-      if AsyncStore.next(AsyncStore.instance(), Model.BalanceAccount, nil) == :none do
-        init_wealth_store()
+      if AsyncStore.next(async_store, Model.BalanceAccount, nil) == :none do
+        init_wealth_store(async_store)
       else
-        AsyncStore.instance()
+        async_store
       end
 
     _store =
@@ -79,9 +79,7 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
     :ok
   end
 
-  defp init_wealth_store do
-    async_store = AsyncStore.instance()
-
+  defp init_wealth_store(async_store) do
     State.new()
     |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
     |> Enum.reduce(async_store, fn {amount, pubkey}, store ->

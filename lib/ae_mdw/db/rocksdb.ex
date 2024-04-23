@@ -125,9 +125,9 @@ defmodule AeMdw.Db.RocksDb do
   """
   @spec dirty_iterator(transaction(), table(), Keyword.t()) :: {:ok, iterator()} | {:error, any()}
   def dirty_iterator(transaction, table, read_options \\ []) do
-    {db_ref, cf_ref} = cf_refs(table)
+    {_db_ref, cf_ref} = cf_refs(table)
 
-    :rocksdb.transaction_iterator(db_ref, transaction, cf_ref, read_options)
+    :rocksdb.transaction_iterator(transaction, cf_ref, read_options)
   end
 
   @doc """

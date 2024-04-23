@@ -48,7 +48,7 @@ defmodule AeMdwWeb.BlockchainSim do
           {:id, :account, ga_pk} ->
             %{hash: block_hash} = mock_blocks[:mb]
             block_hash = Validate.id!(block_hash)
-            ga_tx = mock_transactions[:ga_tx]
+            ga_tx = Keyword.get(mock_transactions, :ga_tx)
             ga_tx_hash = if ga_tx, do: :aetx_sign.hash(ga_tx)
 
             if ga_tx_hash do
@@ -76,7 +76,7 @@ defmodule AeMdwWeb.BlockchainSim do
           {:id, :account, pf_pk} ->
             %{hash: block_hash} = mock_blocks[:mb]
             block_hash = Validate.id!(block_hash)
-            pf_tx = mock_transactions[:pf_tx]
+            pf_tx = Keyword.get(mock_transactions, :pf_tx)
             pf_tx_hash = if pf_tx, do: :aetx_sign.hash(pf_tx)
 
             if pf_tx_hash do
@@ -152,7 +152,7 @@ defmodule AeMdwWeb.BlockchainSim do
 
     {_prev_hash, mock_blocks, mock_txs, _max_height} =
       blocks
-      |> Enum.reduce({@genesis_prev_hash, %{}, %{}, @initial_height}, fn
+      |> Enum.reduce({@genesis_prev_hash, %{}, [], @initial_height}, fn
         {mb_name, [{_name, tx1} | _txs] = named_txs}, {prev_hash, mock_blocks, mock_txs, height}
         when is_transaction(tx1) ->
           {last_hash, new_mock_blocks, new_mock_txs} =
@@ -161,7 +161,7 @@ defmodule AeMdwWeb.BlockchainSim do
           {
             last_hash,
             Map.merge(mock_blocks, new_mock_blocks),
-            Map.merge(mock_txs, new_mock_txs),
+            Kernel.++(mock_txs, new_mock_txs),
             height + 1
           }
 
@@ -172,7 +172,7 @@ defmodule AeMdwWeb.BlockchainSim do
           {
             last_hash,
             Map.merge(mock_blocks, new_mock_blocks),
-            Map.merge(mock_txs, new_mock_txs),
+            Kernel.++(mock_txs, new_mock_txs),
             height + 1
           }
       end)
@@ -269,9 +269,9 @@ defmodule AeMdwWeb.BlockchainSim do
     initial_mock_blocks = %{kb_name => key_block, :top_block => key_block}
 
     {_prev_hash, _new_mock_blocks, _new_mock_txs} =
-      Enum.reduce(microblocks, {kb_hash, initial_mock_blocks, %{}}, fn {mb_name, transactions},
-                                                                       {prev_hash, mock_blocks,
-                                                                        mock_txs} ->
+      Enum.reduce(microblocks, {kb_hash, initial_mock_blocks, []}, fn {mb_name, transactions},
+                                                                      {prev_hash, mock_blocks,
+                                                                       mock_txs} ->
         {micro_block, new_mock_txs} =
           mock_micro_block(transactions, mock_accounts, height, prev_hash, kb_hash)
 
@@ -283,7 +283,7 @@ defmodule AeMdwWeb.BlockchainSim do
         {
           mb_hash,
           Map.merge(mock_blocks, %{mb_name => micro_block, :top_block => key_block}),
-          Map.merge(mock_txs, new_mock_txs)
+          Kernel.++(mock_txs, new_mock_txs)
         }
       end)
   end
@@ -336,7 +336,7 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defp mock_micro_block(transactions, accounts, height, prev_hash, kb_hash) do
     mock_txs =
-      Enum.into(transactions, %{}, fn {tx_name, tx} when is_transaction(tx) ->
+      Enum.into(transactions, [], fn {tx_name, tx} when is_transaction(tx) ->
         {:ok, aetx} = create_aetx(tx, accounts)
         signed_tx = :aetx_sign.new(aetx, [])
         {tx_name, signed_tx}
@@ -348,7 +348,7 @@ defmodule AeMdwWeb.BlockchainSim do
        kb_hash,
        <<>>,
        <<>>,
-       Map.values(mock_txs),
+       Keyword.values(mock_txs),
        :aeu_time.now_in_msecs(),
        :no_fraud,
        0
@@ -482,13 +482,13 @@ defmodule AeMdwWeb.BlockchainSim do
     %{
       owner_id: Map.fetch!(accounts, account_name),
       nonce: 1,
-      code: :erlang.list_to_binary(['o', 'k']),
+      code: :erlang.list_to_binary([?o, ?k]),
       auth_fun: <<1::256>>,
       vm_version: 7,
       abi_version: 3,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k']),
+      call_data: :erlang.list_to_binary([?o, ?k]),
       fee: 100
     }
     |> Map.merge(args)
@@ -548,14 +548,14 @@ defmodule AeMdwWeb.BlockchainSim do
     %{
       owner_id: Map.fetch!(accounts, account_name),
       nonce: 1,
-      code: :erlang.list_to_binary(['o', 'k']),
+      code: :erlang.list_to_binary([?o, ?k]),
       vm_version: 7,
       abi_version: 3,
       deposit: 1_000,
       amount: 123,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k']),
+      call_data: :erlang.list_to_binary([?o, ?k]),
       fee: 100
     }
     |> Map.merge(args)
@@ -572,7 +572,7 @@ defmodule AeMdwWeb.BlockchainSim do
       amount: 123,
       gas: 25_000,
       gas_price: 1_000_000_000,
-      call_data: :erlang.list_to_binary(['o', 'k'])
+      call_data: :erlang.list_to_binary([?o, ?k])
     }
     |> Map.merge(args)
     |> :aect_call_tx.new()

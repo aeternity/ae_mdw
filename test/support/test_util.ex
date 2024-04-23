@@ -25,7 +25,7 @@ defmodule AeMdw.TestUtil do
 
   def all_keys(state, table), do: state |> Collection.stream(table, nil) |> Enum.to_list()
 
-  @spec handle_input((() -> Conn.t())) :: Conn.t() | String.t()
+  @spec handle_input((-> Conn.t())) :: Conn.t() | String.t()
   def handle_input(f) do
     try do
       f.()
@@ -38,6 +38,11 @@ defmodule AeMdw.TestUtil do
   @spec with_store(Conn.t(), Store.t()) :: Conn.t()
   def with_store(conn, store) do
     Conn.assign(conn, :state, State.new(store))
+  end
+
+  @spec with_async_store(Conn.t(), Store.t()) :: Conn.t()
+  def with_async_store(conn, async_store) do
+    Conn.assign(conn, :async_state, State.new(async_store))
   end
 
   @spec change_store(MemStore.t(), [Mutation.t()]) :: Store.t()

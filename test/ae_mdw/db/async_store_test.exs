@@ -9,17 +9,12 @@ defmodule AeMdw.Db.AsyncStoreTest do
 
   describe "next/2" do
     test "it returns the next value from same table" do
-      store = AsyncStore.instance()
+      table = :it_returns_the_next_value_from_same_table
+      AsyncStore.init(table)
+      store = AsyncStore.instance(table)
 
       txi1 = Enum.random(100_000_000..999_999_999)
       txi2 = txi1 + 1
-
-      on_exit(fn ->
-        store
-        |> Store.delete(Model.Tx, txi1)
-        |> Store.delete(Model.Tx, txi2)
-        |> Store.delete(Model.Type, {:ga_meta_tx, txi1})
-      end)
 
       store =
         store

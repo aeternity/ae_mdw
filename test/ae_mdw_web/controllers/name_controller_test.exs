@@ -43,7 +43,7 @@ defmodule AeMdwWeb.NameControllerTest do
         mb2: [
           tx4: name_tx(:name_update_tx, :bob, bob_name)
         ] do
-        %{tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4} = transactions
+        [tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4] = transactions
         {:id, :account, alice_pk} = accounts[:alice]
         {:id, :account, bob_pk} = accounts[:bob]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -412,7 +412,7 @@ defmodule AeMdwWeb.NameControllerTest do
           tx4: name_tx(:name_update_tx, :bob, bob_name),
           tx5: name_tx(:name_revoke_tx, :bob, bob_name)
         ] do
-        %{tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4, tx5: tx5} = transactions
+        [tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4, tx5: tx5] = transactions
         {:id, :account, alice_pk} = accounts[:alice]
         {:id, :account, bob_pk} = accounts[:bob]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -688,7 +688,12 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "inactive", by: by, direction: direction, limit: limit)
+                 |> get("/v2/names",
+                   state: "inactive",
+                   by: by,
+                   direction: direction,
+                   limit: limit
+                 )
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -725,7 +730,7 @@ defmodule AeMdwWeb.NameControllerTest do
         mb1: [
           tx2: name_tx(:name_claim_tx, :bob, plain_name)
         ] do
-        %{tx1: tx1, tx2: tx2} = transactions
+        [tx1: tx1, tx2: tx2] = transactions
         %{mb0: %{block: mb0}} = blocks
         {:ok, hash0} = mb0 |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
@@ -804,7 +809,7 @@ defmodule AeMdwWeb.NameControllerTest do
         mb1: [
           tx2: name_tx(:name_claim_tx, :bob, plain_name)
         ] do
-        %{tx1: tx1, tx2: tx2} = transactions
+        [tx1: tx1, tx2: tx2] = transactions
 
         {:ok, key_hash} =
           blocks[0][:block] |> :aec_blocks.to_header() |> :aec_headers.hash_header()
@@ -1985,7 +1990,7 @@ defmodule AeMdwWeb.NameControllerTest do
           tx1: name_tx(:name_claim_tx, :alice, name),
           tx2: name_tx(:name_update_tx, :alice, name)
         ] do
-        tx2 = transactions[:tx2]
+        tx2 = Keyword.get(transactions, :tx2)
         {:id, :account, alice_pk} = accounts[:alice]
 
         store =
@@ -2029,7 +2034,7 @@ defmodule AeMdwWeb.NameControllerTest do
           tx1: name_tx(:name_claim_tx, :alice, name),
           tx2: name_tx(:name_update_tx, :alice, name)
         ] do
-        tx2 = transactions[:tx2]
+        tx2 = Keyword.get(transactions, :tx2)
         aetx2 = :aetx_sign.tx(tx2)
 
         store =

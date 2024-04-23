@@ -33,14 +33,17 @@ defmodule AeMdw.Aex9Test do
       balances_list =
         Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
 
-      async_state = State.new(AsyncStore.instance())
+      table = :gets_contract_balances_from_async_store
+      AsyncStore.init(table)
+
+      async_state = State.new(AsyncStore.instance(table))
 
       Mutation.execute(
         UpdateAex9StateMutation.new(contract_pk, call_txi, balances_list),
         async_state
       )
 
-      assert {:ok, ^balances} = Aex9.fetch_balances(State.new(), contract_pk, false)
+      assert {:ok, ^balances} = Aex9.fetch_balances(State.new(), async_state, contract_pk, false)
     end
   end
 

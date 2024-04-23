@@ -24,10 +24,10 @@ defmodule AeMdw.Db.Sync.StatsTest do
       time1 = 0
       time2 = 31_536_000_000
 
-      type_counts = %{
-        spend_tx: 1,
-        oracle_register_tx: 18
-      }
+      type_counts = [
+        oracle_register_tx: 18,
+        spend_tx: 1
+      ]
 
       mutation1 =
         StatisticsMutation.new([
