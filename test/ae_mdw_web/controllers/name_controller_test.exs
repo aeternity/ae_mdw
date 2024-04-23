@@ -1764,14 +1764,11 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Enum.reduce(store, fn i, store ->
           plain_name = "#{i}.chain"
 
-          name =
-            Model.name(index: plain_name)
+          name = Model.name(index: plain_name)
 
-          owner =
-            Model.owner(index: {owner_pk.(i), plain_name})
+          owner = Model.owner(index: {owner_pk.(i), plain_name})
 
-          owner_deactivation =
-            Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
+          owner_deactivation = Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
 
           store
           |> Store.put(Model.ActiveName, name)
@@ -1786,14 +1783,11 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Enum.reduce(store, fn i, store ->
           plain_name = "#{i}.chain"
 
-          name =
-            Model.name(index: plain_name)
+          name = Model.name(index: plain_name)
 
-          owner =
-            Model.owner(index: {owner_pk.(i), plain_name})
+          owner = Model.owner(index: {owner_pk.(i), plain_name})
 
-          owner_deactivation =
-            Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
+          owner_deactivation = Model.owner_deactivation(index: {owner_pk.(i), i + 10, plain_name})
 
           store
           |> Store.put(Model.InactiveName, name)
