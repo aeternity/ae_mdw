@@ -11,9 +11,10 @@ defmodule AeMdw.Db.Origin do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  require Model
-
   import AeMdw.Util
+
+  require Model
+  require Logger
 
   @contract_creation_types ~w(contract_create_tx contract_call_tx ga_attach_tx)a
   @iris_protocol 5
@@ -151,8 +152,12 @@ defmodule AeMdw.Db.Origin do
       try do
         protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
       rescue
-        e in ErlangError -> e
-        e -> reraise(e, __STACKTRACE__)
+        e in ErlangError ->
+          Logger.error("Error fetching contracts for protocol #{protocol}: #{inspect(e)}")
+          []
+
+        e ->
+          reraise(e, __STACKTRACE__)
       end
     end)
     |> Enum.map(fn contract ->
