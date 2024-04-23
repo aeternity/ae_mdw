@@ -11,11 +11,14 @@ defmodule AeMdw.Db.Origin do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  require Model
-
   import AeMdw.Util
 
+  require Model
+  require Logger
+
   @contract_creation_types ~w(contract_create_tx contract_call_tx ga_attach_tx)a
+  @iris_protocol 5
+  @ceres_protocol 6
 
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
@@ -144,8 +147,18 @@ defmodule AeMdw.Db.Origin do
   @spec hc_contracts() :: [Db.pubkey()]
   def hc_contracts do
     :aec_hard_forks.protocols()
+    |> Enum.filter(fn {protocol, _height} -> protocol in [@iris_protocol, @ceres_protocol] end)
     |> Enum.flat_map(fn {protocol, _height} ->
-      protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
+      try do
+        protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
+      rescue
+        e in ErlangError ->
+          Logger.error("Error fetching contracts for protocol #{protocol}: #{inspect(e)}")
+          []
+
+        e ->
+          reraise(e, __STACKTRACE__)
+      end
     end)
     |> Enum.map(fn contract ->
       (Map.get(contract, "pubkey") || Map.fetch!(contract, "contract_pubkey")) |> Validate.id!()

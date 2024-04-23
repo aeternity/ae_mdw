@@ -42,7 +42,7 @@ WORKDIR /home/aeternity/node
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
 ENV NODEROOT=/home/aeternity/node/local
-ARG NODE_VERSION=6.13.0
+ARG NODE_VERSION=7.0.0-rc1
 ARG NODE_URL=https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
