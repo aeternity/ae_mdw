@@ -148,7 +148,12 @@ defmodule AeMdw.Db.Origin do
     :aec_hard_forks.protocols()
     |> Enum.filter(fn {protocol, _height} -> protocol in [@iris_protocol, @ceres_protocol] end)
     |> Enum.flat_map(fn {protocol, _height} ->
-      protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
+      try do
+        protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
+      rescue
+        e in ErlangError -> e
+        e -> reraise(e, __STACKTRACE__)
+      end
     end)
     |> Enum.map(fn contract ->
       (Map.get(contract, "pubkey") || Map.fetch!(contract, "contract_pubkey")) |> Validate.id!()
