@@ -23,7 +23,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @default_scope nil
 
-  @pagination_params ~w(limit cursor rev direction scope tx_hash expand by)
+  @pagination_params ~w(limit cursor rev direction scope tx_hash expand by int-as-string)
 
   @spec init(opts()) :: opts()
   def init(opts), do: opts

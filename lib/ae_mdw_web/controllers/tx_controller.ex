@@ -74,8 +74,10 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec txs(Conn.t(), map()) :: Conn.t()
-  def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def txs(%Conn{assigns: assigns} = conn, params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query_params} =
+      assigns
+
     opts = [add_spendtx_details?: Map.has_key?(params, "account")]
 
     with {:ok, query} <- extract_query(query_params),
@@ -89,8 +91,10 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec txs_v2(Conn.t(), map()) :: Conn.t()
-  def txs_v2(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def txs_v2(%Conn{assigns: assigns} = conn, params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query_params} =
+      assigns
+
     opts = [add_spendtx_details?: Map.has_key?(params, "account")]
 
     with {:ok, query} <- extract_query(query_params),
@@ -147,10 +151,9 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec micro_block_txs(Conn.t(), map()) :: Conn.t()
-  def micro_block_txs(%Conn{assigns: assigns, query_params: query_params} = conn, %{
-        "hash" => hash
-      }) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def micro_block_txs(%Conn{assigns: assigns} = conn, %{"hash" => hash}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query_params} =
+      assigns
 
     with :ok <- validate_without_scope(scope),
          {:ok, query} <- extract_query(query_params),
@@ -161,10 +164,9 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec micro_block_txs_v2(Conn.t(), map()) :: Conn.t()
-  def micro_block_txs_v2(%Conn{assigns: assigns, query_params: query_params} = conn, %{
-        "hash" => hash
-      }) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def micro_block_txs_v2(%Conn{assigns: assigns} = conn, %{"hash" => hash}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query_params} =
+      assigns
 
     with :ok <- validate_without_scope(scope),
          {:ok, query} <- extract_query(query_params),
