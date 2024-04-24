@@ -1,13 +1,13 @@
 defmodule AeMdw.Node.Db do
   @moduledoc false
 
+  import AeMdw.Util
+
   alias AeMdw.Blocks
-  alias AeMdw.DryRun.Runner
   alias AeMdw.Db.Model
+  alias AeMdw.DryRun.Runner
   alias AeMdw.Log
   alias AeMdw.Node
-
-  import AeMdw.Util
 
   require Logger
   require Model
@@ -18,6 +18,7 @@ defmodule AeMdw.Node.Db do
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
   @type balances_map() :: %{{:address, pubkey()} => integer()}
   @type account_balance() :: {integer() | nil, height_hash()}
+  @type protocol_version() :: 1..6
   @opaque key_block() :: tuple()
   @opaque micro_block() :: tuple()
   @opaque id() :: tuple()
