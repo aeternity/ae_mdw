@@ -34,8 +34,7 @@ defmodule AeMdw.Db.Sync.NameTest do
       owner_pk = <<1::256>>
       name_fee = 1_000_000
 
-      timeout =
-        :aec_governance.name_claim_bid_timeout(plain_name, :aec_hard_forks.protocol_vsn(:lima))
+      protocol_version = :aec_hard_forks.protocol_vsn(:lima)
 
       height = AeMdw.Node.lima_height() + Enum.random(100..999)
       block_index = {height, 1}
@@ -69,7 +68,7 @@ defmodule AeMdw.Db.Sync.NameTest do
             true,
             txi_idx,
             block_index,
-            timeout
+            protocol_version
           )
           | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
         ]
@@ -114,7 +113,7 @@ defmodule AeMdw.Db.Sync.NameTest do
             true,
             {txi, -1},
             block_index,
-            0
+            4
           )
           | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
         ]

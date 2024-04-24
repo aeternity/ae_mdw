@@ -1,13 +1,12 @@
 defmodule AeMdw.Db.NameClaimMutationTest do
   use AeMdw.Db.MutationCase
+  import Mock
 
-  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync
-
-  import Mock
 
   require Model
 
@@ -85,16 +84,18 @@ defmodule AeMdw.Db.NameClaimMutationTest do
   end
 
   test "claim new name with timeout > 0", %{store: store} do
-    plain_name = "claim_new.test"
+    plain_name = "claimnew.test"
     name_hash = :crypto.strong_rand_bytes(32)
     owner_pk = :crypto.strong_rand_bytes(32)
     name_fee = 1_000_000_000_000
-    claim_height = 23
-    block_index = {claim_height, 0}
-    timeout = 54
+    protocol_version = 6
     txi = 1234
     txi_idx = {txi, -1}
     state = State.new(store)
+
+    claim_height = 23
+    block_index = {claim_height, 0}
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, protocol_version)
 
     mutation =
       NameClaimMutation.new(
@@ -105,7 +106,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         false,
         txi_idx,
         block_index,
-        timeout
+        protocol_version
       )
 
     state = Mutation.execute(mutation, state)
@@ -130,5 +131,106 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
     assert State.exists?(state, Model.AuctionExpiration, {claim_height + timeout, plain_name})
     assert State.exists?(state, Model.AuctionBidClaim, {plain_name, claim_height, txi_idx})
+  end
+
+  test "place bid on name", %{store: store} do
+    plain_name = "bid.test"
+    name_hash = :crypto.strong_rand_bytes(32)
+    owner_pk = :crypto.strong_rand_bytes(32)
+    name_fee = 1_000_000_000_000
+    protocol_version = 6
+    txi = 1234
+    txi_idx = {txi, -1}
+    claim_height = 23
+    block_index = {claim_height, 0}
+    state = State.new(store)
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, protocol_version)
+    extended = :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
+    tx_hash = <<1::256>>
+    expire_height = claim_height + timeout
+
+    mutation =
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        txi_idx,
+        block_index,
+        protocol_version
+      )
+
+    state =
+      State.put(state, Model.Tx, Model.tx(index: txi, id: tx_hash))
+
+    state =
+      Mutation.execute(mutation, state)
+
+    assert {:ok,
+            Model.auction_bid(
+              index: ^plain_name,
+              start_height: ^claim_height,
+              owner: ^owner_pk,
+              expire_height: ^expire_height
+            )} = State.get(state, Model.AuctionBid, plain_name)
+
+    next_txi_idx = {txi + 1, -1}
+
+    bid_mutation =
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        next_txi_idx,
+        {claim_height + 1, 0},
+        protocol_version
+      )
+
+    {:ok, claim_aetx} =
+      :aens_claim_tx.new(%{
+        account_id: :aeser_id.create(:account, <<0::256>>),
+        nonce: 1,
+        name: plain_name,
+        name_salt: 0,
+        name_fee: name_fee,
+        fee: 5_000
+      })
+
+    {:name_claim_tx, claim_tx} = :aetx.specialize_type(claim_aetx)
+
+    with_mocks [
+      {AeMdw.Node.Db, [:passthrough],
+       [get_tx_data: fn ^tx_hash -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
+    ] do
+      state = Mutation.execute(bid_mutation, state)
+
+      next_expire_height = claim_height + extended + 1
+
+      assert {:ok,
+              Model.auction_bid(
+                index: ^plain_name,
+                start_height: ^claim_height,
+                owner: ^owner_pk,
+                expire_height: ^next_expire_height
+              )} = State.get(state, Model.AuctionBid, plain_name)
+
+      assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
+      assert State.exists?(state, Model.AuctionBidClaim, {plain_name, claim_height, txi_idx})
+
+      assert State.exists?(
+               state,
+               Model.AuctionExpiration,
+               {claim_height + extended + 1, plain_name}
+             )
+
+      assert State.exists?(
+               state,
+               Model.AuctionBidClaim,
+               {plain_name, claim_height, next_txi_idx}
+             )
+    end
   end
 end

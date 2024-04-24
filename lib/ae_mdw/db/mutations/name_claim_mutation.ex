@@ -26,7 +26,7 @@ defmodule AeMdw.Db.NameClaimMutation do
     :lima_or_higher?,
     :txi_idx,
     :block_index,
-    :timeout
+    :protocol_version
   ]
 
   @opaque t() :: %__MODULE__{
@@ -37,7 +37,7 @@ defmodule AeMdw.Db.NameClaimMutation do
             lima_or_higher?: boolean(),
             txi_idx: Txs.txi_idx(),
             block_index: Blocks.block_index(),
-            timeout: Names.auction_timeout()
+            protocol_version: non_neg_integer()
           }
 
   @spec new(
@@ -48,7 +48,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           boolean(),
           Txs.txi_idx(),
           Blocks.block_index(),
-          Names.auction_timeout()
+          non_neg_integer()
         ) :: t()
   def new(
         plain_name,
@@ -58,7 +58,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         lima_or_higher?,
         txi_idx,
         block_index,
-        timeout
+        protocol_version
       ) do
     %__MODULE__{
       plain_name: plain_name,
@@ -68,7 +68,7 @@ defmodule AeMdw.Db.NameClaimMutation do
       lima_or_higher?: lima_or_higher?,
       txi_idx: txi_idx,
       block_index: block_index,
-      timeout: timeout
+      protocol_version: protocol_version
     }
   end
 
@@ -82,13 +82,20 @@ defmodule AeMdw.Db.NameClaimMutation do
           lima_or_higher?: lima_or_higher?,
           txi_idx: txi_idx,
           block_index: {height, _mbi} = block_index,
-          timeout: timeout
+          protocol_version: protocol_version
         },
         state
       ) do
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
 
     state2 = State.put(state, Model.PlainName, m_plain_name)
+
+    timeout =
+      if State.get(state2, Model.AuctionBid, plain_name) == :not_found do
+        :aec_governance.name_claim_bid_timeout(plain_name, protocol_version)
+      else
+        :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
+      end
 
     case timeout do
       0 ->

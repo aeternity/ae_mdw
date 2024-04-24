@@ -36,7 +36,6 @@ defmodule AeMdw.Db.Sync.Name do
     name_fee = :aens_claim_tx.name_fee(tx)
     proto_vsn = Db.proto_vsn(height)
     lima_or_higher? = height >= Node.lima_height()
-    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
 
     [
       NameClaimMutation.new(
@@ -47,7 +46,7 @@ defmodule AeMdw.Db.Sync.Name do
         lima_or_higher?,
         txi_idx,
         block_index,
-        timeout
+        proto_vsn
       )
       | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
     ]
