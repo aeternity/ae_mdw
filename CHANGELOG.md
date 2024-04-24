@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.74.4](https://www.github.com/aeternity/ae_mdw/compare/v1.74.3...v1.74.4) (2024-04-24)
+
+
+### Bug Fixes
+
+* add int-as-string on pagination next/prev urls ([#1745](https://www.github.com/aeternity/ae_mdw/issues/1745)) ([635249b](https://www.github.com/aeternity/ae_mdw/commit/635249bcd6de48938873deadc913a8cd0d157a75))
+* extend auction properly ([#1743](https://www.github.com/aeternity/ae_mdw/issues/1743)) ([21d942e](https://www.github.com/aeternity/ae_mdw/commit/21d942e69f5a24a1f3570099031f2a283a2d8605))
+
 ### [1.74.3](https://www.github.com/aeternity/ae_mdw/compare/v1.74.2...v1.74.3) (2024-04-23)
 
 
