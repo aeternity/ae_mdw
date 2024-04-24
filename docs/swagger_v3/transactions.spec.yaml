@@ -48,7 +48,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple transactions.
-      operationId: get_transactions
+      operationId: GetTransactions
       parameters:
         - name: type
           description: The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)
@@ -183,7 +183,7 @@ paths:
     get:
       deprecated: false
       description: Get a single transaction.
-      operationId: get_transaction
+      operationId: GetTransaction
       parameters:
         - name: hash
           in: path
@@ -215,7 +215,7 @@ paths:
     get:
       deprecated: false
       description: Get count of transactions at the latest height.
-      operationId: get_transactions_count
+      operationId: GetTransactionsCount
       parameters:
       - name: tx_type
         description: Type of a transaction
@@ -245,7 +245,7 @@ paths:
     get:
       deprecated: false
       description: Get transactions count and its type for given aeternity ID.
-      operationId: get_transaction_count_by_id
+      operationId: GetTransactionsCountById
       parameters:
         - description: The ID of the address/name/oracle/etc
           in: path

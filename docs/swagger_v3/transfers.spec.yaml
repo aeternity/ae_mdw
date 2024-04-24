@@ -25,7 +25,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple transfers.
-      operationId: get_transfers
+      operationId: GetTransfers
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'

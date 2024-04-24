@@ -171,7 +171,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple key blocks.
-      operationId: get_key_blocks
+      operationId: GetKeyBlocks
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -200,7 +200,7 @@ paths:
     get:
       deprecated: false
       description: Get a single key block.
-      operationId: get_key_block
+      operationId: GetKeyBlock
       parameters:
         - name: hash_or_kbi
           in: path
@@ -235,7 +235,7 @@ paths:
     get:
       deprecated: false
       description: Get the key block micro blocks.
-      operationId: get_key_block_micro_blocks
+      operationId: GetKeyBlockMicroBlocks
       parameters:
         - name: hash_or_kbi
           in: path
@@ -274,7 +274,7 @@ paths:
     get:
       deprecated: false
       description: Get a micro block
-      operationId: get_micro_block
+      operationId: GetMicroBlock
       parameters:
         - name: hash
           in: path
@@ -306,7 +306,7 @@ paths:
     get:
       deprecated: false
       description: Get a micro block transactions
-      operationId: get_micro_block_transactions
+      operationId: GetMicroBlockTransactions
       parameters:
         - name: hash
           in: path

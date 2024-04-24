@@ -215,7 +215,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple names.
-      operationId: get_names
+      operationId: GetNames
       parameters:
         - name: by
           in: query
@@ -264,7 +264,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple names.
-      operationId: get_names_auctions
+      operationId: GetNamesAuctions
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -286,7 +286,7 @@ paths:
     get:
       deprecated: false
       description: Get a single name.
-      operationId: get_name
+      operationId: GetName
       parameters:
         - name: id
           in: path
@@ -318,7 +318,7 @@ paths:
     get:
       deprecated: false
       description: Get name auction
-      operationId: get_name_auction
+      operationId: GetNameAuction
       parameters:
         - name: id
           in: path
@@ -356,7 +356,7 @@ paths:
     get:
       deprecated: false
       description: Get name auction claims
-      operationId: get_name_auction_claims
+      operationId: GetNameAuctionClaims
       parameters:
         - name: id
           in: path
@@ -390,7 +390,7 @@ paths:
     get:
       deprecated: false
       description: Get name pointers
-      operationId: get_name_pointers
+      operationId: GetNamePointers
       parameters:
         - name: id
           in: path
@@ -416,7 +416,7 @@ paths:
     get:
       deprecated: false
       description: Get name pointees
-      operationId: get_name_pointees
+      operationId: GetNamePointees
       parameters:
         - name: id
           in: path
@@ -447,7 +447,7 @@ paths:
     get:
       deprecated: false
       description: Get name claims
-      operationId: get_name_claims
+      operationId: GetNameClaims
       parameters:
         - name: id
           in: path
@@ -476,7 +476,7 @@ paths:
     get:
       deprecated: false
       description: Get name transfers
-      operationId: get_name_transfers
+      operationId: GetNameTransfers
       parameters:
         - name: id
           in: path
@@ -505,7 +505,7 @@ paths:
     get:
       deprecated: false
       description: Get name updates
-      operationId: get_name_updates
+      operationId: GetNameUpdates
       parameters:
         - name: id
           in: path

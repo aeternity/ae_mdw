@@ -349,7 +349,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX141 contract meta-info, extensions, limits and stats.
-      operationId: get_aex141_by_contract
+      operationId: GetAex141ByContract
       parameters:
         - description: The contract id
           in: path
@@ -375,7 +375,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX141 contracts sorted by creation time, name or symbol.
-      operationId: get_sorted_aex141_contracts
+      operationId: GetSortedAex141Contracts
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -417,7 +417,7 @@ paths:
     get:
       deprecated: false
       description: Get owner of a NFT (AEX-141 token).
-      operationId: get_aex141_token_owner
+      operationId: GetAex141TokenOwner
       parameters:
         - description: The contract id
           in: path
@@ -451,7 +451,7 @@ paths:
     get:
       deprecated: false
       description: Get owners of tokens of a AEX-141 contract.
-      operationId: get_aex141_contract_owners
+      operationId: GetAex141ContractOwners
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -486,7 +486,7 @@ paths:
     get:
       deprecated: false
       description: Get templates AEX-141 contract tokens.
-      operationId: get_aex141_contract_templates
+      operationId: GetAex141ContractTemplates
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -521,7 +521,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX-141 template tokens.
-      operationId: get_aex141_template_tokens
+      operationId: GetAex141TemplateTokens
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -563,7 +563,7 @@ paths:
     get:
       deprecated: false
       description: Get tokens owned by an account.
-      operationId: get_aex141_owned_tokens
+      operationId: GetAex141OwnedTokens
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -605,7 +605,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 creation and meta_info information by contract id.
-      operationId: get_aex9_by_contract
+      operationId: GetAex9ByContract
       parameters:
         - description: The contract id
           in: path
@@ -631,7 +631,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 tokens sorted by creation time, name or symbol.
-      operationId: get_sorted_aex9_tokens
+      operationId: GetSortedAex9Tokens
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -673,7 +673,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 tokens count.
-      operationId: get_aex9_tokens_count
+      operationId: GetAex9TokensCount
       responses:
         '200':
           description: Returns the number of AEX9 contracts created
@@ -686,7 +686,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 token events count.
-      operationId: get_aex9_logs_count
+      operationId: GetAex9LogsCount
       parameters:
         - description: Contract id
           in: path
@@ -713,7 +713,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract.
-      operationId: get_aex9_contract_balances
+      operationId: GetAex9ContractBalances
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -762,7 +762,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 balance for an account on a contract.
-      operationId: get_aex9_contract_account_balance
+      operationId: GetAex9ContractAccountBalance
       parameters:
         - description: Contract id
           in: path
@@ -813,7 +813,7 @@ paths:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account on the last block.
-      operationId: get_aex9_account_balances
+      operationId: GetAex9AccountBalances
       parameters:
         - description: Account id
           in: path
@@ -846,7 +846,7 @@ paths:
     get:
       deprecated: false
       description: Get AEX9 account balance on a contract throughout all heights when changed.
-      operationId: get_aex9_contract_account_balance_history
+      operationId: GetAex9ContractAccountBalanceHistory
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'

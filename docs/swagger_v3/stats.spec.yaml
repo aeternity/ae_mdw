@@ -132,7 +132,7 @@ paths:
     get:
       deprecated: false
       description: Get delta stats.
-      operationId: get_deltastats
+      operationId: GetDeltastats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -161,7 +161,7 @@ paths:
     get:
       deprecated: false
       description: Get total accumulated stats.
-      operationId: get_totalstats
+      operationId: GetTotalstats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -190,7 +190,7 @@ paths:
     get:
       deprecated: false
       description: Get miners list with total rewards obtained through mining.
-      operationId: get_minerstats
+      operationId: GetMinerstats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -218,7 +218,7 @@ paths:
     get:
       deprecated: false
       description: Get total blocks count statistics.
-      operationId: get_blocks_statistics
+      operationId: GetBlocksStatistics
       parameters:
         - name: interval_by
           description: The interval in which to return the statistics.
@@ -281,7 +281,7 @@ paths:
     get:
       deprecated: false
       description: Get total transactions count statistics.
-      operationId: get_transactions_statistics
+      operationId: GetTransactionsStatistics
       parameters:
         - name: interval_by
           description: The interval in which to return the statistics.
@@ -341,7 +341,7 @@ paths:
     get:
       deprecated: false
       description: Get total names count statistics.
-      operationId: get_names_statistics
+      operationId: GetNamesStatistics
       parameters:
         - name: interval_by
           description: The interval in which to return the statistics.

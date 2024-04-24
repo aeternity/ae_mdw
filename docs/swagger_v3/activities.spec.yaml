@@ -205,7 +205,7 @@ paths:
     get:
       deprecated: false
       description: Get an account activities.
-      operationId: get_account_activities
+      operationId: GetAccountActivities
       parameters:
         - name: id
           in: path
