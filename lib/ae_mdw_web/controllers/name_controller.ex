@@ -57,8 +57,12 @@ defmodule AeMdwWeb.NameController do
   def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}) do
     opts = [{:render_v3?, true} | opts]
 
-    with {:ok, auction_bid} <- AuctionBids.fetch(state, ident, opts) do
-      format_json(conn, auction_bid)
+    case AuctionBids.fetch(state, ident, opts) do
+      {:ok, auction_bid} ->
+        format_json(conn, auction_bid)
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: ident)}
     end
   end
 
