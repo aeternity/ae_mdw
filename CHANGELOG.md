@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.74.5](https://www.github.com/aeternity/ae_mdw/compare/v1.74.4...v1.74.5) (2024-04-26)
+
+
+### Bug Fixes
+
+* handle not found auction bids ([#1746](https://www.github.com/aeternity/ae_mdw/issues/1746)) ([1d788af](https://www.github.com/aeternity/ae_mdw/commit/1d788afbbbc68f5482a2e0048e9baf4d77527d9e))
+
 ### [1.74.4](https://www.github.com/aeternity/ae_mdw/compare/v1.74.3...v1.74.4) (2024-04-24)
 
 
