@@ -16,6 +16,7 @@ defmodule AeMdw.Stats do
   alias AeMdw.Node
   alias AeMdw.Util
   alias AeMdw.Validate
+  alias AeMdw.Node.Db, as: NodeDb
 
   require Model
 
@@ -155,7 +156,8 @@ defmodule AeMdw.Stats do
            State.get(state, Model.Stat, @tps_stat_key),
          {:ok, Model.stat(payload: miners_count)} <-
            State.get(state, Model.Stat, @miners_count_stat_key) do
-      {last_24hs_txs_count, trend} = last_24hs_txs_count_and_trend(state)
+      {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
+        last_24hs_txs_count_and_fee_with_trend(state)
 
       {:ok,
        %{
@@ -163,7 +165,9 @@ defmodule AeMdw.Stats do
          max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
          miners_count: miners_count,
          last_24hs_transactions: last_24hs_txs_count,
-         transactions_trend: trend
+         transactions_trend: trend,
+         last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
+         fees_trend: fees_trend
        }}
     else
       :not_found ->
@@ -562,7 +566,7 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp last_24hs_txs_count_and_trend(state) do
+  defp last_24hs_txs_count_and_fee_with_trend(state) do
     time_24hs_ago = :aeu_time.now_in_msecs() - @seconds_per_day * 1_000
 
     case State.next(state, Model.Time, {time_24hs_ago, -1}) do
@@ -576,10 +580,16 @@ defmodule AeMdw.Stats do
         txs_count_48hs = tx_index_24hs_ago - tx_index_48hs_ago
         trend = Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2)
 
-        {txs_count_24hs, trend}
+        average_tx_fees_24hs = average_tx_fees(state, tx_index_24hs_ago, last_tx_index)
+        average_tx_fees_48hs = average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago)
+
+        fee_trend =
+          Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2)
+
+        {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
 
       :none ->
-        {0, 0}
+        {{0, 0}, {0, 0}}
     end
   end
 
@@ -613,6 +623,23 @@ defmodule AeMdw.Stats do
       :month ->
         %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
         (year - @start_unix) * 12 + month - 1
+    end
+  end
+
+  defp average_tx_fees(state, start_txi, end_txi) do
+    txs_count = end_txi - start_txi + 1
+
+    if txs_count != 0 do
+      start_txi..end_txi
+      |> Enum.reduce(0, fn tx_index, acc ->
+        Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, tx_index)
+        fee = NodeDb.get_tx_fee(tx_hash)
+
+        acc + fee
+      end)
+      |> then(&(&1 / txs_count))
+    else
+      0
     end
   end
 end
