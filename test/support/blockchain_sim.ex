@@ -185,8 +185,18 @@ defmodule AeMdwWeb.BlockchainSim do
         {:value, block} = find_block(hash, mock_blocks)
         {:value, :aec_blocks.to_header(block)}
       end,
-      find_tx_location: fn _tx_hash ->
-        header = mock_blocks[:mb] |> :aec_blocks.to_header()
+      find_tx_location: fn tx_hash ->
+        micro_block =
+          Enum.find_value(mock_blocks, fn
+            {_name, {:mic_block, _header, txs, _pof} = micro_block} ->
+              Enum.any?(txs, fn tx -> :aetx_sign.hash(tx) == tx_hash end) && micro_block
+
+            _another_type_of_block ->
+              false
+          end)
+
+        header = micro_block |> :aec_blocks.to_header()
+
         {:ok, mb0_hash} = :aec_headers.hash_header(header)
         mb0_hash
       end,

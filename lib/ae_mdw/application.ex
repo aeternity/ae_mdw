@@ -48,8 +48,8 @@ defmodule AeMdw.Application do
 
     children = [
       AeMdwWeb.Supervisor,
-      AeMdwWeb.Websocket.Supervisor,
       AeMdw.Sync.Supervisor,
+      AeMdwWeb.Websocket.Supervisor,
       AeMdw.APM.Telemetry
     ]
 
