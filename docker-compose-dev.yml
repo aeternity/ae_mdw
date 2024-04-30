@@ -6,7 +6,7 @@ services:
       dockerfile: ./Dockerfile
       args:
         MIX_ENV: dev
-        RUNNER_IMAGE: "hexpm/elixir:1.16.2-erlang-26.2.3-debian-bullseye-20240311-slim"
+        RUNNER_IMAGE: "hexpm/elixir:1.16.2-erlang-26.2.4-debian-bullseye-20240423-slim"
         USER: root
     image: aeternity/ae_mdw_dev${IMAGE_NAME_SUFFIX:-}:latest
     ports:
