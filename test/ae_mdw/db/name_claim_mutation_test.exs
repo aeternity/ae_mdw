@@ -175,7 +175,9 @@ defmodule AeMdw.Db.NameClaimMutationTest do
               expire_height: ^expire_height
             )} = State.get(state, Model.AuctionBid, plain_name)
 
-    next_txi_idx = {txi + 1, -1}
+    next_txi = txi + 1
+    next_txi_idx = {next_txi, -1}
+    state = State.put(state, Model.Tx, Model.tx(index: next_txi, id: <<2::256>>))
 
     bid_mutation =
       NameClaimMutation.new(
@@ -203,18 +205,16 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
     with_mocks [
       {AeMdw.Node.Db, [:passthrough],
-       [get_tx_data: fn ^tx_hash -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
+       [get_tx_data: fn _ -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
     ] do
       state = Mutation.execute(bid_mutation, state)
-
-      next_expire_height = claim_height + extended + 1
 
       assert {:ok,
               Model.auction_bid(
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^next_expire_height
+                expire_height: ^expire_height
               )} = State.get(state, Model.AuctionBid, plain_name)
 
       assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
@@ -223,7 +223,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       assert State.exists?(
                state,
                Model.AuctionExpiration,
-               {claim_height + extended + 1, plain_name}
+               {expire_height, plain_name}
              )
 
       assert State.exists?(
@@ -231,6 +231,55 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                Model.AuctionBidClaim,
                {plain_name, claim_height, next_txi_idx}
              )
+
+      almost_expired_txi = txi + 2
+      state = State.put(state, Model.Tx, Model.tx(index: almost_expired_txi, id: <<3::256>>))
+
+      bid_mutation_2 =
+        NameClaimMutation.new(
+          plain_name,
+          name_hash,
+          owner_pk,
+          name_fee,
+          false,
+          {almost_expired_txi, -1},
+          {expire_height - 1, 0},
+          protocol_version
+        )
+
+      state = Mutation.execute(bid_mutation_2, state)
+
+      new_expire_height = expire_height - 1 + extended
+
+      assert {:ok,
+              Model.auction_bid(
+                index: ^plain_name,
+                start_height: ^claim_height,
+                owner: ^owner_pk,
+                expire_height: ^new_expire_height
+              )} = State.get(state, Model.AuctionBid, plain_name)
+
+      bid_mutation_3 =
+        NameClaimMutation.new(
+          plain_name,
+          name_hash,
+          owner_pk,
+          name_fee,
+          false,
+          {almost_expired_txi + 1, -1},
+          {new_expire_height - 300, 0},
+          protocol_version
+        )
+
+      state = Mutation.execute(bid_mutation_3, state)
+
+      assert {:ok,
+              Model.auction_bid(
+                index: ^plain_name,
+                start_height: ^claim_height,
+                owner: ^owner_pk,
+                expire_height: ^new_expire_height
+              )} = State.get(state, Model.AuctionBid, plain_name)
     end
   end
 end

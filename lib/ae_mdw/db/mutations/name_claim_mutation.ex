@@ -125,7 +125,6 @@ defmodule AeMdw.Db.NameClaimMutation do
 
       timeout ->
         auction_end = height + timeout
-        m_auction_exp = Model.expiration(index: {auction_end, plain_name})
 
         state3 =
           IntTransfer.fee(state2, {height, txi_idx}, :spend_name, owner_pk, txi_idx, name_fee)
@@ -144,10 +143,13 @@ defmodule AeMdw.Db.NameClaimMutation do
                   owner: owner_pk
                 )
 
+              m_auction_exp = Model.expiration(index: {auction_end, plain_name})
+
               state3
               |> State.inc_stat(:auctions_started)
               |> State.put(Model.AuctionBidClaim, auction_claim)
               |> State.put(Model.AuctionBid, m_auction_bid)
+              |> State.put(Model.AuctionExpiration, m_auction_exp)
 
             {:ok,
              Model.auction_bid(
@@ -160,11 +162,12 @@ defmodule AeMdw.Db.NameClaimMutation do
               prev_name_fee = :aens_claim_tx.name_fee(prev_name_claim_tx)
 
               auction_claim = Model.auction_bid_claim(index: {plain_name, start_height, txi_idx})
+              actual_auction_end = max(auction_end, prev_auction_end)
 
               m_auction_bid =
                 Model.auction_bid(auction_bid,
                   block_index_txi_idx: {block_index, txi_idx},
-                  expire_height: auction_end,
+                  expire_height: actual_auction_end,
                   owner: owner_pk
                 )
 
@@ -185,11 +188,14 @@ defmodule AeMdw.Db.NameClaimMutation do
               |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)
               |> State.put(Model.AuctionBidClaim, auction_claim)
               |> State.put(Model.AuctionBid, m_auction_bid)
+              |> State.put(
+                Model.AuctionExpiration,
+                Model.expiration(index: {actual_auction_end, plain_name})
+              )
           end
 
         state4
         |> State.put(Model.AuctionOwner, Model.owner(index: {owner_pk, plain_name}))
-        |> State.put(Model.AuctionExpiration, m_auction_exp)
     end
   end
 end
