@@ -152,6 +152,19 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec get_tx_fee(binary()) :: non_neg_integer() | nil
+  def get_tx_fee(<<_pk::256>> = tx_hash) do
+    case :aec_db.find_tx_with_location(tx_hash) do
+      {_block_hash, signed_tx} ->
+        signed_tx
+        |> :aetx_sign.tx()
+        |> :aetx.fee()
+
+      :none ->
+        nil
+    end
+  end
+
   @spec top_height_hash(boolean()) :: height_hash()
   def top_height_hash(false = _the_very_top?) do
     block = :aec_chain.top_key_block() |> ok!

@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.StatsControllerTest do
   use AeMdwWeb.ConnCase, async: false
+  import Mock
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
@@ -475,25 +476,51 @@ defmodule AeMdwWeb.StatsControllerTest do
   end
 
   describe "stats" do
-    test "it counts last 24hs transactions and 48hs comparison trend", %{conn: conn, store: store} do
+    test "it counts last 24hs transactions and 48hs comparison trend and gets average of fees with trend",
+         %{conn: conn, store: store} do
       now = :aeu_time.now_in_msecs()
       msecs_per_day = 3_600 * 24 * 1_000
-      delay = 10
+      delay = 500
+
+      last_24hs_start_txi = 8
+      last_txi = 21
 
       store =
         store
-        |> Store.put(Model.Tx, Model.tx(index: 21))
-        |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day + delay, 7}))
-        |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day * 2 + delay, 0}))
+        |> add_transactions(1, last_txi)
+        |> Store.put(
+          Model.Time,
+          Model.time(index: {now - msecs_per_day + delay, last_24hs_start_txi})
+        )
+        |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day * 2 + delay, 1}))
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
 
-      assert %{"last_24hs_transactions" => 14, "transactions_trend" => 0.5} =
-               conn
-               |> with_store(store)
-               |> get("/v2/stats")
-               |> json_response(200)
+      txis = last_24hs_start_txi..last_txi
+
+      fee_avg = Enum.sum(txis) / Enum.count(txis)
+
+      with_mocks([{AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end}]) do
+        assert %{
+                 "last_24hs_transactions" => 13,
+                 "transactions_trend" => 0.46,
+                 "fees_trend" => 0.69,
+                 "last_24hs_average_transaction_fees" => ^fee_avg
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/stats")
+                 |> json_response(200)
+      end
     end
+  end
+
+  defp add_transactions(store, start_txi, end_txi) do
+    start_txi..end_txi
+    |> Enum.reduce({store, 1}, fn txi, {store, i} ->
+      {Store.put(store, Model.Tx, Model.tx(index: txi, id: <<i::256>>)), i + 1}
+    end)
+    |> elem(0)
   end
 
   defp network_time_interval do
