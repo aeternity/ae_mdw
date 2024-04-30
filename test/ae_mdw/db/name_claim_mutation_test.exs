@@ -205,7 +205,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
     with_mocks [
       {AeMdw.Node.Db, [:passthrough],
-       [get_tx_data: fn _ -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
+       [get_tx_data: fn _tx_hash -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
     ] do
       state = Mutation.execute(bid_mutation, state)
 
@@ -267,7 +267,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
           name_fee,
           false,
           {almost_expired_txi + 1, -1},
-          {new_expire_height - 300, 0},
+          {new_expire_height - extended - 1, 0},
           protocol_version
         )
 
