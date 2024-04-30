@@ -1,0 +1,74 @@
+schemas:
+  DexSwap:
+    description: DEX swap
+    type: object
+    properties:
+      amounts:
+        type: array
+        items:
+          type: integer
+        example: [1000050, 1000060, 1000070, 1000080]
+      caller:
+        type: string
+        example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      from_token:
+        type: string
+        example: "TK1"
+      to_token:
+        type: string
+        example: "TK2"
+      log_idx:
+        type: integer
+        example: 0
+      to_account:
+        type: string
+        example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      tx_hash:
+        type: string
+        example: "th_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+    required:
+      - amounts
+      - caller
+      - from_token
+      - to_token
+      - log_idx
+      - to_account
+      - tx_hash
+paths:
+  /dex/swaps:
+    get:
+      deprecated: false
+      description: Get DEX swap tokens
+      operationId: GetDexSwaps
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - in: query
+          name: caller
+          type: string
+          description: The account ID of the caller. [More info](https://github.com/aeternity/ae_mdw#generic-ids)
+          example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        - in: query
+          name: from_symbol
+          type: string
+          description: DEX token
+          example: "TK1"
+      responses:
+        '200':
+          description: Returns paginatinated list of DEX swaps
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DexSwap'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
