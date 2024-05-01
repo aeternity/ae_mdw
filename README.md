@@ -404,6 +404,10 @@ For the new endpoints, though, we **highly recommend not to use transaction inde
 
 In the newer versions of the API, the transaction index will stop being exposed, regardless of the `tx_hash`query parameter.
 
+### `int-as-string`
+
+If this flag is set to `true`, the response will have all integers set as strings
+
 ----
 
 ## Transactions
