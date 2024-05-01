@@ -90,18 +90,18 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: deps
-          key: dependencies-${{ hashFiles('mix.lock') }}
+          key: dependencies-${{ hashFiles('mix.lock', '.github/actions/mdw-setup/action.yml') }}
 
       - uses: actions/cache@v3
         with:
           path: _build
-          key: build-${{ hashFiles('mix.lock') }}
+          key: build-${{ hashFiles('mix.lock', '.github/actions/mdw-setup/action.yml') }}
 
       - uses: actions/cache@v3
         id: plt-cache
         with:
           path: priv/plts
-          key: plts-v14-${{ hashFiles('mix.lock') }}
+          key: plts-v14-${{ hashFiles('mix.lock', '.github/actions/mdw-setup/action.yml') }}
 
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
