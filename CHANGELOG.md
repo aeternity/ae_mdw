@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.75.0](https://www.github.com/aeternity/ae_mdw/compare/v1.74.4...v1.75.0) (2024-05-01)
+
+
+### Features
+
+* add average of transaction fees for last 24 hours with trend ([#1749](https://www.github.com/aeternity/ae_mdw/issues/1749)) ([eac8a60](https://www.github.com/aeternity/ae_mdw/commit/eac8a60dab5b928976bbad9e36c017a0fca3c53f))
+* add openapi schema for dex controller ([#1754](https://www.github.com/aeternity/ae_mdw/issues/1754)) ([301f76f](https://www.github.com/aeternity/ae_mdw/commit/301f76ffdb9527c88b0de64cca89ef54f5bad88e))
+
+
+### Bug Fixes
+
+* extend auctions only if the extension is longer that the timeout ([#1753](https://www.github.com/aeternity/ae_mdw/issues/1753)) ([e08dbf5](https://www.github.com/aeternity/ae_mdw/commit/e08dbf5b3299c5d090d7027170f8cf00785356f1))
+* handle not found auction bids ([#1746](https://www.github.com/aeternity/ae_mdw/issues/1746)) ([1d788af](https://www.github.com/aeternity/ae_mdw/commit/1d788afbbbc68f5482a2e0048e9baf4d77527d9e))
+
+
+### Miscellaneous
+
+* bump otp version ([#1752](https://www.github.com/aeternity/ae_mdw/issues/1752)) ([a2c027e](https://www.github.com/aeternity/ae_mdw/commit/a2c027eb9a43f7e495022c65fe7e59282d22dcac))
+* bump version to 7.0.0 ([#1751](https://www.github.com/aeternity/ae_mdw/issues/1751)) ([7f2647a](https://www.github.com/aeternity/ae_mdw/commit/7f2647a8cf845e437dbae6ea20767a643f7695c0))
+
 ### [1.74.4](https://www.github.com/aeternity/ae_mdw/compare/v1.74.3...v1.74.4) (2024-04-24)
 
 
