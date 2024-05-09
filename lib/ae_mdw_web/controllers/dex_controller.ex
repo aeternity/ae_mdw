@@ -8,7 +8,6 @@ defmodule AeMdwWeb.DexController do
 
   alias AeMdw.Dex
   alias AeMdw.Db.Model
-  alias AeMdw.Validate
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
@@ -26,10 +25,8 @@ defmodule AeMdwWeb.DexController do
       }) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, create_txi} <- Dex.validate_token(token_symbol),
-         {:ok, swaps} <-
-           Dex.fetch_account_swaps(state, {account_pk, create_txi}, pagination, cursor) do
+    with {:ok, swaps} <-
+           Dex.fetch_swaps_for_account(state, {account_id, token_symbol}, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
@@ -37,8 +34,7 @@ defmodule AeMdwWeb.DexController do
   def swaps(%Conn{assigns: assigns} = conn, %{"caller" => account_id}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, swaps} <- Dex.fetch_account_swaps(state, account_pk, pagination, cursor) do
+    with {:ok, swaps} <- Dex.fetch_swaps_for_account(state, account_id, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
@@ -46,8 +42,7 @@ defmodule AeMdwWeb.DexController do
   def swaps(%Conn{assigns: assigns} = conn, %{"from_symbol" => token_symbol}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, create_txi} <- Dex.validate_token(token_symbol),
-         {:ok, swaps} <- Dex.fetch_contract_swaps(state, create_txi, pagination, cursor) do
+    with {:ok, swaps} <- Dex.fetch_swaps_by_token_symbol(state, token_symbol, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
@@ -56,9 +51,7 @@ defmodule AeMdwWeb.DexController do
   def swaps_for_contract(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txi} <- Dex.validate_contract_pk(contract_pk, state, contract_id),
-         {:ok, swaps} <- Dex.fetch_contract_swaps(state, create_txi, pagination, cursor) do
+    with {:ok, swaps} <- Dex.fetch_swaps_by_contract_id(state, contract_id, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
