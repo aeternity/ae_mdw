@@ -271,7 +271,8 @@ defmodule AeMdwWeb.NameControllerTest do
               auction_timeout: 1
             )
 
-          Store.put(store, Model.ActiveName, name)
+          store
+          |> Store.put(Model.ActiveName, name)
           |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
