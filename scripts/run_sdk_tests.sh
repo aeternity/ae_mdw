@@ -13,7 +13,7 @@ sleep 10
 
 docker-compose -f docker-compose-dev.yml exec ae_mdw ./bin/ae_mdw rpc ':aeplugin_dev_mode_app.start_unlink()'
 
-docker-compose -f docker-compose-dev.yml run node_sdk /bin/bash -c "yarn install && node index.js"
+docker-compose -f docker-compose-dev.yml run node_sdk /bin/sh -c "yarn install && node index.js"
 
 docker-compose -f docker-compose-dev.yml stop ae_mdw
 

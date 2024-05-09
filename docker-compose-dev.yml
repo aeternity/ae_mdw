@@ -31,7 +31,7 @@ services:
         aliases:
           - mdw.aeternity.localhost
   node_sdk:
-    image: node
+    image: node:20-alpine
     working_dir: /app
     volumes:
       - ${PWD}/node_sdk:/app
