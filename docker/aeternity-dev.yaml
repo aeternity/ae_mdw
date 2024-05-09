@@ -34,7 +34,7 @@ system:
   # plugin_path: /home/aeternity/node/plugins
   dev_mode: true
   plugins:
-    - name: ae_plugin_dev_mode
+    - name: aeplugin_dev_mode
       config: # keeping the old config style at first to stay backwards compatible
         # workspace_name: plugindev
         keyblock_interval: 0
