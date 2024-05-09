@@ -112,12 +112,4 @@ defmodule AeMdw.Sync.DexCache do
       %{pair: contract_pk, token1: token1, token2: token2}
     end)
   end
-
-  @spec get_contract_pk_txi(pubkey(), State.t()) :: pos_integer() | nil
-  def get_contract_pk_txi(contract_pk, state) do
-    case Origin.tx_index(state, {:contract, contract_pk}) do
-      {:ok, create_txi} -> create_txi
-      :not_found -> nil
-    end
-  end
 end

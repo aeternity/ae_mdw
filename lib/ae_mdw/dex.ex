@@ -5,10 +5,12 @@ defmodule AeMdw.Dex do
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
+  alias AeMdw.Sync.DexCache
   alias AeMdw.Txs
 
   require Model
@@ -49,6 +51,23 @@ defmodule AeMdw.Dex do
       |> build_streamer(@contract_swaps_table, key_boundary(create_txi), cursor)
       |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
+    end
+  end
+
+  @spec validate_contract_pk(pubkey(), State.t(), String.t()) ::
+          {:ok, pos_integer()} | {:error, Error.t()}
+  def validate_contract_pk(contract_pk, state, contract_id) do
+    case Origin.tx_index(state, {:contract, contract_pk}) do
+      {:ok, create_txi} -> {:ok, create_txi}
+      :not_found -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
+    end
+  end
+
+  @spec validate_token(String.t()) :: {:ok, pos_integer()} | {:error, Error.t()}
+  def validate_token(token_symbol) do
+    case DexCache.get_token_pair_txi(token_symbol) do
+      nil -> {:error, ErrInput.NotAex9.exception(value: token_symbol)}
+      create_txi -> {:ok, create_txi}
     end
   end
 

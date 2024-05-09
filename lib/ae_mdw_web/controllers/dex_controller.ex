@@ -8,8 +8,6 @@ defmodule AeMdwWeb.DexController do
 
   alias AeMdw.Dex
   alias AeMdw.Db.Model
-  alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Sync.DexCache
   alias AeMdw.Validate
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -29,7 +27,7 @@ defmodule AeMdwWeb.DexController do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, create_txi} <- validate_token(token_symbol),
+         {:ok, create_txi} <- Dex.validate_token(token_symbol),
          {:ok, swaps} <-
            Dex.fetch_account_swaps(state, {account_pk, create_txi}, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
@@ -48,7 +46,7 @@ defmodule AeMdwWeb.DexController do
   def swaps(%Conn{assigns: assigns} = conn, %{"from_symbol" => token_symbol}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, create_txi} <- validate_token(token_symbol),
+    with {:ok, create_txi} <- Dex.validate_token(token_symbol),
          {:ok, swaps} <- Dex.fetch_contract_swaps(state, create_txi, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
     end
@@ -59,23 +57,9 @@ defmodule AeMdwWeb.DexController do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txi} <- validate_contract_pk(contract_pk, state, contract_id),
+         {:ok, create_txi} <- Dex.validate_contract_pk(contract_pk, state, contract_id),
          {:ok, swaps} <- Dex.fetch_contract_swaps(state, create_txi, pagination, cursor) do
       Util.render(conn, swaps, &render_swap(state, &1))
-    end
-  end
-
-  defp validate_contract_pk(contract_pk, state, contract_id) do
-    case DexCache.get_contract_pk_txi(contract_pk, state) do
-      nil -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
-      create_txi -> {:ok, create_txi}
-    end
-  end
-
-  defp validate_token(token_symbol) do
-    case DexCache.get_token_pair_txi(token_symbol) do
-      nil -> {:error, ErrInput.NotAex9.exception(value: token_symbol)}
-      create_txi -> {:ok, create_txi}
     end
   end
 end
