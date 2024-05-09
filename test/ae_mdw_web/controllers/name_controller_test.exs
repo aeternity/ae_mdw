@@ -198,8 +198,9 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.ActiveNameExpiration,
             Model.expiration(index: {height - 1, height_name[height - 1]})
           )
-          |> Store.put(Model.Tx, Model.tx(index: txi + 1, id: <<txi::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
           |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: key_hash))
+          |> Store.put(Model.Block, Model.block(index: {txi, -1}, hash: key_hash))
         end)
         |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {121, height_name[121]}))
 
@@ -243,7 +244,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert names_next ==
                  Enum.sort_by(
                    names_next,
-                   fn %{"info" => %{"expire_height" => expire}} -> expire end,
+                   fn %{"expire_height" => expire} -> expire end,
                    :desc
                  )
       end
@@ -368,7 +369,7 @@ defmodule AeMdwWeb.NameControllerTest do
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
@@ -543,13 +544,14 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.InactiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -557,8 +559,8 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => next} =
                  conn
@@ -599,13 +601,14 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.InactiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {
           Name,
@@ -616,8 +619,8 @@ defmodule AeMdwWeb.NameControllerTest do
             stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
           ]
         },
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
@@ -1248,12 +1251,12 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.ActiveName, name)
           |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
-          |> Store.put(Model.Tx, Model.tx(index: i, id: <<123::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<123::256>>))
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
            fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
@@ -1263,7 +1266,7 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]},
         {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => _next} =
                  conn
@@ -1298,15 +1301,15 @@ defmodule AeMdwWeb.NameControllerTest do
 
           store
           |> Store.put(Model.ActiveName, name)
-          |> Store.put(Model.Tx, Model.tx(index: i, id: <<i::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
           |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -1314,8 +1317,8 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
@@ -1379,6 +1382,7 @@ defmodule AeMdwWeb.NameControllerTest do
           Model.ActiveNameOwnerDeactivation,
           Model.owner_deactivation(index: {owner_pk, exp_height + 3, third_name})
         )
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: key_hash))
 
       with_mocks [
@@ -1393,7 +1397,7 @@ defmodule AeMdwWeb.NameControllerTest do
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [name1, name2, name3], "next" => _next} =
                  conn
