@@ -75,6 +75,25 @@ defmodule AeMdw.Txs do
     end
   end
 
+  def count(state, nil, %{"type_group" => type_group} = params) do
+    params = Map.delete(params, "type_group")
+
+    case Validate.tx_group(type_group) do
+      {:ok, type_group} ->
+        type_group
+        |> Node.tx_group()
+        |> Enum.reduce_while({:ok, 0}, fn tx_type, {:ok, acc} ->
+          case count(state, nil, Map.put(params, "type", tx_type)) do
+            {:ok, count} -> {:cont, {:ok, count + acc}}
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def count(state, nil, %{"type" => tx_type}) do
     with {:ok, tx_type} <- Validate.tx_type(tx_type) do
       case State.get(state, Model.TypeCount, tx_type) do
@@ -97,8 +116,12 @@ defmodule AeMdw.Txs do
     end
   end
 
-  def count(state, nil, params) when map_size(params) == 0,
-    do: {:ok, DbUtil.last_txi!(state)}
+  def count(state, nil, params) when map_size(params) == 0 do
+    case DbUtil.last_txi(state) do
+      {:ok, count} -> {:ok, count}
+      :none -> {:ok, 0}
+    end
+  end
 
   def count(_state, {:txi, first_txi..last_txi}, params) when map_size(params) == 0,
     do: {:ok, last_txi - first_txi + 1}
