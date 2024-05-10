@@ -14,8 +14,7 @@
   - [Docker setup for local dev](#docker-setup-for-local-dev)
   - [Tools for local development](#tools-for-local-development)
 - [Hosted infrastructure](#hosted-infrastructure)
-- [HTTP v2 (latest) endpoints](#http-v2-latest-endpoints)
-- [HTTP v1 (deprecated) endpoints](#http-v1-endpoints-deprecated)
+- [HTTP v3 (latest) endpoints](#http-v3-latest-endpoints)
 - [OpenAPI specs](#openapi-specs)
 - [Pagination](#pagination)
 - [Additional endpoint options](#additional-endpoint-options)
@@ -31,7 +30,6 @@
 - [NFTs](#aex141)
 - [Statistics](#statistics)
 - [Activities](#activities)
-- [Migrating to v2](#migrating-to-v2)
 - [Websocket interface](#websocket-interface)
 - [Tests](#tests)
 - [Auto-generated Documentation](#auto-generated-documentation)
@@ -132,135 +130,83 @@ We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ 
 
 **NOTE:** Local deploy with default configuration endpoints **will not** contain `/mdw/` segment on the path.
 
-## HTTP v2 (latest) endpoints
+## HTTP v3 (latest) endpoints
 
 The routes and respective responses are:
 
 ```
-GET /v2/key-blocks                           - key blocks with micro blocks and transaction counts
-GET /v2/key-blocks/:hash_or_kbi              - key block by hash or height
-GET /v2/key-blocks/:hash_or_kbi/micro-blocks - micro block belonging to key block
-GET /v2/micro-blocks/:hash                   - micro block with transaction count
-GET /v2/micro-blocks/:hash/txs               - micro block transactions
+GET /v3/key-blocks                           - key blocks with micro blocks and transaction counts
+GET /v3/key-blocks/:hash_or_kbi              - key block by hash or height
+GET /v3/key-blocks/:hash_or_kbi/micro-blocks - micro block belonging to key block
+GET /v3/micro-blocks/:hash                   - micro block with transaction count
+GET /v3/micro-blocks/:hash/transactions      - micro block transactions
 
-GET /v2/txs                            - transactions in any direction
-GET /v2/txs/:hash_or_index             - transaction by hash or index
-GET /v2/txs/count                      - total number of transactions (last transaction index + 1)
-GET /v2/txs/count/:id                  - counts of transactions per transaction field for given id
+GET /v3/transactions                            - transactions in any direction
+GET /v3/transactions/:hash                      - transaction by hash
+GET /v3/transactions/count                      - total number of transactions (last transaction index + 1)
 
-GET /v2/accounts/:id/activities        - transactions, internal contract calls, AEX-N and internal transfers involving an account
+GET /v3/accounts/:id/activities             - transactions, internal contract calls, AEX-N and internal transfers involving an account
+GET /v3/accounts/:account_id/aex9/balances  - aex9 account balances
 
-GET /v2/contracts                         - contracts
-GET /v2/contracts/:id                     - contract by id
-GET /v2/contracts/logs                    - contract logs
-GET /v2/contracts/call                    - contract calls
+GET /v3/contracts                         - contracts
+GET /v3/contracts/:id                     - contract by id
+GET /v3/contracts/logs                    - contract logs
+GET /v3/contracts/calls                   - contract calls
 
-GET /v2/names                              - AENS names
-GET /v2/names/search                       - AENS names and auctions filtered by a query
-GET /v2/names/:id/auction                  - AENS name auction
-GET /v2/names/:id/pointers                 - AENS name pointer
-GET /v2/names/:id/pointees                 - AENS name pointees
-GET /v2/names/auctions                     - all AENS name auctions
-GET /v2/names/:id                          - AENS name state and transaction history
-GET /v2/names/:id/claims                   - AENS name claims history
-GET /v2/names/:id/updates                  - AENS name update history
-GET /v2/names/:id/transfers                - AENS name transfer history
+GET /v3/names                              - AENS names
+GET /v3/names/search                       - AENS names and auctions filtered by a query
+GET /v3/names/:id/auction                  - AENS name auction
+GET /v3/names/:id/pointers                 - AENS name pointer
+GET /v3/names/:id/pointees                 - AENS name pointees
+GET /v3/names/auctions                     - all AENS name auctions
+GET /v3/names/:id                          - AENS name state and transaction history
+GET /v3/names/:id/claims                   - AENS name claims history
+GET /v3/names/:id/updates                  - AENS name update history
+GET /v3/names/:id/transfers                - AENS name transfer history
 
-GET /v2/oracles                         - expired oracles ordered by expiration height, filtered by active/inactive state and scope
-GET /v2/oracles/:id                     - oracle information by hash
+GET /v3/oracles                         - expired oracles ordered by expiration height, filtered by active/inactive state and scope
+GET /v3/oracles/:id                     - oracle information by hash
+GET /v3/oracles/:id/queries             - oracle queries
+GET /v3/oracles/:id/responses           - oracle responses
 
-GET /v2/channels                        - active channels ordered by activation height
-GET /v2/channels/:id                    - active or inactive channel
-GET /v2/channels/:id/updates            - displays all updates done to a channel
+GET /v3/channels                        - active channels ordered by activation height
+GET /v3/channels/:id                    - active or inactive channel
+GET /v3/channels/:id/updates            - displays all updates done to a channel
 
-GET /v2/transfers                        - internal transfers from the top of the chain
+GET /v3/transfers                        - internal transfers from the top of the chain
 
-GET /v2/aex9                                           - aex9 contracts
-GET /v2/aex9/:contract_id                              - aex9 contract tokens
-GET /v2/aex9/:contract_id/balances                     - aex9 contract balances
-GET /v2/aex9/:contract_id/balances/:account_id         - aex9 contract account balance
-GET /v2/aex9/account-balances/:account_id              - aex9 account balances
-GET /v2/aex9/transfers/from/:sender                    - aex9 transfers from sender
-GET /v2/aex9/transfers/to/:recipient                   - aex9 transfers to recipient
-GET /v2/aex9/transfers/from-to/:sender/:recipient      - aex9 transfers from sender to recipient
-GET /v2/aex9/:contract_id/balances/:account_id/history - aex9 contract account balanances history
+GET /v3/aex9                                           - aex9 contracts
+GET /v3/aex9/:contract_id                              - aex9 contract tokens
+GET /v3/aex9/:contract_id/balances                     - aex9 contract balances
+GET /v3/aex9/:contract_id/balances/:account_id         - aex9 contract account balance
+GET /v3/aex9/transfers                                 - aex9 transfers that can be filtered by sender/recipient
+GET /v3/aex9/:contract_id/balances/:account_id/history - aex9 contract account balanances history
 
-GET /v2/aex141                                         - nft contracts meta info and stats
-GET /v2/aex141/:contract_id                            - nft contract meta info and stats
-GET /v2/aex141/owned-nfts/:account_id                  - nfts owned by a wallet
-GET /v2/aex141/:contract_id/owner/:token_id            - the owner wallet address of a NFT
-GET /v2/aex141/:contract_id/owners                     - the owners wallets of NFTs from a collection
-GET /v2/aex141/:contract_id/templates                  - nft templates
-GET /v2/aex141/:contract_id/templates/:id/tokens       - nft supply from a template
-GET /v2/aex141/transfers/from/:sender                  - nft transfers from sender
-GET /v2/aex141/transfers/to/:recipient                 - nft transfers to recipient
-GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
+GET /v3/aex141                                         - nft contracts meta info and stats
+GET /v3/aex141/:contract_id                            - nft contract meta info and stats
+GET /v3/aex141/owned-nfts/:account_id                  - nfts owned by a wallet
+GET /v3/aex141/:contract_id/owner/:token_id            - the owner wallet address of a NFT
+GET /v3/aex141/:contract_id/owners                     - the owners wallets of NFTs from a collection
+GET /v3/aex141/:contract_id/templates                  - nft templates
+GET /v3/aex141/:contract_id/templates/:id/tokens       - nft supply from a template
+GET /v3/aex141/transfers                               - nft transfers that can be filtered by sender/recipient
 
-GET /v2/deltastats                       - statistics for generations from tip of the chain
-GET /v2/totalstats                       - aggregated statistics for generations from tip of the chain
-GET /v2/minerstats                       - total rewards for each miner
+GET /v3/deltastats                       - statistics for generations from tip of the chain
+GET /v3/totalstats                       - aggregated statistics for generations from tip of the chain
+GET /v3/minerstats                       - total rewards for each miner
 
-GET /v2/status                           - middleware status
-```
+GET /v3/statistics/transactions                - statistics over time of transactions count
+GET /v3/statistics/blocks                      - statistics over time of blocks count
+GET /v3/statistics/names                       - statistics over time of names count
 
-## HTTP v1 endpoints (DEPRECATED)
-
-These endpoints are soon to be deprecated and should no longer be used.
-
-The routes and respective responses are:
-
-```
-GET  /name/:id                          - name information by hash or plain name
-GET  /name/auction/:id                  - name information for auction, by hash or plain name
-GET  /name/pointers/:id                 - pointers of a name specified by hash of plain name
-GET  /name/pointees/:id                 - names which point to id specified by hash
-GET  /names/owned_by/:id                - names owned by account and auctions with top bid from account
-GET  /names/search/:prefix              - names matching the provided prefix
-
-GET  /names/auctions                    - name auctions ordered by (optional) query parameters
-GET  /names/auctions/:scope_type/:range - name auctions for continuation link
-GET  /names/inactive                    - expired names ordered by (optional) query parameters
-GET  /names/inactive/:scope_type/:range - expired names for continuation link
-GET  /names/active                      - active names ordered by (optional) query parameters
-GET  /names/active/:scope_type/:range   - active names for continuation link
-GET  /names                             - all names (active and expired) ordered by (optional) query parameters
-GET  /names/:scope_type/:range          - all names for continuation link
-
-GET /aex9/by_name                       - AEX9 tokens, filtered by token name
-GET /aex9/by_symbol                     - AEX9 tokens, filtered by token symbol
-
-GET /aex9/balance/gen/:range/:contract_id/:account_id      - AEX9 token balance in range for given contract and account
-GET /aex9/balance/hash/:blockhash/:contract_id/:account_id - AEX9 token balance at block for given contract and account
-GET /aex9/balance/:contract_id/:account_id                 - current AEX9 token balance for given contract and account
-
-GET /aex9/balances/gen/:height/account/:account_id         - AEX9 token balances of all contracts at height for given account
-GET /aex9/balances/hash/:blockhash/account/:account_id     - AEX9 token balances of all contracts at blockhash for given account
-GET /aex9/balances/account/:account_id                     - current AEX9 token balances of all contracts for given account
-
-GET /aex9/balances/gen/:range/:contract_id       - all AEX9 token balances in range for given contract
-GET /aex9/balances/hash/:blockhash/:contract_id  - all AEX9 token balances at block for given contract
-GET /aex9/balances/:contract_id                  - all current AEX9 token balances for given contract
-
-GET /aex9/transfers/from/:sender                 - all transfers of AEX9 tokens from sender
-GET /aex9/transfers/to/:recipient                - all transfers of AEX9 tokens to recipient
-GET /aex9/transfers/from-to/:sender/:recipient   - all transfers of AEX9 tokens between sender and recipient
-
-GET /contracts/logs                      - contract logs
-GET /contracts/logs/:direction           - contract logs from genesis or from the tip of chain
-GET /contracts/logs/:scope_type/:range   - contract logs from in given range
-
-GET /contracts/calls                     - function calls inside of the contracts
-GET /contracts/calls/:direction          - function calls inside of the contracts from genesis or from the tip of chain
-GET /contracts/calls/:scope_type/:range  - function calls inside of the contracts in a given range
-
-GET /status                              - middleware status
+GET /v3/status                           - middleware status
 ```
 
 ## OpenAPI specs
 
 The swagger specification of the endpoints can be downloaded from:
 
-- https://testnet.aeternity.io/mdw/v2/api/
+- https://testnet.aeternity.io/mdw/v3/api/
 
 It can be visualized on a swagger UI at:
 
@@ -297,7 +243,7 @@ Examples
 Getting the first transaction:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -322,15 +268,15 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_
       "tx_index": 1776073
     }
   ],
-  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1",
-  "prev": "/txs/backward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=19813844&limit=1&rev=1"
+  "next": "/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1",
+  "prev": "/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=19813844&limit=1&rev=1"
 }
 ```
 
 Getting the next transaction by prepending host (https://mainnet.aeternity.io/mdw) to the continuation-URL from last request:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1" | jq '.'
 {
   "data": [
     {
@@ -351,16 +297,15 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_
         "sender_id": "ak_2iK7D3t5xyN8GHxQktvBnfoC3tpq1eVMzTpABQY72FXRfg3HMW",
         "type": "SpendTx",
         "version": 1
-      },
-      "tx_index": 1779354
+      }
     }
   ],
-  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779356&limit=1",
-  "prev": "/txs/backward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1776073&limit=1&rev=1"
+  "next": "/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779356&limit=1",
+  "prev": "/v3/transactions?direction=backward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1776073&limit=1&rev=1"
 }
 ```
 
-Once there are no more transactions for a query, the `next` key is set to `null`.
+Once there are no more transactions for a query, the `next` and/or `prev` key is set to `null`.
 
 ### Limit
 
@@ -369,10 +314,9 @@ of transactions in the reply than `10` (max `100`).
 
 ### Scope
 
-The `scope` parameter specifies the time period to look for transactions matching the criteria:
+The `scope` parameter specifies the time period to look for results matching the criteria:
 
 - `gen:A-B`   - from generation A to B (forward if A < B, backward otherwise)
-- `txi:A-B`   - from transaction index A to B (forward if A < B, backward otherwise)
 
 Not all paginated endpoints support all scopes.
 
@@ -386,23 +330,9 @@ It can be either `forward` or `backward` (default).
 
 In many of the endpoints there's some additional query parameters that can be sent to change the endpoint behavior.
 
-### `expand`
-
-When `expand=true` is sent on the URL, it displays additional information.
-
-Most oracle and name endpoints allow this option.
-
 ### `top`
 
 When `top=true`, it displays the latest state of the changes by querying the node directly. This is allowed on some of the `AEx9` endpoints to obtain the latest balances state for a given contract.
-
-### `tx_hash`
-
-Currently, in the endpoints created from the beginning, transactions were identified by a "transaction index". Since recently, we've decided this shouldn't really be the case: transactions are to be identified exclusively via the transaction hash. This is because forks caused different transactions to have the same (consecutive and sequentially calculated) transaction indexes.
-
-For the new endpoints, though, we **highly recommend not to use transaction indexes**, instead, use `tx_hash=true` for all endpoints and use exclusively the transaction hashes.
-
-In the newer versions of the API, the transaction index will stop being exposed, regardless of the `tx_hash`query parameter.
 
 ### `int-as-string`
 
@@ -412,9 +342,9 @@ If this flag is set to `true`, the response will have all integers set as string
 
 ## Transactions
 
-### `/v2/txs`
+### `/v3/transactions`
 
-Querying for transactions via `/v2/txs` endpoint supports 3 kinds of parameters specifying which transactions should be part of the reply:
+Querying for transactions via `/v3/transactions` endpoint supports 3 kinds of parameters specifying which transactions should be part of the reply:
 
 - types
 - generic ids
@@ -438,19 +368,20 @@ Supported types:
 
 Supported type groups:
 
-* channel
-* contract
-* ga
-* name
-* oracle
-* paying
-* spend
+* `channel`
+* `contract`
+* `ga`
+* `name`
+* `oracle`
+* `paying`
+* `spend`
 
 Examples:
 
 `type` parameter:
+
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type=channel_create&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&type=channel_create&limit=1" | jq '.'
 {
   "data": [
     {
@@ -477,17 +408,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type=channe
         "state_hash": "st_MHb9b2dXovoWyhDf12kVJPwXNLCWuSzpwPBvMFbNizRJttaZ",
         "type": "ChannelCreateTx",
         "version": 1
-      },
-      "tx_index": 87
+      }
     }
   ],
-  "next": "/txs/forward?cursor=73270&limit=1&type=channel_create"
+  "next": "/v3/transactions?direction=forward&cursor=73270&limit=1&type=channel_create"
+  "prev": null
 }
 ```
 
 `type_group` parameter:
+
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type_group=oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&type_group=oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -514,11 +446,11 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type_group=
         "response_format": "the response spec",
         "type": "OracleRegisterTx",
         "version": 1
-      },
-      "tx_index": 8891
+      }
     }
   ],
-  "next": "/txs/forward?cursor=8892&limit=1&type_group=oracle"
+  "next": "/v3/transactions?direction=forward&cursor=8892&limit=1&type_group=oracle",
+  "prev": null
 }
 ```
 
@@ -535,12 +467,10 @@ Supported generic IDs:
 - `channel`
 - `oracle`
 
-(todo: name)
-
 Examples
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -567,8 +497,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&contract=ct
         "type": "ContractCreateTx",
         "version": 1,
         "vm_version": 5
-      },
-      "tx_index": 8392766
+      }
     },
     {
       "block_hash": "mh_233z34seMczJE7XtGLJN6ZrvJG9eQXG6fdTFymyzYyUyQbt2tY",
@@ -620,16 +549,16 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&contract=ct
         "return_type": "ok",
         "type": "ContractCallTx",
         "version": 1
-      },
-      "tx_index": 8395071
+      }
     }
   ],
-  "next": "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=8401663&limit=2"
+  "next": "/v3/transactions?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=8401663&limit=2",
+  "prev": null
 }
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
 {
   "data": [
     {
@@ -657,16 +586,16 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&oracle=ok_2
         "ttl": 50000,
         "type": "OracleRegisterTx",
         "version": 1
-      },
-      "tx_index": 600284
+      }
     }
   ],
-  "next": "/txs/forward?cursor=600286&limit=1&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
+  "next": "/v3/transactions?direction=forward&cursor=600286&limit=1&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+  "prev": null
 }
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
 {
   "data": [
     {
@@ -693,8 +622,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&channel=ch_
         "state_hash": "st_MHb9b2dXovoWyhDf12kVJPwXNLCWuSzpwPBvMFbNizRJttaZ",
         "type": "ChannelCreateTx",
         "version": 1
-      },
-      "tx_index": 87
+      }
     },
     {
       "block_hash": "mh_joVBtAVakCpGWqesP4S8HpDTs6tUuwq2hjpGHwN4aGP1shfFx",
@@ -716,11 +644,11 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&channel=ch_
         "to_id": "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS",
         "type": "ChannelWithdrawTx",
         "version": 1
-      },
-      "tx_index": 94616
+      }
     }
   ],
-  "next": "/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&cursor=94617&limit=2"
+  "next": "/v3/transactions?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&cursor=94617&limit=2",
+  "prev": null
 }
 ```
 
@@ -798,7 +726,7 @@ Examples
 
 with provided transaction type (`name_transfer`):
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
 {
   "data": [
     {
@@ -823,31 +751,32 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&name_transf
       "tx_index": 11700056
     }
   ],
-  "next": "/txs/forward?cursor=11734834&limit=1&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF"
+  "next": "/v3/transactions?direction=forward&cursor=11734834&limit=1&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF"
 }
 ```
 
-freestanding field `from_id`, and via `jq` extracting only tx_index and transaction type:
+freestanding field `from_id`, and via `jq` extracting only hash and transaction type:
+
 ```
-curl -s "https://mainnet.aeternity.io/mdw/v2/txs?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.tx_index, .tx.type]'
+curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.hash, .tx.type]'
 [
-  98535,
+  "th_s1C1VC1nwWR4WB8qqJ7o9VokTTPQkAmKQ4aEfQf2GnVa4GKqw",
   "ChannelForceProgressTx"
 ]
 [
-  96518,
+  "th_2donST82cDa4trBqE4d2m7kPoTe56cvQVZ52aSoNG8V4UnV8vX",
   "ChannelSettleTx"
 ]
 [
-  96514,
+  "th_2wevgEPtCdRMpPaoHRQjyaApXK9FbErnM3UtqN7KDmbxjEeiAQ",
   "ChannelSlashTx"
 ]
 [
-  94618,
+  "th_YcFkm7qTgEe5zFhCB21td6f68u1WTH8qArZZwsNqhJCSzhJ3L",
   "ChannelSnapshotSoloTx"
 ]
 [
-  94617,
+  "th_qT9SvwhKZaUeVJLvr4e24gBYCwXaszdMPgRAZismKK2oecFAi",
   "ChannelDepositTx"
 ]
 ```
@@ -864,7 +793,7 @@ If `type` or `type_group` is provided, the transaction in the result set must be
 
 transactions where each transaction contains both accounts, no matter in which field:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -886,18 +815,17 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?account=ak_24jcHLTZQfsou7Nvom
         "ttl": 70000,
         "type": "SpendTx",
         "version": 1
-      },
-      "tx_index": 1747960
+      }
     }
   ],
-  "next": "/txs/backward?account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&cursor=17022424&limit=1",
+  "next": "/v3/transactions?account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&cursor=17022424&limit=1",
   "prev": null
 }
 ```
 
 spend transactions between sender and recipient (transaction type = spend is deduced from the fields):
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
 {
   "data": [
     {
@@ -918,18 +846,17 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&sender_id=a
         "sender_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
         "type": "SpendTx",
         "version": 1
-      },
-      "tx_index": 9
+      }
     }
   ],
-  "next": "/txs/forward?cursor=41&limit=1&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+  "next": "/v3/transactions?direction=forward&cursor=41&limit=1&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
   "prev": null
 }
 ```
 
 name related transactions for account:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
 {
   "data": [
     {
@@ -949,8 +876,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_
         "recipient_id": "ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD",
         "type": "NameTransferTx",
         "version": 1
-      },
-      "tx_index": 3550045
+      }
     }
   ],
   "next": null,
@@ -958,12 +884,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_
 }
 ```
 
-### `/v2/txs/:hash_or_txi`
+### `/v3/transactions/:hash`
 
 Single transactions can be obtained by either the identifying hash or transaction index.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
 {
   "block_hash": "mh_2kE3N7GCaeAiowu1a7dopJygxQfxvRXYCNy7Pc657arjCa8PPe",
   "block_height": 257058,
@@ -983,34 +909,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/th_zATv7B4RHS45GamShnWgjkvcrQ
     "ttl": 257068,
     "type": "SpendTx",
     "version": 1
-  },
-  "tx_index": 11306257
-}
-```
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/10000000" | jq '.'
-{
-  "block_hash": "mh_2J4A4f7RJ4oVKKCFmBEDMQpqacLZFtJ5oBvx3fUUABmLv5SUZH",
-  "block_height": 240064,
-  "hash": "th_qYi26SEQoW9baWkwfenWxLCveQ1QNSThEzxxWzfHTscfcfovs",
-  "micro_index": 94,
-  "micro_time": 1586725056043,
-  "signatures": [
-    "sg_WomDtVzmhoJ2fitFkHGMEciwgmQ4FqXW1mZ5W9GNFenpsTSSduPA8iswWZnU4xma2g9EzJy8a5EPqtSf1dMZNY1pT7A55"
-  ],
-  "tx": {
-    "amount": 20000,
-    "fee": 19340000000000,
-    "nonce": 1826406,
-    "payload": "ba_MjQwMDY0OmtoXzJ2aFpmRUJSZGpEY2V6Mm5aa3hTU1FHS2tRb0FtQUhrbWhlVU03ZEpFekdBd0pVaVZvOm1oXzJkWEQzVHNqMmU2MUttdFVLRFNLdURrdEVOWXdWZDJjdUhMYUJZTUhKTUZ1RnYydmZpOjE1ODY3MjUwNTYoz+LD",
-    "recipient_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
-    "sender_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
-    "ttl": 240074,
-    "type": "SpendTx",
-    "version": 1
-  },
-  "tx_index": 10000000
+  }
 }
 ```
 
@@ -1019,84 +918,35 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/10000000" | jq '.'
 Counting all transactions
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/count" | jq '.'
 11921825
 ```
 
 It can also be scoped by generations:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?scope=gen:123-456" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/count?scope=gen:123-456" | jq '.'
 23
 ```
 
 Or by address:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/count?id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
 19323
 ```
 
 Or by type:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?tx_type=oracle_register" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/count?tx_type=oracle_register" | jq '.'
 286
 ```
 
 **NOTE**: It cannot be filtered by more than one of these filters.
 
-### `/txs/count/:address`
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
-{
-  "channel_create_tx": {
-    "responder_id": 74
-  },
-  "contract_call_tx": {
-    "caller_id": 69
-  },
-  "contract_create_tx": {
-    "owner_id": 3
-  },
-  "name_claim_tx": {
-    "account_id": 7
-  },
-  "name_preclaim_tx": {
-    "account_id": 26
-  },
-  "name_revoke_tx": {
-    "account_id": 1
-  },
-  "name_transfer_tx": {
-    "account_id": 1
-  },
-  "name_update_tx": {
-    "account_id": 40
-  },
-  "oracle_extend_tx": {
-    "oracle_id": 4
-  },
-  "oracle_query_tx": {
-    "oracle_id": 16,
-    "sender_id": 556
-  },
-  "oracle_register_tx": {
-    "account_id": 6
-  },
-  "oracle_response_tx": {
-    "oracle_id": 6
-  },
-  "spend_tx": {
-    "recipient_id": 8,
-    "sender_id": 18505
-  }
-}
-```
-
 ---
 
 ## Blocks
 
-### `/v2/blocks` [DEPRECATED use /v2/key-blocks instead]
+### `/v3//key-blocks`
 
 There are several endpoints for querying block(s) or generation(s). A generation can be understood as key block and micro blocks containing transactions.
 
@@ -1104,74 +954,28 @@ Since we are returning whole generations, replies can be very large.
 
 Examples below are trimmed heavily.
 
-With /v2/blocks endpoint ("micro_blocks" as a sorted list):
+With /v3/key-blocks endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:101125-101125" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/key-blocks?scope=gen:101125-101125" | jq '.'
 {
   "data": [
     {
-      "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
-      "hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
-      "height": 101125,
-      "info": "cb_AAAAAfy4hFE=",
-      "micro_blocks": [
-        {
-          "hash": "mh_3cSMUMFHxFzVV7kCSkbi6kcsUNBk6wU5BAfkFxxPRTFuyZsqG",
-          "height": 101125,
-          "pof_hash": "no_fraud",
-          "prev_hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
-          "prev_key_hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
-          "signature": "sg_3NZ23RXhgg5NWebsfG6CHSBzpjgB9Nm8pgD9rVczsTcPiXN6tJziSLHGSZban3DLFsnyp3qU1GmnNZLYPG4cFmXvusJiq",
-          "state_hash": "bs_2kR2LUjxrxNtibd4BFpnvgykJTwM9K8i7eYoYN1fJsmhTRUc2h",
-          "time": 1561595880058,
-          "transactions": {
-            "th_28ixRZNWVJXdQ3C43HstKYAr7P1nSkMN1A2X5myE3pZz7Lao6M": {
-              "block_hash": "mh_3cSMUMFHxFzVV7kCSkbi6kcsUNBk6wU5BAfkFxxPRTFuyZsqG",
-              "block_height": 101125,
-              "hash": "th_28ixRZNWVJXdQ3C43HstKYAr7P1nSkMN1A2X5myE3pZz7Lao6M",
-              "signatures": [
-                "sg_9mPr9vVGpqhTokKjzof6PLrEAPgBuR9xr6BbVPr8MxxG4GPwe7LCoBqoE7tWoxxWzkZdTUQHCHCkhL9nDBLxFkN9QLUED"
-              ],
-              "tx": {
-                "amount": 32223629770000000000,
-                "fee": 130000000000000,
-                "nonce": 2547,
-                "payload": "ba_Xfbg4g==",
-                "recipient_id": "ak_2ASdNERRwAYmoNhxVuYC3k6RV5L2tbaK974QM5emcdzPNwSEUd",
-                "sender_id": "ak_dArxCkAsk1mZB1L9CX3cdz1GDN4hN84L3Q8dMLHN4v8cU85TF",
-                "ttl": 101424,
-                "type": "SpendTx",
-                "version": 1
-              }
-            },
-            "th_2ioXeSv9Mbh7nMNtNtJFc8Nc6Nd9dFZBscZnC9YKmMw6FqLodG": {
-              ...
-            },
-            "th_SUXzH48FMioCy3P4NwbwC2hZjc99rgRHZs8HJwcvnsNfwBSDX": {
-              ...
-            },
-            "th_pMGxKY4hELiqu9Xm91DHpzYQZD8gkJrc12aa4hF8mYDMAve4t": {
-              ...
-            }
-          },
-          "txs_hash": "bx_AqKk4fiLGM13cQxgta4apaHPnzgWK4Epb4pnUVQMAic3ncFxs",
-          "version": 3
-        }
-      ],
-      "miner": "ak_2HToRDUsCuBqdGsFqCCE19chrRQ7hhYE5Ebd3LETfwnk3gGnzX",
-      "nonce": 9256408633249850000,
-      "pow": [
-        5377241,
-        6371180,
-        ...
-      ],
-      "prev_hash": "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
-      "prev_key_hash": "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
-      "state_hash": "bs_2SF46f1xU4uxiKKVmeT9jqFWJenftFzXTVse9GGLwtit78zHQP",
-      "target": 504458445,
-      "time": 1561595666398,
-      "version": 3
+      "beneficiary" : "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
+      "hash" : "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
+      "height" : 101125,
+      "info" : "cb_AAAAAfy4hFE=",
+      "micro_blocks_count" : 1,
+      "miner" : "ak_2HToRDUsCuBqdGsFqCCE19chrRQ7hhYE5Ebd3LETfwnk3gGnzX",
+      "nonce" : 9256408633249849368,
+      "pow" : [5377241, ..., 514753955],
+      "prev_hash" : "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
+      "prev_key_hash" : "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
+      "state_hash" : "bs_2SF46f1xU4uxiKKVmeT9jqFWJenftFzXTVse9GGLwtit78zHQP",
+      "target" : 504458445,
+      "time" : 1561595666398,
+      "transactions_count" : 4,
+      "version" : 3
     }
   ],
   "next": null,
@@ -1182,263 +986,72 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:101125-101125" |
 Numeric range:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:100000-100100&limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/key-blocks?scope=gen:100000-100100&limit=3" | jq '.'
 {
   "data": [
     {
-      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-      "hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
-      "height": 100000,
-      "info": "cb_AAAAAfy4hFE=",
-      "micro_blocks": {
-        "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS": {
-          "hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
-          "height": 100000,
-          "pof_hash": "no_fraud",
-          "prev_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
-          "prev_key_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
-          "signature": "sg_DM1gKHR8acCcXF8i2YPLjMVPrCeG8J4QQYcFeLrpZvy3wjJzQ1dQcgF3H9p5uLWSJ4QTTymgCm3rERD1Q3xVeHrvVqMBa",
-          "state_hash": "bs_2breNSbLBYoUXyo7oCAeeEeR4WYxvDhCU6CpcyxStwyJ24JPhJ",
-          "time": 1561390173025,
-          "transactions": {
-            "th_VAGQK8LmPQ5NvQ6kJZz7rhQdMJ5nTJZ9uHRbDKRWDGD4Ex5Gj": {
-              "block_hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
-              "block_height": 100000,
-              "hash": "th_VAGQK8LmPQ5NvQ6kJZz7rhQdMJ5nTJZ9uHRbDKRWDGD4Ex5Gj",
-              "signatures": [
-                "sg_RXp8FEo8cDwiy61S9fkH6dJrMjZL2Cri5FJLbK8Q7VWXamX5eh2CBvL1cjsy6BW8hizvruXdDt5vUhJH1NA4Ye9qUEX8i"
-              ],
-              "tx": {
-                "amount": 5e+21,
-                "fee": 20000000000000,
-                "nonce": 720,
-                "payload": "ba_Xfbg4g==",
-                "recipient_id": "ak_2B6nPK6HLK5Yp7qMbMeLMSDJwxNdypbDzW3xm938uw2a7EemdQ",
-                "sender_id": "ak_2mggc8gkx9nhkciBtYbq39T6Jzd7WBms6jgYoLAAeRNgdy3Md6",
-                "ttl": 100500,
-                "type": "SpendTx",
-                "version": 1
-              }
-            }
-          },
-          "txs_hash": "bx_MbpXZycNCDzTXSqb5fVq9Nh217x9P4PjrdpLb5doz8PtPoZsD",
-          "version": 3
-        }
-      },
-      "miner": "ak_2K5fAjna26t2U2V6v2LwNBUZpT9puriPdvxifDmGRoqG1a7R3Z",
-      "nonce": 14620604494251231000,
-      "pow": [8664748,...,485310990],
-      "prev_hash": "mh_2EFE1CxvXM2dKtu4Jt4yLAbW8gS5MkpDtNmGKHP4bPXDvtubKJ",
-      "prev_key_hash": "kh_B18SQZmResYV5yqxbFUizKPqrtrjky3LESGUvRECDp9N2kNmA",
-      "state_hash": "bs_185cZMdvy6wJXjCZDwGnLJ4TCrU18yxGSVkbtQh4DyCm2yPaV",
-      "target": 504047608,
-      "time": 1561390154570,
-      "version": 3
+      "beneficiary" : "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash" : "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+      "height" : 100000,
+      "info" : "cb_AAAAAfy4hFE=",
+      "micro_blocks_count" : 1,
+      "miner" : "ak_2K5fAjna26t2U2V6v2LwNBUZpT9puriPdvxifDmGRoqG1a7R3Z",
+      "nonce" : 14620604494251230255,
+      "pow" : [8664748, ..., 485310990],
+      "prev_hash" : "mh_2EFE1CxvXM2dKtu4Jt4yLAbW8gS5MkpDtNmGKHP4bPXDvtubKJ",
+      "prev_key_hash" : "kh_B18SQZmResYV5yqxbFUizKPqrtrjky3LESGUvRECDp9N2kNmA",
+      "state_hash" : "bs_185cZMdvy6wJXjCZDwGnLJ4TCrU18yxGSVkbtQh4DyCm2yPaV",
+      "target" : 504047608,
+      "time" : 1561390154570,
+      "transactions_count" : 1,
+      "version" : 3
     },
     {
-      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-      "hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
-      "height": 100001,
-      "info": "cb_AAAAAfy4hFE=",
-      "micro_blocks": {
-        "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ": {
-          "hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
-          "height": 100001,
-          "pof_hash": "no_fraud",
-          "prev_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
-          "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
-          "signature": "sg_QJtdAT57RX6rhe51mseBAxq9VVZ46e93q6jm334rQGyk1mZoR52ya9rsh7zzibntdzS9d72GH5XTorSi7ubt8BDhn8A9v",
-          "state_hash": "bs_2BUKS5vTvBgwP8G4gCnaZeExztr4op6xmGv81jUezoS7qBfAya",
-          "time": 1561390314442,
-          "transactions": {
-            "th_HRJe3r5bMYeDWysqJayzbVLr4gQEDXfXcDemeXCJo2HHnxk9U": {
-              "block_hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
-              "block_height": 100001,
-              "hash": "th_HRJe3r5bMYeDWysqJayzbVLr4gQEDXfXcDemeXCJo2HHnxk9U",
-              "signatures": [
-                "sg_7BFTstKBgmdKiZdW6EctPCV1UM4LdMX7yhkoa6NCQoiGP5mren1VmTEVTtANQagQdEmfJgDE6MgDvCN5YAJcWhw7Dd9qy"
-              ],
-              "tx": {
-                "amount": 4.999e+21,
-                "fee": 28000000001760,
-                "nonce": 2773,
-                "payload": "ba_Xfbg4g==",
-                "recipient_id": "ak_2CZpwotEioaKag2ci6ULVqutbwgupVUdrDSsaVroLWGNrTfHyR",
-                "sender_id": "ak_6sssiKcg7AywyJkfSdHz52RbDUq5cZe4V4hcvghXnrPz4H4Qg",
-                "ttl": 100010,
-                "type": "SpendTx",
-                "version": 1
-              }
-            }
-          },
-          "txs_hash": "bx_xYB1Cnj7B4yPGK97rXQADj53MSdYBBFjBraiZnjYNh2u3t7vn",
-          "version": 3
-        },
-        "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr": {
-          "hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
-          "height": 100001,
-          "pof_hash": "no_fraud",
-          "prev_hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
-          "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
-          "signature": "sg_JpXtMbaCcx3dCSntGCL5hQpynvQ5zuhvWH8njeB3xiwZL4FAS9PvZHvYHFoZCh4ZRjWXS2RTwUS9q34GUyropGUmyqPaU",
-          "state_hash": "bs_hEFr1wBFMCYa6spbZyaSr3SBiwypjyHGsDKfTRPaAspLKNYWj",
-          "time": 1561390321251,
-          "transactions": {
-            "th_2H3tAA8kuyv3hetRHzMY8At4GTaDz7Ta2KhNKWgG2QNufn9MML": {
-              "block_hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
-              "block_height": 100001,
-              "hash": "th_2H3tAA8kuyv3hetRHzMY8At4GTaDz7Ta2KhNKWgG2QNufn9MML",
-              "signatures": [
-                "sg_F1db1TVZaUypoWZVxscXh9GE6QTNJZaaDqDe2gpqbD93jAyRiY2mufByaxnxtZJPC8feiYThcri4p9aie4WsAf4gB1Jod"
-              ],
-              "tx": {
-                "amount": 4.2098e+20,
-                "fee": 20000000000000,
-                "nonce": 721,
-                "payload": "ba_Xfbg4g==",
-                "recipient_id": "ak_2drSE1t9wNjzLqTMUH3LMaGExnZ26E9Vss5WENC9YncnZEZZQW",
-                "sender_id": "ak_2mggc8gkx9nhkciBtYbq39T6Jzd7WBms6jgYoLAAeRNgdy3Md6",
-                "ttl": 100501,
-                "type": "SpendTx",
-                "version": 1
-              }
-            }
-          },
-          "txs_hash": "bx_gsiG1snHbhc9RaUYkdiXc4jUbsxyKWKqshnDKwSsEBQSEuxDf",
-          "version": 3
-        }
-      },
-      "miner": "ak_2AT33FPB7DSvd3XU2nKPh4sUbBjb6jHWtKh6CF2b1eK2y3daA3",
-      "nonce": 8862664339569828000,
-      "pow": [7438320,...,519071892],
-      "prev_hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
-      "prev_key_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
-      "state_hash": "bs_Wqv4So3wfCV2eyJMnjfiGsrb1D7nrUk2r6K9ufgnX22J5wVPA",
-      "target": 504063592,
-      "time": 1561390309740,
-      "version": 3
+      "beneficiary" : "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash" : "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+      "height" : 100001,
+      "info" : "cb_AAAAAfy4hFE=",
+      "micro_blocks_count" : 2,
+      "miner" : "ak_2AT33FPB7DSvd3XU2nKPh4sUbBjb6jHWtKh6CF2b1eK2y3daA3",
+      "nonce" : 8862664339569827477,
+      "pow" : [7438320, ..., 519071892],
+      "prev_hash" : "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
+      "prev_key_hash" : "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+      "state_hash" : "bs_Wqv4So3wfCV2eyJMnjfiGsrb1D7nrUk2r6K9ufgnX22J5wVPA",
+      "target" : 504063592,
+      "time" : 1561390309740,
+      "transactions_count" : 2,
+      "version" : 3
     },
     {
-      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-      "hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
-      "height": 100002,
-      "info": "cb_AAAAAfy4hFE=",
-      "micro_blocks": {
-        "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo": {
-          "hash": "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo",
-          "height": 100002,
-          "pof_hash": "no_fraud",
-          "prev_hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
-          "prev_key_hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
-          "signature": "sg_4AWRGirnV9FFfZdCQZD6xcY422Sfqo32hL18AKBDV6MqZ3PJm3u9FuQ874SQDXkrD4P4aftT4UvFoRXKybKcDYZ1YrTSe",
-          "state_hash": "bs_2f1fKQXp6BW93EMvoo53QCUn4cJJN8EnJ38WHaSVjsNTfFnPs8",
-          "time": 1561390368180,
-          "transactions": {
-            "th_2MNiHqkHKUioTcGpob8mEyyd8stx176gKQwHtHb5jknuf2wggm": {
-              "block_hash": "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo",
-              "block_height": 100002,
-              "hash": "th_2MNiHqkHKUioTcGpob8mEyyd8stx176gKQwHtHb5jknuf2wggm",
-              "signatures": [
-                "sg_RJtTUzjwMgQxay4EksNdHzCxAXQRobdSLxJLD6QqpwFXPkycCZkmWR239G93Q9RAwbXMzEykogPDj4r6MDZyFEJ3WSny2"
-              ],
-              "tx": {
-                "amount": 3.26e+20,
-                "fee": 16880000000000,
-                "nonce": 536,
-                "payload": "ba_Xfbg4g==",
-                "recipient_id": "ak_2UBcNqdXQb4PvZaTz6zd4dVbPuJf29Jvx9gNqvmSQcoQK11RZW",
-                "sender_id": "ak_dnzaNnchT7f3YT3CtrQ7GUjqGT6VaHzPxpf2efHWPuEAWKcht",
-                "type": "SpendTx",
-                "version": 1
-              }
-            }
-          },
-          "txs_hash": "bx_29BoCEp5xcJweJD6Dme4hipvE5VhSE8MwGFFfXnM8en5d48izY",
-          "version": 3
-        }
-      },
-      "miner": "ak_2VJtWGt45q8w9Aj7gYJPz9kZG3EU45xi6YZ4wgXSb25MeYGdfM",
-      "nonce": 5829762670850390000,
-      "pow": [1917903,...,530252456],
-      "prev_hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
-      "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
-      "state_hash": "bs_2E75ChNX5EZo42xek6K64i5MZfQNxDUo5M9DwAufFRqQRqx3Z5",
-      "target": 504062474,
-      "time": 1561390340812,
-      "version": 3
+      "beneficiary" : "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash" : "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
+      "height" : 100002,
+      "info" : "cb_AAAAAfy4hFE=",
+      "micro_blocks_count" : 1,
+      "miner" : "ak_2VJtWGt45q8w9Aj7gYJPz9kZG3EU45xi6YZ4wgXSb25MeYGdfM",
+      "nonce" : 5829762670850390403,
+      "pow" : [1917903, ..., 530252456],
+      "prev_hash" : "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
+      "prev_key_hash" : "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+      "state_hash" : "bs_2E75ChNX5EZo42xek6K64i5MZfQNxDUo5M9DwAufFRqQRqx3Z5",
+      "target" : 504062474,
+      "time" : 1561390340812,
+      "transactions_count" : 1,
+      "version" : 3
     }
   ],
-  "next": "/v2/blocks/100000-100100?cursor=100003&limit=3",
-  "prev": null
+  "next" : "/v3/key-blocks?cursor=100003&limit=3&scope=gen%3A100000-100100",
+  "prev" : null
 }
 ```
 
-### `/v2/blocks/:hash_or_kbi` [DEPRECATED]
-
-A single block can be obtained by either the identifying `hash` or key-block index.
-
-Since it's **deprecated**, the new [`/v2/key-blocks/:hash_or_kbi` endpoint](### `/v2/key-blocks/:hash_or_kbi) should be used instead.
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
-{
-  "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
-  "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
-  "height": 123008,
-  "info": "cb_AAAAAfy4hFE=",
-  "miner": "ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV",
-  "nonce": 9223756548132686000,
-  "pow": [12359907, ..., 533633643],                                     # pow removed for clarity
-  "prev_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
-  "prev_key_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
-  "state_hash": "bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna",
-  "target": 504082055,
-  "time": 1565548832164,
-  "version": 3
-}
-```
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
-{
-  "hash": "mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp",
-  "height": 123003,
-  "pof_hash": "no_fraud",
-  "prev_hash": "mh_2ALC3nX5Hm9488yhPKn65egU6KWugMnAyhYiBq3eRVn9Bf2mD1",
-  "prev_key_hash": "kh_mrRQL1wvGNvXtF1HcicnPRbcm6uHtvpz5VztyqVsoCvybiEgY",
-  "signature": "sg_JA6we1Pz2Ask15dNnsNF3Ziof2NcdbSsLrrX5xQtsnraQm9ytX7X2DXzAFm2TYcPwGEddkxRTrkvKcSZm6eZPDBDWEi1T",
-  "state_hash": "bs_5xhq7iqCZAdVZx76RjFHFv1CdBoRLPV5L2goD1QDjRwEWXK53",
-  "time": 1565548441990,
-  "txs_hash": "bx_kjjNsYXDHNTaGJgbHryMb3C9eJkKMfijtWtvDDxtGTkzVbnai",
-  "version": 3
-}
-```
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/1234" | jq '.'
-{
-  "beneficiary": "ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
-  "hash": "kh_2L9i7dMqrYiUs6um71kwnZsNDqD9xBbD71EiVoWFtbMUKs2Tka",
-  "height": 1234,
-  "info": "cb_Xfbg4g==",
-  "miner": "ak_2wfU7H1B5iPNm7Qh6Fe4uqL2Swhuy1P2Y6Mja6FrrA6Lqqgs4U",
-  "nonce": 3506640638825476600,
-  "pow": [13191216, ..., 527787452],                                     # pow removed for clarity
-  "prev_hash": "kh_28dE5V2VhN47H3vFePVvugz5XhwxqYHemo74cLV8xW4vq4vg3i",
-  "prev_key_hash": "kh_28dE5V2VhN47H3vFePVvugz5XhwxqYHemo74cLV8xW4vq4vg3i",
-  "state_hash": "bs_2WAAvA4HPNWWFa4nxScsHp8f332rVpZZz4uGsZg5SYe5pYPTdX",
-  "target": 520781974,
-  "time": 1543589552624,
-  "version": 1
-}
-```
-
-### `/v2/key-blocks/:hash_or_kbi`
+### `/v3/key-blocks/:hash_or_kbi`
 
 Retrieves a single key block including the `micro_blocks_count` and `transactions_count` counters.
 
 ```
-$ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/kh_2oKCXoTcm7rSxxAHaEcoUe6JV7Xs9Nmk3TNXHSEQcs9NwE8o6W
+$ curl -s https://mainnet.aeternity.io/mdw/v3/key-blocks/kh_2oKCXoTcm7rSxxAHaEcoUe6JV7Xs9Nmk3TNXHSEQcs9NwE8o6W
 {
   "micro_blocks_count": 204,
   "transactions_count": 273,
@@ -1473,7 +1086,7 @@ $ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/kh_2oKCXoTcm7rSxxAHaEco
 Or alternatively, by `kbi`:
 
 ```
-$ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/123
+$ curl -s https://mainnet.aeternity.io/mdw/v3/key-blocks/123
 {
   "micro_blocks_count": 0,
   "transactions_count": 0,
@@ -1505,36 +1118,12 @@ $ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/123
 }
 ```
 
-### `/v2/blocks/:kbi/:mbi` [DEPRECATED]
+### `/v3/key-blocks`
 
-Micro blocks are identified by height and sequence id (order) within the generation, starting from 0.
-
-Since this endpoint is **deprecated**, it is advised to use `/v2/key-blocks/:kbi/micro-blocks` instead.
+Returns a paginated list of key-blocks together with the amount of micro blocks and transactions each key-block generation has.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/300000/0" | jq '.'
-{
-  "hash": "mh_2Nyaoy9CCPa8WBfzGbWXy5rd6AahJpBFxyXM9MMpCrvCqpkFj",
-  "height": 300000,
-  "pof_hash": "no_fraud",
-  "prev_hash": "kh_2kJKKRfu6BMwNzYoDc5sJBSS4X3S1vdmiZitWQ84KEqWnGLoDe",
-  "prev_key_hash": "kh_2kJKKRfu6BMwNzYoDc5sJBSS4X3S1vdmiZitWQ84KEqWnGLoDe",
-  "signature": "sg_Ks256s7x8K3UFeUi6qV9ufZv7q9NtDXiSYJmoCKYivZCqEpJhKnVt3SViLzWWo9Lr149J5iUeZrxNNtv6Svn7eLAk22V5",
-  "state_hash": "bs_EydSYyRMLdUBdtgzCgbmT6CHgisv5UWN18oW9Urjn6V7JUAfe",
-  "time": 1597568157025,
-  "txs_hash": "bx_2pJG7zzAELatCHr8QjNtc3QFx6vdf4p9gvgMwPzSjXeL1DHDkK",
-  "version": 4
-}
-```
-
-### `/v2/key-blocks`
-
-New endpoint that returns a paginated list of key-blocks together with the amount of micro blocks and transactions each key-block generation has.
-
-This endpoint should be used in place of `/v2/blocks`
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/key-blocks?limit=1" | jq '.'
 {
   "data": [
     {
@@ -1563,15 +1152,15 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
       "version": 5
     }
   ],
-  "next": "/v2/key-blocks?cursor=652729&limit=1",
+  "next": "/v3/key-blocks?cursor=652729&limit=1",
   "prev": null
 }
 ```
 
-### `/v2/key-blocks/:hash_or_kbi/micro-blocks`
+### `/v3/key-blocks/:hash_or_kbi/micro-blocks`
 
 ```
-$ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?limit=1
+$ curl https://mainnet.aeternity.io/v3/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?limit=1
 {
   "data": [
     {
@@ -1589,15 +1178,15 @@ $ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK1
       "version": 5
     }
   ],
-  "next": "/v2/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?cursor=38&limit=1",
+  "next": "/v3/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?cursor=38&limit=1",
   "prev": null
 }
 ```
 
-### `/v2/micro-blocks/:hash`
+### `/v3/micro-blocks/:hash`
 
 ```
-$ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_HqJKqWdJ1vaPcr82zYNue99GXcKfjpYbmrEcZ7kmUHAzQoeZv
+$ curl https://mainnet.aeternity.io/mdw/v3/micro-blocks/mh_HqJKqWdJ1vaPcr82zYNue99GXcKfjpYbmrEcZ7kmUHAzQoeZv
 {
   "micro_block_index": 39,
   "transactions_count": 0,
@@ -1614,10 +1203,10 @@ $ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_HqJKqWdJ1vaPcr82zYNue
 }
 ```
 
-### `/v2/micro-blocks/:hash/txs`
+### `/v3/micro-blocks/:hash/txs`
 
 ```
-$ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_3TzzPsMhgnJBYAtSJ6c4SdbQppZi64mxP61b1u1E8g3stDQwk/txs?limit=1
+$ curl https://mainnet.aeternity.io/mdw/v3/micro-blocks/mh_3TzzPsMhgnJBYAtSJ6c4SdbQppZi64mxP61b1u1E8g3stDQwk/txs?limit=1
 {
   "data": [
     {
@@ -1638,14 +1227,14 @@ $ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_3TzzPsMhgnJBYAtSJ6c4S
         "sender_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
         "type": "SpendTx",
         "version": 1
-      },
-      "tx_index": 92999
+      }
     }
   ],
   "next": null,
   "prev": null
 }
 ```
+
 ---
 
 ## Naming System
@@ -1659,11 +1248,11 @@ Information about the name returned from the name endpoints summarizes this life
 
 Transaction index is useful for retrieving detailed information about the transaction via `txi/:index` endpoint.
 
-Using `txi/:index` endpoint is flexible, on-demand way to get detailed transaction information, but in some situations leads to multiple round trips to the server.
+Using `transactions/:hash` endpoint is flexible, on-demand way to get detailed transaction information, but in some situations leads to multiple round trips to the server.
 
 Due to this reason, all name endpoints except `name/pointers` and `name/pointees` support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
 
-### `/v2/names`
+### `/v3/names`
 
 Names can be filtered by state, which can contain the following values:
 
@@ -1671,225 +1260,99 @@ Names can be filtered by state, which can contain the following values:
 - `active` - for listing `active` names
 - `auction` - for listing `auctions`
 
-They support ordering via parameters `by` (with value `activation`, `deactivation` or `name`), and `direction` (with value `forward` or `backward`).
+They support ordering via parameters `by` (with value `activation`, `deactivation` or `name`).
 
 Using the `by=activation` requires `state=active` and includes only successfully claimed names (those in auction won't appear yet).
 
 Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked.
 For active names it means they are sorted by expiration height.
 
-Without these parameters, the endpoints return results ordered as if `by=deactivation` and `direction=backward` were provided.
-
-The parameter `limit` (by default = 10) is optional, and limits the number of elements in the response.
+Without these parameters, the endpoints return results ordered as if `by=deactivation` were provided.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?limit=2" | jq '.'
 {
   "data": [
     {
       "active": true,
       "hash": "nm_qock4y2xnYdyy779vayFfu7YUBTwy9bTfoJeH4pM5EpRyJU3A",
-      "info": {
-        "active_from": 205194,
-        "auction_timeout": 14880,
-        "claims": [
-          6264107
-        ],
-        "expire_height": 349080,
-        "ownership": {
-          "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
-          "original": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is"
-        },
-        "pointers": {
-          "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-        },
-        "revoke": null,
-        "transfers": [
-          11861475,
-          11860109
-        ],
-        "updates": [
-          14543330,
-          14505538,
-          14467888,
-          14426800,
-          14390282,
-          14353967,
-          14317741,
-          14270055,
-          14233470,
-          14194346,
-          14155286,
-          14116038,
-          14080116,
-          14044009,
-          14003639,
-          13964444,
-          13925716,
-          13885179,
-          13849484,
-          13726977,
-          13689551,
-          13650653,
-          13617597,
-          13582977,
-          13546321,
-          13513872,
-          13475401,
-          13118526,
-          13118504,
-          12757704,
-          12757665,
-          12757629,
-          12757597,
-          12757567,
-          12757542,
-          12757511,
-          12432470,
-          12432445,
-          12077800,
-          12077767,
-          11096410,
-          8025749
-        ]
+      "active_from": 205194,
+      "auction_timeout": 14880,
+      "expire_height": 349080,
+      "ownership": {
+        "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+        "original": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is"
       },
-      "name": "jieyi.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "jieyi.chain"
     },
     {
       "active": true,
       "hash": "nm_8vYbsvsrBow6jpxPHUtMLKG6EfTKqqwfpu425aJuHKafSxyR6",
-      "info": {
-        "active_from": 253179,
-        "auction_timeout": 480,
-        "claims": [
-          10982214
-        ],
-        "expire_height": 349071,
-        "ownership": {
-          "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
-          "original": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx"
-        },
-        "pointers": {
-          "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-        },
-        "revoke": null,
-        "transfers": [
-          11802923,
-          11802444,
-          11798902
-        ],
-        "updates": [
-          14542592,
-          14504810,
-          14467150,
-          14425332,
-          14388049,
-          14351750,
-          14316275,
-          14268586,
-          14232001,
-          14191428,
-          14153084,
-          14113833,
-          14078596,
-          14043263,
-          14002870,
-          13963698,
-          13924995,
-          13884427,
-          13848748,
-          13724781,
-          13688047,
-          13648398,
-          13615903,
-          13581447,
-          13545563,
-          13513208,
-          13474497,
-          13117722,
-          13117694,
-          13117669,
-          12756905,
-          12431769,
-          12431744,
-          12431718,
-          12077315,
-          12077262,
-          11433982
-        ]
+      "active_from": 253179,
+      "auction_timeout": 480,
+      "expire_height": 349071,
+      "ownership": {
+        "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+        "original": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx"
       },
-      "name": "helloword.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "helloword.chain"
     }
   ],
-  "next": "/v2/names?by=deactivation&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2",
+  "next": "/v3/names?by=deactivation&cursor=703645-jiangjiajia.chain&limit=2",
   "prev": null
 }
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=inactive&by=deactivation&direction=forward&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?state=inactive&by=deactivation&direction=forward&limit=2" | jq '.'
 {
   "data": [
     {
       "active": false,
       "hash": "nm_PstDX8VxoTutPJG8YrXkWEwAfBoC5ZmoW1j5RZSNNyXa5oJSB",
-      "info": {
-        "active_from": 6089,
-        "auction_timeout": 0,
-        "claims": [
-          12356
-        ],
-        "expire_height": 16090,
-        "ownership": {
-          "current": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7",
-          "original": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
-        },
-        "pointers": {
-          "account_pubkey": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          12547
-        ]
+      "active_from": 6089,
+      "auction_timeout": 0,
+      "expire_height": 16090,
+      "ownership": {
+        "current": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7",
+        "original": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
       },
-      "name": "philippsdk.test",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "philippsdk.test"
     },
     {
       "active": false,
       "hash": "nm_J9wKEZ1Deo4UAnNo5s5VTRccVCLdZexZBQJgA6YHYy67xDpqy",
-      "info": {
-        "active_from": 6094,
-        "auction_timeout": 0,
-        "claims": [
-          13113
-        ],
-        "expire_height": 16094,
-        "ownership": {
-          "current": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7",
-          "original": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
-        },
-        "pointers": {
-          "account_pubkey": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          13114
-        ]
+      "active_from": 6094,
+      "auction_timeout": 0,
+      "expire_height": 16094,
+      "ownership": {
+        "current": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7",
+        "original": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
       },
-      "name": "philippsdk2.test",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_c3LfYDjLqdNdWHUCV8NDv1BELhXqfKxhmKfzh4cBMpwj64CD7"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "philippsdk2.test"
     }
   ],
-  "next": "/v2/names?state=inactive&cursor=16117-philippsdk1.test&direction=forward&expand=false&limit=2",
+  "next": "/v3/names?state=inactive&cursor=16117-philippsdk1.test&direction=forward&limit=2",
   "prev": null
 }
 ```
@@ -1897,79 +1360,45 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=inactive&by=deactivat
 Active names
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=name&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?state=active&by=name&limit=2" | jq '.'
 {
   "data": [
     {
       "active": true,
       "hash": "nm_23NKMgfB5igtdWHkY5BPMg75PykVrBTBpPAsE6Y1mYV3kZ8Nbd",
-      "info": {
-        "active_from": 162213,
-        "auction_timeout": 0,
-        "claims": [
-          4748820
-        ],
-        "expire_height": 309542,
-        "ownership": {
-          "current": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8",
-          "original": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
-        },
-        "pointers": {
-          "account_pubkey": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          11490573,
-          8946568,
-          5770445,
-          5561653,
-          5561576,
-          4776331,
-          4771609,
-          4748827
-        ]
+      "active_from": 162213,
+      "auction_timeout": 0,
+      "expire_height": 309542,
+      "ownership": {
+        "current": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8",
+        "original": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
       },
-      "name": "0000000000000.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "0000000000000.chain"
     },
     {
       "active": true,
       "hash": "nm_2q5bUSTcibKsuRfGnXSFC5JkUSUxiy9UbMuQ2uJn2xiYNZdcbL",
-      "info": {
-        "active_from": 183423,
-        "auction_timeout": 480,
-        "claims": [
-          5721301
-        ],
-        "expire_height": 336933,
-        "ownership": {
-          "current": "ak_id5HJww6GzFBuFeVGX1NNM66fuzuyfvnCQgZmRxzdSnW8WRcv",
-          "original": "ak_id5HJww6GzFBuFeVGX1NNM66fuzuyfvnCQgZmRxzdSnW8WRcv"
-        },
-        "pointers": {
-          "account_pubkey": "ak_VLkEyJBmvaf6XnqLdknjj7ZMN58G5x1eJhNUkLxPFGmg9JAaJ"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          13597701,
-          12338867,
-          11556782,
-          11556781,
-          10066616,
-          10066605,
-          9175096,
-          8450457
-        ]
+      "active_from": 183423,
+      "auction_timeout": 480,
+      "expire_height": 336933,
+      "ownership": {
+        "current": "ak_id5HJww6GzFBuFeVGX1NNM66fuzuyfvnCQgZmRxzdSnW8WRcv",
+        "original": "ak_id5HJww6GzFBuFeVGX1NNM66fuzuyfvnCQgZmRxzdSnW8WRcv"
       },
-      "name": "0123456789.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_VLkEyJBmvaf6XnqLdknjj7ZMN58G5x1eJhNUkLxPFGmg9JAaJ"
+      },
+      "revoke": null,
+      "auction": null,
+      "name": "0123456789.chain"
     }
   ],
-  "next": "/v2/names?state=active&cursor=zz.chain&direction=backward&expand=false&limit=2",
+  "next": "/v3/names?state=active&cursor=zz.chain&limit=2",
   "prev": null
 }
 ```
@@ -1977,486 +1406,154 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=name&limit=
 Additionally, this endpoint allows you to filter by name owner using the query param `owned_by`:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?owned_by=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN&by=name" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?owned_by=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN&by=name" | jq '.'
 {
-  "active": [
-    {
-      "active": true,
-      "auction": null,
-      "hash": "nm_ekASCb5VvGYg8tcdA93A4dsMRNCsBVrv8b5kozYNjr2ofBbga",
-      "info": {
-        "active_from": 440894,
-        "auction_timeout": 0,
-        "claims": [
-          23101974
-        ],
-        "expire_height": 630903,
-        "ownership": {
-          "current": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq",
-          "original": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq"
-        },
-        "pointers": {
-          "account_pubkey": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          23579316
-        ]
-      },
-      "name": "zzzzzzzzzzzzz.chain",
-      "previous": [],
-      "status": "name"
-    },
-    ...
-    ],
-  "top_bid": [
+  "data": [
     {
       "active": false,
-      "hash": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
-      "info": {
-        "auction_end": 316672,
-        "bids": [
-          14747888
-        ],
-        "last_bid": {
-          "block_hash": "mh_gGVCDKzwBP85BGTiionuZrpibThyPUdqn8VWWVzvAVYN2YuGS",
-          "block_height": 301792,
-          "hash": "th_eWrp3M6REtTmVjGJqEvqXM5ejQ73irAptTtcaqTWNsBYJoxZ5",
-          "micro_index": 0,
-          "micro_time": 1597894719687,
-          "signatures": [
-            "sg_E3dyEYE9mrBXbFRN3PjCakpAN1VZbZAuYq8JKVq6ki8vvwsCaDMd947QHBx5pkcwFX1Y1AqiwhcYx5AUpQD1xYoXYHi63"
-          ],
-          "tx": {
-            "account_id": "ak_2AVeRypSdS4ZosdKWW1C4avWU4eeC2Yq7oP7guBGy8jkxdYVUy",
-            "fee": 16560000000000,
-            "name": "nikita.chain",
-            "name_fee": 51422900000000000000,
-            "name_id": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
-            "name_salt": 7461157538025441,
-            "nonce": 43,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 14747888
-        }
+      "name": "yedianzhiwang.chain",
+      "hash": "nm_2akgyVeSqDeynUVTHnHzengLarQyQqC9sHigsrBKnaCtmd3Ca5",
+      "name_fee": 1771100000000000000,
+      "revoke": null,
+      "expire_height": 364002,
+      "auction_timeout": 0,
+      "auction": null,
+      "ownership": {
+        "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+        "original": "ak_2pqYSBpEkykFy11KFZXxDJaB8KugXBi2JxraqZXpTaXzreYb95"
       },
-      "name": "nikita.chain",
-      "previous": [],
-      "status": "auction"
+      "active_from": 163855,
+      "approximate_expire_time": 1609161570008,
+      "approximate_activation_time": 1572935113556
     }
-  ]
+  ],
+  "next": null,
+  "prev": null
 }
 ```
 
 An example of `by` usage:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=activation&direction=forward&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?state=active&by=activation&direction=forward&limit=2" | jq '.'
 {
   "data": [
     {
       "active": true,
       "auction": null,
       "hash": "nm_2FvtAFr3gPAQtNutEnjcPDQSqbhxDHBg9j8LE5WESPCJjzFmuU",
-      "info": {
-        "active_from": 161313,
-        "auction_timeout": 0,
-        "claims": [
-          4681666
-        ],
-        "expire_height": 653635,
-        "ownership": {
-          "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
-          "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
-        },
-        "pointers": {
-          "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          24868257,
-          22196443,
-          19655223,
-          17065630,
-          13654097,
-          9992832,
-          9992371,
-          6685502
-        ]
+      "active_from": 161313,
+      "auction_timeout": 0,
+      "expire_height": 653635,
+      "ownership": {
+        "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
+        "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
       },
-      "name": "batchpayments.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
+      },
+      "revoke": null,
+      "name": "batchpayments.chain"
     },
     {
       "active": true,
       "auction": null,
       "hash": "nm_E5JeB8xLS9UR5qN65kDuAhRCHDno5B9pLwoXCm5DEKVpmWrUN",
-      "info": {
-        "active_from": 161349,
-        "auction_timeout": 0,
-        "claims": [
-          4684245
-        ],
-        "expire_height": 653635,
-        "ownership": {
-          "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
-          "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
-        },
-        "pointers": {
-          "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          24868289,
-          22196724,
-          19655216,
-          17065615,
-          13654148,
-          9992939,
-          6685785
-        ]
+      "active_from": 161349,
+      "auction_timeout": 0,
+      "expire_height": 653635,
+      "ownership": {
+        "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
+        "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
       },
-      "name": "internetofmoney.chain",
-      "previous": [],
-      "status": "name"
+      "pointers": {
+        "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
+      },
+      "revoke": null,
+      "name": "internetofmoney.chain"
     }
   ],
-  "next": "/v2/names?by=activation&cursor=161350-internetofvalue.chain&direction=forward&limit=2&state=active",
+  "next": "/v3/names?by=activation&cursor=161350-internetofvalue.chain&direction=forward&limit=2&state=active",
   "prev": null
 }
 ```
 
-### `/v2/names/search`
-
-Prefix searching of names is possible via `/v2/names/search` endpoint.
-By default, the prefix search will find names in any of the lifecycle states - `auction`, `active`, `inactive`.
+### `/v3/names/auctions`
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/search?prefix=xxxxxx" | jq '.'
-[
-  [
-    {
-      "payload": {
-        "active": true,
-        "auction": null,
-        "hash": "nm_n6mE2D37D5vEbLVSwvLr7haCbKt1Rtk8vczCywMRXFss3cPLs",
-        "info": {
-          "active_from": 513559,
-          "auction_timeout": 0,
-          "claims": [
-            27875299
-          ],
-          "expire_height": 693559,
-          "ownership": {
-            "current": "ak_2fxRQ2STRnBdhu7XR1Q7amotX7FSaC1z73bwAuJX7nf8JDQ4PS",
-            "original": "ak_2fxRQ2STRnBdhu7XR1Q7amotX7FSaC1z73bwAuJX7nf8JDQ4PS"
-          },
-          "pointers": {},
-          "revoke": null,
-          "transfers": [],
-          "updates": []
-        },
-        "name": "xxxxxxxxxxxxx.chain",
-        "previous": [],
-        "status": "name"
-      },
-      "type": "name"
-    },
-  ...
-]
-```
-
-Via the `only` parameter, it's possible to search for a name in particular lifecycle state only.
-The parameter can be repeated:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/search?prefix=aaa&only=auction&only=inactive" | jq '.'
-[
-  {
-    "active": false,
-    "info": {
-      "auction_end": 433568,
-      "bids": [
-        20309433
-      ],
-      "last_bid": {
-        "block_hash": "mh_2j6HpTVpgqVoYLRVSiG7Rm2W6XfkCgMPMYTvtVDoykgAkrDPj3",
-        "block_height": 403808,
-        "hash": "th_swc2vXht9xjrVWXXHSMLaUqDFx21qLdHbwixgSagX8DNhwnVC",
-        "micro_index": 0,
-        "micro_time": 1616501035488,
-        "signatures": [
-          "sg_4RmWff8UECeL5h319TY7RVx7biDU7C36GfzhsbLDvy5DrJ3iRGDx6rk4FiwjgTZrH4hrSz4sJ4hr9AHFJHNGCq32PSkA1"
-        ],
-        "tx": {
-          "account_id": "ak_2VKyfAmVpUjX69TKLBMRqdBgK4YXyrTi8J9L82RgvqaCycHYeq",
-          "fee": 33040000000000,
-          "name": "aaa.chain",
-          "name_fee": 217830900000000000000,
-          "name_id": "nm_246C5HgNYowJwj5p7mFrCrLs999ySoDa334r3SCqj9zRFbonBm",
-          "name_salt": 2674742195530689,
-          "nonce": 140,
-          "type": "NameClaimTx",
-          "version": 2
-        },
-        "tx_index": 20309433
-      }
-    },
-    "name": "aaa.chain",
-    "previous": [],
-    "status": "auction"
-  },
-  {
-    "active": false,
-    "auction": null,
-    "info": {
-      "active_from": 18546,
-      "auction_timeout": 0,
-      "claims": [
-        164943
-      ],
-      "expire_height": 135776,
-      "ownership": {
-        "current": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8",
-        "original": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8"
-      },
-      "pointers": {
-        "account_pubkey": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8"
-      },
-      "revoke": null,
-      "transfers": [],
-      "updates": [
-        2114471,
-        1224905,
-        650357,
-        650355,
-        650354,
-        307848
-      ]
-    },
-    "name": "aaa.test",
-    "previous": [],
-    "status": "name"
-  },
-  ...
-]
-```
-
-This endpoint also accepts the `expand` parameter:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/search?prefix=asdf&expand" | jq '.'
-[
-  {
-    "active": false,
-    "auction": null,
-    "info": {
-      "active_from": 80657,
-      "auction_timeout": 0,
-      "claims": [
-        {
-          "block_hash": "mh_2b6pVcaQGkkz8GmttTyzWdM2HpdBgAkY8hSoDQzsJy5sAAcVFX",
-          "block_height": 80657,
-          "hash": "th_q23GahzkBMFmATHi1BrGcPkP1kYVwCs9jE67nectQN6MPddGU",
-          "micro_index": 0,
-          "micro_time": 1557897366141,
-          "signatures": [
-            "sg_3s1kNCWYHRabHwpaYT7UKWgNmkDBJQbf6raK8Nz9KPxQDLfz94N3eUXZw6rL33yPVaf4hAuzFgqWEpbSqAkEiRcwmoLZN"
-          ],
-          "tx": {
-            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-            "fee": 20000000000000,
-            "name": "asdf.test",
-            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
-            "name_salt": 123,
-            "nonce": 24965,
-            "ttl": 80756,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 1789259
-        }
-      ],
-      "expire_height": 131372,
-      "ownership": {
-        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
-      },
-      "pointers": {
-        "account_pubkey": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
-      },
-      "revoke": null,
-      "transfers": [],
-      "updates": [
-        {
-          "block_hash": "mh_2oLyC8yeBGvgJgCzaXRzqSsHRszEXsjrVwBFeLC4FGedEdEPpD",
-          "block_height": 81372,
-          "hash": "th_2fREBJgCYVo8nAAzEQAUUq5Qn7nHvrS6baRwUFeHaNDwaS6S83",
-          "micro_index": 2,
-          "micro_time": 1558026126012,
-          "signatures": [
-            "sg_GBc1ZsENYyrBvEi4APVoZFM99Y12Jx7bqKh7pKsdfanqEB7G4iarJedaKGjeWXyiVkfFju1WQkYykwkKkC8jBwRQ2jpRK"
-          ],
-          "tx": {
-            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-            "client_ttl": 50000,
-            "fee": 30000000000000,
-            "name": "asdf.test",
-            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
-            "name_ttl": 50000,
-            "nonce": 40517,
-            "pointers": [
-              {
-                "id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-                "key": "account_pubkey"
-              }
-            ],
-            "type": "NameUpdateTx",
-            "version": 1
-          },
-          "tx_index": 1822284
-        },
-        {
-          "block_hash": "mh_GFJ7tS12D4fKksfz7kQJJwXYs8eK4s2wAD1MA79XCXakuuAVq",
-          "block_height": 81370,
-          "hash": "th_2vZBGDF92GGxy93T11qCsXhrgm51k9mf5mkQ3GuoHVrYzbfPtB",
-          "micro_index": 1,
-          "micro_time": 1558025965641,
-          "signatures": [
-            "sg_Ai54pfkEptae3zrhy5UYD3tDSciHMyCfQSX9HWAHiF4g5M6W5dKHXxXDF2oZaAqeNPhtwH3ZfACwZPmHzCKHvB7C6sKCe"
-          ],
-          "tx": {
-            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-            "client_ttl": 50000,
-            "fee": 30000000000000,
-            "name": "asdf.test",
-            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
-            "name_ttl": 50000,
-            "nonce": 40510,
-            "pointers": [
-              {
-                "id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-                "key": "account_pubkey"
-              }
-            ],
-            "type": "NameUpdateTx",
-            "version": 1
-          },
-          "tx_index": 1822277
-        }
-      ]
-    },
-...
-]
-```
-
-### `/v2/names/auctions`
-
-Without ordering parameters, the first auction in reply set expires the latest.
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/auctions?limit=2" | jq '.'
 {
   "data": [
     {
-      "active": false,
-      "hash": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
-      "info": {
-        "auction_end": 320279,
-        "bids": [
-          13863543
+      "name": "meta.chain",
+      "name_fee": 134626900000000000000,
+      "auction_end": 968903,
+      "last_bid": {
+        "block_hash": "mh_2F3vhNXJ1eXaQiAz6RQHzAUW5dEUTSEvxaBAHDn8ziHjrd9FJK",
+        "block_height": 939143,
+        "encoded_tx": "tx_+JYLAfhCuECFZmpTCOnm3v0zZ3g2BVIZApsjxGt4Q4MWck+gEw0j09Jq61XEgQWafn3fP2oesqcsy6wYGpGWT6eFW/iE7IoCuE74TCACoQH7BL4bl7Y/NrliWEMKWaxk9besmKUYp6PkFk7ZZeieHYIyZ4ptZXRhLmNoYWluhwUXe6y8hW+JB0xS1EQgCUAAhg8PrOrgAADImXsf",
+        "hash": "th_2KpsBbibCN4EwtKNtLLAZzRw3AJ7xMEQw5sfbNZjQKCdP5pc5V",
+        "micro_index": 0,
+        "micro_time": 1714619449351,
+        "signatures": [
+          "sg_JTFJFCMh84NB9rJiHgzVcCgXsSt5i6njT4E55vLDRVoeXKuB4ETqzt1BB6TtAUrbGoGMYd4iXM7xuwPXXgVoWCPPZu8SS"
         ],
-        "last_bid": {
-          "block_hash": "mh_2hXMY6BJ49LAMKNFcADx4dPesYbcnJj7ac881ojrktUecHPiYf",
-          "block_height": 290519,
-          "hash": "th_2KNZfYmAFKyW3xhvfdWAjMc6R5FRy2nUjLtYUuQsQyxGJ84kGJ",
-          "micro_index": 0,
-          "micro_time": 1595846818606,
-          "signatures": [
-            "sg_XtQb143doXyS2tE8DNb2563Ukxy18aBbL9dd8iDxYNjUmZq2xywLp1qyiLancXjauRmYaQQz54aXKjevw21pGmZwv4gLA"
-          ],
-          "tx": {
-            "account_id": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is",
-            "fee": 16540000000000,
-            "name": "ant.chain",
-            "name_fee": 217830900000000000000,
-            "name_id": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
-            "name_salt": 8831319772225873,
-            "nonce": 524,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 13863543
+        "tx": {
+          "account_id": "ak_2uYw22W3KGCCduExjzkBDNUxWt3Akdehm66CFAXDKRt9aoUofX",
+          "fee": 16560000000000,
+          "name": "meta.chain",
+          "name_fee": 134626900000000000000,
+          "name_id": "nm_2ab7LiFhV5uAzXq6EHmMsPm2cHoKaLdFMnwoTrkVaHSUAAZmx5",
+          "name_salt": 1433194830005615,
+          "nonce": 12903,
+          "ttl": 1148903,
+          "type": "NameClaimTx",
+          "version": 2
         }
       },
-      "name": "ant.chain",
-      "previous": [],
-      "status": "auction"
+      "approximate_expire_time": 1719979602317,
+      "activation_time": 1714619449351
     },
     {
-      "active": false,
-      "hash": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
-      "info": {
-        "auction_end": 316465,
-        "bids": [
-          13581110,
-          12162548,
-          10084274,
-          10059350,
-          7808796,
-          7455148,
-          5564748
+      "name": "tank.chain",
+      "name_fee": 134626900000000000000,
+      "auction_end": 965088,
+      "last_bid": {
+        "block_hash": "mh_bV9Kq1tCMpRWgTAWy6C6vvQy5r2RjganqjFhQcPoRZmwNxZtN",
+        "block_height": 935328,
+        "encoded_tx": "tx_+JQLAfhCuEA+wsY1qqQhRraS487OtyxOqltUkG8KrnrVoMeGj1Db5XRf/cFdyJ3MhMfE5bgoBx57i9zAKC/iMdQsPzzNf3QFuEz4SiACoQFDfNR5+5vHGV9m03tIkBWvRBxUxZg57c17DFoKdfI/bleKdGFuay5jaGFpbocLZSf1Zg0fiQdMUtREIAlAAIYPBly7UAAAdKgDMw==",
+        "hash": "th_2fpQo1jm3VwHkn4VcDxFxaMnNLWc2PD8KA35WZwGDDSYKxJDkx",
+        "micro_index": 0,
+        "micro_time": 1713926446496,
+        "signatures": [
+          "sg_9DEUyZZfXQDR7t1QbGod9GztGTeFGCiAuNHzqZaXng6kY9Xbn1hNqbFWVugChgQySzLsNfxhcHRrP7qtjPoCAjaJM57pf"
         ],
-        "last_bid": {
-          "block_hash": "mh_CVYWyhvtQiqbYwRQYV7NPxknWqVTxoefyXz2X9R2kKGrx8vM2",
-          "block_height": 286705,
-          "hash": "th_2Us1TMbypBpnNZagh3hexbvL4KuQF89JV8sFf92RRChPiwTQBC",
-          "micro_index": 102,
-          "micro_time": 1595155581605,
-          "signatures": [
-            "sg_7pGmtgSMXLCa7YchSDFSeLVis9JYrAWKDgd4SPCnsNQQVFZhJKR4HyEentwZkKHT5GJN6L5VikwEsdkPNKDXD5xur6LiM"
-          ],
-          "tx": {
-            "account_id": "ak_w9dCnphJRYxpjrPZSXUm8RPXAhFFdxyhqFGq1yPt23B4M8A1n",
-            "fee": 16320000000000,
-            "name": "5.chain",
-            "name_fee": 8e+20,
-            "name_id": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
-            "name_salt": 0,
-            "nonce": 24,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 13581110
+        "tx": {
+          "account_id": "ak_Wit5Lxv9v3QNYiGSTidCM7Ssuagd7cs6fsBnuwZmULLAWBZd2",
+          "fee": 16520000000000,
+          "name": "tank.chain",
+          "name_fee": 134626900000000000000,
+          "name_id": "nm_CCgyYJEUuyZtfZrAZvFK8tv2k9a9zhKkByxhwHcrc64mVw7EB",
+          "name_salt": 3207447039053087,
+          "nonce": 87,
+          "ttl": 1145088,
+          "type": "NameClaimTx",
+          "version": 2
         }
       },
-      "name": "5.chain",
-      "previous": [],
-      "status": "auction"
+      "approximate_expire_time": 1719292902317,
+      "activation_time": 1713926446496
     }
   ],
-  "next": "/v2/names?state=auctions&cursor=548763-svs.chain&direction=backward&expand=false&limit=2",
+  "next": "/v3/names/auctions?cursor=548763-svs.chain&limit=2",
   "prev": null
 }
 ```
 
-To show auctions starting with the one expiring the earliest:
+To show auctions ordered by name, from the beginning:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=expiration&direction=forward&limit=2" | jq '.data [] .info.auction_end'
-300490
-300636
-```
-
-Or, ordered by name, from the beginning:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=forward&limit=100" | jq '.data [] .name'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/auctions?by=name&direction=forward&limit=100" | jq '.data [] .name'
 "0.chain"
 "5.chain"
 "6.chain"
@@ -2478,134 +1575,49 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=
 "y.chain"
 ```
 
-### `/v2/names/:name_or_hash`
+### `/v3/names/:name_or_hash`
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/bear.test" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/bear.test" | jq '.'
 {
   "active": false,
-  "hash": "nm_2aGpF2uJp1wDpuHoNDhhSztpoQr43dAjzZ5SyvfD2RSKTVmL6X",
-  "info": {
-    "active_from": 85624,              # block height
-    "auction_timeout": 0,              # in blocks
-    "claims": [
-      2101866                          # transaction index
-    ],
-    "expire_height": 135638,           # block height
-    "ownership": {
-      "current": "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM", # from transfer tx
-      "original": "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM" # claimant
-    },
-    "pointers": {
-      "account_pubkey": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is"
-    },
-    "revoke": null,                    # null OR transaction index
-    "transfers": [],                   # transaction indices
-    "updates": [
-      2103935                          # transaction index
-    ]
-  },
   "name": "bear.test",
-  "previous": [                        # previous epochs of the same name
-    {
-      "active_from": 4054,
-      "auction_timeout": 0,
-      "claims": [
-        5800
-      ],
-      "expire_height": 40054,
-      "ownership": {
-        "current": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-        "original": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-      },
-      "pointers": {
-        "account_pubkey": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-      },
-      "revoke": null,
-      "transfers": [],
-      "updates": [
-        5801
-      ]
-    }
-  ],
-  "status": "name"
+  "hash": "nm_2aGpF2uJp1wDpuHoNDhhSztpoQr43dAjzZ5SyvfD2RSKTVmL6X",
+  "name_fee": 134626900000000000000,
+  "revoke": null,
+  "expire_height": 135638,
+  "auction_timeout": 0,
+  "auction": null,
+  "ownership": {
+    "current": "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM",
+    "original": "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
+  },
+  "active_from": 85624,
+  "approximate_expire_time": 1567835676059,
+  "approximate_activation_time": 1558792599799
 }
 ```
 
 It's possible to use encoded hash as well:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
 {
-  "active": true,
-  "hash": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
-  "info": {
-    "active_from": 279555,
-    "auction_timeout": 0,
-    "claims": [
-      12942484
-    ],
-    "expire_height": 329558,
-    "ownership": {
-      "current": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
-      "original": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
-    },
-    "pointers": {
-      "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
-    },
-    "revoke": null,
-    "transfers": [],
-    "updates": [
-      12942695
-    ]
-  },
+  "active": false,
   "name": "wwwbeaconoidcom.chain",
-  "previous": [],
-  "status": "name"
-}
-```
-
-If there's no suffix (`.chain` or `.test`), `.chain` is added by default:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/aeternity" | jq '.'
-{
-  "active": true,
-  "hash": "nm_S4ofw6861biSJrXgHuJPo7VotLbrY8P9ngTLvgrRwbDEA3svc",
-  "info": {
-    "active_from": 162197,
-    "auction_timeout": 480,
-    "claims": [
-      4712046,
-      4711222,
-      4708228,
-      4693879,
-      4693568,
-      4678533
-    ],
-    "expire_height": 304439,
-    "ownership": {
-      "current": "ak_2rGuHcjycoZgzhAY3Jexo6e1scj3JRCZu2gkrSxGEMf2SktE3A",
-      "original": "ak_2ruXgsLy9jMwEqsgyQgEsxw8chYDfv2QyBfCsR6qtpQYkektWB"
-    },
-    "pointers": {
-      "account_pubkey": "ak_2cJokSy6YHfoE9zuXMygYPkGb1NkrHsXqRUAAj3Y8jD7LdfnU7"
-    },
-    "revoke": null,
-    "transfers": [
-      8778162
-    ],
-    "updates": [
-      11110443,
-      10074212,
-      10074008,
-      8322927,
-      7794392
-    ]
+  "hash": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+  "name_fee": 676500000000000000,
+  "revoke": null,
+  "expire_height": 329558,
+  "auction_timeout": 0,
+  "auction": null,
+  "ownership": {
+  "current": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+  "original": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
   },
-  "name": "aeternity.chain",
-  "previous": [],
-  "status": "name"
+  "active_from": 279555,
+  "approximate_expire_time": 1602925509746,
+  "approximate_activation_time": 1593861576848
 }
 ```
 
@@ -2615,184 +1627,96 @@ If the name is currently in auction, the reply has different shape:
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/help" | jq '.'
 {
   "active": false,
-  "hash": "nm_2WoR2PCFXeLiLQH8C7GVbGpU57qDBqkQbPvaML8w3ijMQiei7E",
-  "info": {
-    "auction_end": 302041,                   # block height
-    "bids": [
-      12433889                               # transaction index
-    ],
+  "name": "yedianzhiwang.chain",
+  "hash": "nm_2akgyVeSqDeynUVTHnHzengLarQyQqC9sHigsrBKnaCtmd3Ca5",
+  "name_fee": 1771100000000000000,
+  "revoke": null,
+  "expire_height": 364002,
+  "auction_timeout": 0,
+  "auction": {
+    "name": "yedianzhiwang.chain",
+    "name_fee": 134626900000000000000,
+    "auction_end": 965088,
     "last_bid": {
-      "block_hash": "mh_2vrYDKt2L1uBN7f8HEFSVUViUrxjNFASQcaHdrrPgdzh7MER2d",
-      "block_height": 272281,
-      "hash": "th_26BczfSQhgnVv1XQBaVNM3PzMuwLPLwR9WZ1qgthcFYJztLkdW",
+      "block_hash": "mh_bV9Kq1tCMpRWgTAWy6C6vvQy5r2RjganqjFhQcPoRZmwNxZtN",
+      "block_height": 935328,
+      "encoded_tx": "tx_+JQLAfhCuEA+wsY1qqQhRraS487OtyxOqltUkG8KrnrVoMeGj1Db5XRf/cFdyJ3MhMfE5bgoBx57i9zAKC/iMdQsPzzNf3QFuEz4SiACoQFDfNR5+5vHGV9m03tIkBWvRBxUxZg57c17DFoKdfI/bleKdGFuay5jaGFpbocLZSf1Zg0fiQdMUtREIAlAAIYPBly7UAAAdKgDMw==",
+      "hash": "th_2fpQo1jm3VwHkn4VcDxFxaMnNLWc2PD8KA35WZwGDDSYKxJDkx",
       "micro_index": 0,
-      "micro_time": 1592546912379,
+      "micro_time": 1713926446496,
       "signatures": [
-        "sg_ZsdWenUVDvSW7xQCCfd4SxG8UjbKTWpZimsotmcv8q8fdqdPb7qno4BRLDGhtHNDN6fNJBZSk6M4VYuycLdWYXGavmps6"
+      "sg_9DEUyZZfXQDR7t1QbGod9GztGTeFGCiAuNHzqZaXng6kY9Xbn1hNqbFWVugChgQySzLsNfxhcHRrP7qtjPoCAjaJM57pf"
       ],
       "tx": {
-        "account_id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
-        "fee": 17100000000000,
-        "name": "help.chain",
-        "name_fee": 141358245000000000000,
-        "name_id": "nm_2WoR2PCFXeLiLQH8C7GVbGpU57qDBqkQbPvaML8w3ijMQiei7E",
-        "name_salt": 5.50894365698189e+76,
-        "nonce": 254,
-        "ttl": 272779,
+        "account_id": "ak_Wit5Lxv9v3QNYiGSTidCM7Ssuagd7cs6fsBnuwZmULLAWBZd2",
+        "fee": 16520000000000,
+        "name": "tank.chain",
+        "name_fee": 134626900000000000000,
+        "name_id": "nm_CCgyYJEUuyZtfZrAZvFK8tv2k9a9zhKkByxhwHcrc64mVw7EB",
+        "name_salt": 3207447039053087,
+        "nonce": 87,
+        "ttl": 1145088,
         "type": "NameClaimTx",
         "version": 2
-      },
-      "tx_index": 12433889
-    }
+      }
+    },
+    "approximate_expire_time": 1719295566979,
+    "activation_time": 1713926446496
   },
-  "name": "help.chain",
-  "previous": [],
-  "status": "auction"
+  "ownership": {
+    "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+    "original": "ak_2pqYSBpEkykFy11KFZXxDJaB8KugXBi2JxraqZXpTaXzreYb95"
+  },
+  "active_from": 163855,
+  "approximate_expire_time": 1609161570008,
+  "approximate_activation_time": 1572935113556
 }
 ```
 
-With `expand` parameter, notice how `claims` and `updates` have the transaction detail inlined:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/cryptobase.chain?expand" | jq '.'
-{
-  "active": true,
-  "hash": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
-  "info": {
-    "active_from": 264318,
-    "auction_timeout": null,
-    "claims": [
-      {
-        "block_hash": "mh_gtErJSZWePyPyr8yoeQb3mUqA7YsjL6Ac7YKKMGqbbyNGcjWk",
-        "block_height": 263838,
-        "hash": "th_2aHZ1hCkuGRdB9f9F1g6brjwvxfzZ6c1rV8TAiGxRLncpdLJRA",
-        "micro_index": 0,
-        "micro_time": 1591023065609,
-        "signatures": [
-          "sg_BDED9YVuq7X7j51ni2jmfbj7tZ4Tx8KcTP3sx3W9C3aZwDLsXYEnNc9yCBbeGC1AcCkVBsGigSFPqNS5CXPCDXramjUNd"
-        ],
-        "tx": {
-          "account_id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
-          "fee": 16620000000000,
-          "name": "cryptobase.chain",
-          "name_fee": 7502500000000000000,
-          "name_id": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
-          "name_salt": 7573518016165599,
-          "nonce": 49,
-          "type": "NameClaimTx",
-          "version": 2
-        },
-        "tx_index": 11807560
-      }
-    ],
-    "expire_height": 361829,
-    "ownership": {
-      "current": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
-      "original": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr"
-    },
-    "pointers": {
-      "account_pubkey": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr"
-    },
-    "revoke": null,
-    "transfers": [],
-    "updates": [
-      {
-        "block_hash": "mh_pFixjYGYcqtSMzHprsTB9t1Z3zp11W9yFgJJ7GoRfpBBpFyxS",
-        "block_height": 311829,
-        "hash": "th_W4L8X2FcWSi2cyGCayimNSWojEzyVjXSXk8EEJES2evTqxLzS",
-        "micro_index": 16,
-        "micro_time": 1599712936956,
-        "signatures": [
-          "sg_6PSRErVuLWGZAcRAW2fYDDNSsBPgccgxMjQciGCwqAeCKF16ykBVPghZWe2QPPTs86QTevoAPphtbhMCmZWpQSjrPR24L"
-        ],
-        "tx": {
-          "account_id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
-          "client_ttl": 10500,
-          "fee": 17840000000000,
-          "name": "cryptobase.chain",
-          "name_id": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
-          "name_ttl": 50000,
-          "nonce": 64,
-          "pointers": [
-            {
-              "id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
-              "key": "account_pubkey"
-            }
-          ],
-          "ttl": 312329,
-          "type": "NameUpdateTx",
-          "version": 1
-        },
-        "tx_index": 15494052
-      }
-    ]
-  },
-  "name": "cryptobase.chain",
-  "previous": [],
-  "status": "name"
-}
-```
-
-### `/v2/names/:name/auction`
+### `/v3/names/auctions/:name`
 
 Auction specific name resolution is available behind this endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/nikita.chain/auction" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/auctions/meta.chain" | jq '.'
 {
-  "active": false,
-  "hash": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
-  "info": {
-    "auction_end": 316672,
-    "bids": [
-      14747888
+  "name": "meta.chain",
+  "name_fee": 134626900000000000000,
+  "auction_end": 968903,
+  "last_bid": {
+    "block_hash": "mh_2F3vhNXJ1eXaQiAz6RQHzAUW5dEUTSEvxaBAHDn8ziHjrd9FJK",
+    "block_height": 939143,
+    "encoded_tx": "tx_+JYLAfhCuECFZmpTCOnm3v0zZ3g2BVIZApsjxGt4Q4MWck+gEw0j09Jq61XEgQWafn3fP2oesqcsy6wYGpGWT6eFW/iE7IoCuE74TCACoQH7BL4bl7Y/NrliWEMKWaxk9besmKUYp6PkFk7ZZeieHYIyZ4ptZXRhLmNoYWluhwUXe6y8hW+JB0xS1EQgCUAAhg8PrOrgAADImXsf",
+    "hash": "th_2KpsBbibCN4EwtKNtLLAZzRw3AJ7xMEQw5sfbNZjQKCdP5pc5V",
+    "micro_index": 0,
+    "micro_time": 1714619449351,
+    "signatures": [
+      "sg_JTFJFCMh84NB9rJiHgzVcCgXsSt5i6njT4E55vLDRVoeXKuB4ETqzt1BB6TtAUrbGoGMYd4iXM7xuwPXXgVoWCPPZu8SS"
     ],
-    "last_bid": {
-      "block_hash": "mh_gGVCDKzwBP85BGTiionuZrpibThyPUdqn8VWWVzvAVYN2YuGS",
-      "block_height": 301792,
-      "hash": "th_eWrp3M6REtTmVjGJqEvqXM5ejQ73irAptTtcaqTWNsBYJoxZ5",
-      "micro_index": 0,
-      "micro_time": 1597894719687,
-      "signatures": [
-        "sg_E3dyEYE9mrBXbFRN3PjCakpAN1VZbZAuYq8JKVq6ki8vvwsCaDMd947QHBx5pkcwFX1Y1AqiwhcYx5AUpQD1xYoXYHi63"
-      ],
-      "tx": {
-        "account_id": "ak_2AVeRypSdS4ZosdKWW1C4avWU4eeC2Yq7oP7guBGy8jkxdYVUy",
-        "fee": 16560000000000,
-        "name": "nikita.chain",
-        "name_fee": 51422900000000000000,
-        "name_id": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
-        "name_salt": 7461157538025441,
-        "nonce": 43,
-        "type": "NameClaimTx",
-        "version": 2
-      },
-      "tx_index": 14747888
+    "tx": {
+      "account_id": "ak_2uYw22W3KGCCduExjzkBDNUxWt3Akdehm66CFAXDKRt9aoUofX",
+      "fee": 16560000000000,
+      "name": "meta.chain",
+      "name_fee": 134626900000000000000,
+      "name_id": "nm_2ab7LiFhV5uAzXq6EHmMsPm2cHoKaLdFMnwoTrkVaHSUAAZmx5",
+      "name_salt": 1433194830005615,
+      "nonce": 12903,
+      "ttl": 1148903,
+      "type": "NameClaimTx",
+      "version": 2
     }
   },
-  "name": "nikita.chain",
-  "previous": [],
-  "status": "auction"
+  "approximate_expire_time": 1719978527794,
+  "activation_time": 1714619449351
 }
 ```
 
-### `/v2/names/:name/pointers`
-
-This is basically a restricted reply from `/v2/names/:id` endpoint, returning just pointers.
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/wwwbeaconoidcom.chain/pointers" | jq '.'
-{
-  "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
-}
-```
-
-### `/v2/names/:name/pointees`
+### `/v3/names/:name/pointees`
 
 Returns names pointing to a particular pubkey, partitioned into `active` and `inactive` sets.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C/pointees" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C/pointees" | jq '.'
 {
   "active": {
     "account_pubkey": [
@@ -2812,12 +1736,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ak_2HNsyfhFYgByVq8rzn7q4hRb
 }
 ```
 
-### `/v2/names/:name/claims`
+### `/v3/names/:name/claims`
 
 Returns the name claims, paginated.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/vlsl.test/claims" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/vlsl.test/claims" | jq '.'
 {
   "data": [
     {
@@ -2840,12 +1764,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/vlsl.test/claims" | jq '.'
 }
 ```
 
-### `/v2/names/:name/transfers`
+### `/v3/names/:name/transfers`
 
 Returns the name transfers, paginated.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/test.test/transfers" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/test.test/transfers" | jq '.'
 {
   "data": [
     {
@@ -2868,12 +1792,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/test.test/transfers" | jq '
 }
 ```
 
-### `/v2/names/:name/updates`
+### `/v3/names/:name/updates`
 
 Returns the name updates, paginated.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/ssup.test/updates?limit=1" | jq '.'
 {
   "data": [
     {
@@ -2898,7 +1822,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" 
       }
     }
   ],
-  "next": "/v2/names/ssup.test/updates?cursor=45706-20-1132300&limit=1",
+  "next": "/v3/names/ssup.test/updates?cursor=45706-20-1132300&limit=1",
   "prev": null
 }
 ```
@@ -2907,12 +1831,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" 
 
 ## Contracts
 
-### `/v2/contracts`
+### `/v3/contracts`
 
 Paginatable list of all non-preset contracts, filterable by scope.
 
 ```
-curl -s "https://mainnet.aeternity.io/mdw/v2/contracts?limit=1" | jq '.'
+curl -s "https://mainnet.aeternity.io/mdw/v3/contracts?limit=1" | jq '.'
 {
   "data" : [
     {
@@ -2936,17 +1860,17 @@ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts?limit=1" | jq '.'
       "source_tx_type" : "ContractCreateTx"
     }
   ],
-  "next" : "/v2/contracts?cursor=40835756-0&limit=1",
+  "next" : "/v3/contracts?cursor=40835756-0&limit=1",
   "prev" : null
 }
 ```
 
-### `/v2/contracts/:id`
+### `/v3/contracts/:id`
 
 Get a single contract.
 
 ```
-$ curl -s "http://mainnet.aeternity.io/mdw/v2/contracts/ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX" | jq '.'
+$ curl -s "http://mainnet.aeternity.io/mdw/v3/contracts/ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX" | jq '.'
 {
   "block_hash" : "mh_2sEDNcQaZwpU4qUZGPX3zV7BruQvzQ4qnYpo4VWaPU6sQfjDqJ",
   "contract" : "ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX",
@@ -2969,7 +1893,7 @@ $ curl -s "http://mainnet.aeternity.io/mdw/v2/contracts/ct_D4ZxQD9wXRXYkT7EQd5Si
 }
 ```
 
-### `/v2/contracts/logs`
+### `/v3/contracts/logs`
 
 A paginable contract log endpoint allows querying of the contract logs using several querying parameters, including:
 
@@ -2980,7 +1904,7 @@ A paginable contract log endpoint allows querying of the contract logs using sev
 - `aexn-args`- formats the args topics according to the event type
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?direction=forward&contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
@@ -2989,17 +1913,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&
         "10000000000000000"
       ],
       "call_tx_hash": "th_2JLGkWhXbEQxMuEYTxazPurKiwGvo5R6vgqjSBw3R8z9F6b4rv",
-      "call_txi": 8395071,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "https://github.com/thepiwo",
       "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
       "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/0-370592?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2"
+  "next": "/v3/contracts/logs?direction=forward&contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1"
 }
 ```
 
@@ -3015,11 +1936,7 @@ The attributes returned on each object are the following:
 
 - `call_tx_hash` - hash of contract call transaction which emitted the event log
 
-- `call_txi` - tx index of contract call transaction
-
 - `contract_id` - contract identifier
-
-- `contract_txi` - tx index of contract create transaction
 
 - `data` - decoded (human readable) data field of event log (if any)
 
@@ -3032,8 +1949,6 @@ The attributes returned on each object are the following:
   ```
 
 - `ext_caller_contract_id` - caller contract id, potentially different to `contract_id`, if the contract which emitted the event was called from other contract
-
-- `ext_caller_contract_txi` - tx index of caller's contract create transaction
 
 - `log_idx` - contract call can emit many events. Log idx uniquely identifies the event log inside the contract call.
 
@@ -3061,7 +1976,7 @@ With access to the contract's source code, the developer can:
 Listing the last (to date) contract log in the chain:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3071,17 +1986,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?limit=1" | jq '.'
         "966628800000000000"
       ],
       "call_tx_hash": "th_2vDNSLGyBdBNPmyfWtfHEAH2PdJh7t39G3a6JtM4ByfYD1LT1V",
-      "call_txi": 19626064,
       "contract_id": "ct_2MgX2e9mdM3epVpmxLQim7SAMF2xTbid4jtyVi4WiLF3Q8ZTRZ",
-      "contract_txi": 17708111,
       "data": "",
       "event_hash": "48U3JOKTVTI6FVMTK2BLHM8NG72JEBG93VS6MENPSC8E71IM5FNG====",
       "ext_caller_contract_id": "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE",
-      "ext_caller_contract_txi": 17707096,
       "log_idx": 2
     }
   ],
-  "next": "/v2/contracts/logs?cursor=68PJACHK74O3E91J60QJADHG6OR28HA96P258MAL6KRJAKQ7A0RLEDAL8D65CKIN95C52I23AH7KOKAA8GRJ8HQN9TC5KD2D957KGGIJAT350M2H7KUJQF9460I0&limit=1",
+  "next": "/v3/contracts/logs?cursor=68PJACHK74O3E91J60QJADHG6OR28HA96P258MAL6KRJAKQ7A0RLEDAL8D65CKIN95C52I23AH7KOKAA8GRJ8HQN9TC5KD2D957KGGIJAT350M2H7KUJQF9460I0&limit=1",
   "prev": null
 }
 ```
@@ -3089,7 +2001,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?limit=1" | jq '.'
 Listing contract logs in range between generations 200000 and 210000:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:200000-210000&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?scope=gen:200000-210000&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3098,17 +2010,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:200000-2
         "1000000000000000000"
       ],
       "call_tx_hash": "th_2BjrnHaRHo196AHtpMHV4QUiJqDi6UjfsA5pbPgTGhKpQuB67N",
-      "call_txi": 7004806,
       "contract_id": "ct_cT9mSpx9989Js39ag45fih2daephb7YsicsvNdUdEB156gT5C",
-      "contract_txi": 6589581,
       "data": "https://github.com/aeternity",
       "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
       "ext_caller_contract_id": "ct_cT9mSpx9989Js39ag45fih2daephb7YsicsvNdUdEB156gT5C",
-      "ext_caller_contract_txi": 6589581,
       "log_idx": 0
     }
   ],
-  "next": "/v2/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A200000-210000",
+  "next": "/v3/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A200000-210000",
   "prev": null
 }
 ```
@@ -3116,7 +2025,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:200000-2
 Listing contract logs in generation 250109 only:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:250109&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?scope=gen:250109&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3125,59 +2034,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:250109&l
         "100000000000000000"
       ],
       "call_tx_hash": "th_22pciXRFnEieCSMEbcEPEfHdxvJobJt2UoCtXXiQ3pnDn6kvaz",
-      "call_txi": 10788741,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "https://twitter.com/LeonBlockchain",
       "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
       "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
       "log_idx": 0
     }
   ],
-  "next": "/v2/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A250109",
-  "prev": null
-}
-```
-
-Listing contract logs from transaction index 15000000 down to 5000000 - e.g. backwards (note descending call_txi):
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=txi:15000000-5000000&limit=2" | jq '.'
-{
-  "data": [
-    {
-      "args": [
-        "62059066751890548769948246095111340843449817566010565188117840814896942849080",
-        "585892500000000000000"
-      ],
-      "call_tx_hash": "th_kNDMha7svd7BefFBzGgLqzZAvFpvCSf3KebML1ehBL681ohyc",
-      "call_txi": 14990154,
-      "contract_id": "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
-      "contract_txi": null,
-      "data": "0X0129E84285A6E158050774C02D0CC0279A952812",
-      "event_hash": "8U30JKGH96FU11A2BB23RPC7BQILKJVEV1HS79QF2QQLMRTN72UG====",
-      "ext_caller_contract_id": "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
-      "ext_caller_contract_txi": null,
-      "log_idx": 0
-    },
-    {
-      "args": [
-        "40622116278729278568318020744060411462094505710435719316947449635041473609173",
-        "200000000000000000"
-      ],
-      "call_tx_hash": "th_2Hu1vp599wdSHKQdX1Hpn6mj9PhQLwBTnqybYqEdzkUrcjKA7J",
-      "call_txi": 14984615,
-      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
-      "data": "https://kryptokrauts.com/log/superhero-a-truly-decentralized-social-tipping-platform",
-      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
-      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
-      "log_idx": 0
-    }
-  ],
-  "next": "/v2/contracts/logs?cursor=68PJACHK74O3E91J60QJAD9N6CQI8HA96P258MAL6KRJAKQ7A0RLEDAL8D65CKIN95C52I23AH7KOKAA8GRJ8HQN9TC5KD2D957KGGIJAT350M2H7KUJQF9460I0&limit=2&scope=txi%3A15000000-5000000",
+  "next": "/v3/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A250109",
   "prev": null
 }
 ```
@@ -3185,7 +2049,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=txi:15000000
 Listing latest logs for given contract
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3194,13 +2058,10 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?contract_id=ct_2Af
         "120000000000000000"
       ],
       "call_tx_hash": "th_2rQFbvkR2rxvBQLWt4WPUPiSViES8aKDBVDraF4mogdZsVTJSQ",
-      "call_txi": 19625942,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "https://www.youtube.com/watch?v=iLQzaLr1enE",
       "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
       "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
       "log_idx": 0
     },
     {
@@ -3209,17 +2070,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?contract_id=ct_2Af
         "52300000000000000000"
       ],
       "call_tx_hash": "th_JgxLwr7WszXNT5tU1ngc6fJJyxTywcLjWxXy8sqrpX7r7byCQ",
-      "call_txi": 19625814,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "https://superhero.com/",
       "event_hash": "ATPGPVQP8277UG86U0JDA2CPFKQ1F28A51VAG9F029836CU1IG80====",
       "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
       "log_idx": 0
     }
   ],
-  "next": "/v2/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=70PJICHN6OR28CPG6GR3GDHK6OI5AH2MACRKOM9LB58KKD9L9DD3AMIKA92KGM269LCKAL9NA12K4DA69HCKGCQC88PKIDHN6TCLAKA2915LKK9T7KUJQ91G4G&limit=2",
+  "next": "/v3/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=70PJICHN6OR28CPG6GR3GDHK6OI5AH2MACRKOM9LB58KKD9L9DD3AMIKA92KGM269LCKAL9NA12K4DA69HCKGCQC88PKIDHN6TCLAKA2915LKK9T7KUJQ91G4G&limit=2",
   "prev": null
 }
 ```
@@ -3228,7 +2086,7 @@ Listing first logs where data field points to `aeternity.com`:
 (The value of data parameter needs to be URL encoded, which is not visible in this example)
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&data=aeternity.com&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?direction=forward&data=aeternity.com&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3236,13 +2094,10 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&
         "69318356919715896655612698359975736845612647472784537635207689589288608801665"
       ],
       "call_tx_hash": "th_29wEBiUVommkJJqtWxczsdTViBSHsCxsQMtyYZb3hju4xW6eFS",
-      "call_txi": 14749000,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "aeternity.com",
       "event_hash": "K3LIVBOTOG9TTAPTPJH47N5CO4KVF41T5BO7RB1R8UVVOKG17APG====",
       "ext_caller_contract_id": "ct_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
-      "ext_caller_contract_txi": 11204400,
       "log_idx": 0
     },
     {
@@ -3250,17 +2105,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&
         "69318356919715896655612698359975736845612647472784537635207689589288608801665"
       ],
       "call_tx_hash": "th_nvrmo5YmrWUW9pr2ohiPWB6FHgok9owi5xbLMpV2pHYvECxTD",
-      "call_txi": 14749001,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "aeternity.com",
       "event_hash": "K3LIVBOTOG9TTAPTPJH47N5CO4KVF41T5BO7RB1R8UVVOKG17APG====",
       "ext_caller_contract_id": "ct_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
-      "ext_caller_contract_txi": 11204400,
       "log_idx": 0
     }
   ],
-  "next": "/v2/contracts/logs?cursor=70PJICHN6OR28C9K6SQ3IC1L74I5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4HGMAT35E9N6IT3P5PHMUR8&data=aeternity.com&direction=forward&limit=2",
+  "next": "/v3/contracts/logs?cursor=70PJICHN6OR28C9K6SQ3IC1L74I5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4HGMAT35E9N6IT3P5PHMUR8&data=aeternity.com&direction=forward&limit=2",
   "prev": null
 }
 ```
@@ -3268,7 +2120,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&
 Listing the last "TipReceived" event:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?event=TipReceived&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/logs?event=TipReceived&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3277,22 +2129,19 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?event=TipReceived&
         "120000000000000000"
       ],
       "call_tx_hash": "th_2rQFbvkR2rxvBQLWt4WPUPiSViES8aKDBVDraF4mogdZsVTJSQ",
-      "call_txi": 19625942,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "data": "https://www.youtube.com/watch?v=iLQzaLr1enE",
       "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
       "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "ext_caller_contract_txi": 8392766,
       "log_idx": 0
     }
   ],
-  "next": "/v2/contracts/logs?cursor=70PJICHN6OR28CPG64R3ADHN6CI5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4G&event=TipReceived&limit=1",
+  "next": "/v3/contracts/logs?cursor=70PJICHN6OR28CPG64R3ADHN6CI5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4G&event=TipReceived&limit=1",
   "prev": null
 }
 ```
 
-### `/v2/contracts/calls`
+### `/v3/contracts/calls`
 
 A running contract can call other functions during execution. These calls are recorded and can be queried later.
 
@@ -3305,15 +2154,13 @@ The query accepts following filters:
 #### Using contract id
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
       "block_hash": "mh_25eLkLkkMDRg5Sau1ezeNteAXxzAnfECqeN318hTFLifozJkpt",
       "call_tx_hash": "th_gTNykxuM2MJ4D2Y7L5EoU7wKprmM6rLmAKe2yaBrjbNudMeSq",
-      "call_txi": 20308637,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "function": "Call.amount",
       "height": 403795,
       "internal_tx": {
@@ -3330,7 +2177,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?contract_id=ct_2A
       "micro_index": 9
     }
   ],
-  "next": "/v2/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=6CO3ACPK6GRJI91J4GS36E9I6SR3C9144GMJ2C1G&limit=1",
+  "next": "/v3/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=6CO3ACPK6GRJI91J4GS36E9I6SR3C9144GMJ2C1G&limit=1",
   "prev": null
 }
 ```
@@ -3338,15 +2185,13 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?contract_id=ct_2A
 Using function prefix
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?direction=forward&function=Oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/calls?direction=forward&function=Oracle&limit=1" | jq '.'
 {
   "data": [
     {
       "block_hash": "mh_2XAPbotBm5qgkWn165g3J7eRsfV9r5tEwSEqS3rggR6b9fRbW",
       "call_tx_hash": "th_4q3cLesnXqSSH3HmecGMSUuZZNKsue8rGMACtCRmFpZtpAXPH",
-      "call_txi": 8404781,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "function": "Oracle.query",
       "height": 219107,
       "internal_tx": {
@@ -3371,7 +2216,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?direction=forward
       "micro_index": 0
     }
   ],
-  "next": "/v2/contracts/calls?cursor=70Q30D1N70OI8C945KOJ0C144H53AMI78DCJ6JADALC4GGPL9H34UIHKA4I2QC9G60&direction=forward&function=Oracle&limit=1",
+  "next": "/v3/contracts/calls?cursor=70Q30D1N70OI8C945KOJ0C144H53AMI78DCJ6JADALC4GGPL9H34UIHKA4I2QC9G60&direction=forward&function=Oracle&limit=1",
   "prev": null
 }
 ```
@@ -3383,15 +2228,13 @@ Following ID fields are recognized: `account_id`, `caller_id`, `channel_id`, `co
 Contract_id field is inaccessible via this lookup, as when present in query, it filters only contracts with given contract id and doesn't look into internal transaction's fields.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
 {
   "data": [
     {
       "block_hash": "mh_2Mp1FfJyEaQUYbBKywWb6kWGm1KoTEyc4SZgt7oA7orz9BpSLD",
       "call_tx_hash": "th_XnXh22b9XsXGPEE9ZJwm4E9FuMhv47Z2ogQo6Lgt4npEwVF9W",
-      "call_txi": 8820436,
       "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-      "contract_txi": 8392766,
       "function": "Call.amount",
       "height": 224666,
       "internal_tx": {
@@ -3408,7 +2251,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?recipient_id=ak_2
       "micro_index": 11
     }
   ],
-  "next": "/v2/contracts/calls?cursor=70S34C1K68S28D145KOJ0C14A93KQGHK9D3K4I258H546JQC99A5IL25AHCL6GPN9T4KIMIB6D2KSKI88P4LKL2M6923AJA16T65ILPJ698I891I&limit=1&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
+  "next": "/v3/contracts/calls?cursor=70S34C1K68S28D145KOJ0C14A93KQGHK9D3K4I258H546JQC99A5IL25AHCL6GPN9T4KIMIB6D2KSKI88P4LKL2M6923AJA16T65ILPJ698I891I&limit=1&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
   "prev": null
 }
 ```
@@ -3417,7 +2260,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?recipient_id=ak_2
 
 ## Internal transfers
 
-### `/v2/transfers`
+### `/v3/transfers`
 
 During the operation of the node, several kinds of internal transfers happen which are not visible on general transaction ledger.
 
@@ -3440,32 +2283,29 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 Listing internal transfers in range
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?scope=gen:50002-70000&limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?scope=gen:50002-70000&limit=3" | jq '.'
 {
   "data": [
     {
       "account_id": "ak_542o93BKHiANzqNaFj6UurrJuDuxU61zCGr9LJCwtTUg34kWt",  # target account
       "amount": 218400000000000,                                             # amount of tokens
       "height": 50002,                                                       # generation height
-      "kind": "reward_block",                                                # kind of transfer
-      "ref_txi": null                                                        # reference tx id (if any)
+      "kind": "reward_block"                                                 # kind of transfer
     },
     {
       "account_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
       "amount": 407000327600000000000,
       "height": 50002,
-      "kind": "reward_block",
-      "ref_txi": null
+      "kind": "reward_block"
     },
     {
       "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
       "amount": 3,
       "height": 50002,
-      "kind": "fee_lock_name",
-      "ref_txi": 1516090
+      "kind": "fee_lock_name"
     }
   ],
-  "next": "/v2/transfers?scope=gen:50002-70000&cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
+  "next": "/v3/transfers?scope=gen:50002-70000&cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
   "prev": null
 }
 ```
@@ -3473,25 +2313,23 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?scope=gen:50002-70000&l
 Listing internal transfers of a specific kind
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?direction=forward&kind=reward_dev&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?direction=forward&kind=reward_dev&limit=2" | jq '.'
 {
   "data": [
     {
       "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
       "amount": 37496010998100000000,
       "height": 90981,
-      "kind": "reward_dev",
-      "ref_txi": null
+      "kind": "reward_dev"
     },
     {
       "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
       "amount": 37496003679840000000,
       "height": 90982,
-      "kind": "reward_dev",
-      "ref_txi": null
+      "kind": "reward_dev"
     }
   ],
-  "next": "/v2/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
+  "next": "/v3/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
   "prev": null
 }
 ```
@@ -3499,18 +2337,17 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?direction=forward&kind=
 Listing internal transfers related to specific account
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
 {
   "data": [
     {
       "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
       "amount": 3,
       "height": 51366,
-      "kind": "fee_lock_name",
-      "ref_txi": 1680384
+      "kind": "fee_lock_name"
     }
   ],
-  "next": "/v2/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
+  "next": "/v3/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
   "prev": null
 }
 ```
@@ -3526,17 +2363,17 @@ Oracles in Aeternity blockchain have a lifecycle formed by several types of tran
 For the same reason as Names, all oracle endpoints support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
 
 
-### `/v2/oracle/:id`
+### `/v3/oracle/:id`
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
 {
   "active": false,
   "active_from": 4660,
   "expire_height": 6894,
-  "extends": [
-    11025
-  ],
+  "approximate_expire_time": 1544587118827,
+  "register_time": 1544194831238,
+  "register_tx_hash": "th_2SLFNYk5s5u5tRD4Bqx6pSc1mysZMsCr3szbx55nKgVBQSiZv2",
   "format": {
     "query": "string",
     "response": "string"
@@ -3547,110 +2384,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles/ok_R7cQfVN15F5ek1wBSYaMRj
 }
 ```
 
-Provided `expand` parameter replaces transaction indices in `extends` and `register` fields:
+### `/v3/oracles`
+
+There is only paginable endpoint for listing oracles, which can be filtered by `scope` (e.g. `gen:100-200`) or state (`active` or `inactive`).
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM?expand" | jq '.'
-{
-  "active": false,
-  "active_from": 4660,
-  "expire_height": 6894,
-  "extends": [
-    {
-      "block_hash": "mh_2CbcGSVU1PaFgpvdv3akxUk5aLkPVtqXrYPYcURr5RnPMzBzic",
-      "block_height": 4662,
-      "hash": "th_rPNXqxHg7JVSe7LRUy2KyEXp6west8JgBzzKGk8PPxvCh8p1h",
-      "micro_index": 0,
-      "micro_time": 1544194970900,
-      "signatures": [
-        "sg_a27euq6jBYUJEadCPbxDzAztHmvLXpFEqrB7md2wNKqmUZur7urmiBAYRiHvwcFz3ZbNKb3ESyA4vSTvDam4e6QTHkCGU"
-      ],
-      "tx": {
-        "fee": 20000,
-        "nonce": 196,
-        "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-        "oracle_ttl": {
-          "type": "delta",
-          "value": 1000
-        },
-        "type": "OracleExtendTx",
-        "version": 1
-      },
-      "tx_index": 11025
-    }
-  ],
-  "format": {
-    "query": "string",
-    "response": "string"
-  },
-  "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-  "query_fee": 20000,
-  "register": {
-    "block_hash": "mh_25pDFuKkhF6zzAhy2DEwY5ALYpM4u5UKVmqgvNTgZ2ZDLqDbHr",
-    "block_height": 4660,
-    "hash": "th_2SLFNYk5s5u5tRD4Bqx6pSc1mysZMsCr3szbx55nKgVBQSiZv2",
-    "micro_index": 0,
-    "micro_time": 1544194831238,
-    "signatures": [
-      "sg_JwZ2KgLAZvDBgsHVccqYuhmwuCvLnMrxNrZ7y7jmA3NxZUaaoBGcxNXd64MTX142JXMbaLAirZrRh7qf6f5XXp3iN5Qao"
-    ],
-    "tx": {
-      "abi_version": 0,
-      "account_id": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-      "fee": 20000,
-      "nonce": 195,
-      "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-      "oracle_ttl": {
-        "type": "delta",
-        "value": 1234
-      },
-      "query_fee": 20000,
-      "query_format": "string",
-      "response_format": "string",
-      "type": "OracleRegisterTx",
-      "version": 1
-    },
-    "tx_index": 11023
-  }
-}
-```
-
-### `/v2/oracles`
-
-There is only one paginable endpoints for listing oracles: `/v2/oracles` - for listing oracles, with filters that include the `scope` (e.g. `gen:100-200`) or state (`active` or `inactive`).
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?direction=forward&limit=1&expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles?direction=forward&limit=1" | jq '.'
 {
   "data": [
     {
       "active": false,
       "active_from": 4608,
       "expire_height": 5851,
-      "extends": [
-        {
-          "block_hash": "mh_rKmT9rDDFNSNfS4HFrRjNbFqszCvTirHfH2JAFCrhB6x6s85u",
-          "block_height": 4609,
-          "hash": "th_2pJmkk8FRsSNU1aH9H7eMHErTVzJTGnE5xiTsVgyhMjPzdEemZ",
-          "micro_index": 0,
-          "micro_time": 1544185907144,
-          "signatures": [
-            "sg_8tvreNZhhV5a1ZVo7CMiRGbjbgpj65XBa8wttqQmuXRD13FL1RAgfU5fgWkdyxsQUop1dJUqC3bV7ZvbRyvQkDo7NamGT"
-          ],
-          "tx": {
-            "fee": 20000,
-            "nonce": 2,
-            "oracle_id": "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
-            "oracle_ttl": {
-              "type": "delta",
-              "value": 9
-            },
-            "type": "OracleExtendTx",
-            "version": 1
-          },
-          "tx_index": 8989
-        }
-      ],
       "format": {
         "query": "the query spec",
         "response": "the response spec"
@@ -3681,12 +2426,11 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?direction=forward&limit=1
           "response_format": "the response spec",
           "type": "OracleRegisterTx",
           "version": 1
-        },
-        "tx_index": 8916
+        }
       }
     }
   ],
-  "next": "/oracles?cursor=6894-ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM&direction=forward&expand=true&limit=1",
+  "next": "/v3/oracles?cursor=6894-ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM&direction=forward&limit=1",
   "prev": null
 }
 ```
@@ -3694,24 +2438,48 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?direction=forward&limit=1
 Inactive oracles
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=inactive&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles?state=inactive&limit=1" | jq '.'
 {
   "data": [
     {
       "active": false,
       "active_from": 307850,
       "expire_height": 308350,
-      "extends": [],
       "format": {
         "query": "string",
         "response": "string"
       },
       "oracle": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
       "query_fee": 20000000000000,
-      "register": 15198855
+      "register": {
+        "block_hash": "mh_uQMxaJ6ajKnMsW2M3QqgH1FchXGNbZriRceVggoTnUEGdgSHq",
+        "block_height": 4608,
+        "hash": "th_tboa3XizqaAW3FUx4SxzT2xmuXDYRarQqjZiZ384u4oVDn1EN",
+        "micro_index": 0,
+        "micro_time": 1544185806672,
+        "signatures": [
+          "sg_A7MGMsQxY9VTCxvBnuStmNsDSADf9H7t57c79hWotFC69e1xpcV78QXJfKoMFSgn1s7RErNksFyKcrihwYifCELnEQFQ3"
+        ],
+        "tx": {
+          "abi_version": 0,
+          "account_id": "ak_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+          "fee": 20000,
+          "nonce": 1,
+          "oracle_id": "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+          "oracle_ttl": {
+            "type": "delta",
+            "value": 1234
+          },
+          "query_fee": 20000,
+          "query_format": "the query spec",
+          "response_format": "the response spec",
+          "type": "OracleRegisterTx",
+          "version": 1
+        }
+      }
     }
   ],
-  "next": "/v2/oracles?state=inactive&cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1",
+  "next": "/v3/oracles?state=inactive&cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&limit=1",
   "prev": null
 }
 ```
@@ -3719,7 +2487,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=inactive&limit=1" |
 Active oracles
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles?state=active&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3763,7 +2531,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expa
       }
     }
   ],
-  "next": "/v2/oracles?state=active&cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1",
+  "next": "/v3/oracles?state=active&cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&limit=1",
   "prev": null
 }
 ```
@@ -3772,7 +2540,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expa
 
 ## Channels
 
-### `/v2/channels`
+### `/v3/channels`
 
 Returns active channels ordered by the txi of the last update.
 
@@ -3784,7 +2552,7 @@ Besides the participants balances it includes some fields intrinsic to the chann
 - delegates allowed to represent participants
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?direction=forward&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/channels?direction=forward&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3808,12 +2576,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?direction=forward&limit=
       "solo_round": 0
     }
   ],
-  "next": "/v2/channels?cursor=9155-ch_2tceSwiqxgBcPirX3VYgW3sXgQdJeHjrNWHhLWyfZL7pT4gZF4&direction=forward&limit=1",
+  "next": "/v3/channels?cursor=9155-ch_2tceSwiqxgBcPirX3VYgW3sXgQdJeHjrNWHhLWyfZL7pT4gZF4&direction=forward&limit=1",
   "prev": null
 }
 ```
 
-### `/v2/channels/:id`
+### `/v3/channels/:id`
 
 Returns the state of an active/inactive channel.
 
@@ -3822,7 +2590,7 @@ Optionally a `block_hash` parameter might be used to query for the state on a sp
 In this example it retrieves the `ChannelDepositTx` as the last udpate for a block prior to the last update that was a `ChannelCloseMutualTx`.
 
 ```
-$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs?block_hash=mh_245PQCb1gWrJRxUjAmEAv5qSXLQGnksCgHyw9PTHRNGA6PfeD" | jq '.'
+$ curl -s "https://testnet.aeternity.io/mdw/v3/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs?block_hash=mh_245PQCb1gWrJRxUjAmEAv5qSXLQGnksCgHyw9PTHRNGA6PfeD" | jq '.'
 {
   "active": true,
   "amount": 1e+19,
@@ -3845,12 +2613,12 @@ $ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQr
 }
 ```
 
-### `/v2/channels/:id/updates`
+### `/v3/channels/:id/updates`
 
 Returns a paginated list of updates done to a channel.
 
 ```
-$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?limit=1" | jq '.'
+$ curl -s "https://testnet.aeternity.io/mdw/v3/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3874,382 +2642,98 @@ $ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQr
       }
     }
   ],
-  "next": "/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?cursor=9155-0&limit=1",
+  "next": "/v3/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?cursor=9155-0&limit=1",
   "prev": null
 }
 ```
 
 ## AEX9 tokens
 
-There are 2 endpoints for listing tokens as defined by AEX9 (https://github.com/aeternity/AEXs/blob/master/AEXS/aex-9.md)
+AEx9 tokens standard is defined by AEX9 (https://github.com/aeternity/AEXs/blob/master/AEXS/aex-9.md).
 
-- `/aex9/by_name` - for listing tokens sorted by name
-- `/aex9/by_symbol` - for listing tokens sorted by symbol
+### `/v3/aex9`
 
-These endpoints optional parameters:
+Returns paginated list of AEx9 contracts. Can be sorted with the `by` query parameter by `name` (default), `symbol` or `creation`.
 
-- `all` - for listing all contract creations for a token, not just the last one (default: false)
-- `prefix` OR `exact` - for listing tokens with the name or symbol, which are matching either by prefix, or exactly
-
-### AEX9 tokens by name
+These endpoints accepts an optiona parameter of `prefix` OR `exact` for listing tokens with the name or symbol, which are matching either by prefix, or exactly.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name" | jq '.'
-[
-  {
-    "decimals": 18,
-    "name": "911058",
-    "symbol": "SPH",
-    "txi": 12361891
-  },
-  {
-    "decimals": 18,
-    "name": "AAA",
-    "symbol": "AAA",
-    "txi": 15672306
-  },
-  {
-    "decimals": 18,
-    "name": "AAA name",
-    "symbol": "AAA",
-    "txi": 12287008
-  },
-  {
-    "decimals": 18,
-    "name": "ABB",
-    "symbol": "ABB",
-    "txi": 12287175
-  },
-  {
-    "decimals": 18,
-    "name": "ABC",
-    "symbol": "ABC",
-    "txi": 17742955
-  },
-  {
-    "decimals": 18,
-    "name": "ABC Test token",
-    "symbol": "ABC",
-    "txi": 12287522
-  },
-  {
-    "decimals": 18,
-    "name": "AE Genesis",
-    "symbol": "AEG",
-    "txi": 5476384
-  },
-  ...
-```
-
-Or, listing tokens with prefix = "ae", along with all contract create transaction ids:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name?prefix=ae" | jq '.'
-[
-  {
-    "decimals": 18,
-    "name": "ae",
-    "symbol": "ae",
-    "txi": 9434572
-  },
-  {
-    "decimals": 18,
-    "name": "ae",
-    "symbol": "ae",
-    "txi": 9434926
-  },
-  {
-    "decimals": 18,
-    "name": "ae",
-    "symbol": "ae",
-    "txi": 9438753
-  },
-  {
-    "decimals": 18,
-    "name": "aea",
-    "symbol": "aea",
-    "txi": 9434498
-  },
-  {
-    "decimals": 18,
-    "name": "aeaeb",
-    "symbol": "aeaeb",
-    "txi": 9770669
-  },
-  {
-    "decimals": 18,
-    "name": "aeb",
-    "symbol": "aeb",
-    "txi": 9770640
-  },
-  {
-    "decimals": 18,
-    "name": "aeb",
-    "symbol": "aeb",
-    "txi": 9771055
-  },
-  {
-    "decimals": 18,
-    "name": "aeblievers",
-    "symbol": "AEB",
-    "txi": 12407023
-  },
-  {
-    "decimals": 18,
-    "name": "aeblievers",
-    "symbol": "AEB",
-    "txi": 12407153
-  }
-]
-```
-
-Note, that for both endpoints - `by_name` and `by_symbol` - if the querying part (`prefix` or `exact`) contains unicode or a space character, it needs to be URL encoded:
-
-```
-$ curl -s "https://testnet.aeternity.io/mdw/aex9/by_name?exact=%F0%9D%9D%BA%20Token" | jq '.'
-[
-  {
-    "contract_id": "ct_eW2aiba4vXEwmyGEu7vxvDt6396Zvr6jQYUcoyfe9W9V7KGqr",
-    "contract_txi": 13321748,
-    "decimals": 18,
-    "name": "𝝺 Token",
-    "symbol": "𝝺"
-  },
-  {
-    "contract_id": "ct_2vsdt2dpbx9MQGcDytedT8sL2UjhYzp6Le3ZSQiKuLDgzAhuWT",
-    "contract_txi": 13321799,
-    "decimals": 18,
-    "name": "𝝺 Token",
-    "symbol": "𝝺"
-  }
-]
-```
-
-### AEX9 tokens by symbol
-
-Example with exact parameter:
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_symbol?exact=TNT" | jq '.'
-[
-  {
-    "contract_id": "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
-    "contract_txi": 8537557,
-    "decimals": 18,
-    "name": "Test Network",
-    "symbol": "TNT"
-  }
-]
-```
-
-## AEX9 contract balances
-
-There are 3 endpoints for listing token balance of the contract for given account:
-
-- `/aex9/balance/:contract_id/:account_id` - shows account balance at the current top of the chain
-
-- `/aex9/balance/hash/:blockhash/:contract_id/:account_id` - shows account balance at given block
-
-- `/aex9/balance/gen/:range/:contract_id/:account_id` - show account balances at given height or range of heights
-
-
-Additional 3 endpoints can be used for showing ALL balances for a given contract:
-
-- `/aex9/balances/:contract_id` - shows all balances at the current top of the chain
-
-- `/aex9/balances/hash/:blockhash/:contract_id` - shows all balances at given block
-
-- `/aex9/balances/gen/:range/:contract_id` - shows all balances at given height or range of heights
-
-Lastly, 3 endpoints can show balances over all contracts for a given account:
-
-- `/aex9/balances/gen/:height/account/:account_id` - shows balances of all contracts at height for account
-- `/aex9/balances/hash/:blockhash/account/:account_id` - shows balances of all contracts at blockhash for account
-- `/aex9/balances/account/:account_id` - shows token balances of all contracts for given account at the current top of the chain
-
-
-Endpoints which use the current top of the chain:
-- `/aex9/balance/:contract_id/:account_id`
-- `/aex9/balances/:contract_id`
-- `/aex9/balances/account/:account_id`
-
-use the latest key block as a source of information for returning of the balances.
-
-If the user wishes, she can provide a query parameter `top` to the query.
-Its presence or binding it to `true` will use the latest micro block for retrieving balances of the contract(s).
-
-
-### AEX9 contract balance for account
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
-{
-  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
-  "amount": 49999999999906850000000000,
-  "block_hash": "kh_2QevaXY7ULF5kTLsddwMzzZmBYWPgfaQbg2Y8maZDLKJaPhwDJ",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "height": 351666
-}
-```
-
-### AEX9 contract balance for account at block
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/hash/mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
-{
-  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
-  "amount": 49999999999906850000000000,
-  "block_hash": "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "height": 350622
-}
-```
-
-### AEX9 contract balance for account at height or range of heights
-
-Single integer identifies the generation:
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/gen/350700/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
-{
-  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "range": [
-    {
-      "amount": 49999999999906850000000000,
-      "block_hash": "kh_2dhhsiRAUt1319MyDWLSq2WeKvCXfWoeaaosqNhyHvKsK8dZqJ",
-      "height": 350700
-    }
-  ]
-}
-```
-
-A range can be provided as well:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/gen/350620-350623/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
-{
-  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "range": [
-    {
-      "amount": 49999999999906850000000000,
-      "block_hash": "kh_2qXeiNrHh3U1ZfyUifwLVf9e7riyv6Rgp7nJV9bHoQb2vugn8c",
-      "height": 350620
-    },
-    {
-      "amount": 49999999999906850000000000,
-      "block_hash": "kh_29yHf38wCMNdqEsDVQTBSx6A7W8oZedQqTBQuAPN9JiXYxwx2o",
-      "height": 350621
-    },
-    {
-      "amount": 49999999999906850000000000,
-      "block_hash": "kh_21P5Y1rv97MZruUSC9mTRmscFxAFnFi4HjUAoqmqHfmoS1Np4b",
-      "height": 350622
-    },
-    {
-      "amount": 49999999999906850000000000,
-      "block_hash": "kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV",
-      "height": 350623
-    }
-  ]
-}
-```
-
-### AEX9 contract balances
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
-{
-  "amounts": {
-    "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-    "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-    "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-    "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-  },
-  "block_hash": "kh_2hXEoFTmMphpvCmvdvQTZtGu9a3RndL5fSvVqzKBs2DSNJjQ2V",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "height": 351669
-}
-```
-
-### AEX9 contract balances at block
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
-{
-  "amounts": {
-    "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-    "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-    "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-    "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-  },
-  "block_hash": "kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV",
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "height": 350623
-}
-```
-
-### AEX9 contract balances
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/aex9/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/balances" | jq '.'
-{
-  "data" : [
-    {
-      "account_id" : "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK",
-      "amount" : 8100000000000,
-      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
-      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-      "height" : 335293,
-      "last_log_idx" : 1,
-      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
-    },
-    {
-      "account_id" : "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6",
-      "amount" : 4050000000000,
-      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
-      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-      "height" : 335293,
-      "last_log_idx" : 2,
-      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
-    },
-    {
-      "account_id" : "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
-      "amount" : "49999999999906850000000000",
-      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
-      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-      "height" : 335293,
-      "last_log_idx" : 2,
-      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
-    },
-    {
-      "account_id" : "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4",
-      "amount" : 81000000000000,
-      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
-      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-      "height" : 335293,
-      "last_log_idx" : 0,
-      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
-    }
-  ],
-  "next" : null,
-  "prev" : null
-}
-```
-
-Or, at a specific block-height:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/aex9/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/balances?block_hash=mh_hmHyBsn6D5p5d8mttyT7Pc82NCySB9yVmUQhBV2EqNepsnDtv" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/aex9?by=symbol" | jq '.'
 {
   "data": [
     {
-      "account_id": "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4",
-      "amount": 5e+25,
-      "block_hash": "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
-      "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-      "height": 335293,
-      "last_log_idx": 0,
-      "last_tx_hash": "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+    "decimals": 18,
+    "name": "yy",
+    "extensions": [],
+    "symbol": "yy",
+    "contract_id": "ct_ukZe6BBpuSWxT8hxd87z11vdgRnwKnedEWqJ7SyQucbX1C1pc",
+    "contract_tx_hash": "th_236RbbgokHipFbG5Eu9yZSSgzrBQhkRrkFdhXM7ipsmorbkqgy",
+    "event_supply": 1e+26,
+    "holders": 1,
+    "initial_supply": 1e+26
+    },
+    {
+    "decimals": 18,
+    "name": "xx",
+    "extensions": [],
+    "symbol": "xx",
+    "contract_id": "ct_vJWj5Z9KPBSE52ZvbZ9cffRhEEX6K6DjRwAZcZ9bArDmrZDuS",
+    "contract_tx_hash": "th_2B6DM7SLqRkcTRBejLR4fohBpa4k3nR164uUja3k8SKKYvbwdJ",
+    "event_supply": 2e+25,
+    "holders": 4,
+    "initial_supply": 2e+25
+    }
+  ],
+  "next": "/v3/aex9?by=symbol&cursor=g2gDdwRhZXg5bQAAAAN4b2ttAAAAIHUgUMyJxcMnebj7f5xFL1tWPOn3pfdez%2FvPSy04W1ws",
+  "prev": null
+}
+```
+
+### `/v3/aex9/:contract_id`
+
+```
+$ curl https://mainnet.aeternity.io/mdw/v3/aex9/ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
+{
+  "decimals": 18,
+  "name": "🚀",
+  "extensions": [
+    "allowances",
+    "mintable",
+    "burnable",
+    "swappable"
+  ],
+  "symbol": "🚀",
+  "contract_id": "ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9",
+  "contract_tx_hash": "th_rbFNrRDpn6finytCEmHAExtBnRxt14yckvuCWRmXxsRpypHxt",
+  "event_supply": 99000000000000000000,
+  "holders": 2,
+  "initial_supply": 99000000000000000000
+}
+```
+
+### `/v3/aex9/:contract_id/balances`
+
+```
+$ curl https://mainnet.aeternity.io/mdw/v3/aex9/ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9/balances
+{
+  "data": [
+    {
+      "height": 359828,
+      "amount": 24000000000000000000,
+      "contract_id": "ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9",
+      "block_hash": "mh_22uNd2u5ogsFCua2kU3fSag758fTcwJ4kKJwvHpRVedeKwFRHc",
+      "account_id": "ak_2KnhztVzfKMBUogdSsCACKVotb6uxjqDLLcLsTk8MdW3266YTL",
+      "last_tx_hash": "th_2d2Qnx632buohPC6jmu9jwm5m4vbbegcAiwwZevoJJLeru2MVZ",
+      "last_log_idx": 0
+    },
+    {
+      "height": 359828,
+      "amount": 75000000000000000000,
+      "contract_id": "ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9",
+      "block_hash": "mh_22uNd2u5ogsFCua2kU3fSag758fTcwJ4kKJwvHpRVedeKwFRHc",
+      "account_id": "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2",
+      "last_tx_hash": "th_2d2Qnx632buohPC6jmu9jwm5m4vbbegcAiwwZevoJJLeru2MVZ",
+      "last_log_idx": 0
     }
   ],
   "next": null,
@@ -4257,81 +2741,21 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/aex9/ct_RDRJC5EySx4TcLtGRWYrXfNgy
 }
 ```
 
-### AEX 9 contract balances for account
-
-In all account specific balance endpoints, the values of `block_hash`/`tx_hash`/`tx_index` show the last time of when (in what block, transaction) was the balance in a listed contract updated.
+### `/v3/aex9/:contract_id/balances/:account_id`
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
-[
-  {
-    "amount": 5e+26,
-    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
-    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
-    "height": 334200,
-    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
-    "tx_index": 17153024,
-    "tx_type": "contract_create_tx"  # account was creator of the contract
-  },
-  {
-    "amount": 0,
-    "block_hash": "mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9",
-    "contract_id": "ct_2jDFr1iaKxKrftiFge6gPsfgsZnwNLgu1icScBfhuzpgX1faXM",
-    "height": 334268,
-    "tx_hash": "th_26xCyuKpvs3CTUxTbycDXDQbYt2xQbd6Rf2uJEWSNDAyFSucNK",
-    "tx_index": 17157444,
-    "tx_type": "contract_call_tx"    # account received tokens during contract call
-  },
-  ...
-]
+$ curl https://mainnet.aeternity.io/mdw/v3/aex9/ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9/balances/ak_2KnhztVzfKMBUogdSsCACKVotb6uxjqDLLcLsTk8MdW3266YTL
+{
+  "contract": "ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9",
+  "account": "ak_2KnhztVzfKMBUogdSsCACKVotb6uxjqDLLcLsTk8MdW3266YTL",
+  "amount": 24000000000000000000
+}
 ```
 
-The `top` parameter at this endpoint, when present, can show the most up to date balance as a result of contract call, but can't show an account balance of freshly created AEX9 contract.
-
-The awareness that the contract is created by some account comes from syncing, which is inherently one generation behind the top of the chain.
-
-
-### AEX 9 contract balances for account at height
+### `/v3/aex9/:contract_id/transfers`
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/334201/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
-[
-  {
-    "amount": 5e+26,
-    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
-    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
-    "height": 334200,
-    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
-    "tx_index": 17153024,
-    "tx_type": "contract_create_tx"
-  }
-]
-```
-
-### AEX 9 contract balances for account at block
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
-[
-  {
-    "amount": 5e+26,
-    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
-    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
-    "height": 334200,
-    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
-    "tx_index": 17153024,
-    "tx_type": "contract_create_tx"
-  },
-  {
-    "amount": 0,
-    "block_hash": "mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9",
-    "contract_id": "ct_2jDFr1iaKxKrftiFge6gPsfgsZnwNLgu1icScBfhuzpgX1faXM",
-    "height": 334268,
-    "tx_hash": "th_26xCyuKpvs3CTUxTbycDXDQbYt2xQbd6Rf2uJEWSNDAyFSucNK",
-    "tx_index": 17157444,
-    "tx_type": "contract_call_tx"
-  }
-]
+$ TODO
 ```
 
 ---
@@ -4340,20 +2764,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKja
 
 AEX-141 NFT contracts might organize the access and storage of NFTs metadata in flexible ways. This behaviour is declared during contract creation with the metadata_type field. This and other meta_info fields like name and symbol can be accessed by `/aex141` endpoint that displays information about NFT contracts.
 
-With other endpoints it's possible to know more about AEX-141 NFTs including:
+### `/v3/aex141`
 
-- who is the owner of an NFT
-- who are the nft owners on a collection
-- which NFTs a wallet owns
-- NFT transfers filtered by contract and/or wallet
-- and more to come ...
-
-### `/v2/aex141`
-
-Returns creation and stats information in default paginated way for all NFT collection.
+Returns creation and stats information in default paginated way for all NFT collections.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141?direction=forward&limit=1' | jq '.'
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141?direction=forward&limit=1' | jq '.'
 {
   "data": [
     {
@@ -4370,17 +2786,17 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141?direction=forward&limit=1'
       "symbol": "ASITM"
     }
   ],
-  "next": "/aex141?cursor=g2gDZAAGYWV4MTQxbQAAACBBcGVzIHN0ZXBwaW5nIGludG8gdGhlIE1ldGF2ZXJzZW0AAAAgD29qcQzT%2FM%2BHEg1uw31I%2BYRUpktYP%2FZ09Dapkl2szkA%3D&direction=forward&limit=1",
+  "next": "/v3/aex141?cursor=g2gDZAAGYWV4MTQxbQAAACBBcGVzIHN0ZXBwaW5nIGludG8gdGhlIE1ldGF2ZXJzZW0AAAAgD29qcQzT%2FM%2BHEg1uw31I%2BYRUpktYP%2FZ09Dapkl2szkA%3D&direction=forward&limit=1",
   "prev": null
 }
 ```
 
-### `/v2/aex141/:contract_id`
+### `/v3/aex141/:contract_id`
 
 Returns creation and stats information for a specific NFT collection.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8' | jq .
 {
   "base_url": null,
   "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
@@ -4396,24 +2812,12 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH
 }
 ```
 
-### `/v2/aex141/:contract_id/owner/:token_id`
+### `/v3/aex141/:contract_id/tokens`
 
-Returns the owner wallet address of a NFT.
-
-```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owner/2' | jq .
-
-{
-  "data": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW"
-}
-```
-
-### `/v2/aex141/:contract_id/owners`
-
-Returns the owner address for each NFT of a collection in paginated way.
+Returns the tokens of a collection in paginated way.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/tokens?direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4427,17 +2831,29 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH
       "token_id": 2
     }
   ],
-  "next": "/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?cursor=g2gCbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC2ED&direction=forward&limit=2",
+  "next": "/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/tokens?cursor=g2gCbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC2ED&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/:contract_id/templates`
+### `/v3/aex141/:contract_id/tokens/:token_id`
+
+Returns the owner wallet address of a NFT.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/tokens/2' | jq .
+
+{
+  "data": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW"
+}
+```
+
+### `/v3/aex141/:contract_id/templates`
 
 Returns the NFT templates of a collection in paginated way.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?direction=forward&limit=2' | jq .
 
 {
   "data": [
@@ -4456,17 +2872,17 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2oq4kSd4j1VkkbupueXLdHw
       "tx_hash": "th_Vrk8UGyUpgnvVPK3TknudxPx3Jd3mSCUPnfqcuKbjWZSZivjQ"
     }
   ],
-  "next": "/v2/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?cursor=g2gCbQAAACDuBsFrXLJEIAr8CpUxUAJxriYxXg%2BRMhW900GbowEFwWED&direction=forward&limit=2",
+  "next": "/v3/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?cursor=g2gCbQAAACDuBsFrXLJEIAr8CpUxUAJxriYxXg%2BRMhW900GbowEFwWED&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/:contract_id/templates/:template_id/tokens`
+### `/v3/aex141/:contract_id/templates/:template_id/tokens`
 
 Returns the NFTs from a collection template in paginated way.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4482,17 +2898,17 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAf
       "tx_hash": "th_2UAUi3oYgcYsJ8EGvxR4vurygt7qhYq7tVRNx4g2sZ3quVpym7"
     }
   ],
-  "next": "/v2/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?cursor=g2gDbQAAACBqgQyEWHrcaKnZMsVhZvJdUfhMZjSF4KpvuLx%2FpHpCcmEIYR8%3D&direction=forward&limit=2",
+  "next": "/v3/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?cursor=g2gDbQAAACBqgQyEWHrcaKnZMsVhZvJdUfhMZjSF4KpvuLx%2FpHpCcmEIYR8%3D&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/owners-nfts/:account_id`
+### `/v3/accounts/:account_id/aex141/tokens`
 
 Returns each NFT owned by a wallet in paginated way.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/owned-nfts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/accounts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW/tokens?direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4506,17 +2922,17 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/owned-nfts/ak_QVSUoGrJ31CV
       "token_id": 2
     }
   ],
-  "next": "/aex141/owned-nfts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?cursor=g2gDbQAAACA1VnHPFWKr80aBDnG3tjrWGYMqQpxUJK6dhDlBrJXgEG0AAAAgAwJumVbCVqhk2XF8UnTR8fiNve0Gh9zLEEoZoC55qRdhAw%3D%3D&direction=forward&limit=2",
+  "next": "/v3/accounts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW/aex141/tokens?cursor=g2gDbQAAACA1VnHPFWKr80aBDnG3tjrWGYMqQpxUJK6dhDlBrJXgEG0AAAAgAwJumVbCVqhk2XF8UnTR8fiNve0Gh9zLEEoZoC55qRdhAw%3D%3D&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/transfers/:contract_id`
+### `/v3/aex141/:contract_id/transfers`
 
 Returns all NFT transfers involving a NFT collection in paginated way.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/transfers?direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4544,19 +2960,17 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/ct_2tw26RwgNADrp
       "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
     }
   ],
-  "next": "/v2/aex141/transfers/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
+  "next": "/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/transfers?cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/transfers/from/:account_id`
+### `/v3/aex141/transfers`
 
-Returns paginated NFT transfers having a certain sender account (seller's wallet or marketplace contract address).
-
-It accepts the param `contract` or `contract_id` to filter by collection address.
+Returns paginated NFT transfers where you can filter by an account being the sender, recpient or both.
 
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/transfers?from=ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4584,19 +2998,13 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from/ak_2tw26Rwg
       "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
     }
   ],
-  "next": "/v2/aex141/transfers/from/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
+  "next": "/v3/aex141/transfers?from=ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
   "prev": null
 }
 ```
 
-### `/v2/aex141/transfers/to/:account_id`
-
-Returns paginated NFT transfers having a certain recipient account_id (most likely a buyer).
-
-It accepts the param `contract` or `contract_id` to filter by collection address.
-
 ```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/to/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
+$ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/transfers?to=ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW&contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
 {
   "data": [
     {
@@ -4624,45 +3032,7 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/to/ak_QVSUoGrJ31
       "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
     }
   ],
-  "next": "/v2/aex141/transfers/to/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&cursor=g2gGYgHYZIZtAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYgHYZIttAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYQNhAA%3D%3D&direction=forward&limit=2",
-  "prev": null
-}
-```
-
-### `/v2/aex141/transfers/from-to/:sender_id/:recipient_id`
-
-Returns paginated NFT transfers that happened between to accounts (likely involving a seller and buyer or marketplace address and a buyer).
-
-```
-$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from-to/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
-{
-  "data": [
-    {
-      "block_height": 651434,
-      "call_txi": 30958727,
-      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
-      "log_idx": 0,
-      "micro_index": 5,
-      "micro_time": 1661491608237,
-      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
-      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
-      "token_id": 1,
-      "tx_hash": "th_2d5iaRa2DkgJb6ABSt5ea6TcM1FVB2EW6dx7FRU9XMWi1J4n9e"
-    },
-    {
-      "block_height": 651434,
-      "call_txi": 30958729,
-      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
-      "log_idx": 0,
-      "micro_index": 6,
-      "micro_time": 1661491611260,
-      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
-      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
-      "token_id": 2,
-      "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
-    }
-  ],
-  "next": "/v2/aex141/transfers/from-to/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?cursor=g2gGZAAGYWV4MTQxbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC20AAAAgNVZxzxViq%2FNGgQ5xt7Y61hmDKkKcVCSunYQ5QayV4BBiAdhki2EDYQA%3D&direction=forward&limit=2",
+  "next": "/v3/aex141/transfers?to=ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW&cursor=g2gGYgHYZIZtAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYgHYZIttAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYQNhAA%3D%3D&direction=forward&limit=2",
   "prev": null
 }
 ```
@@ -4671,12 +3041,12 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from-to/ak_2tw26
 
 ## Statistics
 
-### `/v2/deltastats`
+### `/v3/deltastats`
 
 To show a statistics for a given height, we can use "stats" endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/deltastats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/deltastats?limit=1" | jq '.'
 {
   "data": [
     {
@@ -4698,16 +3068,16 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/deltastats?limit=1" | jq '.'
       "oracles_registered": 0
     }
   ],
-  "next": "/v2/deltastats?scope=gen:419209-0&limit=1&cursor=419208"
+  "next": "/v3/deltastats?limit=1&cursor=419208"
 }
 ```
 
-### `/v2/totalstats`
+### `/v3/totalstats`
 
 Aggregated (summarized) statistics are also available, showing the total sum of rewards and the token supply:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/totalstats?scope=gen:421454-0&limit=1" | jq '.'
 {
   "data": [
     {
@@ -4728,18 +3098,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" 
       "total_token_supply": 8.945137682239798e+25
     }
   ],
-  "next": "/v2/totalstats?scope=gen:421454-0&limit=1&cursor=42152"
+  "next": "/v3/totalstats?scope=gen:421454-0&limit=1&cursor=42152"
 }
 ```
 
 These endpoints allow pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
 
-### `/v2/minerstats`
+### `/v3/minerstats`
 
 Total reward given to each chain miner.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/minerstats?limit=1" | jq '.'
 {
   "data": [
     {
@@ -4747,7 +3117,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
       "total_reward": 76626041292504000000
     }
   ],
-  "next": "/v2/totalminers?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
+  "next": "/v3/totalminers?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
   "prev": null
 }
 ```
@@ -4759,7 +3129,7 @@ Intended for being able to display all events in which a specific account is rel
 
 An activity event occurs when there's any change in the blockchain related to a specific account. It is not the same as the log events which occur when executing a contract.
 
-### `/v2/accounts/:id/activities`
+### `/v3/accounts/:id/activities`
 
 Paginated list of events related to the `:id` account.
 
@@ -4768,7 +3138,7 @@ Each activity contains 3 values:
 - `type` - The type of event.
 - `payload` - An object whose structure depends on the type of event.
 
-For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v2/txs` endpoint.
+For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v3/transactions` endpoint.
 
 Transaction events can also be `InternalContractCallEvent` which represent transactions that happen internally during a contract call.
 
@@ -4785,7 +3155,7 @@ Additionally, activities can be filtered by any of these types using `?type=<typ
 * `claims` - Name claims related to the name hash
 
 ```
-$ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
+$ curl https://mainnet.aeternity.io/mdw/v3/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
 {
   "data": [
     {
@@ -4889,48 +3259,10 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
       "type": "Aex141TransferEvent"
     }
   ],
-  "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
+  "next": "/v3/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
   "prev": null
 }
 ```
-
-## Migrating to v2
-
-Most routes will remain the same, and can be updated by only appending the `/v2` prefix to them.
-
-This is a list of the exceptions together with the changes that need to be done:
-
-* `/blocks/:range_or_dir` - Can now be accessed via `/v2/key-blocks?scope=gen:100-200` or `/v2/key-blocks?direction=forward`.
-* `/blocki/:id` - Was renamed to `/v2/key-blocks/:hash_or_kbi`.
-* `/blocki/:kbi/:mbi` - Was renamed to `/v2/micro-blocks/:hash`.
-* `/name/auction/:id` - Was renamed to `/v2/names/:id/auction`.
-* `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
-* `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
-* `/name/:id` - Was renamed to `/v2/names/:id`.
-* `/names/owned_by/:id` - Can now be accessed via `/v2/names?owned_by=:id`, to filter by active a `state=active` or `state=inactive` additional parameter can be used.
-* `/names/active` - Can now be accessed via `/v2/names?state=active`.
-* `/names/inactive` - Can now be accessed via `/v2/names?state=inactive`.
-* `/names/:scope_type/:range`, `/names/active/:scope_type/:range` and
-  `/names/inactive/:scope_type/:range` - Can now be accessed via `/v2/names?scope=txi:100-200` or `/v2/names?scope=gen:30-40`.
-* `/names/auctions` - Can now be accessed via `/v2/names/auctions`
-* `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
-* `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
-* `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
-* `/contracts/logs/:direction`, `/contracts/logs/:scope_type/:range` - Can now be accessed via `/v2/contracts/logs?scope=txi:100-200` or `/v2/contracts/logs?scope=gen:30-40`.
-* `/contracts/calls/:direction`, `/contracts/calls/:scope_type/:range` - Can now be accessed via `/v2/contracts/calls?scope=txi:100-200` or `/v2/contracts/calls?scope=gen:30-40`.
-* `/aex9/by_name/:prefix` - Is now `/v2/aex9?by=name&prefix=<prefix>`, a paginated endpoint.
-* `/aex9/by_symbol/:prefix` - Is now `/v2/aex9?by=symbol&prefix=<prefix>`, a paginated endpoint.
-* `/aex9/by_contract/:id` - Is now `/v2/aex9/:contract_id`.
-* `/aex9/balances/:contract_id` - Is now `/v2/aex9/:contract_id/balances`, a paginated endpoint.
-* `/aex9/balance/:contract_id/:account_id` - Is now `/v2/aex9/:contract_id/balances/:account_id`.
-* `/aex9/gen/:range/:contract_id` - Removed on v2.
-* `/aex9/hash/:blockhash/:contract_id` - Removed on v2.
-* `/aex9/balances/gen/:height/account/:account_id`, `/aex9/balances/hash/:blockhash/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
-* `/aex9/balances/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
-* `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
-* `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/deltastats?direction=forward` or `/v2/deltastats?scope=gen:100-200`.
-* `/totalstats/:direction`, `/totalstats/:scope_type/:range` - Can now be accessed via `/v2/totalstats?direction=forward` or `/v2/totalstats?scope=gen:100-200`.
-* `/status` - Can now be accessed via `/v2/status`.
 
 ## Websocket interface
 
@@ -4942,8 +3274,8 @@ In order to differentiate, please check the "source" field on [Publishing Messag
 
 ```
 {
-"op": <subscription operation>,
-"payload": "<message payload>",
+  "op": <subscription operation>,
+  "payload": "<message payload>",
 }
 ```
 
@@ -4990,18 +3322,18 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 
 ```
 {
-"payload": "<sync info payload>",
-"source": "node" | "mdw",
-"subscription": "KeyBlocks" | "MicroBlocks" | "Transactions" | "Object"
+  "payload": "<sync info payload>",
+  "source": "node" | "mdw",
+  "subscription": "KeyBlocks" | "MicroBlocks" | "Transactions" | "Object"
 }
 ```
 
 When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw).
 If it's "mdw", it indicates that it's already available through AeMdw Api.
 
-### `/v2/websocket`
+### `/v3/websocket`
 
-The V2 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v2/txs` endpoint).
+The V3 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v3/transactions` endpoint).
 
 ## Tests
 
