@@ -72,3 +72,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /dex/{contract_id}/swaps:
+    get:
+      deprecated: false
+      description: Get DEX swap tokens
+      operationId: GetDexSwapsByContractId
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - in: path
+          name: contract_id
+          required: true
+          type: string
+          description: The contract id
+          example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+      responses:
+        '200':
+          description: Returns paginatinated list of DEX swaps
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DexSwap'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

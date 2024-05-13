@@ -5,10 +5,13 @@ defmodule AeMdw.Dex do
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
+  alias AeMdw.Validate
+  alias AeMdw.Sync.DexCache
   alias AeMdw.Txs
 
   require Model
@@ -30,9 +33,55 @@ defmodule AeMdw.Dex do
   @typep page_cursor :: Collection.pagination_cursor()
   @typep txi() :: Txs.txi()
 
+  @spec fetch_swaps_for_account(State.t(), {String.t(), String.t()}, pagination(), cursor()) ::
+          {:ok, paginated_account_swaps()} | {:error, Error.t()}
+  def fetch_swaps_for_account(state, {account_id, token_symbol}, pagination, cursor) do
+    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
+         {:ok, create_txi} <- validate_token(token_symbol) do
+      fetch_account_swaps(state, {account_pk, create_txi}, pagination, cursor)
+    end
+  end
+
+  @spec fetch_swaps_for_account(State.t(), String.t(), pagination(), cursor()) ::
+          {:ok, paginated_account_swaps()} | {:error, Error.t()}
+  def fetch_swaps_for_account(state, account_id, pagination, cursor) do
+    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      fetch_account_swaps(state, account_pk, pagination, cursor)
+    end
+  end
+
+  @spec fetch_swaps_by_token_symbol(State.t(), String.t(), pagination(), cursor()) ::
+          {:ok, paginated_contract_swaps()} | {:error, Error.t()}
+  def fetch_swaps_by_token_symbol(state, token_symbol, pagination, cursor) do
+    with {:ok, create_txi} <- validate_token(token_symbol) do
+      fetch_contract_swaps(state, create_txi, pagination, cursor)
+    end
+  end
+
+  @spec fetch_swaps_by_contract_id(State.t(), String.t(), pagination(), cursor()) ::
+          {:ok, paginated_contract_swaps()} | {:error, Error.t()}
+  def fetch_swaps_by_contract_id(state, contract_id, pagination, cursor) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}),
+         {:ok, swaps} <- fetch_contract_swaps(state, create_txi, pagination, cursor) do
+      {:ok, swaps}
+    else
+      :not_found -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
+      err -> err
+    end
+  end
+
+  @spec validate_token(String.t()) :: {:ok, pos_integer()} | {:error, Error.t()}
+  def validate_token(token_symbol) do
+    case DexCache.get_token_pair_txi(token_symbol) do
+      nil -> {:error, ErrInput.NotAex9.exception(value: token_symbol)}
+      create_txi -> {:ok, create_txi}
+    end
+  end
+
   @spec fetch_account_swaps(State.t(), account_query(), pagination(), cursor()) ::
           {:ok, paginated_account_swaps()} | {:error, Error.t()}
-  def fetch_account_swaps(state, query, pagination, cursor) do
+  defp fetch_account_swaps(state, query, pagination, cursor) do
     with {:ok, cursor} <- deserialize_account_cursor(cursor) do
       state
       |> build_streamer(@account_swaps_table, key_boundary(query), cursor)
@@ -43,7 +92,7 @@ defmodule AeMdw.Dex do
 
   @spec fetch_contract_swaps(State.t(), txi(), pagination(), cursor()) ::
           {:ok, paginated_contract_swaps()} | {:error, Error.t()}
-  def fetch_contract_swaps(state, create_txi, pagination, cursor) do
+  defp fetch_contract_swaps(state, create_txi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_contract_cursor(cursor) do
       state
       |> build_streamer(@contract_swaps_table, key_boundary(create_txi), cursor)

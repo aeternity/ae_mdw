@@ -5,6 +5,7 @@ defmodule AeMdwWeb.DexControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Sync.DexCache
+  alias AeMdw.Util.Encoding
 
   require Model
 
@@ -261,6 +262,64 @@ defmodule AeMdwWeb.DexControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> get("/v3/dex/swaps", caller: invalid_id)
+               |> json_response(400)
+    end
+
+    test "gets SwapTokens from a contract_id by desc txi", %{conn: conn} do
+      contract_id = Encoding.encode_contract(@pair1_pk)
+
+      assert %{"data" => swaps, "next" => next} =
+               conn
+               |> get("/v3/dex/#{contract_id}/swaps")
+               |> json_response(200)
+
+      assert @default_limit = length(swaps)
+      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK1", "TK2"))
+
+      assert %{"data" => next_swaps, "prev" => prev_swaps} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_swaps)
+
+      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+
+      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK1", "TK2"))
+
+      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+    end
+
+    test "gets SwapTokens from a contract_id by asc txi", %{conn: conn} do
+      contract_id = Encoding.encode_contract(@pair2_pk)
+
+      assert %{"data" => swaps, "next" => next} =
+               conn
+               |> get("/v3/dex/#{contract_id}/swaps", direction: :forward)
+               |> json_response(200)
+
+      assert @default_limit = length(swaps)
+      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK3", "TK4"))
+
+      assert %{"data" => next_swaps, "prev" => prev_swaps} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_swaps)
+
+      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+
+      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK3", "TK4"))
+
+      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+    end
+
+    test "returns bad request when contract_id is invalid", %{conn: conn} do
+      invalid_id = "ct_InvalidId"
+      error_msg = "invalid id: #{invalid_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v3/dex/#{invalid_id}/swaps")
                |> json_response(400)
     end
   end
