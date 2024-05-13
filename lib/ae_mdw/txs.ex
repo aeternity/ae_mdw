@@ -80,14 +80,9 @@ defmodule AeMdw.Txs do
 
     case Validate.tx_group(type_group) do
       {:ok, type_group} ->
-        type_group
-        |> Node.tx_group()
-        |> Enum.reduce_while({:ok, 0}, fn tx_type, {:ok, acc} ->
-          case count(state, nil, Map.put(params, "type", tx_type)) do
-            {:ok, count} -> {:cont, {:ok, count + acc}}
-            {:error, reason} -> {:halt, {:error, reason}}
-          end
-        end)
+        tx_types = Node.tx_group(type_group)
+
+        sum_tx_types(state, tx_types, params)
 
       {:error, reason} ->
         {:error, reason}
@@ -663,6 +658,15 @@ defmodule AeMdw.Txs do
       case extract_transaction_by(String.split(field, ".")) do
         {:ok, fields} -> {:ok, {id, fields}}
         {:error, reason} -> {:error, reason}
+      end
+    end)
+  end
+
+  defp sum_tx_types(state, tx_types, params) do
+    Enum.reduce_while(tx_types, {:ok, 0}, fn tx_type, {:ok, acc} ->
+      case count(state, nil, Map.put(params, "type", tx_type)) do
+        {:ok, count} -> {:cont, {:ok, count + acc}}
+        {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
   end
