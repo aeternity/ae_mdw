@@ -130,30 +130,20 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => [name1], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "active", limit: 1)
+                 |> get("/v3/names", state: "active", limit: 1)
                  |> json_response(200)
 
         assert %{
                  "name" => ^bob_name,
                  "active" => true,
                  "auction" => nil,
-                 "info" => %{
-                   "active_from" => ^active_from,
-                   "auction_timeout" => 0,
-                   "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
-                   "pointers" => %{
-                     "account_pubkey" => ^bob_id,
-                     "oracle_pubkey" => ^bob_oracle_id
-                   },
-                   "revoke" => nil,
-                   "transfers" => [14],
-                   "updates" => [4],
-                   "claims" => [3],
-                   "expire_height" => ^expire2,
-                   "approximate_expire_time" => ^approx_expire_time1
-                 },
-                 "previous" => [],
-                 "status" => "name"
+                 "active_from" => ^active_from,
+                 "auction_timeout" => 0,
+                 "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
+                 "revoke" => nil,
+                 "expire_height" => ^expire2,
+                 "approximate_expire_time" => ^approx_expire_time1,
+                 "pointers" => %{"account_pubkey" => ^bob_id, "oracle_pubkey" => ^bob_oracle_id}
                } = name1
 
         assert %{"data" => [name2]} =
@@ -162,28 +152,21 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get(next_url)
                  |> json_response(200)
 
-        %{
-          "name" => ^alice_name,
-          "active" => true,
-          "auction" => nil,
-          "info" => %{
-            "active_from" => ^active_from,
-            "auction_timeout" => 0,
-            "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
-            "pointers" => %{
-              "account_pubkey" => ^alice_id,
-              "oracle_pubkey" => ^alice_oracle_id
-            },
-            "revoke" => nil,
-            "transfers" => [12],
-            "updates" => [2],
-            "claims" => [1],
-            "expire_height" => ^expire1,
-            "approximate_expire_time" => ^approx_expire_time2
-          },
-          "previous" => [],
-          "status" => "name"
-        } = name2
+        assert %{
+                 "name" => ^alice_name,
+                 "active" => true,
+                 "auction" => nil,
+                 "active_from" => ^active_from,
+                 "auction_timeout" => 0,
+                 "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+                 "pointers" => %{
+                   "account_pubkey" => ^alice_id,
+                   "oracle_pubkey" => ^alice_oracle_id
+                 },
+                 "revoke" => nil,
+                 "expire_height" => ^expire1,
+                 "approximate_expire_time" => ^approx_expire_time2
+               } = name2
       end
     end
 
@@ -198,11 +181,12 @@ defmodule AeMdwWeb.NameControllerTest do
         height_name
         |> Enum.reduce(store, fn {expire, plain_name}, store ->
           height = expire
+          txi = expire - 10
 
           name =
             Model.name(
               index: plain_name,
-              active: expire - 10,
+              active: txi,
               expire: expire,
               revoke: nil,
               auction_timeout: 1
@@ -214,14 +198,16 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.ActiveNameExpiration,
             Model.expiration(index: {height - 1, height_name[height - 1]})
           )
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
           |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: key_hash))
+          |> Store.put(Model.Block, Model.block(index: {txi, -1}, hash: key_hash))
         end)
         |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {121, height_name[121]}))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -229,13 +215,13 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "active")
+                 |> get("/v3/names", state: "active")
                  |> json_response(200)
 
         assert @default_limit = length(names)
@@ -243,7 +229,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert names ==
                  Enum.sort_by(
                    names,
-                   fn %{"info" => %{"expire_height" => expire}} -> expire end,
+                   fn %{"expire_height" => expire} -> expire end,
                    :desc
                  )
 
@@ -258,7 +244,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert names_next ==
                  Enum.sort_by(
                    names_next,
-                   fn %{"info" => %{"expire_height" => expire}} -> expire end,
+                   fn %{"expire_height" => expire} -> expire end,
                    :desc
                  )
       end
@@ -285,15 +271,17 @@ defmodule AeMdwWeb.NameControllerTest do
               auction_timeout: 1
             )
 
-          Store.put(store, Model.ActiveName, name)
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -301,13 +289,13 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "active", by: by, direction: direction, limit: limit)
+                 |> get("/v3/names", state: "active", by: by, direction: direction, limit: limit)
                  |> json_response(200)
 
         plain_names = Enum.map(names, fn %{"name" => name} -> name end)
@@ -332,7 +320,7 @@ defmodule AeMdwWeb.NameControllerTest do
       error = "invalid query: by=#{by}"
 
       assert %{"error" => ^error} =
-               conn |> get("/v2/names", state: "active", by: by) |> json_response(400)
+               conn |> get("/v3/names", state: "active", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -342,7 +330,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn
-               |> get("/v2/names", state: "active", by: by, direction: direction)
+               |> get("/v3/names", state: "active", by: by, direction: direction)
                |> json_response(400)
     end
 
@@ -366,11 +354,12 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
         |> Store.put(Model.PreviousName, Model.previous_name(index: {plain_name, 0}, name: name))
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<1::256>>, block_index: {1, 0}))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash ->
+           fetch!: fn _state, _hash, _opts ->
              %{"tx" => %{"tx" => %{"tx" => %{"pointers" => [], "account_id" => <<>>}}}}
            end
          ]},
@@ -380,17 +369,17 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "active")
+                 |> get("/v3/names", state: "active")
                  |> json_response(200)
 
         assert 1 = length(names)
-        assert [%{"name" => ^plain_name, "info" => %{"pointers" => %{}}}] = names
+        assert [%{"name" => ^plain_name, "pointers" => %{}}] = names
       end
     end
   end
@@ -399,6 +388,8 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders inactive names with detailed info", %{conn: conn, store: store} do
       alice_name = "aliceinchains.chain"
       bob_name = "bobandmarley.chain"
+      {:ok, alice_hash} = :aens.get_name_hash(alice_name)
+      {:ok, bob_hash} = :aens.get_name_hash(bob_name)
 
       with_blockchain %{alice: 1_000, bob: 1_000},
         mb0: [
@@ -413,6 +404,8 @@ defmodule AeMdwWeb.NameControllerTest do
           tx5: name_tx(:name_revoke_tx, :bob, bob_name)
         ] do
         [tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4, tx5: tx5] = transactions
+        alice_revoke_hash = tx2 |> :aetx_sign.hash() |> then(&encode(:tx_hash, &1))
+        bob_revoke_hash = tx5 |> :aetx_sign.hash() |> then(&encode(:tx_hash, &1))
         {:id, :account, alice_pk} = accounts[:alice]
         {:id, :account, bob_pk} = accounts[:bob]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -489,54 +482,44 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.tx(index: 5, id: :aetx_sign.hash(tx5), block_index: {1, 2})
           )
           |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
+          |> Store.put(Model.PlainName, Model.plain_name(index: alice_hash, value: alice_name))
+          |> Store.put(Model.PlainName, Model.plain_name(index: bob_hash, value: bob_name))
 
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "inactive")
+                 |> get("/v3/names", state: "inactive")
                  |> json_response(200)
+
+        bob_encoded_account_id = encode(:account_pubkey, bob_pk)
 
         assert [
                  %{
                    "name" => ^bob_name,
                    "active" => false,
                    "auction" => nil,
-                   "info" => %{
-                     "active_from" => ^active_from,
-                     "auction_timeout" => 0,
-                     "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
-                     "pointers" => %{
-                       "account_pubkey" => ^bob_id,
-                       "oracle_pubkey" => ^bob_oracle_id
-                     },
-                     "revoke" => 5,
-                     "transfers" => [],
-                     "updates" => [4],
-                     "claims" => [3],
-                     "expire_height" => ^expire2,
-                     "approximate_expire_time" => ^approx_expire_time2
-                   },
-                   "previous" => [],
-                   "status" => "name"
+                   "active_from" => ^active_from,
+                   "auction_timeout" => 0,
+                   "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
+                   "expire_height" => ^expire2,
+                   "revoke" => %{"tx_hash" => ^bob_revoke_hash},
+                   "approximate_expire_time" => ^approx_expire_time2,
+                   "pointers" => %{
+                     "account_pubkey" => ^bob_encoded_account_id,
+                     "oracle_pubkey" => ^bob_oracle_id
+                   }
                  },
                  %{
                    "name" => ^alice_name,
                    "active" => false,
                    "auction" => nil,
-                   "info" => %{
-                     "active_from" => ^active_from,
-                     "auction_timeout" => 0,
-                     "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
-                     "pointers" => %{},
-                     "revoke" => 2,
-                     "transfers" => [],
-                     "updates" => [],
-                     "claims" => [1],
-                     "expire_height" => ^expire1,
-                     "approximate_expire_time" => ^approx_expire_time1
-                   },
-                   "previous" => [],
-                   "status" => "name"
+                   "active_from" => ^active_from,
+                   "auction_timeout" => 0,
+                   "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+                   "revoke" => %{"tx_hash" => ^alice_revoke_hash},
+                   "expire_height" => ^expire1,
+                   "approximate_expire_time" => ^approx_expire_time1,
+                   "pointers" => %{}
                  }
                ] = names
       end
@@ -562,13 +545,14 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.InactiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -576,13 +560,13 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "inactive")
+                 |> get("/v3/names", state: "inactive")
                  |> json_response(200)
 
         assert @default_limit = length(names)
@@ -618,13 +602,14 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.InactiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {
           Name,
@@ -635,13 +620,13 @@ defmodule AeMdwWeb.NameControllerTest do
             stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
           ]
         },
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "inactive", limit: limit)
+                 |> get("/v3/names", state: "inactive", limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -672,23 +657,30 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Store.put(Model.InactiveName, Model.name(name, index: "aa.chain"))
         |> Store.put(Model.InactiveName, Model.name(name, index: "aaa.chain"))
         |> Store.put(Model.InactiveName, Model.name(name, index: "aaaa.chain"))
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<0::256>>, block_index: {1, 0}, time: 1))
+        |> Store.put(Model.Tx, Model.tx(index: 1, id: <<1::256>>, block_index: {1, 1}, time: 2))
+        |> Store.put(Model.Tx, Model.tx(index: 2, id: <<2::256>>, block_index: {1, 2}, time: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: block_hash1))
         |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: block_hash2))
 
       with_mocks [
+        {Txs, [:passthrough],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
         {Name, [],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names",
+                 |> get("/v3/names",
                    state: "inactive",
                    by: by,
                    direction: direction,
@@ -704,7 +696,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      assert %{"error" => ^error} = conn |> get("/v2/names", by: by) |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/v3/names", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -714,7 +706,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn
-               |> get("/v2/names", state: "inactive", by: by, direction: direction)
+               |> get("/v3/names", state: "inactive", by: by, direction: direction)
                |> json_response(400)
     end
   end
@@ -1216,7 +1208,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -1236,7 +1228,7 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "on v2, it gets active and inactive names, except those in auction, with default limit",
+    test "on v3, it gets active and inactive names, except those in auction, with default limit",
          %{
            conn: conn,
            store: store
@@ -1260,26 +1252,27 @@ defmodule AeMdwWeb.NameControllerTest do
           store
           |> Store.put(Model.ActiveName, name)
           |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<123::256>>))
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names, "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/names")
+                 |> get("/v3/names")
                  |> json_response(200)
 
         assert @default_limit = length(names)
@@ -1309,14 +1302,15 @@ defmodule AeMdwWeb.NameControllerTest do
 
           store
           |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
           |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
@@ -1324,13 +1318,13 @@ defmodule AeMdwWeb.NameControllerTest do
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => names} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", limit: limit)
+                 |> get("/v3/names", limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -1389,22 +1383,27 @@ defmodule AeMdwWeb.NameControllerTest do
           Model.ActiveNameOwnerDeactivation,
           Model.owner_deactivation(index: {owner_pk, exp_height + 3, third_name})
         )
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: key_hash))
 
       with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
         {Name, [],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [name1, name2, name3], "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", direction: "forward", owned_by: owner_id)
+                 |> get("/v3/names", direction: "forward", owned_by: owner_id)
                  |> json_response(200)
 
         assert %{"name" => ^first_name} = name1
@@ -1414,7 +1413,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => [name1, name2], "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names",
+                 |> get("/v3/names",
                    direction: "forward",
                    limit: 3,
                    owned_by: owner_id,
@@ -1975,102 +1974,6 @@ defmodule AeMdwWeb.NameControllerTest do
 
       with_mocks [{Name, [], [locate: fn _state, ^name -> nil end]}] do
         assert %{"error" => ^error} = conn |> get("/v3/names/#{name}") |> json_response(404)
-      end
-    end
-  end
-
-  describe "pointers" do
-    test "get pointers for valid given name", %{conn: conn, store: store} do
-      name = "wwwbeaconoidcom.chain"
-      {:ok, name_hash} = :aens.get_name_hash(name)
-      active_height = 3
-
-      with_blockchain %{alice: 1_000},
-        mb: [
-          tx1: name_tx(:name_claim_tx, :alice, name),
-          tx2: name_tx(:name_update_tx, :alice, name)
-        ] do
-        tx2 = Keyword.get(transactions, :tx2)
-        {:id, :account, alice_pk} = accounts[:alice]
-
-        store =
-          store
-          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
-          )
-          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
-          |> Store.put(
-            Model.ActiveName,
-            Model.name(index: name, active: active_height, owner: alice_pk)
-          )
-          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, -1}}))
-
-        alice_id = encode(:account_pubkey, alice_pk)
-        oracle_id = encode(:oracle_pubkey, alice_pk)
-
-        assert %{
-                 "account_pubkey" => ^alice_id,
-                 "oracle_pubkey" => ^oracle_id
-               } =
-                 conn
-                 |> with_store(store)
-                 |> get("/v2/names/#{name}/pointers")
-                 |> json_response(200)
-      end
-    end
-
-    test "when last update tx is internal, it gets pointers for valid given name", %{
-      conn: conn,
-      store: store
-    } do
-      name = "wwwbeaconoidcom.chain"
-      {:ok, name_hash} = :aens.get_name_hash(name)
-      active_height = 3
-
-      with_blockchain %{alice: 1_000},
-        mb: [
-          tx1: name_tx(:name_claim_tx, :alice, name),
-          tx2: name_tx(:name_update_tx, :alice, name)
-        ] do
-        tx2 = Keyword.get(transactions, :tx2)
-        aetx2 = :aetx_sign.tx(tx2)
-
-        store =
-          store
-          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
-          )
-          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
-          |> Store.put(Model.ActiveName, Model.name(index: name, active: active_height))
-          |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}, tx: aetx2))
-          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, 0}}))
-
-        {:id, :account, alice_pk} = accounts[:alice]
-        alice_id = encode(:account_pubkey, alice_pk)
-        oracle_id = encode(:oracle_pubkey, alice_pk)
-
-        assert %{
-                 "account_pubkey" => ^alice_id,
-                 "oracle_pubkey" => ^oracle_id
-               } =
-                 conn
-                 |> with_store(store)
-                 |> get("/v2/names/#{name}/pointers")
-                 |> json_response(200)
-      end
-    end
-
-    test "renders error when the name is missing", %{conn: conn} do
-      id = "no--such--name--in--the--chain.chain"
-      error = "not found: #{id}"
-
-      with_mocks [{Name, [], [locate: fn _state, ^id -> nil end]}] do
-        assert %{"error" => ^error} =
-                 conn |> get("/v2/names/#{id}/pointers") |> json_response(404)
       end
     end
   end

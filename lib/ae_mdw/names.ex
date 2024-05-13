@@ -584,6 +584,8 @@ defmodule AeMdw.Names do
           nil
       end
 
+    pointers = Name.pointers(state, name)
+
     %{
       name: plain_name,
       hash: name_hash,
@@ -597,6 +599,7 @@ defmodule AeMdw.Names do
       name_fee: :aec_governance.name_claim_fee(plain_name, protocol),
       revoke: revoke && expand_txi_idx(state, revoke, opts),
       auction_timeout: auction_timeout,
+      pointers: pointers,
       ownership: render_ownership(state, name)
     }
   end
@@ -731,7 +734,7 @@ defmodule AeMdw.Names do
     cond do
       Keyword.get(opts, :v3?, false) ->
         state
-        |> Txs.fetch!(txi)
+        |> Txs.fetch!(txi, opts)
         |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
         |> Map.drop(["tx_index"])
 

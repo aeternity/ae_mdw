@@ -36,10 +36,6 @@ defmodule AeMdwWeb.NameController do
         auction_reply(conn, Validate.plain_name!(state, ident), opts)
       end)
 
-  @spec pointers(Conn.t(), map()) :: Conn.t()
-  def pointers(%Conn{assigns: %{state: state}} = conn, %{"id" => ident}),
-    do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(state, ident)) end)
-
   @spec pointees(Conn.t(), map()) :: Conn.t()
   def pointees(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
@@ -280,19 +276,6 @@ defmodule AeMdwWeb.NameController do
     case Name.locate(state, plain_name) do
       {info, source} -> format_json(conn, Format.to_map(state, info, source, expand?(opts)))
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name)}
-    end
-  end
-
-  defp pointers_reply(%Conn{assigns: %{state: state}} = conn, plain_name) do
-    case Name.locate(state, plain_name) do
-      {m_name, Model.ActiveName} ->
-        format_json(conn, Name.pointers(state, m_name))
-
-      {_m_name, Model.InactiveName} ->
-        {:error, ErrInput.Expired.exception(value: plain_name)}
-
-      _no_match? ->
-        {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end
 
