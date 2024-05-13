@@ -164,7 +164,7 @@ defmodule AeMdw.MixProject do
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev, :test]},
       {:excoveralls, "~> 0.14", only: :test},
       {:gen_state_machine, "~> 2.0"}
