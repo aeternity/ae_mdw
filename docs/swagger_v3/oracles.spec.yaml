@@ -318,7 +318,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple oracles.
-      operationId: get_oracles
+      operationId: GetOracles
       parameters:
         - name: state
           in: query
@@ -354,7 +354,7 @@ paths:
     get:
       deprecated: false
       description: Get a single oracle.
-      operationId: get_oracle
+      operationId: GetOracle
       parameters:
         - name: id
           in: path
@@ -386,7 +386,7 @@ paths:
     get:
       deprecated: false
       description: Get an oracle's queries.
-      operationId: get_oracle_queries
+      operationId: GetOracleQueries
       parameters:
         - name: id
           in: path
@@ -425,7 +425,7 @@ paths:
     get:
       deprecated: false
       description: Get an oracle's responses.
-      operationId: get_oracle_responses
+      operationId: GetOracleResponses
       parameters:
         - name: id
           in: path

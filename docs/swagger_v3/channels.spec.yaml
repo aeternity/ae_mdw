@@ -79,7 +79,7 @@ paths:
     get:
       deprecated: false
       description: Get multiple channels.
-      operationId: get_channels
+      operationId: GetChannels
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -118,7 +118,7 @@ paths:
     get:
       deprecated: false
       description: Get a single channel.
-      operationId: get_channel
+      operationId: GetChannel
       parameters:
         - name: id
           in: path

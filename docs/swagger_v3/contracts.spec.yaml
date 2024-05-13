@@ -126,7 +126,7 @@ paths:
     get:
       deprecated: false
       description: Gets contract creation info.
-      operationId: get_contract.
+      operationId: GetContract
       parameters:
         - name: id
           in: path
@@ -158,7 +158,7 @@ paths:
     get:
       deprecated: false
       description: Get contract logs.
-      operationId: get_contracts_logs
+      operationId: GetContractLogs
       parameters:
         - name: contract_id
           in: query
@@ -229,7 +229,7 @@ paths:
     get:
       deprecated: false
       description: Get contract calls.
-      operationId: get_contracts_calls
+      operationId: GetContractCalls
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
