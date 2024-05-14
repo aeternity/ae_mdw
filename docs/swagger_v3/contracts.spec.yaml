@@ -9,6 +9,9 @@ schemas:
       block_hash:
         type: string
         example: mh_mZ15v6q3eF8mUBVQ6shmWz6AXGvufMDTfcG9DXYY9uADuenHg
+      contract:
+        type: string
+        example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
       source_tx_hash:
         type: string
         example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
@@ -18,8 +21,18 @@ schemas:
       create_tx:
         type: object
         example:
+          abi_version: 3
           amount: 25123
+          call_data: "cb_+Q=="
+          code: "cb_+QrfRgOgbAwsRHU"
+          deposit: 0
+          fee: 13276000000000
+          gas: 200000
+          gas_price: 1000000000
+          nonce: 66
           owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4 
+          ttl: 0
+          vm_version: 5
   ContractCall:
     description: ContractCall
     type: object
@@ -30,15 +43,12 @@ schemas:
       call_tx_hash:
         type: string
         example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
-      call_txi:
-        type: integer
-        example: 32508544
       contract_id:
         type: string
         example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
-      contract_txi:
-        type: integer
-        example: 8392766
+      contract_tx_hash:
+        type: string
+        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
       function:
         type: string
         example: Oracle.query
@@ -76,7 +86,7 @@ schemas:
       args:
         type: array
         items:
-          type: integer
+          type: string
         example:
           - 57632170077998225994387431184384351560267542170559996321319244663568556637966
           - 70455690283454580784062717387189552611484838031419336802117080415662207780030
@@ -84,30 +94,35 @@ schemas:
       block_hash:
         type: string
         example: mh_27wa1cRsbEGV5N9N6BVKEtX1ycaomL5Q9w1NpL2iRjRt4aZhiV
+      block_time:
+        type: integer
+        example: 1615820000000
       call_tx_hash:
         type: string
         example: th_DXhneXz8xk1RW2rSWtjzMFBsqkQ7qwhZzzYbdumq3hiZJHPig
-      call_txi:
-        type: integer
-        example: 32530611
       contract_id:
         type: string
         example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo
-      contract_txi:
-        type: integer
-        example: 23524907
+      contract_tx_hash:
+        type: string
+        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
       data:
         type: string
         example: ""
       event_hash:
         type: string
         example: "48U3JOKTVTI6FVMTK2BLHM8NG72JEBG93VS6MENPSC8E71IM5FNG===="
+      event_name:
+        type: string
+        example: "Transfer"
+        nullable: true
       ext_caller_contract_id:
         type: string
         example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
-      ext_caller_contract_txi:
-        type: integer
-        example: 20366741
+      ext_caller_contract_tx_hash:
+        type: string
+        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+        nullable: true
       height:
         type: integer
         example: 609854
@@ -134,7 +149,7 @@ paths:
           required: true
           schema:
             type: string
-            example: ct_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+            example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
       responses:
         '200':
           description: Returns single contract
@@ -166,7 +181,7 @@ paths:
           required: false
           schema:
             type: string
-            example: ct_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+            example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
         - name: event
           in: query
           description: Name of the event

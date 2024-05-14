@@ -9,6 +9,9 @@ schemas:
       block_height:
         description: The block height
         type: integer
+      encoded_tx:
+        description: The encoded transaction
+        type: string
       hash:
         description: The transaction hash
         type: string
@@ -23,18 +26,22 @@ schemas:
         type: array
         items:
           type: string
-      transaction:
+      tx:
         description: The transaction
         type: object
+      ttl:
+        description: The time to live
+        type: integer
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
       hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
+      encoded_tx: tx_+IQLAfhCuED6AOECECJDXntSS/dj034AJ20Ed+xE4FrgvlEI8PPBziK1VwEBaT73ZlNOiMCC9u7CEUow8YZefEiJ97ppfd8GuDz4OiABoQH+GsB85Crb3bTZQOTQxfR79trkBfFyAvBtzs5utqqbqkCJdmxzYS50ZXN0e4YTGXGKUACCsztl3yJX
       micro_index: 0
       micro_time: 1543375246712
       signatures:
         - sg_Fipyxq5f3JS9CB3AQVCw1v9skqNBw1cdfe5W3h1t2MkviU19GQckERQZkqkaXWKowdTUvr7B1QbtWdHjJHQcZApwVDdP9
-      transaction:
+      tx:
         amount: 150425
         fee: 101014
         nonce: 1
@@ -43,6 +50,7 @@ schemas:
         sender_id: ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5
         type: SpendTx
         version: 1
+        ttl: 10000
 paths:
   /transactions:
     get:

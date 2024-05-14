@@ -66,6 +66,9 @@ schemas:
       name:
         type: string
         example: trustwallet.chain
+      name_fee:
+        type: integer
+        example: 134626900000000000000
       revoke:
         type: "#/components/schemas/NameTx"
         example:
@@ -89,61 +92,73 @@ schemas:
     description: Auction
     type: object
     properties:
-      active:
-        type: boolean
-        example: false
-      info:
+      auction_end:
+        type: integer
+        example: 638002
+      activation_time:
+        type: integer
+        example: 1687575562705
+      approximate_expire_time:
+        type: integer
+        example: 1692935617598
+      last_bid:
         type: object
         properties:
-          auction_end:
+          block_hash:
+            type: string
+            example: mh_28pH6wARaeMcdvMfe7nMJV2yYQMP9E36mmk6g9r9kkpEgao9MQ
+          block_height:
             type: integer
-            example: 638002
-          activation_time:
+            example: 608242
+          encoded_tx:
+            type: string
+            example: tx_+JYLAfhCuECFZmpTCOnm3v0zZ3g2BVIZApsjxGt4Q4MWck+gEw0j09Jq61XEgQWafn3fP2oesqcsy6wYGpGWT6eFW/iE7IoCuE74TCACoQH7BL4bl7Y/NrliWEMKWaxk9besmKUYp6PkFk7ZZeieHYIyZ4ptZXRhLmNoYWluhwUXe6y8hW+JB0xS1EQgCUAAhg8PrOrgAADImXsf
+          hash:
+            type: string
+            example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+          micro_index:
+            type: integer
+            example: 2
+          micro_time:
             type: integer
             example: 1687575562705
-          approximate_expire_time:
-            type: integer
-            example: 1692935617598
-          last_bid:
+          signatures:
+            type: array
+            items:
+              type: string
+              example: sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
+          tx:
             type: object
-            properties:
-              block_hash:
-                type: string
-                example: mh_28pH6wARaeMcdvMfe7nMJV2yYQMP9E36mmk6g9r9kkpEgao9MQ
-              block_height:
-                type: integer
-                example: 608242
-              hash:
-                type: string
-                example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
-              micro_index:
-                type: integer
-                example: 2
-              signatures:
-                type: array
-                items:
-                  type: string
-                  example: sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
-              tx:
-                type: object
-                example:
-                  account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
-                  fee: 16540000000000
-                  name: 1996.chain
-                  name_fee: 134626900000000000000
-                  name_id: nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c
-                  name_salt: 7095609104934055
-                  nonce: 225,
-                  ttl: 818002
-                  type: NameClaimTx
-                  version: 2
-          name:
-            type: string
-            example: 1996.chain
+            example:
+              account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
+              fee: 16540000000000
+              name: 1996.chain
+              name_fee: 134626900000000000000
+              name_id: nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c
+              name_salt: 7095609104934055
+              nonce: 225
+              ttl: 818002
+              type: NameClaimTx
+              version: 2
+      name:
+        type: string
+        example: 1996.chain
+      name_fee:
+        type: integer
+        example: 134626900000000000000
   NameClaim:
     description: Name Claim
     type: object
     properties:
+      active_from:
+        type: integer
+        example: 163282
+      source_tx_hash:
+        type: string
+        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+      source_tx_type:
+        type: string
+        example: NameClaimTx
       block_hash:
         type: string
         example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
@@ -157,22 +172,28 @@ schemas:
           fee: 16540000000000
           name: "1996.chain"
           name_fee: 134626900000000000000
-          name_id: "nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c"
           name_salt: 7095609104934055
           nonce: 225
           ttl: 818002
-          type: "NameClaimTx"
-          version: 2
   NameTransfer:
     description: Name Transfer
     type: object
     properties:
+      active_from:
+        type: integer
+        example: 163282
       block_hash:
         type: string
         example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       height:
         type: integer
         example: 45784
+      source_tx_hash:
+        type: string
+        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+      source_tx_type:
+        type: string
+        example: NameTransferTx
       tx:
         type: object
         example:
@@ -182,18 +203,25 @@ schemas:
           nonce: 18550
           recipient_id: "ak_2WZoa13VKHCamt2zL9Wid8ovmyvTEUzqBjDNGDNwuqwUQJZG4t"
           ttl: 42420
-          type: "NameTransferTx"
-          version: 1
   NameUpdate:
     description: Name Update
     type: object
     properties:
+      active_from:
+        type: integer
+        example: 163282
       block_hash:
         type: string
         example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       height:
         type: integer
         example: 45784
+      source_tx_hash:
+        type: string
+        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+      source_tx_type:
+        type: string
+        example: NameUpdateTx
       tx:
         type: object
         example:
@@ -207,8 +235,6 @@ schemas:
             - id: "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5"
               key: "account_pubkey"
           ttl: 60000
-          type: "NameUpdateTx"
-          version: 1
 
 paths:
   /names:
@@ -275,7 +301,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Auction'
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Auction'
+                  - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
           content:
@@ -294,7 +327,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: trustwallet.chain
       responses:
         '200':
           description: Returns single name
@@ -336,10 +369,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/Auction'
+                $ref: '#/components/schemas/Auction'
         '400':
           description: Bad request
           content:
@@ -398,7 +428,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: trustwallet.chain
       responses:
         '200':
           description: Returns a mapping of the name pointers
@@ -406,6 +436,8 @@ paths:
             application/json:
               schema:
                 type: object
+              example:
+                account_pubkey: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
         '404':
           description: Not Found
           content:
@@ -424,7 +456,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: ak_27PLE5ATTcJ5DC18oLsPpW3xf9vzvTvNR4ggt5p3u95zfR2qm9
       responses:
         '200':
           description: Returns the name the active and inactive name pointees
@@ -455,7 +487,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: trustwallet.chain
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -465,7 +497,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NameClaim'
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NameClaim'
+                  - $ref: '#/components/schemas/PaginatedResponse'
         '404':
           description: Not Found
           content:
@@ -484,7 +523,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: trustwallet.chain
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -494,7 +533,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NameTransfer'
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NameTransfer'
+                  - $ref: '#/components/schemas/PaginatedResponse'
         '404':
           description: Not Found
           content:
@@ -513,7 +559,7 @@ paths:
           required: true
           schema:
             type: string
-            example: foo.chain
+            example: trustwallet.chain
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -523,7 +569,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NameUpdate'
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NameUpdate'
+                  - $ref: '#/components/schemas/PaginatedResponse'
         '404':
           description: Not Found
           content:
