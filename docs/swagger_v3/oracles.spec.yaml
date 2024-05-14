@@ -29,6 +29,7 @@ schemas:
     example:
       active: false
       active_from: 4660
+      approximate_expire_time: 1587577871376
       expire_height: 6894
       extends:
         - hash: "mh_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
@@ -53,28 +54,41 @@ schemas:
       oracle: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
       query_fee: 20000
       register:
+        block_hash: "mh_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
+        block_height: 4660
+        encoded_tx: "tx_+JELAfhCuEBX6CvfGClpszz2kg4qjUL8BtvNE0JpCtuwBHbZwGfTd6O6cQ9fr723QhuML50EIzZlFafB6UUi1y5S6RpZH2wJuEn4RxYBoQFtrWD1RJ5rxuHksnEXADAPHPT2jRT6uqVIr8X45BNYqgGFcXVlcnmIcmVzcG9uc2UAAIOYloCHBowmEhDKAIMEauEAmOjXSw=="
         hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
         micro_index: 0
         micro_time: 1587577771376
         signatures:
           - sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
         tx:
+            abi_version: 0
+            account_id: ak_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
             fee: 20000
             nonce: 1
             oracle_id: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
             oracle_ttl:
                 type: "delta"
                 value: 100
+            query_fee: 20000
+            query_format: "query"
+            response_format: "response"
             ttl: 1587577871376
             type: "OracleRegisterTx"
             version: 1
+        tx_hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
       register_time: 1587577771376
+      register_tx_hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
     properties:
       active:
         description: The oracle active status
         type: boolean
       active_from:
         description: The block height when the oracle became active
+        type: integer
+      approximate_expire_time:
+        description: The approximate time when the oracle expires
         type: integer
       expire_height:
         description: The block height when the oracle expires

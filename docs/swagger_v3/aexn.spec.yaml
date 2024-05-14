@@ -4,7 +4,7 @@ schemas:
     example:
       base_url: null
       contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
-      contract_txi: 32746407
+      contract_tx_hash: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
       extensions: [
         mintable_templates,
         mintable_templates_limit,
@@ -13,7 +13,7 @@ schemas:
       ]
       limits: {
         limit_log_idx: 0,
-        limit_txi: 32746408,
+        limit_tx_hash: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF,
         template_limit: 100,
         token_limit: null
       }
@@ -29,8 +29,8 @@ schemas:
       contract_id:
         description: NFT contract id
         type: string
-      contract_txi:
-        description: Transaction that created the contract
+      contract_tx_hash:
+        description: Transaction hash of the contract creation
         type: string
       extensions:
         description: Extensions implemented by the contract
@@ -357,7 +357,7 @@ paths:
           required: true
           schema:
             type: string
-            example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+            example: ct_2w7MHbcyk5iM4yijZmjGcUF2DSZuVM1Mueppx5SSvPn5cgLJuZ
       responses:
         '200':
           description: Returns AEX-141 information by contract id
@@ -425,22 +425,25 @@ paths:
           required: true
           schema:
             type: string
-            example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
         - description: The nft token id
           in: path
           name: tokenId
           required: true
           schema:
             type: integer
-            example: 2
+            example: 1
       responses:
         '200':
           description: Owner account of the NFT
           content:
             application/json:
               schema:
-                type: string
-                description: The owner account ID.
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
         '400':
           description: Bad request
           content:
@@ -461,7 +464,7 @@ paths:
           required: true
           schema:
             type: string
-            example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
       responses:
         '200':
           description: Returns paginated AEX-141 contracts
@@ -496,7 +499,7 @@ paths:
           required: true
           schema:
             type: string
-            example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
       responses:
         '200':
           description: Returns paginated AEX-141 templates
@@ -573,7 +576,7 @@ paths:
           required: true
           schema:
             type: string
-            x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+            example: ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa
         - description: Collection contract pubkey
           in: query
           name: contract

@@ -12,6 +12,15 @@ schemas:
       block_reward:
         description: The block reward
         type: integer
+      burned_in_auctions:
+        description: The amount burned in auctions
+        type: integer
+      channels_closed:
+        description: The number of channels closed
+        type: integer
+      channels_opened:
+        description: The number of channels opened
+        type: integer
       contracts_created:
         description: The number of contracts created
         type: integer
@@ -36,9 +45,18 @@ schemas:
       last_tx_hash:
         description: The last transaction hash for this height
         type: string
+      locked_in_auctions:
+        description: The amount locked in auctions
+        type: integer
+      locked_in_channels:
+        description: The amount locked in channels
+        type: integer
     example:
       auctions_started: 0
       block_reward: 269973000000000000000
+      burned_in_auctions: 0
+      channels_closed: 0
+      channels_opened: 0
       contracts_created: 0
       dev_reward: 33027000000000000000
       height: 121804
@@ -48,6 +66,8 @@ schemas:
       oracles_expired: 0
       oracles_registered: 0
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
+      locked_in_auctions: 0
+      locked_in_channels: 0
   TotalStat:
     type: object
     description: TotalStat
@@ -55,47 +75,63 @@ schemas:
       height:
         description: The generation
         type: integer
-      auctions_started:
-        description: The number of auctions started
+      contracts:
+        description: The number of contracts
         type: integer
-      block_reward:
-        description: The block reward
+      locked_in_auctions:
+        description: The amount locked in auctions
         type: integer
-      contracts_created:
-        description: The number of contracts created
+      burned_in_auctions:
+        description: The amount burned in auctions
         type: integer
-      dev_reward:
-        description: The dev reward
+      locked_in_channels:
+        description: The amount locked in channels
         type: integer
-      names_activated:
-        description: The number of names activated
+      active_auctions:
+        description: The number of active auctions
         type: integer
-      names_expired:
-        description: The number of names expired
+      active_names:
+        description: The number of active names
         type: integer
-      names_revoked:
-        description: The number of names revoked
+      inactive_names:
+        description: The number of inactive names
         type: integer
-      oracles_expired:
-        description: The number of oracles expired
+      active_oracles:
+        description: The number of active oracles
         type: integer
-      oracles_registered:
-        description: The number of oracles registered
+      inactive_oracles:
+        description: The number of inactive oracles
+        type: integer
+      open_channels:
+        description: The number of open channels
+        type: integer
+      sum_block_reward:
+        description: The sum of block rewards
+        type: integer
+      sum_dev_reward:
+        description: The sum of dev rewards
+        type: integer
+      total_token_supply:
+        description: The total token supply
         type: integer
       last_tx_hash:
         description: The last transaction hash for this height
         type: string
     example:
-      auctions_started: 0
-      block_reward: 269973000000000000000
-      contracts_created: 0
-      dev_reward: 33027000000000000000
       height: 121804
-      names_activated: 0
-      names_expired: 0
-      names_revoked: 0
-      oracles_expired: 0
-      oracles_registered: 0
+      contracts: 0
+      locked_in_auctions: 0
+      burned_in_auctions: 0
+      locked_in_channels: 0
+      active_auctions: 0
+      active_names: 0
+      inactive_names: 0
+      active_oracles: 0
+      inactive_oracles: 0
+      open_channels: 0
+      sum_block_reward: 269973000000000000000
+      sum_dev_reward: 33027000000000000000
+      total_token_supply: 10000000000000000000000000000
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
   Statistic:
     type: object

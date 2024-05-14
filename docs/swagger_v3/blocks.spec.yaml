@@ -27,6 +27,9 @@ schemas:
       info:
         description: The info
         type: string
+      micro_blocks_count:
+        description: The number of micro blocks
+        type: integer
       miner:
         description: The miner public key
         type: string
@@ -53,6 +56,9 @@ schemas:
       time:
         description: The time
         type: integer
+      transactions_count:
+        description: The number of transactions
+        type: integer
       version:
         description: The version
         type: integer
@@ -64,14 +70,16 @@ schemas:
       hash: kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6
       height: 123008
       info: cb_AAAAAfy4hFE=
+      micro_blocks_count: 2
       miner: ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV
       nonce: 9223756548132686000
       pow: [12359907, 21243613,  31370838, 34911479, 39070315, 39375528, 45751339, 49864206, 56785423, 70282271, 89781776, 136985196, 140580763, 142415353, 145306210, 148449813, 156037609, 161568067, 170308922, 185345129, 192805579, 214115188, 220339679, 243288723, 258891016, 283001743, 284306909, 286457285, 326405486, 352963232, 377904500, 378120539, 380987399, 388675008, 447958786, 457602498, 465751225, 466823982, 475416389, 491255227, 530197445, 533633643]
-      ev_hash: kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm
+      prev_hash: kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm
       prev_key_hash: kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm
       state_hash: bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna
       target: 504082055
       time: 1565548832164
+      transactions_count: 2
       version: 3
     properties:
       beneficiary:
@@ -282,7 +290,7 @@ paths:
           required: true
           schema:
             type: string
-            example: mh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+            example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       responses:
         '200':
           description: Returns a single micro block
@@ -314,7 +322,7 @@ paths:
           required: true
           schema:
             type: string
-            example: mh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+            example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       responses:
         '200':
           description: Returns paginated micro blocks

@@ -16,10 +16,18 @@ schemas:
         enum:
           - reward_dev
           - reward_block
-      ref_txi:
-        type: integer
+      ref_block_hash:
+        type: string
         nullable: true
-        example: null
+        example: mh_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+      ref_tx_hash:
+        type: string
+        nullable: true
+        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+      ref_tx_type:
+        type: string
+        nullable: true
+        example: ChannelDepositTx
 paths:
   /transfers:
     get:

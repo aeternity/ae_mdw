@@ -2,6 +2,10 @@ schemas:
   Channel:
     type: object
     properties:
+      active:
+        type: boolean
+        description: Channel is active
+        example: true
       amount:
         type: integer
         description: Balance currently left in the channel
@@ -30,7 +34,7 @@ schemas:
         description: Amount owned by initiator
         example: 4500000000000000000
       last_updated_height:
-        type: string
+        type: integer
         description: The last height in which the channel was updated on chain
         example: 141956
       last_updated_tx_type:
@@ -41,6 +45,10 @@ schemas:
         type: integer
         description: The block time in which the channel was last updated
         example: 1587577771376
+      last_updated_tx_hash:
+        type: string
+        description: The hash of the last transaction that updated the channel
+        example: th_2K9cFjoxWxCku6D8ugXonhj7ZqpPsGFPcbVPx25b2HFaLSoLie
       lock_period:
         description: Amount of heights locked after a solo closing
         example: 10
@@ -70,7 +78,7 @@ schemas:
         description: The hash of the current channel state
         example: "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
       updates_count:
-        type: string
+        type: integer
         description: The amount of times the channel's been updated by any of the channel transactions
         example: 2
 
