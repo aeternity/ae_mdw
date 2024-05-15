@@ -2,6 +2,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   use AeMdwWeb.ConnCase
   @moduletag skip_store: true
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.Origin
@@ -135,7 +136,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
         store
         |> Store.put(
           Model.Tx,
-          Model.tx(index: txi, id: :crypto.strong_rand_bytes(32), block_index: {i, 0})
+          Model.tx(index: txi, id: <<txi::256>>, block_index: {i, 0})
         )
         |> Store.put(Model.AexnTransfer, m_transfer)
         |> Store.put(Model.RevAexnTransfer, m_rev_transfer)
@@ -746,11 +747,12 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   describe "aex141_transfers_from" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
       sender_id = encode_account(@from_pk1)
+      contract_id = encode_contract(@aex141_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/from/#{sender_id}")
+               |> get("/v3/aex141/#{contract_id}/transfers?from=#{sender_id}")
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -779,11 +781,14 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
       sender_id = encode_account(@from_pk2)
+      contract_id = encode_contract(@aex141_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/from/#{sender_id}", direction: "forward")
+               |> get("/v3/aex141/#{contract_id}/transfers?from=#{sender_id}",
+                 direction: "forward"
+               )
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -818,8 +823,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/from/#{sender_id}",
-                 contract_id: contract_id,
+               |> get("/v3/aex141/#{contract_id}/transfers?from=#{sender_id}",
                  direction: "forward",
                  limit: limit
                )
@@ -853,32 +857,27 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
     end
 
-    test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
-
-      assert %{"prev" => nil, "data" => [], "next" => nil} =
-               conn
-               |> get("/v2/aex141/transfers/from/#{account_id_without_transfer}")
-               |> json_response(200)
-    end
-
     test "returns bad request when id is invalid", %{conn: conn} do
       invalid_id = "ak_InvalidId"
       error_msg = "invalid id: #{invalid_id}"
+      contract_id = encode_contract(@aex141_pk1)
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex141/transfers/from/#{invalid_id}") |> json_response(400)
+               conn
+               |> get("/v3/aex141/#{contract_id}/transfers?from=#{invalid_id}")
+               |> json_response(400)
     end
   end
 
   describe "aex141_transfers_to" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
       recipient_id = encode_account(@to_pk1)
+      contract_id = encode_contract(@aex141_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/to/#{recipient_id}")
+               |> get("/v3/aex141/#{contract_id}/transfers?to=#{recipient_id}")
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -907,11 +906,14 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
       recipient_id = encode_account(@to_pk2)
+      contract_id = encode_contract(@aex141_pk2)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/to/#{recipient_id}", direction: "forward")
+               |> get("/v3/aex141/#{contract_id}/transfers?to=#{recipient_id}",
+                 direction: "forward"
+               )
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -946,8 +948,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/to/#{recipient_id}",
-                 contract: contract_id,
+               |> get("/v3/aex141/#{contract_id}/transfers?to=#{recipient_id}",
                  direction: "forward",
                  limit: limit
                )
@@ -981,21 +982,15 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
     end
 
-    test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
-
-      assert %{"prev" => nil, "data" => [], "next" => nil} =
-               conn
-               |> get("/v2/aex141/transfers/to/#{account_id_without_transfer}")
-               |> json_response(200)
-    end
-
     test "returns bad request when id is invalid", %{conn: conn} do
       invalid_id = "ak_InvalidId"
       error_msg = "invalid id: #{invalid_id}"
+      contract_id = encode_contract(@aex141_pk1)
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex141/transfers/to/#{invalid_id}") |> json_response(400)
+               conn
+               |> get("/v3/aex141/#{contract_id}/transfers?to=#{invalid_id}")
+               |> json_response(400)
     end
   end
 
@@ -1007,7 +1002,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/from-to/#{sender_id}/#{recipient_id}")
+               |> get("/v3/aex141/transfers", from: sender_id, to: recipient_id)
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -1047,7 +1042,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/from-to/#{sender_id}/#{recipient_id}",
+               |> get("/v3/aex141/transfers",
+                 from: sender_id,
+                 to: recipient_id,
                  direction: "forward"
                )
                |> json_response(200)
@@ -1086,7 +1083,9 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> get(
-                 "/v2/aex141/transfers/from-to/#{account_id_without_transfer}/#{encode_account(@to_pk1)}"
+                 "/v3/aex141/transfers",
+                 from: account_id_without_transfer,
+                 to: encode_account(@to_pk1)
                )
                |> json_response(200)
     end
@@ -1097,7 +1096,10 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex141/transfers/from-to/#{invalid_id}/#{encode_account(@to_pk1)}")
+               |> get("/v3/aex141/transfers",
+                 from: invalid_id,
+                 to: encode_account(@to_pk1)
+               )
                |> json_response(400)
     end
   end
@@ -1109,7 +1111,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/#{contract_id}")
+               |> get("/v3/aex141/#{contract_id}/transfers")
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -1142,7 +1144,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/#{contract_id}", direction: "forward")
+               |> get("/v3/aex141/#{contract_id}/transfers", direction: "forward")
                |> json_response(200)
 
       assert @default_limit = length(aex141_transfers)
@@ -1171,7 +1173,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       error_message = "not found: #{unknown_id}"
 
       assert %{"error" => ^error_message} =
-               conn |> get("/v2/aex141/transfers/#{unknown_id}") |> json_response(404)
+               conn |> get("/v3/aex141/#{unknown_id}/transfers") |> json_response(404)
     end
 
     test "returns bad request when id is invalid", %{conn: conn} do
@@ -1179,7 +1181,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       error_msg = "invalid id: #{invalid_id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex141/transfers/#{invalid_id}") |> json_response(400)
+               conn |> get("/v3/aex141/#{invalid_id}/transfers") |> json_response(400)
     end
 
     test "returns bad request when cursor is invalid", %{conn: conn, store: store} do
@@ -1190,7 +1192,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> with_store(store)
-               |> get("/v2/aex141/transfers/#{contract_id}", cursor: invalid_cursor)
+               |> get("/v3/aex141/#{contract_id}/transfers", cursor: invalid_cursor)
                |> json_response(400)
     end
   end
@@ -1276,11 +1278,13 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   defp aex141_valid_contract_transfer?(contract_id, %{
          "sender" => sender,
          "recipient" => recipient,
-         "call_txi" => call_txi,
+         "tx_hash" => call_tx_hash,
          "log_idx" => log_idx,
          "token_id" => token_id,
          "contract_id" => ct_id
        }) do
+    call_txi = tx_hash_to_txi(call_tx_hash)
+
     sender in @senders and recipient in @recipients and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
       contract_id == ct_id
@@ -1291,13 +1295,15 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
          %{
            "sender" => sender,
            "recipient" => recipient,
-           "call_txi" => call_txi,
+           "tx_hash" => tx_hash,
            "log_idx" => log_idx,
            "token_id" => token_id,
            "contract_id" => contract_id
          },
          contracts \\ @contracts
        ) do
+    call_txi = tx_hash_to_txi(tx_hash)
+
     sender == sender_id and recipient in @recipients and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
       contract_id in contracts
@@ -1308,13 +1314,15 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
          %{
            "sender" => sender,
            "recipient" => recipient,
-           "call_txi" => call_txi,
+           "tx_hash" => tx_hash,
            "log_idx" => log_idx,
            "token_id" => token_id,
            "contract_id" => contract_id
          },
          contracts \\ @contracts
        ) do
+    call_txi = tx_hash_to_txi(tx_hash)
+
     sender in @senders and recipient == recipient_id and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
       contract_id in contracts
@@ -1331,5 +1339,14 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     sender == sender_id and recipient == recipient_id and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
       contract_id in @contracts
+  end
+
+  defp tx_hash_to_txi(tx_hash) do
+    <<txi::256>> =
+      tx_hash
+      |> Enc.decode()
+      |> elem(1)
+
+    txi
   end
 end

@@ -92,13 +92,37 @@ defmodule AeMdwWeb.AexnTransferController do
   end
 
   @spec aex141_transfers(Conn.t(), map()) :: Conn.t()
-  def aex141_transfers(conn, %{"contract_id" => contract_id}) do
-    contract_transfers_reply(conn, contract_id, {:from, nil})
+  def aex141_transfers(
+        %{assigns: %{query: query}} = conn,
+        params
+      ) do
+    contract_id = params["contract_id"]
+
+    case query do
+      %{"from" => sender_id, "to" => recipient_id} ->
+        transfers_pair_reply(conn, :aex141, sender_id, recipient_id)
+
+      %{"from" => sender_id} ->
+        contract_transfers_reply(conn, contract_id, {:from, sender_id})
+
+      %{"to" => recipient_id} ->
+        contract_transfers_reply(conn, contract_id, {:to, recipient_id})
+
+      %{} ->
+        contract_transfers_reply(conn, contract_id, {:from, nil})
+    end
+  end
+
+  @spec aex141_transfers_v2(Conn.t(), map()) :: Conn.t()
+  def aex141_transfers_v2(conn, %{"contract_id" => contract_id}) do
+    v3? = false
+    contract_transfers_reply(conn, contract_id, {:from, nil}, v3?)
   end
 
   @spec aex141_transfers_from(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_from(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
-    contract_transfers_reply(conn, contract_id, {:from, sender_id})
+    v3? = false
+    contract_transfers_reply(conn, contract_id, {:from, sender_id}, v3?)
   end
 
   def aex141_transfers_from(conn, %{"contract" => contract_id} = params) do
@@ -111,7 +135,8 @@ defmodule AeMdwWeb.AexnTransferController do
 
   @spec aex141_transfers_to(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_to(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
-    contract_transfers_reply(conn, contract_id, {:to, recipient_id})
+    v3? = false
+    contract_transfers_reply(conn, contract_id, {:to, recipient_id}, v3?)
   end
 
   def aex141_transfers_to(conn, %{"contract" => contract_id} = params) do
@@ -143,7 +168,7 @@ defmodule AeMdwWeb.AexnTransferController do
          %Conn{assigns: assigns} = conn,
          contract_id,
          {filter_by, account_id},
-         v3? \\ false
+         v3? \\ true
        ) do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
