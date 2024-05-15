@@ -154,7 +154,6 @@ GET /v3/contracts/logs                    - contract logs
 GET /v3/contracts/calls                   - contract calls
 
 GET /v3/names                              - AENS names
-GET /v3/names/search                       - AENS names and auctions filtered by a query
 GET /v3/names/:id/auction                  - AENS name auction
 GET /v3/names/:id/pointers                 - AENS name pointer
 GET /v3/names/:id/pointees                 - AENS name pointees
@@ -1474,6 +1473,54 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/names?state=active&by=activation&
     }
   ],
   "next": "/v3/names?by=activation&cursor=161350-internetofvalue.chain&direction=forward&limit=2&state=active",
+  "prev": null
+}
+```
+
+Names can also be filtered by prefix, as long as they are NOT filtered by owner and ordered by name (e.g. `?prefix=somenam&by=name`).
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names?prefix=aaa&by=name&limit=2" | jq '.'
+{
+  "data": [
+    {
+      "active": false,
+      "name": "aaaz.test",
+      "hash": "nm_28ZLaroYYUQ1B5MDa7FiKz2F7mSvrtPXSEfavbqXbg2y1ia28j",
+      "revoke": null,
+      "name_fee": 134626900000000000000,
+      "auction_timeout": 0,
+      "pointers": {},
+      "auction": null,
+      "expire_height": 130718,
+      "active_from": 80718,
+      "approximate_activation_time": 1557907284835,
+      "approximate_expire_time": 1566948271337,
+      "ownership": {
+        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+      }
+    },
+    {
+      "active": false,
+      "name": "aaay.test",
+      "hash": "nm_2CtkYRVTtqnK6rf9Tc7AyyiHtcTFaustEzRLArAMiWUzXdAhTT",
+      "revoke": null,
+      "name_fee": 134626900000000000000,
+      "auction_timeout": 0,
+      "pointers": {},
+      "auction": null,
+      "expire_height": 130714,
+      "active_from": 80714,
+      "approximate_activation_time": 1557906623769,
+      "approximate_expire_time": 1566948022162,
+      "ownership": {
+        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+      }
+    }
+  ],
+  "next": "/v3/names?by=name&cursor=aaaq.test&prefix=aaa",
   "prev": null
 }
 ```

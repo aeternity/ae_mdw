@@ -257,6 +257,13 @@ paths:
           schema:
             type: string
             example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+        - name: prefix
+          in: query
+          description: Name prefix filter (case insensitive). Requires by=name parameter
+          required: false
+          schema:
+            type: string
+            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
         - name: state
           in: query
           description: Activation state of the name (active or inactive)

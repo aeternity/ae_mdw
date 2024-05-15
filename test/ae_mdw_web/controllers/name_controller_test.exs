@@ -1666,6 +1666,55 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "it gets names filtered by prefix when by=name", %{conn: conn, store: store} do
+      first_name = "x.chain"
+      second_name = "o1#{first_name}"
+      third_name = "o3#{first_name}"
+      fourth_name = "x.chain"
+      key_hash = <<0::256>>
+
+      inactive_name =
+        Model.name(
+          index: first_name,
+          active: 1,
+          expire: 3,
+          revoke: nil,
+          owner: <<0::256>>,
+          auction_timeout: 1
+        )
+
+      active_name = Model.name(inactive_name, index: third_name)
+
+      store =
+        store
+        |> Store.put(Model.InactiveName, inactive_name)
+        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
+        |> Store.put(Model.ActiveName, Model.name(inactive_name, index: fourth_name))
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [:passthrough], [pointers: fn _state, _mnme -> %{} end]},
+        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]},
+        {:aec_hard_forks, [], [protocol_effective_at_height: fn _height -> :lima end]},
+        {:aec_governance, [:passthrough], [name_claim_fee: fn _name, :lima -> 1 end]}
+      ] do
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", by: "name", prefix: "o")
+                 |> json_response(200)
+
+        assert [^third_name, ^second_name] =
+                 Enum.map(names, fn %{"name" => name} -> name end)
+      end
+    end
+
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
