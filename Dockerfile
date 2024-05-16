@@ -50,13 +50,14 @@ COPY --from=aeternity/aeternity:v7.0.0-bundle /home/aeternity/node ./local/rel/a
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
 RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/${NODE_VERSION}/sys.config
-ENV ERL_FLAGS="+JPperf true"
 
 # Check if the config file is OK
 RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
 
 # prepare build dir
 WORKDIR /home/aeternity/node/ae_mdw
+
+ENV ERL_FLAGS="+JMsingle true"
 
 # install hex + rebar
 RUN mix local.hex --force && \
