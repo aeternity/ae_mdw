@@ -461,6 +461,18 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :dex_contract_swap_tokens, @dex_contract_swap_tokens_defaults
 
+  # DEX swap tokens indexed by contract:
+  #     index: {create_txi, txi, log_idx}
+  @type dex_swap_tokens_index() :: {integer(), integer(), integer()}
+  @type dex_swap_tokens ::
+          record(:dex_swap_tokens,
+            index: dex_swap_tokens_index()
+          )
+  @dex_swap_tokens_defaults [
+    index: {-1, -1, -1}
+  ]
+  defrecord :dex_swap_tokens, @dex_swap_tokens_defaults
+
   # AEX9 event balance:
   #     index: {contract_pk, account_pk}
   #     txi: call txi,
@@ -1204,6 +1216,7 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.DexAccountSwapTokens,
       AeMdw.Db.Model.DexContractSwapTokens,
+      AeMdw.Db.Model.DexSwapTokens,
       AeMdw.Db.Model.Aex9BalanceAccount,
       AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.Aex9InitialSupply,
@@ -1316,6 +1329,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.DexAccountSwapTokens), do: :dex_account_swap_tokens
   def record(AeMdw.Db.Model.DexContractSwapTokens), do: :dex_contract_swap_tokens
+  def record(AeMdw.Db.Model.DexSwapTokens), do: :dex_swap_tokens
   def record(AeMdw.Db.Model.Aex9BalanceAccount), do: :aex9_balance_account
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply

@@ -79,6 +79,17 @@ defmodule AeMdwWeb.DexControllerTest do
             Model.dex_contract_swap_tokens(index: {pair_txi, account_pk, txi, log_idx})
           )
           |> Store.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {pair_txi, txi, log_idx})
+          )
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {pair_txi, txi, log_idx},
+              args: [account_pk, account_pk]
+            )
+          )
+          |> Store.put(
             Model.Tx,
             Model.tx(index: txi, id: <<txi::256>>, block_index: {100_000 + i, 0})
           )
@@ -104,6 +115,54 @@ defmodule AeMdwWeb.DexControllerTest do
   describe "swaps" do
     setup %{conn: conn, store: store} do
       {:ok, conn: with_store(conn, store)}
+    end
+
+    test "gets SwapTokens by desc txi", %{conn: conn} do
+      caller_id = encode_account(@account2_pk)
+
+      assert %{"data" => swaps, "next" => next} =
+               conn
+               |> get("/v3/dex/swaps")
+               |> json_response(200)
+
+      assert @default_limit = length(swaps)
+      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+
+      assert %{"data" => next_swaps, "prev" => prev_swaps} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_swaps)
+
+      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+
+      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+
+      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+    end
+
+    test "gets SwapTokens by asc txi", %{conn: conn} do
+      caller_id = encode_account(@account1_pk)
+
+      assert %{"data" => swaps, "next" => next} =
+               conn
+               |> get("/v3/dex/swaps", direction: :forward)
+               |> json_response(200)
+
+      assert @default_limit = length(swaps)
+      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+
+      assert %{"data" => next_swaps, "prev" => prev_swaps} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_swaps)
+
+      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+
+      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+
+      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
     end
 
     test "gets SwapTokens from a caller by desc txi", %{conn: conn} do

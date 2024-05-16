@@ -18,6 +18,7 @@ defmodule AeMdw.Dex do
 
   @account_swaps_table Model.DexAccountSwapTokens
   @contract_swaps_table Model.DexContractSwapTokens
+  @dex_swap_tokens_table Model.DexSwapTokens
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
@@ -63,11 +64,24 @@ defmodule AeMdw.Dex do
   def fetch_swaps_by_contract_id(state, contract_id, pagination, cursor) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}),
-         {:ok, swaps} <- fetch_contract_swaps(state, create_txi, pagination, cursor) do
+         {:ok, swaps} <- fetch_swaps(state, create_txi, pagination, cursor) do
       {:ok, swaps}
     else
       :not_found -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
       err -> err
+    end
+  end
+
+  def fetch_swaps(state, create_txi, pagination, cursor) do
+    with {:ok, cursor} <- deserialize_dex_swaps_cursor(cursor) do
+      state
+      |> build_streamer(
+        @dex_swap_tokens_table,
+        key_boundary(@dex_swap_tokens_table, create_txi),
+        cursor
+      )
+      |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
+      |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     end
   end
 
@@ -117,6 +131,18 @@ defmodule AeMdw.Dex do
     end
   end
 
+  defp build_streamer(state, @dex_swap_tokens_table = table, boundary, cursor) do
+    fn direction ->
+      state
+      |> Collection.stream(table, direction, boundary, cursor)
+      |> Stream.map(fn {create_txi, txi, log_idx} = index ->
+        Model.contract_log(args: [from, _to]) = State.fetch!(state, Model.ContractLog, index)
+
+        {from, create_txi, txi, log_idx}
+      end)
+    end
+  end
+
   defp deserialize_account_cursor(nil), do: {:ok, nil}
 
   defp deserialize_account_cursor(cursor_hex) do
@@ -145,10 +171,40 @@ defmodule AeMdw.Dex do
     end
   end
 
+  defp deserialize_dex_swaps_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_dex_swaps_cursor(cursor_hex) do
+    with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
+         {_from, create_txi, txi, log_idx}
+         when is_integer(create_txi) and is_integer(txi) and is_integer(log_idx) <-
+           :erlang.binary_to_term(cursor_bin) do
+      {:ok, {create_txi, txi, log_idx}}
+    else
+      _invalid_cursor ->
+        {:ok, cursor_bin} = Base.hex_decode32(cursor_hex, padding: false)
+        :erlang.binary_to_term(cursor_bin)
+        {:error, ErrInput.Cursor.exception(value: cursor_hex)}
+    end
+  end
+
   defp serialize_cursor(cursor_tuple) do
     cursor_tuple
     |> :erlang.term_to_binary()
     |> Base.hex_encode32(padding: false)
+  end
+
+  defp key_boundary(@dex_swap_tokens_table, nil) do
+    {
+      {0, 0, 0},
+      {nil, nil, nil}
+    }
+  end
+
+  defp key_boundary(@dex_swap_tokens_table, create_txi) do
+    {
+      {create_txi, 0, 0},
+      {create_txi, nil, nil}
+    }
   end
 
   defp key_boundary({<<_pk::256>> = account_pk, create_txi}) do
