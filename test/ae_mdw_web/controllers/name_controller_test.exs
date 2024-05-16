@@ -1712,6 +1712,15 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert [^third_name, ^second_name] =
                  Enum.map(names, fn %{"name" => name} -> name end)
+
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", by: "name", prefix: "O")
+                 |> json_response(200)
+
+        assert [^third_name, ^second_name] =
+                 Enum.map(names, fn %{"name" => name} -> name end)
       end
     end
 
