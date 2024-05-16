@@ -46,6 +46,7 @@ defmodule AeMdw.Db.Model do
   @typep fname() :: Contract.fname()
   @typep call_tx_args :: Contract.call_tx_args()
   @typep call_tx_res :: Contract.call_tx_res()
+  @typep local_idx() :: Contract.local_idx()
 
   @typep token_id :: AeMdw.Aex141.token_id()
   @typep template_id :: AeMdw.Aex141.template_id()
@@ -432,10 +433,10 @@ defmodule AeMdw.Db.Model do
           )
 
   # DEX swap tokens indexed by account:
-  #     index: {create_txi, account_pk, txi, log_idx}
+  #     index: {account_pk, create_txi, txi, log_idx}
   #     to: address
   #     amount: integer
-  @type dex_account_swap_tokens_index() :: {pubkey(), integer(), integer(), integer()}
+  @type dex_account_swap_tokens_index() :: {pubkey(), txi(), txi(), local_idx()}
   @type dex_account_swap_tokens ::
           record(:dex_account_swap_tokens,
             index: dex_account_swap_tokens_index(),
@@ -451,7 +452,7 @@ defmodule AeMdw.Db.Model do
 
   # DEX swap tokens indexed by contract:
   #     index: {create_txi, account_pk, txi, log_idx}
-  @type dex_contract_swap_tokens_index() :: {integer(), pubkey(), integer(), integer()}
+  @type dex_contract_swap_tokens_index() :: {txi(), pubkey(), txi(), local_idx()}
   @type dex_contract_swap_tokens ::
           record(:dex_contract_swap_tokens,
             index: dex_contract_swap_tokens_index()

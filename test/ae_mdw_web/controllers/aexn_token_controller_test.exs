@@ -230,28 +230,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
      contract_pk2: contract_pk2}
   end
 
-  describe "aex9_count" do
-    test "gets the number of aex9 contracts", %{conn: conn} do
-      assert %{"data" => count} = conn |> get("/v2/aex9/count") |> json_response(200)
-      assert count == 31
-    end
-  end
-
-  describe "aex9_logs_count" do
-    test "gets the number of aex9 contract logs", %{conn: conn} do
-      contract_id = encode_contract(<<200::256>>)
-
-      assert %{"data" => count} =
-               conn |> get("/v2/aex9/#{contract_id}/logs-count") |> json_response(200)
-
-      assert count == 200
-    end
-  end
-
   describe "aex9_tokens" do
     test "gets aex9 tokens backwards by creation", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9", by: "creation") |> json_response(200)
+               conn |> get("/v3/aex9", by: "creation") |> json_response(200)
 
       aex9_txs = aex9_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
 
@@ -273,7 +255,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "gets aex9 tokens forwards by creation", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn
-               |> get("/v2/aex9", direction: "forward", by: "creation")
+               |> get("/v3/aex9", direction: "forward", by: "creation")
                |> json_response(200)
 
       aex9_txs = Enum.map(aex9_tokens, & &1["contract_txi"])
@@ -295,7 +277,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
     test "gets aex9 tokens backwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9") |> json_response(200)
+               conn |> get("/v3/aex9") |> json_response(200)
 
       aex9_names = aex9_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
 
@@ -318,7 +300,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "gets aex9 tokens forwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn
-               |> get("/v2/aex9", direction: "forward")
+               |> get("/v3/aex9", direction: "forward")
                |> json_response(200)
 
       aex9_names = Enum.map(aex9_tokens, & &1["name"])
@@ -344,7 +326,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       prefix = "some-AEX"
 
       assert %{"data" => aex9_tokens} =
-               conn |> get("/v2/aex9", prefix: prefix) |> json_response(200)
+               conn |> get("/v3/aex9", prefix: prefix) |> json_response(200)
 
       assert length(aex9_tokens) > 0
       assert Enum.all?(aex9_tokens, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
@@ -355,13 +337,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => [%{"name" => ^name}]} =
                conn
-               |> get("/v2/aex9", by: "name", exact: name)
+               |> get("/v3/aex9", by: "name", exact: name)
                |> json_response(200)
     end
 
     test "gets aex9 tokens backwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9", by: "symbol") |> json_response(200)
+               conn |> get("/v3/aex9", by: "symbol") |> json_response(200)
 
       aex9_symbols =
         aex9_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
@@ -385,7 +367,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "gets aex9 tokens forwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn
-               |> get("/v2/aex9", direction: "forward", by: "symbol")
+               |> get("/v3/aex9", direction: "forward", by: "symbol")
                |> json_response(200)
 
       aex9_symbols = Enum.map(aex9_tokens, fn %{"symbol" => symbol} -> symbol end)
@@ -410,7 +392,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => aex9_tokens} =
                conn
-               |> get("/v2/aex9", by: "symbol", prefix: prefix)
+               |> get("/v3/aex9", by: "symbol", prefix: prefix)
                |> json_response(200)
 
       assert length(aex9_tokens) > 0
@@ -425,7 +407,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => aex9_tokens} =
                conn
-               |> get("/v2/aex9", by: "symbol", prefix: symbol_prefix)
+               |> get("/v3/aex9", by: "symbol", prefix: symbol_prefix)
                |> json_response(200)
 
       assert length(aex9_tokens) > 0
@@ -440,7 +422,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => [%{"symbol" => ^symbol}]} =
                conn
-               |> get("/v2/aex9", by: "symbol", exact: symbol)
+               |> get("/v3/aex9", by: "symbol", exact: symbol)
                |> json_response(200)
     end
 
@@ -449,20 +431,20 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       error_msg = "invalid cursor: #{cursor}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9", cursor: cursor) |> json_response(400)
+               conn |> get("/v3/aex9", cursor: cursor) |> json_response(400)
     end
 
     test "when invalid order by", %{conn: conn} do
       assert %{"error" => "invalid query: by=pubkey"} =
                conn
-               |> get("/v2/aex9", by: "pubkey")
+               |> get("/v3/aex9", by: "pubkey")
                |> json_response(400)
     end
   end
 
   describe "aex141_count" do
     test "gets the number of aex141 contracts", %{conn: conn} do
-      assert %{"data" => count} = conn |> get("/v2/aex141/count") |> json_response(200)
+      assert %{"data" => count} = conn |> get("/v3/aex141/count") |> json_response(200)
       assert count == 31
     end
   end
@@ -674,7 +656,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "returns an aex9 token", %{conn: conn} do
       assert %{"contract_id" => @aex9_token_id} =
                conn
-               |> get("/v2/aex9/#{@aex9_token_id}")
+               |> get("/v3/aex9/#{@aex9_token_id}")
                |> json_response(200)
     end
 
@@ -684,7 +666,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{non_existent_id}")
+               |> get("/v3/aex9/#{non_existent_id}")
                |> json_response(404)
     end
 
@@ -693,7 +675,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       error_msg = "invalid id: #{invalid_id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9/#{invalid_id}") |> json_response(400)
+               conn |> get("/v3/aex9/#{invalid_id}") |> json_response(400)
     end
 
     test "displays tokens with meta info out of gas error", %{conn: conn} do
@@ -721,7 +703,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                "name" => "out_of_gas_error",
                "symbol" => "out_of_gas_error",
                "decimals" => nil
-             } = conn |> with_store(store) |> get("/v2/aex9/#{contract_id}") |> json_response(200)
+             } = conn |> with_store(store) |> get("/v3/aex9/#{contract_id}") |> json_response(200)
     end
 
     test "displays tokens with meta info format error", %{conn: conn} do
@@ -746,7 +728,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                "name" => "format_error",
                "symbol" => "format_error",
                "decimals" => nil
-             } = conn |> with_store(store) |> get("/v2/aex9/#{contract_id}") |> json_response(200)
+             } = conn |> with_store(store) |> get("/v3/aex9/#{contract_id}") |> json_response(200)
     end
   end
 
@@ -754,7 +736,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "returns an aex141 token", %{conn: conn} do
       assert %{"contract_id" => @aex141_token_id} =
                conn
-               |> get("/v2/aex141/#{@aex141_token_id}")
+               |> get("/v3/aex141/#{@aex141_token_id}")
                |> json_response(200)
     end
 
@@ -764,7 +746,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex141/#{non_existent_id}")
+               |> get("/v3/aex141/#{non_existent_id}")
                |> json_response(404)
     end
 
@@ -773,7 +755,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       error_msg = "invalid id: #{invalid_id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex141/#{invalid_id}") |> json_response(400)
+               conn |> get("/v3/aex141/#{invalid_id}") |> json_response(400)
     end
 
     test "displays token with meta info error", %{conn: conn} do
@@ -781,8 +763,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
 
       %{store: store} =
-        Contract.aexn_creation_write(
-          conn.assigns.state,
+        conn.assigns.state
+        |> Contract.aexn_creation_write(
           :aex141,
           aexn_meta_info,
           contract_pk,
@@ -792,6 +774,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
             "ext2"
           ]
         )
+        |> State.put(Model.Tx, Model.tx(index: 12_345_678, id: <<12_345_678::256>>))
 
       contract_id = encode_contract(contract_pk)
 
@@ -803,7 +786,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                "metadata_type" => nil,
                "extensions" => ["ext1", "ext2"]
              } =
-               conn |> with_store(store) |> get("/v2/aex141/#{contract_id}") |> json_response(200)
+               conn |> with_store(store) |> get("/v3/aex141/#{contract_id}") |> json_response(200)
     end
   end
 
@@ -815,7 +798,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances", direction: :forward)
+               |> get("/v3/aex9/#{contract_id}/balances", direction: :forward)
                |> json_response(200)
 
       assert Enum.all?(Enum.with_index(balances, 1), fn {balance, i} ->
@@ -856,7 +839,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances", by: "amount")
+               |> get("/v3/aex9/#{contract_id}/balances", by: "amount")
                |> json_response(200)
 
       assert Enum.each(Enum.with_index(balances, 1), fn {balance, i} ->
@@ -895,7 +878,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances", limit: limit)
+               |> get("/v3/aex9/#{contract_id}/balances", limit: limit)
                |> json_response(200)
 
       assert Enum.all?(balances, fn %{"contract_id" => ct_id} -> ct_id == contract_id end)
@@ -918,7 +901,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => "invalid query: by=foo"} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances", by: "foo")
+               |> get("/v3/aex9/#{contract_id}/balances", by: "foo")
                |> json_response(400)
     end
   end
@@ -959,7 +942,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         assert %{"account" => ^account_id, "amount" => ^amount, "contract" => ^contract_id} =
                  conn
-                 |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+                 |> get("/v3/aex9/#{contract_id}/balances/#{account_id}")
                  |> json_response(200)
       end
     end
@@ -999,7 +982,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         assert %{"account" => ^account_id, "amount" => ^amount, "contract" => ^contract_id} =
                  conn
-                 |> get("/v2/aex9/#{contract_id}/balances/#{account_id}",
+                 |> get("/v3/aex9/#{contract_id}/balances/#{account_id}",
                    hash: encode(:micro_block_hash, block_hash)
                  )
                  |> json_response(200)
@@ -1014,7 +997,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> get("/v3/aex9/#{contract_id}/balances/#{account_id}")
                |> json_response(400)
     end
 
@@ -1026,7 +1009,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> get("/v3/aex9/#{contract_id}/balances/#{account_id}")
                |> json_response(400)
     end
 
@@ -1038,7 +1021,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> get("/v3/aex9/#{contract_id}/balances/#{account_id}")
                |> json_response(400)
     end
   end
@@ -1058,7 +1041,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         assert %{"error" => "timeout"} =
                  conn
-                 |> get("/v2/aex9/account-balances/#{account_id}")
+                 |> get("/v3/accounts/#{account_id}/aex9/balances")
                  |> json_response(503)
       end
     end
@@ -1077,7 +1060,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         assert %{"data" => balances, "next" => next} =
                  conn
-                 |> get("/v2/aex9/account-balances/#{account_id}")
+                 |> get("/v3/accounts/#{account_id}/aex9/balances")
                  |> json_response(200)
 
         assert Enum.all?(Enum.with_index(balances), fn {balance, i} ->
@@ -1125,7 +1108,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/account-balances/#{account_id}")
+               |> get("/v3/accounts/#{account_id}/aex9/balances")
                |> json_response(400)
     end
   end

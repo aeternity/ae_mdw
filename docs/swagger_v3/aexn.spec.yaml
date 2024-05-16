@@ -53,7 +53,7 @@ schemas:
       - symbol
     title: Aex141Response
     type: object
-  Aex141OwnedTokenResponse:
+  Aex141TokenResponse:
     description: Response Schema for owners of AEX-141 tokens
     example:
       contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
@@ -450,11 +450,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /aex141/{contractId}/owners:
+  /aex141/{contractId}/tokens:
     get:
       deprecated: false
       description: Get owners of tokens of a AEX-141 contract.
-      operationId: GetAex141ContractOwners
+      operationId: GetAex141ContractTokens
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -477,7 +477,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Aex141OwnedTokenResponse'
+                          $ref: '#/components/schemas/Aex141TokenResponse'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -562,7 +562,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /aex141/owned-nfts/{accountId}:
+  /accounts/{accountId}/aex141/tokens:
     get:
       deprecated: false
       description: Get tokens owned by an account.
@@ -685,33 +685,6 @@ paths:
               schema:
                 type: integer
                 description: Amount of contracts
-  /aex9/{contractId}/logs-count:
-    get:
-      deprecated: false
-      description: Get AEX9 token events count.
-      operationId: GetAex9LogsCount
-      parameters:
-        - description: Contract id
-          in: path
-          name: contractId
-          required: true
-          schema:
-            type: string
-            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
-      responses:
-        '200':
-          description: Returns the number of events emmited so far
-          content:
-            application/json:
-              schema:
-                type: integer
-                description: Amount of log events
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /aex9/{contractId}/balances:
     get:
       deprecated: false
@@ -812,7 +785,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /aex9/account-balances/{account_id}:
+  /accounts/{accountId}/aex9/balances:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account on the last block.
