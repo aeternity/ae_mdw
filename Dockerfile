@@ -14,11 +14,14 @@
 #
 ARG ELIXIR_VERSION=1.16.2
 ARG OTP_VERSION=26.2.4
+ARG NODE_VERSION=7.0.0
 ARG DEBIAN_VERSION=bullseye-20240408-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
+ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
+FROM ${NODE_IMAGE} as aeternity
 FROM ${BUILDER_IMAGE} as builder
 
 # install build dependencies
@@ -42,11 +45,12 @@ WORKDIR /home/aeternity/node
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
 ENV NODEROOT=/home/aeternity/node/local
-ARG NODE_VERSION=7.0.0
+ARG NODE_VERSION
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 
-COPY --from=aeternity/aeternity:v7.0.0-bundle /home/aeternity/node ./local/rel/aeternity
+
+COPY --from=aeternity /home/aeternity/node ./local/rel/aeternity
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
 RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/${NODE_VERSION}/sys.config
@@ -57,6 +61,7 @@ RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
 # prepare build dir
 WORKDIR /home/aeternity/node/ae_mdw
 
+# This is necessary for QEMU build, otherwise it crashes when building for another platform: https://elixirforum.com/t/mix-deps-get-memory-explosion-when-doing-cross-platform-docker-build/57157
 ENV ERL_FLAGS="+JMsingle true"
 
 # install hex + rebar
@@ -137,7 +142,7 @@ COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
 COPY ./docker/aeternity-dev.yaml /home/aeternity/aeternity-dev.yaml
 COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
 
-COPY --from=aeternity/aeternity:v7.0.0-bundle /usr/local/lib/librocksdb.so.7.10.2 /usr/local/lib/
+COPY --from=aeternity /usr/local/lib/librocksdb.so.7.10.2 /usr/local/lib/
 
 RUN ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7.10     && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7     && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so     && ldconfig
 RUN chmod +x /home/aeternity/healthcheck.sh
