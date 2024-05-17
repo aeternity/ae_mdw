@@ -144,7 +144,10 @@ COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
 
 COPY --from=aeternity /usr/local/lib/librocksdb.so.7.10.2 /usr/local/lib/
 
-RUN ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7.10     && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7     && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so     && ldconfig
+RUN ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7.10 \
+    && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so.7 \
+    && ln -fs librocksdb.so.7.10.2 /usr/local/lib/librocksdb.so \
+    && ldconfig
 RUN chmod +x /home/aeternity/healthcheck.sh
 
 # Create data directories in advance so that volumes can be mounted in there
