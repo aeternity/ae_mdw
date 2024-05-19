@@ -78,7 +78,7 @@ defmodule AeMdw.Names do
     scope = deserialize_scope(range)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
-         :ok <- validate_params(filters, order_by) do
+         :ok <- validate_height_filters(filters, order_by) do
       last_micro_time = DbUtil.last_gen_and_time(state)
 
       paginated_names =
@@ -97,7 +97,8 @@ defmodule AeMdw.Names do
   def fetch_names(state, pagination, nil, :name, query, cursor, opts) do
     cursor = deserialize_name_cursor(cursor)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         :ok <- validate_name_filters(filters) do
       last_micro_time = DbUtil.last_gen_and_time(state)
 
       paginated_names =
@@ -286,18 +287,24 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_name_streamer(%{state: "inactive"}, state, cursor) do
+  defp build_name_streamer(%{state: "inactive"} = filters, state, cursor) do
+    prefix = Map.get(filters, :prefix, "")
+    scope = {prefix, prefix <> Util.max_256bit_bin()}
+
     fn direction ->
       state
-      |> Collection.stream(@table_inactive, direction, nil, cursor)
+      |> Collection.stream(@table_inactive, direction, scope, cursor)
       |> Stream.map(fn key -> {key, :inactive} end)
     end
   end
 
-  defp build_name_streamer(%{state: "active"}, state, cursor) do
+  defp build_name_streamer(%{state: "active"} = filters, state, cursor) do
+    prefix = Map.get(filters, :prefix, "")
+    scope = {prefix, prefix <> Util.max_256bit_bin()}
+
     fn direction ->
       state
-      |> Collection.stream(@table_active, direction, nil, cursor)
+      |> Collection.stream(@table_active, direction, scope, cursor)
       |> Stream.map(fn key -> {key, :active} end)
     end
   end
@@ -314,16 +321,19 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_name_streamer(_query, state, cursor) do
+  defp build_name_streamer(filters, state, cursor) do
+    prefix = Map.get(filters, :prefix, "")
+    scope = {prefix, prefix <> Util.max_256bit_bin()}
+
     fn direction ->
       active_stream =
         state
-        |> Collection.stream(@table_active, direction, nil, cursor)
+        |> Collection.stream(@table_active, direction, scope, cursor)
         |> Stream.map(fn key -> {key, :active} end)
 
       inactive_stream =
         state
-        |> Collection.stream(@table_inactive, direction, nil, cursor)
+        |> Collection.stream(@table_inactive, direction, scope, cursor)
         |> Stream.map(fn key -> {key, :inactive} end)
 
       Collection.merge([active_stream, inactive_stream], direction)
@@ -861,6 +871,9 @@ defmodule AeMdw.Names do
 
   defp convert_param({"state", state}) when state in @states, do: {:ok, {:state, state}}
 
+  defp convert_param({"prefix", prefix}) when is_binary(prefix),
+    do: {:ok, {:prefix, String.downcase(prefix)}}
+
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
   defp get_index(Model.auction_bid(index: plain_name)), do: plain_name
@@ -900,7 +913,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp validate_params(filters, :activation) do
+  defp validate_height_filters(filters, :activation) do
     case Map.get(filters, :state) do
       "active" ->
         :ok
@@ -913,5 +926,17 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp validate_params(_filters, _order_by), do: :ok
+  defp validate_height_filters(%{prefix: _prefix}, _order_by),
+    do:
+      {:error,
+       ErrInput.Query.exception(
+         value: "can't filter by prefix when ordering by activation, deactivation or expiration"
+       )}
+
+  defp validate_height_filters(_filters, _order_by), do: :ok
+
+  defp validate_name_filters(%{prefix: _prefix, owned_by: _owner_pk}),
+    do: {:error, ErrInput.Query.exception(value: "can't filter by owner and prefix")}
+
+  defp validate_name_filters(_filters), do: :ok
 end
