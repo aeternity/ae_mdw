@@ -1,4 +1,4 @@
-defmodule AeMdw.Migrations.DexEvents do
+defmodule AeMdw.Migrations.DexNewSwapsTable do
   # credo:disable-for-this-file
   @moduledoc """
   Index dex events.
@@ -85,7 +85,7 @@ defmodule AeMdw.Migrations.DexEvents do
             State.exists?(state, Model.AexnContract, {:aex9, token2_pk}) and
             match?({:ok, _pair_create_txi}, Origin.tx_index(state, {:contract, pair_pk}))
         end)
-        |> Enum.map(fn Model.contract_log(args: [pair_pk, token1_pk, token2_pk]) ->
+        |> Enum.map(fn Model.contract_log(args: [pair_pk, _token1_pk, _token2_pk]) ->
           pair_pk
         end)
 
@@ -98,8 +98,6 @@ defmodule AeMdw.Migrations.DexEvents do
     with true <- String.printable?(amounts),
          %{token1: token1_pk} <- DexCache.get_pair(contract_pk),
          {:ok, create_txi} <- Origin.tx_index(state, {:contract, token1_pk}) do
-      amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
-
       [
         WriteMutation.new(
           Model.DexSwapTokens,
@@ -114,11 +112,5 @@ defmodule AeMdw.Migrations.DexEvents do
 
         []
     end
-  end
-
-  defp swap_tokens_mutations(_state, _pk, _txi, _idx, args, _amounts) do
-    Log.warn("[write_swap_tokens] args mismatch #{inspect(args)}")
-
-    []
   end
 end
