@@ -77,6 +77,8 @@ defmodule AeMdwWeb.Router do
       get "/contracts/:id", ContractController, :contract
 
       get "/accounts/:id/activities", ActivityController, :account_activities
+      get "/accounts/:account_id/aex9/balances", AexnTokenController, :aex9_account_balances
+      get "/accounts/:account_id/aex141/tokens", Aex141Controller, :owned_nfts
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
@@ -100,14 +102,19 @@ defmodule AeMdwWeb.Router do
       get "/transfers", TransferController, :transfers
       get "/totalstats/", StatsController, :total_stats
       get "/status", UtilController, :status
+
+      get "/aex9", AexnTokenController, :aex9_contracts
+      get "/aex9/:contract_id", AexnTokenController, :aex9_contract
+      get "/aex9/:contract_id/balances", AexnTokenController, :aex9_event_balances
+      get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
+      get "/aex9/:contract_id/transfers", AexnTransferController, :aex9_contract_transfers
+
       get "/aex141", AexnTokenController, :aex141_contracts
       get "/aex141/count", AexnTokenController, :aex141_count
-      get "/aex141/owned-nfts/:account_id", Aex141Controller, :owned_nfts
       get "/aex141/transfers", AexnTransferController, :aex141_transfers
       get "/aex141/:contract_id", AexnTokenController, :aex141_contract
-      get "/aex141/:contract_id/owner/:token_id", Aex141Controller, :nft_owner
-      get "/aex141/:contract_id/metadata/:token_id", Aex141Controller, :nft_metadata
-      get "/aex141/:contract_id/owners", Aex141Controller, :collection_owners
+      get "/aex141/:contract_id/token/:token_id", Aex141Controller, :nft_token
+      get "/aex141/:contract_id/tokens", Aex141Controller, :collection_tokens
       get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
       get "/aex141/:contract_id/transfers", AexnTransferController, :aex141_transfers
 
@@ -115,7 +122,6 @@ defmodule AeMdwWeb.Router do
           Aex141Controller,
           :collection_template_tokens
 
-      get "/aex9/:contract_id/transfers", AexnTransferController, :aex9_contract_transfers
       get "/dex/swaps", DexController, :swaps
       get "/dex/:contract_id/swaps", DexController, :swaps_for_contract
 
