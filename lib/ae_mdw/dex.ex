@@ -72,7 +72,7 @@ defmodule AeMdw.Dex do
     end
   end
 
-  @spec fetch_swaps(State.t(), integer(), pagination(), cursor()) ::
+  @spec fetch_swaps(State.t(), integer() | nil, pagination(), cursor()) ::
           {:ok, paginated_contract_swaps()} | {:error, Error.t()}
   def fetch_swaps(state, create_txi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_dex_swaps_cursor(cursor) do
