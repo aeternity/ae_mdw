@@ -181,8 +181,6 @@ defmodule AeMdw.Dex do
       {:ok, {create_txi, txi, log_idx}}
     else
       _invalid_cursor ->
-        {:ok, cursor_bin} = Base.hex_decode32(cursor_hex, padding: false)
-        :erlang.binary_to_term(cursor_bin)
         {:error, ErrInput.Cursor.exception(value: cursor_hex)}
     end
   end
