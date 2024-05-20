@@ -562,6 +562,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /aex141/{contractId}/transfers:
+    get:
+      deprecated: false
+      description: Get AEX-141 transfers on a contract.
+      operationId: GetAex141ContractTransfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Contract id
+          in: path
+          name: contractId
+          required: true
+          schema:
+            type: string
+            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
+        - description: From account
+          in: path
+          name: from
+          required: false
+          schema:
+            type: string
+            example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+        - description: To account
+          in: path
+          name: to
+          required: false
+          schema:
+            type: string
+            example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+      responses:
+        '200':
+          description: Returns paginated AEX-141 transfers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Aex141TransferEvent'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /accounts/{accountId}/aex141/tokens:
     get:
       deprecated: false

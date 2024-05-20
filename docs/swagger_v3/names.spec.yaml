@@ -48,6 +48,12 @@ schemas:
       expire_height:
         type: integer
         example: 362026
+      pointers:
+        type: object
+        properties:
+          account_pubkey:
+            type: string
+            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
       auction:
         $ref: '#/components/schemas/Auction'
         nullable: true
