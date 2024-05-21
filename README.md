@@ -147,6 +147,7 @@ GET /v3/transactions/count                      - total number of transactions (
 
 GET /v3/accounts/:id/activities             - transactions, internal contract calls, AEX-N and internal transfers involving an account
 GET /v3/accounts/:account_id/aex9/balances  - aex9 account balances
+GET /v3/accounts/:account_id/names/pointees - AENS names that point to the account
 
 GET /v3/contracts                         - contracts
 GET /v3/contracts/:id                     - contract by id
@@ -156,7 +157,6 @@ GET /v3/contracts/calls                   - contract calls
 GET /v3/names                              - AENS names
 GET /v3/names/:id/auction                  - AENS name auction
 GET /v3/names/:id/pointers                 - AENS name pointer
-GET /v3/names/:id/pointees                 - AENS name pointees
 GET /v3/names/auctions                     - all AENS name auctions
 GET /v3/names/:id                          - AENS name state and transaction history
 GET /v3/names/:id/claims                   - AENS name claims history
@@ -1758,28 +1758,89 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/names/auctions/meta.chain" | jq '
 }
 ```
 
-### `/v3/names/:name/pointees`
+### `/v3/accounts/:account_id/names/pointees`
 
-Returns names pointing to a particular pubkey, partitioned into `active` and `inactive` sets.
+Returns names pointing to a particular pubkey. Can be scoped by gen using `scope=gen:100-200` query parameter.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C/pointees" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/accounts/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C/names/pointees?limit=3" | jq '.'
 {
-  "active": {
-    "account_pubkey": [
-      {
-        "active_from": 279555,
-        "expire_height": 329558,
-        "name": "wwwbeaconoidcom.chain",
-        "update": {
-          "block_height": 279558,
-          "micro_index": 51,
-          "tx_index": 12942695
-        }
-      }
-    ]
-  },
-  "inactive": {}
+  "data": [
+    {
+      "name": "star.chain",
+      "key": "account_pubkey",
+      "tx": {
+        "account_id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+        "client_ttl": 10500,
+        "fee": 17860000000000,
+        "name_id": "nm_dRChkcZn62toYnPZVjgpi5UsnyMZdHH3zw9ah2JR9ESFga5qK",
+        "name_ttl": 50000,
+        "nonce": 245,
+        "pointers": [
+          {
+            "id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+            "key": "account_pubkey"
+          }
+        ],
+        "ttl": 272285
+      },
+      "block_hash": "mh_2ksi3YAh6oYviVooxn93F6vMrYoGhBuX4LgZnBUHszYJSPx5eT",
+      "source_tx_type": "NameUpdateTx",
+      "source_tx_hash": "th_YfXgjU5LPonGzZRSNedHtzqZLtSLbuorbBV9T2iCPQVcATRNM",
+      "block_time": 1592458627198,
+      "block_height": 271786
+    },
+    {
+      "name": "store.chain",
+      "key": "account_pubkey",
+      "tx": {
+        "account_id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+        "client_ttl": 10500,
+        "fee": 17860000000000,
+        "name_id": "nm_2PMNtzqTk38rEMmoVAuFNSJtWQgdtREDWDau497ofQW4XvRydC",
+        "name_ttl": 50000,
+        "nonce": 244,
+        "pointers": [
+          {
+            "id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+            "key": "account_pubkey"
+          }
+        ],
+        "ttl": 272285
+      },
+      "block_hash": "mh_jKTG4ThGE2dFyoKDBi2AUgkHrBi8LQEF5NuD2WDuX5jJmpT8n",
+      "source_tx_type": "NameUpdateTx",
+      "source_tx_hash": "th_2ccvwv8sd4f7UgjCETvmG8wEx5ZSa7wnYzuU3yUyVSJkjhz3Lq",
+      "block_time": 1592458574738,
+      "block_height": 271785
+    },
+    {
+      "name": "aepps.chain",
+      "key": "account_pubkey",
+      "tx": {
+        "account_id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+        "client_ttl": 10500,
+        "fee": 17860000000000,
+        "name_id": "nm_zJVQvLaC3DPVKTdrYXvrB8YpQpQFqN6drxUmGbyvTQQWjAcAf",
+        "name_ttl": 50000,
+        "nonce": 241,
+        "pointers": [
+          {
+            "id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+            "key": "account_pubkey"
+          }
+        ],
+        "ttl": 271240
+      },
+      "block_hash": "mh_SG6qWMrJEtbjfFiUJLeR7KaU5q3GNMMrMCLM1MYEQcafLF3jU",
+      "source_tx_type": "NameUpdateTx",
+      "source_tx_hash": "th_25nTyhVyLWRwgnkh3VJZnBcNvWpQgEDq1azv3RFyRJXs5eqauV",
+      "block_time": 1592269558743,
+      "block_height": 270740
+    }
+  ],
+  "next": "/v3/accounts/ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx/names/pointees?cursor=276059-0-12703951-0-YWNjb3VudF9wdWJrZXk&limit=3",
+  "prev": null
 }
 ```
 
@@ -2579,6 +2640,110 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles?state=active&limit=1" | j
     }
   ],
   "next": "/v3/oracles?state=active&cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&limit=1",
+  "prev": null
+}
+```
+
+### `/v3/oracle/:id/queries`
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM/queries" | jq '.'
+{
+  "data": [
+    {
+      "response": {
+        "height": 4662,
+        "block_hash": "mh_N2Lg6sLvnHP3eGNp4NB15CiUP3N4TbG5jTjY69HaECs33Z5MS",
+        "query_id": "oq_fKwkWDh1Ze4iWGaMBjGCu69LKNkzYwndrcnPwLatVDdWe3MF9",
+        "block_time": 1544195139953,
+        "source_tx_hash": "th_8Se3Gxt1SYUL7jBAxB33KXDSmp4nh282JqF16CVUmb7wBCvoy",
+        "source_tx_type": "OracleRespondTx",
+        "fee": 20000,
+        "nonce": 198,
+        "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "response": "T3JhY2xlcyBpbiBBZXRlcm5pdHkgYXJlIHdvcmtpbmcu",
+        "response_ttl": {
+          "type": "delta",
+          "value": 1000
+        },
+        "ttl": 0
+      },
+      "height": 4662,
+      "block_hash": "mh_vMjtRSPkkkZFhdWcB7Qs2eCWx7deLShL3sW8ANmjijTS5Kmrt",
+      "query_id": "oq_fKwkWDh1Ze4iWGaMBjGCu69LKNkzYwndrcnPwLatVDdWe3MF9",
+      "block_time": 1544195030464,
+      "source_tx_hash": "th_VNYE1rRfjPD66hjgGUBzaqwdGm4PPmzULZAcqnLcWMvrSWehz",
+      "source_tx_type": "OracleQueryTx",
+      "fee": 20000,
+      "nonce": 197,
+      "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+      "query": "QXJlIG9yYWNsZXMgaW4gYWV0ZXJuaXR5IHdvcmtpbmc/",
+      "query_fee": 20000,
+      "query_ttl": {
+        "type": "delta",
+        "value": 1000
+      },
+      "response_ttl": {
+        "type": "delta",
+        "value": 1000
+      },
+      "sender_id": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+      "ttl": 0
+    }
+  ],
+  "next": null,
+  "prev": null
+}
+```
+
+### `/v3/oracle/:id/responses`
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM/responses" | jq '.'
+{
+  "data": [
+    {
+      "height": 4662,
+      "block_hash": "mh_N2Lg6sLvnHP3eGNp4NB15CiUP3N4TbG5jTjY69HaECs33Z5MS",
+      "query": {
+        "height": 4662,
+        "block_hash": "mh_vMjtRSPkkkZFhdWcB7Qs2eCWx7deLShL3sW8ANmjijTS5Kmrt",
+        "query_id": "oq_fKwkWDh1Ze4iWGaMBjGCu69LKNkzYwndrcnPwLatVDdWe3MF9",
+        "block_time": 1544195030464,
+        "source_tx_hash": "th_VNYE1rRfjPD66hjgGUBzaqwdGm4PPmzULZAcqnLcWMvrSWehz",
+        "source_tx_type": "OracleQueryTx",
+        "fee": 20000,
+        "nonce": 197,
+        "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "query": "QXJlIG9yYWNsZXMgaW4gYWV0ZXJuaXR5IHdvcmtpbmc/",
+        "query_fee": 20000,
+        "query_ttl": {
+          "type": "delta",
+          "value": 1000
+        },
+        "response_ttl": {
+          "type": "delta",
+          "value": 1000
+        },
+        "sender_id": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "ttl": 0
+      },
+      "query_id": "oq_fKwkWDh1Ze4iWGaMBjGCu69LKNkzYwndrcnPwLatVDdWe3MF9",
+      "block_time": 1544195139953,
+      "source_tx_hash": "th_8Se3Gxt1SYUL7jBAxB33KXDSmp4nh282JqF16CVUmb7wBCvoy",
+      "source_tx_type": "OracleRespondTx",
+      "fee": 20000,
+      "nonce": 198,
+      "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+      "response": "T3JhY2xlcyBpbiBBZXRlcm5pdHkgYXJlIHdvcmtpbmcu",
+      "response_ttl": {
+        "type": "delta",
+        "value": 1000
+      },
+      "ttl": 0
+    }
+  ],
+  "next": null,
   "prev": null
 }
 ```

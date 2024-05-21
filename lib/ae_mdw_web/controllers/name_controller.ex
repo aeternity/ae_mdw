@@ -37,7 +37,17 @@ defmodule AeMdwWeb.NameController do
       end)
 
   @spec pointees(Conn.t(), map()) :: Conn.t()
-  def pointees(conn, %{"id" => ident}),
+  def pointees(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
+    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_pointees} <-
+           Names.fetch_pointees(state, account_id, pagination, scope, cursor) do
+      Util.render(conn, paginated_pointees)
+    end
+  end
+
+  @spec pointees_v2(Conn.t(), map()) :: Conn.t()
+  def pointees_v2(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
 
   @spec name(Conn.t(), map()) :: Conn.t()

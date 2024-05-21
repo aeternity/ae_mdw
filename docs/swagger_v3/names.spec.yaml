@@ -451,7 +451,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
-  /names/{id}/pointees:
+  /accounts/{id}/names/pointees:
     get:
       deprecated: false
       description: Get name pointees
@@ -459,7 +459,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: The name
+          description: The account that names point to
           required: true
           schema:
             type: string
