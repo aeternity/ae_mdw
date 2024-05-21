@@ -430,6 +430,10 @@ defmodule AeMdw.Db.Contract do
         Model.DexContractSwapTokens,
         Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
       )
+      |> State.put(
+        Model.DexSwapTokens,
+        Model.dex_swap_tokens(index: {create_txi, txi, idx})
+      )
     else
       reason ->
         Log.warn(

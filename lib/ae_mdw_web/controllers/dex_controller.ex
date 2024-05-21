@@ -47,6 +47,14 @@ defmodule AeMdwWeb.DexController do
     end
   end
 
+  def swaps(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor} = assigns
+
+    with {:ok, swaps} <- Dex.fetch_swaps(state, nil, pagination, cursor) do
+      Util.render(conn, swaps, &render_swap(state, &1))
+    end
+  end
+
   @spec swaps_for_contract(Conn.t(), map()) :: Conn.t()
   def swaps_for_contract(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
