@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.76.0](https://www.github.com/aeternity/ae_mdw/compare/v1.75.0...v1.76.0) (2024-05-21)
+
+
+### Features
+
+* add aex141 contract transfers to v3 api ([#1770](https://www.github.com/aeternity/ae_mdw/issues/1770)) ([76d52c3](https://www.github.com/aeternity/ae_mdw/commit/76d52c3dd58663ee0dfb096cf5e72aa51dd4c74e))
+* add route for dex swaps by contract_id ([#1762](https://www.github.com/aeternity/ae_mdw/issues/1762)) ([e3ce830](https://www.github.com/aeternity/ae_mdw/commit/e3ce8301e54415b5249740547073e19b9e7d1e8d))
+* allow filtering names by prefix (case-insenstive) ([#1772](https://www.github.com/aeternity/ae_mdw/issues/1772)) ([bd78e3c](https://www.github.com/aeternity/ae_mdw/commit/bd78e3c51a4987fe86bd0daa1368ec2222444aca))
+* dex new swaps table ([#1775](https://www.github.com/aeternity/ae_mdw/issues/1775)) ([f7e2c09](https://www.github.com/aeternity/ae_mdw/commit/f7e2c09d7a91471166f67c915375fa8a8e0f3adb))
+* restructure aexn routing for v3 ([#1774](https://www.github.com/aeternity/ae_mdw/issues/1774)) ([011c4b4](https://www.github.com/aeternity/ae_mdw/commit/011c4b4a954d54b38f506bff2c2d49e18aa39e28))
+
+
+### Bug Fixes
+
+* arm docker incompatibility ([#1773](https://www.github.com/aeternity/ae_mdw/issues/1773)) ([826b877](https://www.github.com/aeternity/ae_mdw/commit/826b877c5ec40b5f119f98a3769ce855b68e3a58))
+* handle empty transactions count ([#1766](https://www.github.com/aeternity/ae_mdw/issues/1766)) ([3d55193](https://www.github.com/aeternity/ae_mdw/commit/3d551936212377b4b52b1851ae9b5897c24d56d6))
+* make all operationIds in swagger_v3 PascalCase ([#1741](https://www.github.com/aeternity/ae_mdw/issues/1741)) ([3dc584e](https://www.github.com/aeternity/ae_mdw/commit/3dc584e95365b836255994b158c1588ac8f4c976))
+
+
+### Miscellaneous
+
+* update credo to get rid of warnings ([#1769](https://www.github.com/aeternity/ae_mdw/issues/1769)) ([f00fa29](https://www.github.com/aeternity/ae_mdw/commit/f00fa294c6dff991fce3a248b593e7c9183efc2a))
+* update openapi schema ([#1771](https://www.github.com/aeternity/ae_mdw/issues/1771)) ([cb78b3e](https://www.github.com/aeternity/ae_mdw/commit/cb78b3e560e05d4c8eba1aa556c26af98ec6ba3b))
+
 ## [1.75.0](https://www.github.com/aeternity/ae_mdw/compare/v1.74.4...v1.75.0) (2024-05-01)
 
 
