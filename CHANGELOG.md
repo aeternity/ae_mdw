@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.77.1](https://www.github.com/aeternity/ae_mdw/compare/v1.77.0...v1.77.1) (2024-05-27)
+
+
+### Bug Fixes
+
+* create migration to sync account balances ([#1779](https://www.github.com/aeternity/ae_mdw/issues/1779)) ([f9d40fd](https://www.github.com/aeternity/ae_mdw/commit/f9d40fd354bae803401de9579d89f12e1e3e54f8))
+
 ## [1.77.0](https://www.github.com/aeternity/ae_mdw/compare/v1.76.0...v1.77.0) (2024-05-27)
 
 
