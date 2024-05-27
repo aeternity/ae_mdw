@@ -37,7 +37,7 @@ defmodule AeMdw.Migrations.SyncBalanceAccount do
       end)
 
     Logger.warning("Found #{wrong_balances_count} wrong balances")
-    State.commit(state, [clear_mutation | write_mutations])
+    _state = State.commit(state, [clear_mutation | write_mutations])
 
     {:ok, wrong_balances_count}
   end
