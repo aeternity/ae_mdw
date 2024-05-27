@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.77.2](https://www.github.com/aeternity/ae_mdw/compare/v1.77.1...v1.77.2) (2024-05-27)
+
+
+### Bug Fixes
+
+* chunk dex_swaps migration and fix pattern match ([#1787](https://www.github.com/aeternity/ae_mdw/issues/1787)) ([66cf9af](https://www.github.com/aeternity/ae_mdw/commit/66cf9af0427b7c93badfce3442fec378dff6aadb))
+* rename migrations ([#1785](https://www.github.com/aeternity/ae_mdw/issues/1785)) ([7e84fd4](https://www.github.com/aeternity/ae_mdw/commit/7e84fd41ec07e4a3a537b93b9f38405e85ad677e))
+
 ### [1.77.1](https://www.github.com/aeternity/ae_mdw/compare/v1.77.0...v1.77.1) (2024-05-27)
 
 
