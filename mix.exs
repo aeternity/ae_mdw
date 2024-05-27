@@ -102,7 +102,8 @@ defmodule AeMdw.MixProject do
           :enacl,
           :sext,
           :rocksdb,
-          :telemetry
+          :telemetry,
+          :aeapi
         ]
       ],
       dialyzer: dialyzer(),
