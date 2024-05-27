@@ -870,9 +870,13 @@ defmodule AeMdw.Db.Contract do
         contract_pk: contract_pk
       )
 
+    m_rev_transfer =
+      Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, contract_pk, mint_value, log_idx})
+
     state
     |> State.put(Model.Aex9EventBalance, m_to)
     |> State.put(Model.AexnTransfer, m_transfer)
+    |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)
     |> aex9_update_contract_balance(contract_pk, mint_value)
