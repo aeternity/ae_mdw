@@ -33,6 +33,7 @@ defmodule AeMdw.Names do
   @type update() :: map()
   @type transfer() :: map()
   @type revoke() :: map()
+  @type pointee() :: map()
   @type plain_name() :: String.t()
   @type name_hash() :: binary()
   @type name_fee() :: non_neg_integer()
@@ -61,6 +62,7 @@ defmodule AeMdw.Names do
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameOwner
+  @table_pointees Model.Pointee
 
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
@@ -257,6 +259,38 @@ defmodule AeMdw.Names do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  @spec fetch_pointees(state(), binary(), pagination(), range(), cursor()) ::
+          {:ok, {page_cursor(), [pointee()], page_cursor()}} | {:error, reason()}
+  def fetch_pointees(state, account_id, pagination, scope, cursor) do
+    with {:ok, account_pk} <- Validate.id(account_id),
+         {:ok, cursor} <- deserialize_pointees_cursor(account_pk, cursor) do
+      scope =
+        case scope do
+          nil ->
+            {
+              {account_pk, {{@min_int, -1}, {-1, -1}}, <<>>},
+              {account_pk, {{@max_int, -1}, {-1, -1}}, <<>>}
+            }
+
+          {:gen, gen_start..gen_end} ->
+            {
+              {account_pk, {{gen_start, @min_int}, {-1, -1}}, <<>>},
+              {account_pk, {{gen_end, @max_int}, {-1, -1}}, <<>>}
+            }
+        end
+
+      paginated_pointees =
+        (&Collection.stream(state, @table_pointees, &1, scope, cursor))
+        |> Collection.paginate(
+          pagination,
+          &render_pointee(state, &1),
+          &serialize_pointees_cursor/1
+        )
+
+      {:ok, paginated_pointees}
     end
   end
 
@@ -939,4 +973,49 @@ defmodule AeMdw.Names do
     do: {:error, ErrInput.Query.exception(value: "can't filter by owner and prefix")}
 
   defp validate_name_filters(_filters), do: :ok
+
+  defp deserialize_pointees_cursor(_account_pk, nil), do: {:ok, nil}
+
+  defp deserialize_pointees_cursor(account_pk, cursor_bin) do
+    with [height_bin, mbi_bin, txi_bin, idx_bin, pointee_key_bin] <-
+           Regex.run(~r/\A(\d+)-(\d+)-(\d+)-(\d+)-(\w+)\z/, cursor_bin, capture: :all_but_first),
+         {:ok, pointee_key} <- Base.decode64(pointee_key_bin, padding: false) do
+      mbi = String.to_integer(mbi_bin)
+      height = String.to_integer(height_bin)
+      txi = String.to_integer(txi_bin)
+      idx = String.to_integer(idx_bin) - 1
+
+      {:ok, {account_pk, {{height, mbi}, {txi, idx}}, pointee_key}}
+    else
+      _invalid_cursor ->
+        {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
+
+  defp serialize_pointees_cursor({_account_pk, {{height, mbi}, {txi, idx}}, pointee_key}) do
+    pointee_base64 = Base.encode64(pointee_key, padding: false)
+
+    "#{height}-#{mbi}-#{txi}-#{idx + 1}-#{pointee_base64}"
+  end
+
+  defp render_pointee(state, {_account_pk, {{height, _mbi}, txi_idx}, pointee_key}) do
+    {name_update_tx, :name_update_tx, tx_hash, tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
+
+    name_hash = :aens_update_tx.name_hash(name_update_tx)
+    plain_name = Name.plain_name!(state, name_hash)
+    block_time = Db.get_block_time(block_hash)
+
+    %{
+      name: plain_name,
+      active: State.exists?(state, Model.ActiveName, plain_name),
+      key: pointee_key,
+      block_height: height,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      block_time: block_time,
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Node.tx_name(tx_type),
+      tx: :aens_update_tx.for_client(name_update_tx)
+    }
+  end
 end

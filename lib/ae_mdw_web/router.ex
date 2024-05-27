@@ -79,6 +79,7 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:id/activities", ActivityController, :account_activities
       get "/accounts/:account_id/aex9/balances", AexnTokenController, :aex9_account_balances
       get "/accounts/:account_id/aex141/tokens", Aex141Controller, :owned_nfts
+      get "/accounts/:account_id/names/pointees", NameController, :pointees
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
@@ -89,7 +90,6 @@ defmodule AeMdwWeb.Router do
       get "/names/auctions/:id", NameController, :auction
       get "/names/auctions/:id/claims", NameController, :auction_claims
       get "/names/:id", NameController, :name
-      get "/names/:id/pointees", NameController, :pointees
       get "/names/:id/claims", NameController, :name_claims
       get "/names/:id/updates", NameController, :name_updates
       get "/names/:id/transfers", NameController, :name_transfers
@@ -151,7 +151,7 @@ defmodule AeMdwWeb.Router do
 
       get "/names/:id/auction", NameController, :auction_v2
       get "/names/:id/pointers", NameController, :pointers
-      get "/names/:id/pointees", NameController, :pointees
+      get "/names/:id/pointees", NameController, :pointees_v2
       get "/names/search", NameController, :search
       get "/names", NameController, :names_v2
       get "/names/:id", NameController, :name_v2

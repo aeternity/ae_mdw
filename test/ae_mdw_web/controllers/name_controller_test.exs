@@ -2037,6 +2037,123 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "pointees" do
+    test "get pointees for valid public key", %{conn: conn, store: store} do
+      account_pk = <<0::256>>
+      account_id = :aeser_id.create(:account, account_pk)
+      account = Enc.encode(:account_pubkey, account_pk)
+      plain_name1 = "a.chain"
+      name_hash1 = <<1::256>>
+      name_id1 = :aeser_id.create(:name, name_hash1)
+      plain_name2 = "b.chain"
+      name_hash2 = <<2::256>>
+      name_id2 = :aeser_id.create(:name, name_hash2)
+      plain_name3 = "c.chain"
+      name_hash3 = <<3::256>>
+      name_id3 = :aeser_id.create(:name, name_hash3)
+
+      store =
+        store
+        |> Store.put(
+          Model.Pointee,
+          Model.pointee(index: {account_pk, {{200, 1}, {500, -1}}, "some-key-1"})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 500, id: <<0::256>>))
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash1, value: plain_name1))
+        |> Store.put(
+          Model.Pointee,
+          Model.pointee(index: {account_pk, {{200, 2}, {501, -1}}, "some-key-2"})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 501, id: <<1::256>>))
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash2, value: plain_name2))
+        |> Store.put(
+          Model.Pointee,
+          Model.pointee(index: {account_pk, {{200, 2}, {502, -1}}, "some-key-3"})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 502, id: <<2::256>>))
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash3, value: plain_name3))
+        |> Store.put(Model.ActiveName, Model.name(index: plain_name3))
+
+      {:ok, aetx1} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name_id: name_id1,
+          name_ttl: 1_111,
+          pointers: [],
+          client_ttl: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      {:name_update_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 222,
+          name_id: name_id2,
+          name_ttl: 2_222,
+          pointers: [],
+          client_ttl: 22_222,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:name_update_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 333,
+          name_id: name_id3,
+          name_ttl: 3_333,
+          pointers: [],
+          client_ttl: 33_333,
+          fee: 333_333,
+          ttl: 3_333_333
+        })
+
+      {:name_update_tx, tx3} = :aetx.specialize_type(aetx3)
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             <<0::256>> -> {"", :name_update_tx, :aetx_sign.new(aetx1, []), tx1}
+             <<1::256>> -> {"", :name_update_tx, :aetx_sign.new(aetx2, []), tx2}
+             <<2::256>> -> {"", :name_update_tx, :aetx_sign.new(aetx3, []), tx3}
+           end,
+           get_block_time: fn _block_hash ->
+             1
+           end
+         ]}
+      ] do
+        assert %{"data" => [pointee3, pointee2, pointee1]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/names/pointees")
+                 |> json_response(200)
+
+        assert %{"name" => ^plain_name1, "active" => false} = pointee1
+        assert %{"name" => ^plain_name2, "active" => false} = pointee2
+        assert %{"name" => ^plain_name3, "active" => true} = pointee3
+      end
+    end
+
+    test "renders error when the key is invalid", %{conn: conn, store: store} do
+      id = "ak_invalidkey"
+      error = "invalid id: #{id}"
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: "mb1-hash"))
+
+      assert %{"error" => ^error} =
+               conn |> with_store(store) |> get("/v2/names/#{id}/pointees") |> json_response(400)
+    end
+  end
+
+  describe "pointees_v2" do
     test "get pointees for valid public key", %{conn: conn} do
       id = "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
       name_id = Validate.name_id!(id)
