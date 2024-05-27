@@ -14,8 +14,6 @@ defmodule AeMdw.Migrations.DexNewSwapsTable do
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    key_boundary = {{0, <<>>, 0, 0}, {nil, Util.max_256bit_bin(), nil, nil}}
-
     mutations_length =
       state
       |> Collection.stream(Model.DexContractSwapTokens, nil)
