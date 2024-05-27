@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.76.1](https://www.github.com/aeternity/ae_mdw/compare/v1.76.0...v1.76.1) (2024-05-27)
+
+
+### Bug Fixes
+
+* create RevTransfer on aex9 minting ([#1781](https://www.github.com/aeternity/ae_mdw/issues/1781)) ([6fc8d0f](https://www.github.com/aeternity/ae_mdw/commit/6fc8d0fb7985ec321be364d812497fd8d20760d6))
+
 ## [1.76.0](https://www.github.com/aeternity/ae_mdw/compare/v1.75.0...v1.76.0) (2024-05-21)
 
 
