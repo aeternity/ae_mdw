@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.77.3](https://www.github.com/aeternity/ae_mdw/compare/v1.77.2...v1.77.3) (2024-05-29)
+
+
+### Bug Fixes
+
+* rename migration file so it runs again ([#1788](https://www.github.com/aeternity/ae_mdw/issues/1788)) ([eb95c2f](https://www.github.com/aeternity/ae_mdw/commit/eb95c2f4175778705ed9da70a1d316206f2a2b13))
+* update aex141 and names swagger ([#1776](https://www.github.com/aeternity/ae_mdw/issues/1776)) ([0f2d9fc](https://www.github.com/aeternity/ae_mdw/commit/0f2d9fc2729efc2e5909af9ad1b39d738500da14))
+
 ### [1.77.2](https://www.github.com/aeternity/ae_mdw/compare/v1.77.1...v1.77.2) (2024-05-27)
 
 
