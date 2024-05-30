@@ -47,7 +47,7 @@ defmodule AeMdw.Sync.DexCache do
         |> Stream.filter(fn Model.contract_log(hash: event_hash) ->
           event_hash == pair_created_event_hash
         end)
-        |> Enum.each(fn Model.contract_log(args: [pair_pk, token1_pk, token2_pk]) ->
+        |> Enum.each(fn Model.contract_log(args: [token1_pk, token2_pk, pair_pk]) ->
           add_pair(state, pair_pk, token1_pk, token2_pk)
         end)
 

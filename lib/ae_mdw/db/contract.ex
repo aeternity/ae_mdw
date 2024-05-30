@@ -401,7 +401,7 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
-  defp write_pair_created(state, contract_pk, [pair_pk, token1, token2]) do
+  defp write_pair_created(state, contract_pk, [token1, token2, pair_pk]) do
     if contract_pk == dex_factory_pubkey() do
       DexCache.add_pair(state, pair_pk, token1, token2)
     end

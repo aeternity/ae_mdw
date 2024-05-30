@@ -202,7 +202,7 @@ defmodule AeMdw.Db.ContractTest do
         call_rec("logs", @dex_factory_pk, height, nil, [
           {
             @dex_factory_pk,
-            [aexn_event_hash(:pair_created), dex_pair_pk, dex_token1_pk, dex_token2_pk],
+            [aexn_event_hash(:pair_created), dex_token1_pk, dex_token2_pk, dex_pair_pk],
             ""
           }
         ])
