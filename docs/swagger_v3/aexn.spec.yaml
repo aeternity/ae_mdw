@@ -43,7 +43,7 @@ schemas:
     required:
       - base_url
       - contract_id
-      - contract_txi
+      - contract_tx_hash
       - extensions
       - limits
       - metadata_type
@@ -63,7 +63,7 @@ schemas:
       contract_id:
         description: NFT contract id
         type: string
-      account_id:
+      owner_id:
         description: Account id
         type: string
       token_id:
@@ -144,7 +144,7 @@ schemas:
     description: Response Schema for AEX9 contract
     example:
       contract_id: ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav
-      contract_txi: 12361891
+      contract_tx_hash: th_rbFNrRDpn6finytCEmHAExtBnRxt14yckvuCWRmXxsRpypHxt
       initial_supply: 1e+28
       event_supply: 0
       decimals: 18
@@ -155,14 +155,13 @@ schemas:
       holders: 12
       name: testnetAE
       symbol: TTAE
-      txi: 11145713
     properties:
       contract_id:
         description: Id of the contract of the AEX9 tokens
         type: string
-      contract_txi:
-        description: Index of transaction that created the contract
-        type: integer
+      contract_tx_hash:
+        description: Transaction hash of the contract creation
+        type: string
       initial_supply:
         description: Token supply right after contract's creation
         type: integer
@@ -188,7 +187,7 @@ schemas:
         type: string
     required:
       - contract_id
-      - contract_txi
+      - contract_tx_hash
       - decimals
       - symbol
       - name
@@ -413,7 +412,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /aex141/{contractId}/owner/{tokenId}:
+  /aex141/{contractId}/token/{tokenId}:
     get:
       deprecated: false
       description: Get owner of a NFT (AEX-141 token).
@@ -645,7 +644,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Aex141OwnedTokenResponse'
+                          $ref: '#/components/schemas/Aex141TokenResponse'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -732,8 +731,10 @@ paths:
           content:
             application/json:
               schema:
-                type: integer
-                description: Amount of contracts
+                type: object
+                properties:
+                  data:
+                    type: integer
   /aex9/{contractId}/balances:
     get:
       deprecated: false
@@ -806,7 +807,7 @@ paths:
         - description: Block hash
           in: query
           name: hash
-          required: true
+          required: false
           schema:
             type: string
             x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
@@ -822,12 +823,15 @@ paths:
                       account:
                         description: The account present on a AEX9
                         type: string
+                        example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
                       amount:
                         description: The amount of AEX9 token
                         type: integer
+                        example: 4050000000000
                       contract:
                         description: The contract id of given token
                         type: string
+                        example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
         '400':
           description: Bad request
           content:
@@ -842,11 +846,11 @@ paths:
       parameters:
         - description: Account id
           in: path
-          name: account_id
+          name: accountId
           required: true
           schema:
             type: string
-            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
       responses:
         '200':
           description: Returns all the balances of an account
@@ -897,20 +901,30 @@ paths:
             application/json:
               schema:
                 allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
-                      account:
-                        description: The account present on a AEX9
-                        type: string
-                      amount:
-                        description: The amount of AEX9 token
-                        type: integer
-                      contract:
-                        description: The contract id of given token
-                        type: string
-                      height:
-                        description: The block height, indicating a state of a balance for that block height
-                        type: integer
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            account:
+                              description: The account present on a AEX9
+                              type: string
+                              example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
+                            amount:
+                              description: The amount of AEX9 token
+                              type: integer
+                              example: 4050000000000
+                            contract:
+                              description: The contract id of given token
+                              type: string
+                              example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
+                            height:
+                              description: The block height, indicating a state of a balance for that block height
+                              type: integer
+                              example: 618127
         '400':
           description: Bad request
           content:

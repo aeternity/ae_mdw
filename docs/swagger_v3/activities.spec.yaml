@@ -35,7 +35,7 @@ schemas:
     type: object
     properties:
       block_height:
-        type: string
+        type: integer
         example: 653289
       contract_id:
         type: string
@@ -49,10 +49,10 @@ schemas:
       micro_time:
         type: integer
         example: 1662654259282
-      recipient_id:
+      recipient:
         type: string
         example: "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa"
-      sender_id:
+      sender:
         type: string
         example: "ak_11111111111111111111111111111111273Yts"
       token_id:
