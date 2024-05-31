@@ -1,9 +1,9 @@
-defmodule AeMdw.Sync.AsyncTasks.WealthRankTest do
+defmodule AeMdw.Sync.WealthRankTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
-  alias AeMdw.Sync.AsyncTasks.WealthRank
+  alias AeMdw.Sync.WealthRank
 
   require Model
 

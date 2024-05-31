@@ -191,7 +191,6 @@ defmodule AeMdw.Application do
 
     AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()
-    AeMdw.Sync.AsyncTasks.WealthRank.init()
 
     AeMdw.Db.AsyncStore.init()
     AeMdw.Sync.Aex9BalancesCache.init()

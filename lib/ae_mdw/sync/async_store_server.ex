@@ -13,7 +13,6 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks.WealthRank
 
   @typep internal_state() :: %{async_store: AsyncStore.t(), last_db_kbi: AeMdw.Blocks.height()}
 
@@ -65,16 +64,12 @@ defmodule AeMdw.Sync.AsyncStoreServer do
         _from,
         %{async_store: async_store} = state
       ) do
-    {top_keys, store} = WealthRank.prune_balance_ranking(async_store)
-
     db_state2 =
-      store
+      async_store
       |> AsyncStore.mutations()
       |> Enum.reduce(db_state1, &Mutation.execute/2)
 
     AsyncStore.clear(async_store)
-
-    _store = WealthRank.restore_ranking(async_store, top_keys)
 
     {:reply, db_state2, state}
   end
