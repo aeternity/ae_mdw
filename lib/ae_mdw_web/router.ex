@@ -104,17 +104,23 @@ defmodule AeMdwWeb.Router do
       get "/status", UtilController, :status
 
       get "/aex9", AexnTokenController, :aex9_contracts
+      get "/aex9/count", AexnTokenController, :aex9_count
       get "/aex9/:contract_id", AexnTokenController, :aex9_contract
       get "/aex9/:contract_id/balances", AexnTokenController, :aex9_event_balances
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
+
+      get "/aex9/:contract_id/balances/:account_id/history",
+          AexnTokenController,
+          :aex9_token_balance_history
+
       get "/aex9/:contract_id/transfers", AexnTransferController, :aex9_contract_transfers
 
       get "/aex141", AexnTokenController, :aex141_contracts
       get "/aex141/count", AexnTokenController, :aex141_count
       get "/aex141/transfers", AexnTransferController, :aex141_transfers
       get "/aex141/:contract_id", AexnTokenController, :aex141_contract
-      get "/aex141/:contract_id/token/:token_id", Aex141Controller, :nft_token
-      get "/aex141/:contract_id/tokens", Aex141Controller, :collection_tokens
+      get "/aex141/:contract_id/token/:token_id", Aex141Controller, :nft_owner
+      get "/aex141/:contract_id/tokens", Aex141Controller, :collection_owners
       get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
       get "/aex141/:contract_id/transfers", AexnTransferController, :aex141_transfers
 

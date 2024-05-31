@@ -241,6 +241,47 @@ schemas:
             - id: "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5"
               key: "account_pubkey"
           ttl: 60000
+  Pointee:
+    description: Pointee
+    type: object
+    properties:
+      active:
+        type: boolean
+        example: true
+      name:
+        type: string
+        example: trustwallet.chain
+      key:
+        type: string
+        example: account_pubkey
+      block_hash:
+        type: string
+        example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+      tx:
+        type: object
+        example:
+          account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
+          client_ttl: 36000
+          fee: 20000000000000
+          name_id: "nm_2tokSd7X5zeYzAr5icomaVLBYC3TGeCypsPjZALcQcxYZb4YdP"
+          name_ttl: 50000
+          nonce: 3544
+          pointers:
+            - id: "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5"
+              key: "account_pubkey"
+          ttl: 60000
+      source_tx_type:
+        type: string
+        example: NameUpdateTx
+      source_tx_hash:
+        type: string
+        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+      block_height:
+        type: integer
+        example: 45784
+      block_time:
+        type: integer
+        example: 1687575562705
 
 paths:
   /names:
@@ -476,12 +517,14 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  active:
-                    type: object
-                  inactive:
-                    type: object
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Pointee'
+                  - $ref: '#/components/schemas/PaginatedResponse'
         '404':
           description: Not Found
           content:
