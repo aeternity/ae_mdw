@@ -31,23 +31,6 @@ schemas:
       active_from: 4660
       approximate_expire_time: 1587577871376
       expire_height: 6894
-      extends:
-        - hash: "mh_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
-          micro_index: 1
-          micro_time: 1587577771376
-          signatures:
-            - "sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
-          tx:
-            fee: 20000
-            nonce: 1
-            oracle_id: "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-            oracle_ttl:
-              type: "delta"
-              value: 100
-            ttl: 1587577871376
-            type: "OracleExtendTx"
-            version: 1
-            tx_hash: "th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
       format:
         query: string
         response: string

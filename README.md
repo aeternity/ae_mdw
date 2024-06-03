@@ -2256,7 +2256,7 @@ A running contract can call other functions during execution. These calls are re
 The query accepts following filters:
 
 - `fname` - The prefix of the name of the function
-- `create_txi` - The creation txi for a given contract
+- `contract` - The contract for the calls
 - ID field - Any field belonging to the contract call transaction
 
 #### Using contract id
@@ -2468,30 +2468,6 @@ There are several endpoints for fetching information about the oracles.
 
 Oracles in Aeternity blockchain have a lifecycle formed by several types of transactions, similar to the Name objects.
 
-For the same reason as Names, all oracle endpoints support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
-
-
-### `/v3/oracle/:id`
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
-{
-  "active": false,
-  "active_from": 4660,
-  "expire_height": 6894,
-  "approximate_expire_time": 1544587118827,
-  "register_time": 1544194831238,
-  "register_tx_hash": "th_2SLFNYk5s5u5tRD4Bqx6pSc1mysZMsCr3szbx55nKgVBQSiZv2",
-  "format": {
-    "query": "string",
-    "response": "string"
-  },
-  "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-  "query_fee": 20000,
-  "register": 11023
-}
-```
-
 ### `/v3/oracles`
 
 There is only paginable endpoint for listing oracles, which can be filtered by `scope` (e.g. `gen:100-200`) or state (`active` or `inactive`).
@@ -2644,7 +2620,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles?state=active&limit=1" | j
 }
 ```
 
-### `/v3/oracle/:id/queries`
+### `/v3/oracles/:id/queries`
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM/queries" | jq '.'
@@ -2696,10 +2672,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRj
 }
 ```
 
-### `/v3/oracle/:id/responses`
+### `/v3/oracles/:id/responses`
+
+Paginated list of an oracle's responses to queries.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM/responses" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/oracles/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM/responses?limit=1" | jq '.'
 {
   "data": [
     {
