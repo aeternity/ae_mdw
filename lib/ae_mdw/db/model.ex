@@ -1044,7 +1044,7 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :kind_int_transfer_tx, @kind_int_transfer_tx_defaults
 
-  @type kind_int_transfer_tx_index() :: {IntTransfer.kind(), bi_txi(), pubkey(), txi() | -1}
+  @type kind_int_transfer_tx_index() :: {IntTransfer.kind(), bi_txi(), pubkey(), txi_idx() | -1}
   @type kind_int_transfer_tx() ::
           record(:kind_int_transfer_tx,
             index: kind_int_transfer_tx_index()
@@ -1059,7 +1059,7 @@ defmodule AeMdw.Db.Model do
   defrecord :target_kind_int_transfer_tx, @target_kind_int_transfer_tx_defaults
 
   @type target_kind_int_transfer_tx_index() ::
-          {pubkey(), IntTransfer.kind(), bi_txi(), txi() | -1}
+          {pubkey(), IntTransfer.kind(), bi_txi(), txi_idx() | -1}
   @type target_kind_int_transfer_tx() ::
           record(:target_kind_int_transfer_tx, index: target_kind_int_transfer_tx_index())
 
