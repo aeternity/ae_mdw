@@ -7,10 +7,17 @@ defmodule AeMdw.Sync.WealthRank do
   alias AeMdw.Db.State
 
   require Model
+  @table :wealth_rank
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @typep balances :: [{pubkey(), integer()}]
   @opaque key :: {integer, pubkey()}
+
+  @spec init() :: :ok
+  def init do
+    @table = :ets.new(@table, [:named_table, :set, :public])
+    :ok
+  end
 
   @spec prune_balance_ranking(State.t()) :: {[key()], State.t()}
   def prune_balance_ranking(state) do
@@ -24,6 +31,8 @@ defmodule AeMdw.Sync.WealthRank do
     top_keys = Enum.take(keys, rank_size_config())
 
     cleared_state = Enum.reduce(keys, state, &State.delete(&2, Model.BalanceAccount, &1))
+
+    :ets.delete_all_objects(@table)
 
     {top_keys,
      Enum.reduce(top_keys, cleared_state, fn {amount, pubkey}, state ->
@@ -42,27 +51,32 @@ defmodule AeMdw.Sync.WealthRank do
 
   @spec update_balances(State.t(), balances()) :: :ok
   def update_balances(state, balances) do
-    _state =
-      Enum.reduce(balances, state, fn {account_pk, balance}, state_acc ->
-        with old_balance when old_balance != nil <- get_balance(state_acc, account_pk) do
+    Enum.reduce(balances, state, fn {account_pk, balance}, state_acc ->
+      account_pk
+      |> get_balance()
+      |> case do
+        old_balance when old_balance != nil ->
           State.delete(state_acc, Model.BalanceAccount, {old_balance, account_pk})
-        end
 
-        insert(state, account_pk, balance)
-      end)
+        _ ->
+          state_acc
+      end
+      |> insert(account_pk, balance)
+    end)
 
-    :ok
+    State.commit(state, [])
   end
 
   defp insert(state, pubkey, balance) do
+    :ets.insert(@table, {pubkey, balance})
     record = Model.balance_account(index: {balance, pubkey})
     State.put(state, Model.BalanceAccount, record)
   end
 
-  defp get_balance(state, pubkey) do
-    case State.get(state, Model.BalanceAccount, {nil, pubkey}) do
-      {:ok, {balance, _}} -> balance
-      :not_found -> nil
+  defp get_balance(pubkey) do
+    case :ets.lookup(@table, pubkey) do
+      [{^pubkey, balance}] -> balance
+      [] -> nil
     end
   end
 
