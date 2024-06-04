@@ -152,13 +152,14 @@ defmodule AeMdw.Transfers do
 
   defp deserialize_cursor(cursor) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor, padding: false),
-         [gen_txi_bin, kind_bin, account_pk_bin, ref_txi_bin] <-
+         [gen_txi_bin, kind_bin, account_pk_bin, ref_txi_bin, ref_idx_bin] <-
            String.split(decoded_cursor, "$"),
          {:ok, gen_txi} <- deserialize_cursor_gen_txi(gen_txi_bin),
          {:ok, kind} <- deserialize_cursor_kind(kind_bin),
          {:ok, account_pk} <- deserialize_cursor_account_pk(account_pk_bin),
-         {:ok, ref_txi} <- deserialize_cursor_ref_txi(ref_txi_bin) do
-      {gen_txi, kind, account_pk, ref_txi}
+         {:ok, ref_txi} <- deserialize_cursor_integer(ref_txi_bin),
+         {:ok, ref_idx} <- deserialize_cursor_integer(ref_idx_bin) do
+      {gen_txi, kind, account_pk, {ref_txi, ref_idx}}
     else
       _invalid_cursor -> nil
     end
@@ -179,9 +180,9 @@ defmodule AeMdw.Transfers do
   defp deserialize_cursor_account_pk(account_pk_bin),
     do: Base.decode32(account_pk_bin, padding: false)
 
-  defp deserialize_cursor_ref_txi(ref_txi_bin) do
-    case Integer.parse(ref_txi_bin) do
-      {ref_txi, ""} -> {:ok, ref_txi}
+  defp deserialize_cursor_integer(bin) do
+    case Integer.parse(bin) do
+      {number, ""} -> {:ok, number}
       _error -> :error
     end
   end
@@ -229,9 +230,10 @@ defmodule AeMdw.Transfers do
     }
   end
 
-  defp serialize_cursor({{gen, txi}, kind, account_pk, ref_txi}) do
+  defp serialize_cursor({{gen, txi}, kind, account_pk, ref_txi_idx}) do
     account_pk = Base.encode32(account_pk, padding: false)
+    {ref_txi, ref_idx} = if ref_txi_idx == -1, do: {0, 0}, else: ref_txi_idx
 
-    Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false)
+    Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}$#{ref_idx}", padding: false)
   end
 end
