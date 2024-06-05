@@ -8,7 +8,6 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Stats
   alias AeMdw.Util
 
   require Model
@@ -36,7 +35,7 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
       |> Enum.sum()
 
     stats_boundary =
-      {Stats.aex9_holder_count_key(<<>>), Stats.aex9_holder_count_key(Util.max_256bit_bin())}
+      {{:aex9_holder_count, <<>>}, {:aex9_holder_count, Util.max_256bit_bin()}}
 
     count_invalid_holders =
       state
