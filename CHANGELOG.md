@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.77.4](https://www.github.com/aeternity/ae_mdw/compare/v1.77.3...v1.77.4) (2024-06-05)
+
+
+### Bug Fixes
+
+* aexn openapi schemas ([#1791](https://www.github.com/aeternity/ae_mdw/issues/1791)) ([acc9ba6](https://www.github.com/aeternity/ae_mdw/commit/acc9ba662ff4b0b0bf429809c6b8c287faf8e51d))
+* handle transfers txi_idx ref tuple ([#1794](https://www.github.com/aeternity/ae_mdw/issues/1794)) ([15ce77f](https://www.github.com/aeternity/ae_mdw/commit/15ce77fc87fdac2e20064898ca107799646b1b77))
+* reorder the PairCreated arguments for DEX events ([#1790](https://www.github.com/aeternity/ae_mdw/issues/1790)) ([0a40932](https://www.github.com/aeternity/ae_mdw/commit/0a40932e75e22ec1dda4040b1837e6a5079eda83))
+
 ### [1.77.3](https://www.github.com/aeternity/ae_mdw/compare/v1.77.2...v1.77.3) (2024-05-29)
 
 
