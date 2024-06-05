@@ -14,7 +14,7 @@ defmodule AeMdwWeb.TransferControllerTest do
     } do
       kind_prefix = "accounts"
 
-      conn = get(conn, "/v2/transfers", direction: "forward", kind: kind_prefix, limit: 100)
+      conn = get(conn, "/v3/transfers", direction: "forward", kind: kind_prefix, limit: 100)
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == 100
@@ -38,7 +38,7 @@ defmodule AeMdwWeb.TransferControllerTest do
     } do
       kind_prefix = "accounts_fortuna"
 
-      conn = get(conn, "/v2/transfers", direction: "forward", kind: kind_prefix, limit: 100)
+      conn = get(conn, "/v3/transfers", direction: "forward", kind: kind_prefix, limit: 100)
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == 100
@@ -83,7 +83,7 @@ defmodule AeMdwWeb.TransferControllerTest do
     } do
       account_id = "ak_zGR3f3QQ3BDAwhuPktLanrqcb6vrbViBr8RzU5VeqGNDbEyx9"
 
-      conn = get(conn, "/v2/transfers", direction: "forward", account: account_id)
+      conn = get(conn, "/v3/transfers", direction: "forward", account: account_id)
       response = json_response(conn, 200)
 
       lima_height = AeMdw.Node.lima_height()
@@ -101,7 +101,7 @@ defmodule AeMdwWeb.TransferControllerTest do
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       error_msg = "invalid range: #{range}"
-      conn = get(conn, "/v2/transfers", scope: "gen:#{range}")
+      conn = get(conn, "/v3/transfers", scope: "gen:#{range}")
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
@@ -109,7 +109,7 @@ defmodule AeMdwWeb.TransferControllerTest do
     test "renders error when the account is invalid", %{conn: conn} do
       invalid_account = "invalid"
       error_msg = "invalid id: #{invalid_account}"
-      conn = get(conn, "/v2/transfers", account: invalid_account)
+      conn = get(conn, "/v3/transfers", account: invalid_account)
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
