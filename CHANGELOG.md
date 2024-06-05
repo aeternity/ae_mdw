@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.77.5](https://www.github.com/aeternity/ae_mdw/compare/v1.77.4...v1.77.5) (2024-06-05)
+
+
+### Bug Fixes
+
+* rename 20240528120000_sync_account_balances.ex to 20240528120001_sync_account_balances.ex ([#1797](https://www.github.com/aeternity/ae_mdw/issues/1797)) ([2f330e9](https://www.github.com/aeternity/ae_mdw/commit/2f330e980b2503ea8fb57b048923b08f35e3403a))
+
 ### [1.77.4](https://www.github.com/aeternity/ae_mdw/compare/v1.77.3...v1.77.4) (2024-06-05)
 
 
