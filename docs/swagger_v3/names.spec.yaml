@@ -501,8 +501,8 @@ paths:
   /accounts/{id}/names/pointees:
     get:
       deprecated: false
-      description: Get name pointees
-      operationId: GetNamePointees
+      description: Get account pointees
+      operationId: GetAccountPointees
       parameters:
         - name: id
           in: path
