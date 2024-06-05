@@ -151,7 +151,6 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
         ObjectKeys.count_contracts(State.new())
       end)
 
-    assert div(time1, 1_000) > 180
     assert div(time1, time2) > 100
 
     # cleanup

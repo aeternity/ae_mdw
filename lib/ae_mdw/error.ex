@@ -25,6 +25,7 @@ defmodule AeMdw.Error do
   def to_string(Input.Expired, x), do: concat("expired", x)
   def to_string(Input.NotAex9, x), do: concat("not AEX9 contract", x)
   def to_string(Input.NotAex141, x), do: concat("not AEX141 contract", x)
+  def to_string(Input.AexnContractInvalid, x), do: concat("invalid AEXN contract", x)
   def to_string(Input.ContractReturn, x), do: concat("invalid contract return", x)
   def to_string(Input.ContractDryRun, x), do: concat("error calling contract", x)
   def to_string(Input.Aex9BalanceNotAvailable, x), do: concat("balance is not available", x)
@@ -50,6 +51,7 @@ defmodule AeMdw.Error do
             | __MODULE__.Expired
             | __MODULE__.NotAex9
             | __MODULE__.NotAex141
+            | __MODULE__.AexnContractInvalid
             | __MODULE__.ContractReturn
             | __MODULE__.ContractDryRun
             | __MODULE__.Aex9BalanceNotAvailable
@@ -74,6 +76,7 @@ defmodule AeMdw.Error do
     defexception!(Expired)
     defexception!(NotAex9)
     defexception!(NotAex141)
+    defexception!(AexnContractInvalid)
     defexception!(ContractReturn)
     defexception!(ContractDryRun)
     defexception!(Aex9BalanceNotAvailable)

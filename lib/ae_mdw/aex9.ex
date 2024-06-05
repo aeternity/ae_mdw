@@ -39,6 +39,16 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
+  @spec invalid_number_of_holders() :: String.t()
+  def invalid_number_of_holders() do
+    "Invalid number of holders"
+  end
+
+  @spec invalid_holder_balance() :: String.t()
+  def invalid_holder_balance() do
+    "Invalid holder balance"
+  end
+
   @spec fetch_balances(State.t(), State.t(), pubkey(), boolean()) ::
           {:ok, amounts()} | {:error, Error.t()}
   def fetch_balances(state, async_state, contract_pk, top?) do
@@ -81,13 +91,14 @@ defmodule AeMdw.Aex9 do
         ) ::
           {:ok, {balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}}
           | {:error, Error.t()}
-  def fetch_event_balances(state, contract_id, pagination, cursor, :pubkey, query) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, cursor} <- deserialize_event_balances_cursor(cursor),
+  def fetch_event_balances(state, contract_pk, pagination, cursor, :pubkey, query) do
+    with {:ok, cursor} <- deserialize_event_balances_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          {:ok, creation_txi} <- get_aex9_contract(state, contract_pk),
          {:ok, streamer} <-
            event_balances_streamer(state, contract_pk, creation_txi, cursor, filters) do
+      contract_id = encode_contract(contract_pk)
+
       paginated_balances =
         Collection.paginate(
           streamer,
@@ -99,14 +110,14 @@ defmodule AeMdw.Aex9 do
       {:ok, paginated_balances}
     else
       {:error, reason} -> {:error, reason}
-      :not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
     end
   end
 
-  def fetch_event_balances(state, contract_id, pagination, cursor, :amount, _query) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
+  def fetch_event_balances(state, contract_pk, pagination, cursor, :amount, _query) do
+    with {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
       key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+      contract_id = encode_contract(contract_pk)
 
       paginated_balances =
         (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
@@ -153,7 +164,18 @@ defmodule AeMdw.Aex9 do
     key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
     cursor = if cursor, do: {contract_pk, cursor}, else: nil
 
-    {:ok, &Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor)}
+    {:ok,
+     fn direction ->
+       state
+       |> Collection.stream(Model.Aex9EventBalance, direction, key_boundary, cursor)
+       |> Stream.reject(fn {_contract_pk, account_pk} -> account_pk == <<>> end)
+       |> Stream.reject(fn key ->
+         Model.aex9_event_balance(amount: amount) =
+           State.fetch!(state, Model.Aex9EventBalance, key)
+
+         amount == 0
+       end)
+     end}
   end
 
   @spec fetch_holders_count(State.t(), pubkey()) :: non_neg_integer()
@@ -163,7 +185,9 @@ defmodule AeMdw.Aex9 do
     state
     |> Collection.stream(Model.Aex9EventBalance, :forward, key_boundary, nil)
     |> Stream.map(&State.fetch!(state, Model.Aex9EventBalance, &1))
-    |> Enum.count(fn Model.aex9_event_balance(amount: amount) -> amount > 0 end)
+    |> Enum.count(fn Model.aex9_event_balance(index: {_contract_pk, account_pk}, amount: amount) ->
+      amount > 0 && account_pk != <<>>
+    end)
   end
 
   @spec fetch_balance(pubkey(), pubkey(), height_hash() | nil) ::
@@ -221,7 +245,13 @@ defmodule AeMdw.Aex9 do
       scope = {{account_pk, <<>>}, {account_pk, Util.max_256bit_bin()}}
 
       paginated_account_balances =
-        (&Collection.stream(state, Model.Aex9AccountPresence, &1, scope, cursor))
+        fn direction ->
+          state
+          |> Collection.stream(Model.Aex9AccountPresence, direction, scope, cursor)
+          |> Stream.reject(fn {_account_pk, contract_pk} ->
+            State.exists?(state, Model.Aex9InvalidContract, contract_pk)
+          end)
+        end
         |> Collection.paginate(
           pagination,
           &render_account_balance(state, type_height_hash, &1),

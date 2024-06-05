@@ -4,6 +4,8 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
   """
 
   alias AeMdw.AexnContracts
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
@@ -33,17 +35,22 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
     end
   end
 
-  @spec validate_aex9(String.t()) :: {:ok, pubkey()} | {:error, Error.t()}
-  def validate_aex9(contract_id) do
+  @spec validate_aex9(String.t(), State.t()) :: {:ok, pubkey()} | {:error, Error.t()}
+  def validate_aex9(contract_id, state) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         true <- AexnContracts.is_aex9?(contract_pk) do
+         {:not_aex9, true} <- {:not_aex9, AexnContracts.is_aex9?(contract_pk)},
+         {:invalid, false} <-
+           {:invalid, State.exists?(state, Model.Aex9InvalidContract, contract_pk)} do
       {:ok, contract_pk}
     else
       {:error, reason} ->
         {:error, reason}
 
-      false ->
+      {:not_aex9, false} ->
         {:error, ErrInput.NotAex9.exception(value: contract_id)}
+
+      {:invalid, true} ->
+        {:error, ErrInput.AexnContractInvalid.exception(value: contract_id)}
     end
   end
 end

@@ -50,6 +50,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
 
+        functions =
+          AeMdw.Node.aex9_signatures()
+          |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+        type_info = {:fcode, functions, nil, nil}
+        AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
         store
         |> Store.put(Model.AexnContract, m_aex9)
         |> Store.put(Model.AexnContractCreation, m_aexn_creation)

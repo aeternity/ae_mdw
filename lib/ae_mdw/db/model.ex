@@ -543,6 +543,19 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_contract_balance, @aex9_contract_balance_defaults
 
+  # AEX9 invalid contracts:
+  @type aex9_invalid_contract_index() :: pubkey()
+  @type aex9_invalid_contract ::
+          record(:aex9_invalid_contract,
+            index: aex9_invalid_contract_index(),
+            reason: binary()
+          )
+  @aex9_invalid_contract_defaults [
+    index: <<>>,
+    reason: nil
+  ]
+  defrecord :aex9_invalid_contract, @aex9_invalid_contract_defaults
+
   # AEX-N contract:
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
@@ -1222,6 +1235,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.Aex9InitialSupply,
       AeMdw.Db.Model.Aex9ContractBalance,
+      AeMdw.Db.Model.Aex9InvalidContract,
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractCreation,
       AeMdw.Db.Model.AexnContractName,
@@ -1335,6 +1349,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply
   def record(AeMdw.Db.Model.Aex9ContractBalance), do: :aex9_contract_balance
+  def record(AeMdw.Db.Model.Aex9InvalidContract), do: :aex9_invalid_contract
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol

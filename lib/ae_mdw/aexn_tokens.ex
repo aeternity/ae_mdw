@@ -41,6 +41,15 @@ defmodule AeMdw.AexnTokens do
           {:ok, Model.aexn_contract()} | {:error, Error.t()}
   def fetch_contract(state, {aexn_type, contract_pk}) do
     case State.get(state, Model.AexnContract, {aexn_type, contract_pk}) do
+      {:ok, m_aexn} when aexn_type == :aex9 ->
+        case State.get(state, Model.Aex9InvalidContract, contract_pk) do
+          {:ok, _} ->
+            {:error, ErrInput.AexnContractInvalid.exception(value: encode_contract(contract_pk))}
+
+          _valid_contract ->
+            {:ok, m_aexn}
+        end
+
       {:ok, m_aexn} ->
         {:ok, m_aexn}
 
@@ -76,10 +85,17 @@ defmodule AeMdw.AexnTokens do
       state
       |> Collection.stream(@aexn_creation_table, direction, key_boundary, cursor)
       |> Stream.map(fn {aexn_type, txi_idx} ->
-        Model.aexn_contract_creation(contract_pk: pubkey) =
-          State.fetch!(state, @aexn_creation_table, {aexn_type, txi_idx})
+        State.fetch!(state, @aexn_creation_table, {aexn_type, txi_idx})
+      end)
+      |> Stream.reject(fn
+        Model.aexn_contract_creation(contract_pk: pubkey) when type == :aex9 ->
+          State.exists?(state, Model.Aex9InvalidContract, pubkey)
 
-        State.fetch!(state, @aexn_table, {aexn_type, pubkey})
+        _not_aex9 ->
+          false
+      end)
+      |> Stream.map(fn Model.aexn_contract_creation(contract_pk: pubkey) ->
+        State.fetch!(state, @aexn_table, {type, pubkey})
       end)
     end
   end
@@ -111,6 +127,13 @@ defmodule AeMdw.AexnTokens do
     fn direction ->
       state
       |> Collection.stream(table, direction, scope, cursor)
+      |> Stream.reject(fn
+        {:aex9, _order_by_field, pubkey} ->
+          State.exists?(state, Model.Aex9InvalidContract, pubkey)
+
+        _not_aex9 ->
+          false
+      end)
       |> Stream.map(fn {type, _order_by_field, pubkey} ->
         State.fetch!(state, @aexn_table, {type, pubkey})
       end)

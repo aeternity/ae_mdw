@@ -418,6 +418,56 @@ defmodule AeMdw.Db.ContractTest do
       assert 3 = Stats.fetch_aex9_logs_count(state, contract_pk)
     end
 
+    test "marks aex9 contract as invalid when holder balance is less than 0" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [aexn_event_hash(:mint), account_pk1, <<1_000::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:burn), account_pk1, <<1000::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:burn), account_pk1, <<1000::256>>],
+            ""
+          }
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
+        )
+        |> Contract.logs_write(txi, txi + 1, call_rec)
+
+      assert Model.aex9_contract_balance(amount: -1000) =
+               State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+
+      reason = Aex9.invalid_holder_balance()
+
+      assert {:ok, Model.aex9_invalid_contract(reason: ^reason)} =
+               State.get(state, Model.Aex9InvalidContract, contract_pk)
+    end
+
     test "writes mint and transfer balance when adding liquidity" do
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk1 = :crypto.strong_rand_bytes(32)
