@@ -7,7 +7,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
   alias AeMdwWeb.Websocket.Broadcaster
   alias Support.WsClient
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3, name_tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import Support.WsUtil, only: [unsubscribe_all: 1]
   import Mock
 
