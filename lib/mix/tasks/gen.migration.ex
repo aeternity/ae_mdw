@@ -26,8 +26,7 @@ defmodule Mix.Tasks.Gen.Migration do
 
         # The :change option may be used by other tasks but not the CLI
         assigns = [
-          # credo:disable-for-next-line
-          mod: Module.concat([AeMdw, Migrations, camelize(name)])
+          mod: camelize(name)
         ]
 
         create_file(file, migration_template(assigns))
@@ -51,7 +50,9 @@ defmodule Mix.Tasks.Gen.Migration do
   defp pad(i), do: to_string(i)
 
   embed_template(:migration, """
-  defmodule <%= inspect @mod %> do
+  defmodule AeMdw.Migrations.<%= @mod %> do
+    alias AeMdw.Db.State
+
     @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
     def run(state, _from_start?) do
       
