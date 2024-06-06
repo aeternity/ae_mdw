@@ -36,10 +36,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       decoded_tx_hash2 = TS.tx_hash(1)
       decoded_tx_hash3 = TS.tx_hash(2)
 
-      [tx_hash1, tx_hash2, tx_hash3] =
-        [decoded_tx_hash1, decoded_tx_hash2, decoded_tx_hash3]
-        |> Enum.map(&Enc.encode(:tx_hash, &1))
-
       {:ok, aetx} =
         :aec_spend_tx.new(%{
           sender_id: account_id,
@@ -212,10 +208,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
       decoded_tx_hash1 = TS.tx_hash(0)
       decoded_tx_hash2 = TS.tx_hash(1)
-
-      [tx_hash1, tx_hash2] =
-        [decoded_tx_hash1, decoded_tx_hash2]
-        |> Enum.map(&Enc.encode(:tx_hash, &1))
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{

@@ -5,6 +5,8 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Contract, as: AeMdwContract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.DryRun.Contract
   alias AeMdw.Node.Db
@@ -20,6 +22,11 @@ defmodule AeMdwWeb.TxControllerTest do
 
   require Model
 
+  setup do
+    empty_store = MemStore.new(NullStore.new())
+    %{empty_store: empty_store}
+  end
+
   describe "txs" do
     test "it returns 400 when no direction specified", %{conn: conn} do
       assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(404)
@@ -27,7 +34,7 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "/v2/txs" do
-    test "it returns 200", %{conn: conn, store: store} do
+    test "it returns 200", %{conn: conn, empty_store: store} do
       contract_pk_raw =
         <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
           108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
@@ -140,7 +147,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by type", %{conn: conn, store: store} do
+    test "it filters by type", %{conn: conn, empty_store: store} do
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
           tx1: tx(:oracle_register_tx, :alice, %{}),
@@ -185,7 +192,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by id", %{conn: conn, store: store} do
+    test "it filters by id", %{conn: conn, empty_store: store} do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
       encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
@@ -258,7 +265,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by type and scope", %{conn: conn, store: store} do
+    test "it filters by type and scope", %{conn: conn, empty_store: store} do
       first_gen = 10
       last_gen = 20
 
@@ -298,7 +305,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by id and type", %{conn: conn, store: store} do
+    test "it filters by id and type", %{conn: conn, empty_store: store} do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
       encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
@@ -371,7 +378,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "when filtering by multiple ids, it returns the intersection", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
@@ -429,7 +436,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by id, type and scope", %{conn: conn, store: store} do
+    test "it filters by id, type and scope", %{conn: conn, empty_store: store} do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
       encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
@@ -487,7 +494,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "it filters by field", %{conn: conn, store: store} do
+    test "it filters by field", %{conn: conn, empty_store: store} do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
       txi1 = 123
@@ -539,7 +546,10 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "when filtering by an invalid field, it returns an error", %{conn: conn, store: store} do
+    test "when filtering by an invalid field, it returns an error", %{
+      conn: conn,
+      empty_store: store
+    } do
       account_pk = TS.address(0)
       encoded_account = Enc.encode(:account_pubkey, account_pk)
 
@@ -574,7 +584,7 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(400)
     end
 
-    test "when filtering by an invalid id, it returns an error", %{conn: conn, store: store} do
+    test "when filtering by an invalid id, it returns an error", %{conn: conn, empty_store: store} do
       error_msg = "invalid id: foo"
 
       assert %{"error" => ^error_msg} =
@@ -620,7 +630,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns an ga_attach_tx with call details", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       nonce = 3
 
@@ -701,7 +711,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns an ga_meta_tx with return_type and pointers", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       plain_name = "binarypointer.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
@@ -787,7 +797,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns a paying_for with name_update_tx having binary pointer", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       plain_name = "binarypointer.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
@@ -871,7 +881,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns a paying_for with contract call details", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       contract_pk = <<123::256>>
       function_name = "set_last_caller"
@@ -952,7 +962,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns a inner contract call filtered by entrypoint", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       contract_pk = <<123::256>>
       function_name = "put_something"
@@ -1055,7 +1065,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns an oracle_register_tx with non-string format fields", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       with_blockchain %{alice: 10_000},
         mb: [
@@ -1093,7 +1103,10 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns an oracle_register_tx with utf8 format fields", %{conn: conn, store: store} do
+    test "returns an oracle_register_tx with utf8 format fields", %{
+      conn: conn,
+      empty_store: store
+    } do
       with_blockchain %{alice: 10_000},
         mb: [
           tx:
@@ -1133,7 +1146,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns a spend_tx with inactive name recipient", %{conn: conn, store: store} do
+    test "returns a spend_tx with inactive name recipient", %{conn: conn, empty_store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
       active_height = 123
@@ -1195,7 +1208,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns a spend_tx with name recipient from previous", %{conn: conn, store: store} do
+    test "returns a spend_tx with name recipient from previous", %{conn: conn, empty_store: store} do
       plain_name1 = "aliceinchains1.chain"
       plain_name2 = "aliceinchains2.chain"
       {:ok, name_hash1} = :aens.get_name_hash(plain_name1)
@@ -1299,7 +1312,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns a name_update_tx with multiple pointers", %{conn: conn, store: store} do
+    test "returns a name_update_tx with multiple pointers", %{conn: conn, empty_store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
@@ -1348,7 +1361,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns a name_update_tx with non-string pointers", %{conn: conn, store: store} do
+    test "returns a name_update_tx with non-string pointers", %{conn: conn, empty_store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
@@ -1402,7 +1415,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns channel participants and offchain tx round", %{conn: conn, store: store} do
+    test "returns channel participants and offchain tx round", %{conn: conn, empty_store: store} do
       {initiator_pk1, responder_pk1} =
         {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
 
@@ -1563,7 +1576,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns channel participants", %{conn: conn, store: store} do
+    test "returns channel participants", %{conn: conn, empty_store: store} do
       {initiator_pk1, responder_pk1} =
         {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
 
@@ -1720,7 +1733,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "when non-existent txi, it returns an error", %{conn: conn, store: store} do
+    test "when non-existent txi, it returns an error", %{conn: conn, empty_store: store} do
       error_msg = "not found: 123"
 
       assert %{"error" => ^error_msg} =
@@ -1732,7 +1745,7 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "count" do
-    test "it returns all tx count by default", %{conn: conn, store: store} do
+    test "it returns all tx count by default", %{conn: conn, empty_store: store} do
       tx = Model.tx(index: tx_index) = TS.tx(0)
       store = Store.put(store, Model.Tx, tx)
 
@@ -1753,7 +1766,7 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "it returns the difference between first and last gen", %{conn: conn, store: store} do
+    test "it returns the difference between first and last gen", %{conn: conn, empty_store: store} do
       first_gen = 600
       last_gen = 500
 
@@ -1769,7 +1782,10 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "when filtering by type, it displays type_count number", %{conn: conn, store: store} do
+    test "when filtering by type, it displays type_count number", %{
+      conn: conn,
+      empty_store: store
+    } do
       count = 102
 
       store =
@@ -1798,7 +1814,10 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "when filtering by tx_type, it displays type_count number", %{conn: conn, store: store} do
+    test "when filtering by tx_type, it displays type_count number", %{
+      conn: conn,
+      empty_store: store
+    } do
       count = 102
 
       store =
@@ -1817,7 +1836,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns the count of transactions of an account filtered by type", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       address = TS.address(0)
       account_id = encode_account(address)
@@ -1838,9 +1857,10 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "when no txs, it returns 0", %{conn: conn} do
+    test "when no txs, it returns 0", %{conn: conn, empty_store: store} do
       assert 0 =
                conn
+               |> with_store(store)
                |> get("/v3/transactions/count")
                |> json_response(200)
     end
@@ -1849,7 +1869,7 @@ defmodule AeMdwWeb.TxControllerTest do
   describe "count_id" do
     test "returns the count of transactions involving the id", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       address = TS.address(0)
       enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
@@ -1872,7 +1892,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns the count of transactions involving the id without counting duplicates", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       address = TS.address(0)
       enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
@@ -1897,7 +1917,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns the count of transactions of a type involving the id", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       address = TS.address(0)
       enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
@@ -1920,7 +1940,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns the count of transactions of a type group involving the id", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       address = TS.address(0)
       enc_address = :aeser_api_encoder.encode(:contract_pubkey, address)
@@ -1951,7 +1971,7 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "returns the count of txs from a micro-block", %{conn: conn, store: store} do
+    test "returns the count of txs from a micro-block", %{conn: conn, empty_store: store} do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
@@ -1986,7 +2006,10 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns the count of txs of a type from a micro-block", %{conn: conn, store: store} do
+    test "returns the count of txs of a type from a micro-block", %{
+      conn: conn,
+      empty_store: store
+    } do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
@@ -2026,7 +2049,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "returns 404 if mb exists on node but not yet on the mdw", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       mb_hash = TS.micro_block_hash(0)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
@@ -2100,7 +2123,7 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "micro_block_txs" do
-    test "returns the list of txs from a mb", %{conn: conn, store: store} do
+    test "returns the list of txs from a mb", %{conn: conn, empty_store: store} do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
@@ -2143,7 +2166,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns the list of txs from a mb filtered by type", %{conn: conn, store: store} do
+    test "returns the list of txs from a mb filtered by type", %{conn: conn, empty_store: store} do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
@@ -2187,7 +2210,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "when it's the last micro block, it returns the list of txs from it till the end", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
@@ -2230,7 +2253,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "if no txs, it returns an empty result", %{conn: conn, store: store} do
+    test "if no txs, it returns an empty result", %{conn: conn, empty_store: store} do
       mb_hash = TS.micro_block_hash(0)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
       error_msg = "not found: #{encoded_mb_hash}"
@@ -2250,7 +2273,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "if mb exists on node but doesn't exist on mdw, it returns 404", %{
       conn: conn,
-      store: store
+      empty_store: store
     } do
       mb_hash = TS.micro_block_hash(0)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
