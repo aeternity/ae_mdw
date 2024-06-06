@@ -249,7 +249,7 @@ defmodule AeMdw.Aex9 do
           state
           |> Collection.stream(Model.Aex9AccountPresence, direction, scope, cursor)
           |> Stream.reject(fn {_account_pk, contract_pk} ->
-            State.exists?(state, Model.Aex9InvalidContract, contract_pk)
+            State.exists?(state, Model.AexnInvalidContract, {:aex9, contract_pk})
           end)
         end
         |> Collection.paginate(

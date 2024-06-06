@@ -109,8 +109,11 @@ defmodule AeMdw.Db.Contract do
       balance when balance < 0 ->
         State.put(
           state,
-          Model.Aex9InvalidContract,
-          Model.aex9_invalid_contract(index: contract_pk, reason: Aex9.invalid_holder_balance())
+          Model.AexnInvalidContract,
+          Model.aexn_invalid_contract(
+            index: {:aex9, contract_pk},
+            reason: Aex9.invalid_holder_balance()
+          )
         )
 
       _larger_than_zero ->

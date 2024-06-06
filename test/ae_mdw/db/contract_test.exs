@@ -464,8 +464,8 @@ defmodule AeMdw.Db.ContractTest do
 
       reason = Aex9.invalid_holder_balance()
 
-      assert {:ok, Model.aex9_invalid_contract(reason: ^reason)} =
-               State.get(state, Model.Aex9InvalidContract, contract_pk)
+      assert {:ok, Model.aexn_invalid_contract(reason: ^reason)} =
+               State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk})
     end
 
     test "writes mint and transfer balance when adding liquidity" do

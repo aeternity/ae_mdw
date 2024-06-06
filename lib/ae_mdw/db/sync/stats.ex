@@ -55,9 +55,9 @@ defmodule AeMdw.Db.Sync.Stats do
         if new_count < 0 do
           State.put(
             state,
-            Model.Aex9InvalidContract,
-            Model.aex9_invalid_contract(
-              index: contract_pk,
+            Model.AexnInvalidContract,
+            Model.aexn_invalid_contract(
+              index: {:aex9, contract_pk},
               reason: Aex9.invalid_number_of_holders()
             )
           )

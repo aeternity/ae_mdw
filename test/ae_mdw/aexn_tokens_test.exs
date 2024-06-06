@@ -278,9 +278,9 @@ defmodule AeMdw.AexnTokensTest do
           Model.aexn_contract_name(index: {:aex9, "TokenA1", contract_pk2})
         )
         |> State.put(
-          Model.Aex9InvalidContract,
-          Model.aex9_invalid_contract(
-            index: contract_pk1,
+          Model.AexnInvalidContract,
+          Model.aexn_invalid_contract(
+            index: {:aex9, contract_pk1},
             reason: Aex9.invalid_number_of_holders()
           )
         )

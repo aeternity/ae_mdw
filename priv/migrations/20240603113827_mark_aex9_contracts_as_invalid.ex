@@ -22,8 +22,11 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
       end)
       |> Stream.map(fn {contract_pk, _amount, _pubkey} ->
         WriteMutation.new(
-          Model.Aex9InvalidContract,
-          Model.aex9_invalid_contract(index: contract_pk, reason: Aex9.invalid_holder_balance())
+          Model.AexnInvalidContract,
+          Model.aexn_invalid_contract(
+            index: {:aex9, contract_pk},
+            reason: Aex9.invalid_holder_balance()
+          )
         )
       end)
       |> Stream.chunk_every(1000)
@@ -48,9 +51,9 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
       end)
       |> Stream.map(fn Model.stat(index: {:aex9_holder_count, contract_pk}) ->
         WriteMutation.new(
-          Model.Aex9InvalidContract,
-          Model.aex9_invalid_contract(
-            index: contract_pk,
+          Model.AexnInvalidContract,
+          Model.aexn_invalid_contract(
+            index: {:aex9, contract_pk},
             reason: Aex9.invalid_number_of_holders()
           )
         )

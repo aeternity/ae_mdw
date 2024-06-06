@@ -40,7 +40,7 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:not_aex9, true} <- {:not_aex9, AexnContracts.is_aex9?(contract_pk)},
          {:invalid, false} <-
-           {:invalid, State.exists?(state, Model.Aex9InvalidContract, contract_pk)} do
+           {:invalid, State.exists?(state, Model.AexnInvalidContract, {:aex9, contract_pk})} do
       {:ok, contract_pk}
     else
       {:error, reason} ->
