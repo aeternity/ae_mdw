@@ -17,7 +17,6 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Validate
 
   alias AeMdwWeb.FallbackController
-  alias AeMdwWeb.Helpers.AexnHelper
   alias AeMdwWeb.Plugs.PaginatedPlug
 
   alias Plug.Conn
@@ -57,7 +56,7 @@ defmodule AeMdwWeb.Aex9Controller do
         "contract_id" => contract_id,
         "account_id" => account_id
       }) do
-    with {:ok, contract_pk} <- AexnHelper.validate_aex9(contract_id, state),
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
       balance_reply(conn, contract_pk, account_pk)
     end
@@ -152,7 +151,7 @@ defmodule AeMdwWeb.Aex9Controller do
   def balances(%Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn, %{
         "contract_id" => contract_id
       }) do
-    with {:ok, contract_pk} <- AexnHelper.validate_aex9(contract_id, state),
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, amounts} <- Aex9.fetch_balances(state, async_state, contract_pk, top?(opts)) do
       hash_tuple = DBN.top_height_hash(top?(opts))
       format_json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))

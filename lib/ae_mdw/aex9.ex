@@ -4,6 +4,7 @@ defmodule AeMdw.Aex9 do
   """
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -91,8 +92,9 @@ defmodule AeMdw.Aex9 do
         ) ::
           {:ok, {balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}}
           | {:error, Error.t()}
-  def fetch_event_balances(state, contract_pk, pagination, cursor, :pubkey, query) do
-    with {:ok, cursor} <- deserialize_event_balances_cursor(cursor),
+  def fetch_event_balances(state, contract_id, pagination, cursor, :pubkey, query) do
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
+         {:ok, cursor} <- deserialize_event_balances_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          {:ok, creation_txi} <- get_aex9_contract(state, contract_pk),
          {:ok, streamer} <-
@@ -110,12 +112,13 @@ defmodule AeMdw.Aex9 do
       {:ok, paginated_balances}
     else
       {:error, reason} -> {:error, reason}
-      :not_found -> {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
     end
   end
 
-  def fetch_event_balances(state, contract_pk, pagination, cursor, :amount, _query) do
-    with {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
+  def fetch_event_balances(state, contract_id, pagination, cursor, :amount, _query) do
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
+         {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
       key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
       contract_id = encode_contract(contract_pk)
 

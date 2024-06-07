@@ -5,9 +5,12 @@ defmodule AeMdw.AexnContracts do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.DryRun.Runner
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
   alias AeMdw.Log
+  alias AeMdw.Validate
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
@@ -36,6 +39,25 @@ defmodule AeMdw.AexnContracts do
   end
 
   def is_aex9?(_no_fcode), do: false
+
+  @spec validate_aex9(String.t(), State.t()) :: {:ok, pubkey()} | {:error, Error.t()}
+  def validate_aex9(contract_id, state) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:not_aex9, true} <- {:not_aex9, is_aex9?(contract_pk)},
+         {:invalid, false} <-
+           {:invalid, State.exists?(state, Model.AexnInvalidContract, {:aex9, contract_pk})} do
+      {:ok, contract_pk}
+    else
+      {:error, reason} ->
+        {:error, reason}
+
+      {:not_aex9, false} ->
+        {:error, ErrInput.NotAex9.exception(value: contract_id)}
+
+      {:invalid, true} ->
+        {:error, ErrInput.AexnContractInvalid.exception(value: contract_id)}
+    end
+  end
 
   @spec has_aex141_signatures?(height(), type_info()) :: boolean()
   def has_aex141_signatures?(height, {:fcode, functions, _hash_names, _code}) do

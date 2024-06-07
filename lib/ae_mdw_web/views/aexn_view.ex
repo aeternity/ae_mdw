@@ -120,7 +120,7 @@ defmodule AeMdwWeb.AexnView do
   def render_contract(
         state,
         Model.aexn_contract(
-          index: {_type, contract_pk},
+          index: {_type, contract_pk} = index,
           txi_idx: {txi, _idx},
           meta_info: {name, symbol, decimals},
           extensions: extensions
@@ -139,6 +139,8 @@ defmodule AeMdwWeb.AexnView do
         :not_found -> 0
       end
 
+    invalid? = State.exists?(state, Model.AexnInvalidContract, index)
+
     num_holders = Aex9.fetch_holders_count(state, contract_pk)
 
     response = %{
@@ -149,7 +151,8 @@ defmodule AeMdwWeb.AexnView do
       extensions: extensions,
       initial_supply: initial_supply,
       event_supply: event_supply,
-      holders: num_holders
+      holders: num_holders,
+      invalid: invalid?
     }
 
     case v3? do
@@ -164,7 +167,7 @@ defmodule AeMdwWeb.AexnView do
   def render_contract(
         state,
         Model.aexn_contract(
-          index: {_type, contract_pk},
+          index: {_type, contract_pk} = index,
           txi_idx: {txi, _idx},
           meta_info: {name, symbol, base_url, metadata_type},
           extensions: extensions
@@ -179,7 +182,8 @@ defmodule AeMdwWeb.AexnView do
       contract_id: encode_contract(contract_pk),
       metadata_type: metadata_type,
       extensions: extensions,
-      limits: Aex141.fetch_limits(state, contract_pk, v3?)
+      limits: Aex141.fetch_limits(state, contract_pk, v3?),
+      invalid: State.exists?(state, Model.AexnInvalidContract, index)
     }
     |> maybe_put_contract_tx_hash(state, txi, v3?)
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))

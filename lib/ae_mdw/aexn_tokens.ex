@@ -82,9 +82,6 @@ defmodule AeMdw.AexnTokens do
       |> Stream.map(fn {aexn_type, txi_idx} ->
         State.fetch!(state, @aexn_creation_table, {aexn_type, txi_idx})
       end)
-      |> Stream.reject(fn Model.aexn_contract_creation(contract_pk: pubkey) ->
-        State.exists?(state, Model.AexnInvalidContract, {type, pubkey})
-      end)
       |> Stream.map(fn Model.aexn_contract_creation(contract_pk: pubkey) ->
         State.fetch!(state, @aexn_table, {type, pubkey})
       end)
@@ -118,9 +115,6 @@ defmodule AeMdw.AexnTokens do
     fn direction ->
       state
       |> Collection.stream(table, direction, scope, cursor)
-      |> Stream.reject(fn {type, _order_by_field, pubkey} ->
-        State.exists?(state, Model.AexnInvalidContract, {type, pubkey})
-      end)
       |> Stream.map(fn {type, _order_by_field, pubkey} ->
         State.fetch!(state, @aexn_table, {type, pubkey})
       end)
