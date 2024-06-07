@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.77.6](https://www.github.com/aeternity/ae_mdw/compare/v1.77.5...v1.77.6) (2024-06-07)
+
+
+### Testing
+
+* randmly failing tests and warnings ([#1801](https://www.github.com/aeternity/ae_mdw/issues/1801)) ([6e13a42](https://www.github.com/aeternity/ae_mdw/commit/6e13a4201ed7c660a3910c4758d117d54c49a2c6))
+
+
+### Miscellaneous
+
+* task for generating migrations ([#1800](https://www.github.com/aeternity/ae_mdw/issues/1800)) ([4d5949e](https://www.github.com/aeternity/ae_mdw/commit/4d5949eb905c52253f86de776539179600ddca88))
+
 ### [1.77.5](https://www.github.com/aeternity/ae_mdw/compare/v1.77.4...v1.77.5) (2024-06-05)
 
 
