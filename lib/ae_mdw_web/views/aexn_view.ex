@@ -26,7 +26,8 @@ defmodule AeMdwWeb.AexnView do
            decimals: integer(),
            contract_txi: Txs.txi(),
            contract_id: pubkey(),
-           extensions: [String.t()]
+           extensions: [String.t()],
+           invalid: boolean()
          }
 
   @typep aex141_contract() :: %{
@@ -36,7 +37,8 @@ defmodule AeMdwWeb.AexnView do
            contract_txi: Txs.txi(),
            contract_id: pubkey(),
            metadata_type: Model.aex141_metadata_type(),
-           extensions: [String.t()]
+           extensions: [String.t()],
+           invalid: boolean()
          }
 
   @typep aex9_event_balance() :: %{

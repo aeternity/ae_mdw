@@ -7,6 +7,7 @@ defmodule AeMdw.AexnContracts do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.DryRun.Runner
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
   alias AeMdw.Log
