@@ -2,6 +2,7 @@ defmodule AeMdwWeb.AexnTokenController do
   @moduledoc false
 
   alias AeMdw.Aex9
+  alias AeMdw.AexnContracts
   alias AeMdw.AexnTokens
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -14,7 +15,6 @@ defmodule AeMdwWeb.AexnTokenController do
   alias Plug.Conn
 
   import AeMdwWeb.AexnView
-  import AeMdwWeb.Helpers.AexnHelper, only: [validate_aex9: 1]
 
   use AeMdwWeb, :controller
 
@@ -98,13 +98,13 @@ defmodule AeMdwWeb.AexnTokenController do
 
   @spec aex9_token_balance(Conn.t(), map()) :: Conn.t()
   def aex9_token_balance(
-        conn,
+        %{assigns: %{state: state}} = conn,
         %{
           "contract_id" => contract_id,
           "account_id" => account_id
         } = query_params
       ) do
-    with {:ok, contract_pk} <- validate_aex9(contract_id),
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, height_hash} <- validate_block_hash(Map.get(query_params, "hash")),
          {:ok, balance} <- Aex9.fetch_balance(contract_pk, account_pk, height_hash) do
@@ -139,7 +139,7 @@ defmodule AeMdwWeb.AexnTokenController do
       }) do
     %{pagination: pagination, cursor: cursor, scope: scope, state: state} = assigns
 
-    with {:ok, contract_pk} <- validate_aex9(contract_id),
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, {prev_cursor, balance_history_items, next_cursor}} <-
            Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do

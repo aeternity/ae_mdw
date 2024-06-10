@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Contract do
   Data access to read and write Contract related models.
   """
 
+  alias AeMdw.Aex9
   alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
@@ -101,10 +102,22 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_burn_update_holders(state(), pubkey(), integer()) :: state()
   def aex9_burn_update_holders(state, contract_pk, balance) do
-    if balance <= 0 do
-      SyncStats.decrement_aex9_holders(state, contract_pk)
-    else
-      state
+    case balance do
+      0 ->
+        SyncStats.decrement_aex9_holders(state, contract_pk)
+
+      balance when balance < 0 ->
+        State.put(
+          state,
+          Model.AexnInvalidContract,
+          Model.aexn_invalid_contract(
+            index: {:aex9, contract_pk},
+            reason: Aex9.invalid_holder_balance_reason()
+          )
+        )
+
+      _larger_than_zero ->
+        state
     end
   end
 
@@ -844,7 +857,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
-    |> aex9_burn_update_holders(contract_pk, from_amount - burn_value)
+    |> aex9_burn_update_holders(contract_pk, new_amount)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
   end

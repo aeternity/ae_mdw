@@ -52,8 +52,11 @@ defmodule AeMdwWeb.Aex9Controller do
     do: handle_input(conn, fn -> by_symbols_reply(conn, params) end)
 
   @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}) do
-    with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
+  def balance(%{assigns: %{state: state}} = conn, %{
+        "contract_id" => contract_id,
+        "account_id" => account_id
+      }) do
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
       balance_reply(conn, contract_pk, account_pk)
     end
@@ -148,7 +151,7 @@ defmodule AeMdwWeb.Aex9Controller do
   def balances(%Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn, %{
         "contract_id" => contract_id
       }) do
-    with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
+    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, amounts} <- Aex9.fetch_balances(state, async_state, contract_pk, top?(opts)) do
       hash_tuple = DBN.top_height_hash(top?(opts))
       format_json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
@@ -360,16 +363,6 @@ defmodule AeMdwWeb.Aex9Controller do
 
       {:error, _detail} ->
         {:error, ErrInput.NotAex9.exception(value: range)}
-    end
-  end
-
-  defp ensure_aex9_contract_pk(ct_ident) do
-    with {:ok, pk} <- Validate.id(ct_ident, [:contract_pubkey]) do
-      if AexnContracts.is_aex9?(pk) do
-        {:ok, pk}
-      else
-        {:error, ErrInput.NotAex9.exception(value: ct_ident)}
-      end
     end
   end
 

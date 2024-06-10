@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Sync.Stats do
   Update general and per contract stats during the syncing process.
   """
 
+  alias AeMdw.Aex9
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -46,8 +47,27 @@ defmodule AeMdw.Db.Sync.Stats do
     do: update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk))
 
   @spec decrement_aex9_holders(State.t(), pubkey()) :: State.t()
-  def decrement_aex9_holders(state, contract_pk),
-    do: update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk), &(&1 - 1))
+  def decrement_aex9_holders(state, contract_pk) do
+    update_fn = fn x ->
+      new_count = x - 1
+
+      _ignored_result =
+        if new_count < 0 do
+          State.put(
+            state,
+            Model.AexnInvalidContract,
+            Model.aexn_invalid_contract(
+              index: {:aex9, contract_pk},
+              reason: Aex9.invalid_number_of_holders_reason()
+            )
+          )
+        end
+
+      new_count
+    end
+
+    update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk), update_fn)
+  end
 
   @spec increment_aex9_logs(State.t(), pubkey()) :: State.t()
   def increment_aex9_logs(state, contract_pk),

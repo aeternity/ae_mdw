@@ -6,7 +6,6 @@ defmodule AeMdwWeb.AexnViewTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.Stats
   alias AeMdwWeb.AexnView
 
   import AeMdw.Util.Encoding
@@ -38,7 +37,6 @@ defmodule AeMdwWeb.AexnViewTest do
         NullStore.new()
         |> MemStore.new()
         |> State.new()
-        |> Stats.decrement_aex9_holders(contract_pk)
         |> State.put(Model.Tx, m_tx)
 
       assert %{
@@ -48,7 +46,8 @@ defmodule AeMdwWeb.AexnViewTest do
                contract_txi: ^txi,
                contract_id: ^contract_id,
                extensions: ^extensions,
-               holders: 0
+               holders: 0,
+               invalid: false
              } = AexnView.render_contract(state, m_aex9, false)
 
       assert %{
@@ -57,8 +56,26 @@ defmodule AeMdwWeb.AexnViewTest do
                decimals: ^decimals,
                contract_tx_hash: ^tx_hash,
                contract_id: ^contract_id,
-               extensions: ^extensions
+               extensions: ^extensions,
+               invalid: false
              } = AexnView.render_contract(state, m_aex9, true)
+
+      State.put(
+        state,
+        Model.AexnInvalidContract,
+        Model.aexn_invalid_contract(index: {:aex9, contract_pk})
+      )
+
+      assert %{
+               name: ^name,
+               symbol: ^symbol,
+               decimals: ^decimals,
+               contract_txi: ^txi,
+               contract_id: ^contract_id,
+               extensions: ^extensions,
+               holders: 0,
+               invalid: true
+             } = AexnView.render_contract(state, m_aex9, false)
     end
   end
 end

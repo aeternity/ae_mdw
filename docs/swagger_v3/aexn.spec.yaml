@@ -22,6 +22,7 @@ schemas:
       nft_owners: 1
       nfts_amount: 36
       symbol: "ASITM-T"
+      invalid: false
     properties:
       base_url:
         description: Metadata base url
@@ -40,6 +41,9 @@ schemas:
       limits:
         description: Limit for amount of tokens or templates
         type: object
+      invalid:
+        description: True if the contract is invalid
+        type: boolean
     required:
       - base_url
       - contract_id
@@ -51,6 +55,7 @@ schemas:
       - nft_owners
       - nfts_amount
       - symbol
+      - invalid
     title: Aex141Response
     type: object
   Aex141TokenResponse:
@@ -155,6 +160,7 @@ schemas:
       holders: 12
       name: testnetAE
       symbol: TTAE
+      invalid: false
     properties:
       contract_id:
         description: Id of the contract of the AEX9 tokens
@@ -185,6 +191,9 @@ schemas:
       symbol:
         description: Symbol of AEX9 token
         type: string
+      invalid:
+        description: True if the contract is invalid
+        type: boolean
     required:
       - contract_id
       - contract_tx_hash
@@ -194,6 +203,7 @@ schemas:
       - holders
       - initial_supply
       - event_supply
+      - invalid
     title: Aex9Response
     type: object
   Aex9TransferResponse:
