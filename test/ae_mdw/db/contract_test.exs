@@ -462,7 +462,7 @@ defmodule AeMdw.Db.ContractTest do
       assert Model.aex9_contract_balance(amount: -1000) =
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
 
-      reason = Aex9.invalid_holder_balance()
+      reason = Aex9.invalid_reason(:holder_balance)
 
       assert {:ok, Model.aexn_invalid_contract(reason: ^reason)} =
                State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk})

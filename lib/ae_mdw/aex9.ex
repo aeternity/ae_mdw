@@ -40,15 +40,9 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
-  @spec invalid_number_of_holders() :: String.t()
-  def invalid_number_of_holders() do
-    "Invalid number of holders"
-  end
-
-  @spec invalid_holder_balance() :: String.t()
-  def invalid_holder_balance() do
-    "Invalid holder balance"
-  end
+  @spec invalid_reason(reason :: :holder_balance | :number_of_holders) :: String.t()
+  def invalid_reason(:holder_balance), do: "Invalid holder balance"
+  def invalid_reason(:number_of_holders), do: "Invalid number of holders"
 
   @spec fetch_balances(State.t(), State.t(), pubkey(), boolean()) ::
           {:ok, amounts()} | {:error, Error.t()}

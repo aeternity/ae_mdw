@@ -112,7 +112,7 @@ defmodule AeMdw.Db.Contract do
           Model.AexnInvalidContract,
           Model.aexn_invalid_contract(
             index: {:aex9, contract_pk},
-            reason: Aex9.invalid_holder_balance()
+            reason: Aex9.invalid_reason(:holder_balance)
           )
         )
 

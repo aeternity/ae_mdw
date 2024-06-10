@@ -58,7 +58,7 @@ defmodule AeMdw.Db.Sync.Stats do
             Model.AexnInvalidContract,
             Model.aexn_invalid_contract(
               index: {:aex9, contract_pk},
-              reason: Aex9.invalid_number_of_holders()
+              reason: Aex9.invalid_reason(:number_of_holders)
             )
           )
         end

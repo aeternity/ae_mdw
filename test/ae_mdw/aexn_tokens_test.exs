@@ -2,7 +2,6 @@ defmodule AeMdw.AexnTokensTest do
   use ExUnit.Case
 
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Aex9
   alias AeMdw.AexnTokens
   alias AeMdw.Database
   alias AeMdw.Db.Model
