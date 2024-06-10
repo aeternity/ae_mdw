@@ -91,8 +91,8 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
   end
 
   test "Gets correct balances if there are a lot of records" do
-    account_pks = Enum.map(1..100, fn _ -> :crypto.strong_rand_bytes(32) end)
-    amounts = Enum.map(1..100, fn _ -> Enum.random(100_000_000..999_999_999) end)
+    account_pks = Enum.map(1..100, fn _index -> :crypto.strong_rand_bytes(32) end)
+    amounts = Enum.map(1..100, fn _index -> Enum.random(100_000_000..999_999_999) end)
     account_amounts = Enum.zip(account_pks, amounts)
 
     state = DbStore.new() |> State.new()

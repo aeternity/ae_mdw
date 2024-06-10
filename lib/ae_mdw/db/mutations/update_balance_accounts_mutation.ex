@@ -42,7 +42,7 @@ defmodule AeMdw.Db.UpdateBalanceAccountMutation do
         |> State.delete(Model.BalanceAccount, {old_balance, account_pk})
         |> State.delete(Model.AccountBalance, account_pk)
 
-      _ ->
+      _balance ->
         state
     end
     |> insert(account_pk, balance)
