@@ -92,6 +92,16 @@ defmodule AeMdw.Db.Model do
             index: {amount(), pubkey()}
           )
 
+  @account_balance_defaults [index: nil, balance: 0]
+  defrecord :account_balance, @account_balance_defaults
+
+  @type account_balance_index() :: pubkey()
+  @type account_balance() ::
+          record(:account_balance,
+            index: account_balance_index(),
+            balance: non_neg_integer()
+          )
+
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     On keyblock boundary: mb_index = -1}
@@ -1322,6 +1332,7 @@ defmodule AeMdw.Db.Model do
   defp tasks_tables() do
     [
       AeMdw.Db.Model.BalanceAccount,
+      AeMdw.Db.Model.AccountBalance,
       AeMdw.Db.Model.AsyncTask,
       AeMdw.Db.Model.Migrations
     ]
@@ -1329,6 +1340,7 @@ defmodule AeMdw.Db.Model do
 
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
+  def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
   def record(AeMdw.Db.Model.AsyncTask), do: :async_task
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx

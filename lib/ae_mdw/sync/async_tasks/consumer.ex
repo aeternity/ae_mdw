@@ -120,7 +120,13 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   defp process(Model.async_task(index: {_ts, type} = index, args: args, extra_args: extra_args)) do
     mod = @type_mod[type]
     done_fn = fn -> Producer.notify_consumed(index, args) end
-    mod.process(args ++ extra_args, done_fn)
+
+    if mod == StoreAccountBalance do
+      Logger.info("Skipping #{inspect(index)}")
+    else
+      mod.process(args ++ extra_args, done_fn)
+    end
+
     :ok
   end
 

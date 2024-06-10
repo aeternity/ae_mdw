@@ -16,7 +16,7 @@ defmodule AeMdw.Wealth do
   def fetch_balances(state) do
     state
     |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
-    |> Enum.map(fn {balance, pubkey} -> %{balance: balance, account: encode_account(pubkey)} end)
+    |> Stream.map(fn {balance, pubkey} -> %{balance: balance, account: encode_account(pubkey)} end)
     |> Enum.take(WealthRank.rank_size_config())
   end
 end

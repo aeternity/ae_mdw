@@ -36,6 +36,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.State
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
+  alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
@@ -292,14 +293,14 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
-    enqueue_state = maybe_enqueue_accounts_balance(state, blocks_mutations)
-
-    Enum.reduce(blocks_mutations, enqueue_state, fn {_bi, _block, block_mutations}, state ->
+    blocks_mutations
+    |> maybe_add_accounts_balance_mutations()
+    |> Enum.reduce(state, fn {_bi, _block, block_mutations}, state ->
       State.commit_db(state, block_mutations, clear_mem?)
     end)
   end
 
-  defp maybe_enqueue_accounts_balance(state, gen_mutations) do
+  defp maybe_add_accounts_balance_mutations(gen_mutations) do
     accounts_set =
       Enum.reduce(gen_mutations, MapSet.new(), fn
         {{_height, -1}, _block, _mutations}, set ->
@@ -310,11 +311,37 @@ defmodule AeMdw.Sync.Server do
       end)
 
     if MapSet.size(accounts_set) > 0 do
-      {block_index, mb_hash} = last_microblock(gen_mutations)
-      State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [accounts_set])
+      {block_index, mb_hash, mblock} = last_microblock(gen_mutations)
+
+      account_balances_mutations =
+        mb_hash
+        |> get_balances_from_node(accounts_set)
+        |> Enum.reduce([], fn {account_pk, balance}, acc ->
+          [{block_index, mblock, UpdateBalanceAccountMutation.new(account_pk, balance)} | acc]
+        end)
+
+      gen_mutations ++ account_balances_mutations
     else
-      state
+      gen_mutations
     end
+  end
+
+  defp get_balances_from_node(block_hash, account_set) do
+    with {:value, trees} <- :aec_db.find_block_state_partial(block_hash, true, [:accounts]),
+         accounts_tree <- :aec_trees.accounts(trees) do
+      get_balances(accounts_tree, account_set)
+    end
+  end
+
+  defp get_balances(accounts_tree, account_set) do
+    account_set
+    |> MapSet.to_list()
+    |> Enum.flat_map(fn pubkey ->
+      case :aec_accounts_trees.lookup(pubkey, accounts_tree) do
+        {:value, account} -> [{pubkey, :aec_accounts.balance(account)}]
+        :none -> []
+      end
+    end)
   end
 
   defp last_microblock(blocks_mutations) do
@@ -325,7 +352,7 @@ defmodule AeMdw.Sync.Server do
 
     {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
 
-    {block_index, mb_hash}
+    {block_index, mb_hash, mblock}
   end
 
   defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
@@ -357,9 +384,8 @@ defmodule AeMdw.Sync.Server do
 
     {ts, new_state} =
       :timer.tc(fn ->
-        state
-        |> maybe_enqueue_accounts_balance(blocks_mutations)
-        |> State.commit_mem(all_mutations)
+        all_mutations = maybe_add_accounts_balance_mutations(all_mutations)
+        State.commit_mem(state, all_mutations)
       end)
 
     :ok = profile_sync("sync_mem", height, ts, blocks_mutations)
@@ -373,9 +399,8 @@ defmodule AeMdw.Sync.Server do
     blocks_mutations =
       Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
 
-    state
-    |> maybe_enqueue_accounts_balance(gen_mutations)
-    |> State.commit_mem(blocks_mutations)
+    blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
+    State.commit_mem(state, blocks_mutations)
   end
 
   defp spawn_task(fun) do

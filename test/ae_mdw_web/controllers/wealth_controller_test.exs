@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.WealthControllerTest do
   @moduledoc false
 
+  alias AeMdw.Db.Store
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Db.AsyncStore
@@ -11,7 +12,7 @@ defmodule AeMdwWeb.WealthControllerTest do
   import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   describe "wealth" do
-    test "gets the biggest balances in descending order", %{conn: conn} do
+    test "gets the biggest balances in descending order", %{conn: conn, store: store} do
       balance1 = 200
       a1 = <<1::256>>
       account1 = encode_account(a1)
@@ -20,21 +21,17 @@ defmodule AeMdwWeb.WealthControllerTest do
       account2 = encode_account(a2)
       table = :wealth_controller_test
 
-      AsyncStore.init(table)
-
-      store =
-        table
-        |> AsyncStore.instance()
-        |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance2, a2}))
-        |> AsyncStore.put(Model.BalanceAccount, Model.balance_account(index: {balance1, a1}))
+      store
+      |> Store.put(Model.BalanceAccount, Model.balance_account(index: {balance2, a2}))
+      |> Store.put(Model.BalanceAccount, Model.balance_account(index: {balance1, a1}))
 
       assert [
                %{"balance" => balance1, "account" => account1},
                %{"balance" => balance2, "account" => account2}
              ] ==
                conn
-               |> with_async_store(store)
-               |> get("/v2/wealth")
+               |> with_store(store)
+               |> get("/v3/wealth")
                |> json_response(200)
     end
   end
