@@ -25,7 +25,7 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
           Model.AexnInvalidContract,
           Model.aexn_invalid_contract(
             index: {:aex9, contract_pk},
-            reason: Aex9.invalid_reason(:holder_balance)
+            reason: Aex9.invalid_holder_balance_reason()
           )
         )
       end)
@@ -54,7 +54,7 @@ defmodule AeMdw.Migrations.MarkAex9ContractsAsInvalid do
           Model.AexnInvalidContract,
           Model.aexn_invalid_contract(
             index: {:aex9, contract_pk},
-            reason: Aex9.invalid_reason(:number_of_holders)
+            reason: Aex9.invalid_number_of_holders_reason()
           )
         )
       end)
