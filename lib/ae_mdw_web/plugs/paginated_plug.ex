@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   import Plug.Conn
 
+  alias AeMdw.Db.Util, as: DbUtil
   alias Phoenix.Controller
   alias Plug.Conn
 
@@ -14,7 +15,8 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @scope_types %{
     "gen" => :gen,
-    "txi" => :txi
+    "txi" => :txi,
+    "time" => :time
   }
   @scope_types_keys Map.keys(@scope_types)
 
@@ -25,15 +27,27 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @pagination_params ~w(limit cursor rev direction scope tx_hash expand by int-as-string)
 
+  defmodule DirectionScopeParams do
+    @moduledoc false
+    defstruct [:state, txi_scope?: false]
+  end
+
   @spec init(opts()) :: opts()
   def init(opts), do: opts
 
   @spec call(Conn.t(), opts()) :: Conn.t()
-  def call(%Conn{params: params, query_params: query_params} = conn, opts) do
+  def call(
+        %Conn{params: params, query_params: query_params, assigns: %{state: state}} = conn,
+        opts
+      ) do
     txi_scope? = Keyword.get(opts, :txi_scope?, true)
     max_limit = Keyword.get(opts, :max_limit, @max_limit)
 
-    with {:ok, direction, scope} <- extract_direction_and_scope(params, txi_scope?),
+    with {:ok, direction, scope} <-
+           extract_direction_and_scope(params, %DirectionScopeParams{
+             txi_scope?: txi_scope?,
+             state: state
+           }),
          {:ok, limit} <- extract_limit(params, max_limit),
          {:ok, is_reversed?} <- extract_is_reversed(params),
          {:ok, order_by} <- extract_order_by(params, opts),
@@ -60,38 +74,41 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   def call(conn, _opts), do: conn
 
-  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}, _txi_scope?),
+  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}, _params),
     do: {:ok, :forward, @default_scope}
 
-  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}, _txi_scope?),
+  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}, _params),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_direction_and_scope(%{"range_or_dir" => range} = params, txi_scope?) do
-    params
+  defp extract_direction_and_scope(
+         %{"range_or_dir" => range} = query_params,
+         %DirectionScopeParams{txi_scope?: txi_scope?}
+       ) do
+    query_params
     |> Map.delete("range_or_dir")
     |> Map.put("range", range)
     |> extract_direction_and_scope(txi_scope?)
   end
 
   defp extract_direction_and_scope(
-         %{"scope_type" => scope_type, "range" => range} = params,
-         true = _txi_scope?
+         %{"scope_type" => scope_type, "range" => range} = query_params,
+         %DirectionScopeParams{state: state, txi_scope?: true}
        )
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
     case extract_range(range) do
       {:ok, first, last} when first < last ->
-        {:ok, :forward, {scope_type, first..last}}
+        {:ok, :forward, generate_range(state, scope_type, first, last)}
 
       {:ok, first, last} when first > last ->
-        {:ok, :backward, {scope_type, last..first}}
+        {:ok, :backward, generate_range(state, scope_type, last, first)}
 
       {:ok, first, last} ->
-        if Map.get(params, "direction", "backward") == "forward" do
-          {:ok, :forward, {scope_type, first..last}}
+        if Map.get(query_params, "direction", "backward") == "forward" do
+          {:ok, :forward, generate_range(state, scope_type, last, first)}
         else
-          {:ok, :backward, {scope_type, last..first}}
+          {:ok, :backward, generate_range(state, scope_type, last, first)}
         end
 
       {:error, reason} ->
@@ -99,38 +116,46 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
-  defp extract_direction_and_scope(%{"scope_type" => "gen"} = params, false = _txi_scope?),
-    do: extract_direction_and_scope(params, true)
+  defp extract_direction_and_scope(
+         %{"scope_type" => scope_type} = query_params,
+         %DirectionScopeParams{txi_scope?: false} = params
+       )
+       when scope_type in ["gen", "time"] do
+    extract_direction_and_scope(query_params, %DirectionScopeParams{
+      params
+      | txi_scope?: true
+    })
+  end
 
-  defp extract_direction_and_scope(%{"scope_type" => scope_type}, _txi_scope?),
+  defp extract_direction_and_scope(%{"scope_type" => scope_type}, _params),
     do: {:error, "invalid scope: #{scope_type}"}
 
-  defp extract_direction_and_scope(%{"range" => _range} = params, txi_scope?),
-    do: extract_direction_and_scope(Map.put(params, "scope_type", "gen"), txi_scope?)
+  defp extract_direction_and_scope(%{"range" => _range} = query_params, params),
+    do: extract_direction_and_scope(Map.put(query_params, "scope_type", "gen"), params)
 
-  defp extract_direction_and_scope(%{"scope" => scope} = params, txi_scope?) do
+  defp extract_direction_and_scope(%{"scope" => scope} = query_params, params) do
     case String.split(scope, ":") do
       [scope_type, range] ->
-        params
+        query_params
         |> Map.delete("scope")
         |> Map.merge(%{"scope_type" => scope_type, "range" => range})
-        |> extract_direction_and_scope(txi_scope?)
+        |> extract_direction_and_scope(params)
 
       _invalid_scope ->
         {:error, "invalid scope: #{scope}"}
     end
   end
 
-  defp extract_direction_and_scope(%{"direction" => "forward"}, _txi_scope?),
+  defp extract_direction_and_scope(%{"direction" => "forward"}, _params),
     do: {:ok, :forward, @default_scope}
 
-  defp extract_direction_and_scope(%{"direction" => "backward"}, _txi_scope?),
+  defp extract_direction_and_scope(%{"direction" => "backward"}, _params),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_direction_and_scope(%{"direction" => direction}, _txi_scope?),
+  defp extract_direction_and_scope(%{"direction" => direction}, _params),
     do: {:error, "invalid direction: #{direction}"}
 
-  defp extract_direction_and_scope(_params, _txi_scope?), do: {:ok, :backward, @default_scope}
+  defp extract_direction_and_scope(_query_params, _params), do: {:ok, :backward, @default_scope}
 
   defp extract_range(range) when is_binary(range) do
     case String.split(range, "-") do
@@ -207,5 +232,20 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
          tx_hash?: tx_hash?
        ]}
     end
+  end
+
+  defp generate_range(state, :time, first, last) do
+    {first_txi, last_txi} =
+      DbUtil.time_to_txi(
+        state,
+        first |> DateTime.from_unix!() |> DateTime.to_unix(:millisecond),
+        last |> DateTime.from_unix!() |> DateTime.to_unix(:millisecond)
+      )
+
+    generate_range(state, :txi, first_txi, last_txi)
+  end
+
+  defp generate_range(_state, scope_type, first, last) do
+    {scope_type, first..last}
   end
 end
