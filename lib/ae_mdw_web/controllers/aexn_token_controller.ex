@@ -14,8 +14,6 @@ defmodule AeMdwWeb.AexnTokenController do
   alias AeMdwWeb.Util
   alias Plug.Conn
 
-  import AeMdwWeb.AexnView
-
   use AeMdwWeb, :controller
 
   require Model
@@ -174,17 +172,18 @@ defmodule AeMdwWeb.AexnTokenController do
              aexn_type,
              query,
              order_by,
-             cursor
+             cursor,
+             v3?
            ) do
-      Util.render(conn, paginated_contracts, &render_contract(state, &1, v3?))
+      Util.render(conn, paginated_contracts)
     end
   end
 
   defp aexn_contract(%Conn{assigns: %{state: state} = assigns} = conn, contract_id, aexn_type) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, m_aexn} <- AexnTokens.fetch_contract(state, {aexn_type, contract_pk}) do
-      v3? = Map.get(assigns, :v3?, true)
-      format_json(conn, render_contract(state, m_aexn, v3?))
+    v3? = Map.get(assigns, :v3?, true)
+
+    with {:ok, aexn_contract} <- AexnTokens.fetch_contract(state, aexn_type, contract_id, v3?) do
+      format_json(conn, aexn_contract)
     end
   end
 
