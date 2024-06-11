@@ -2395,25 +2395,34 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?scope=gen:50002-70000&l
 {
   "data": [
     {
-      "account_id": "ak_542o93BKHiANzqNaFj6UurrJuDuxU61zCGr9LJCwtTUg34kWt",  # target account
-      "amount": 218400000000000,                                             # amount of tokens
-      "height": 50002,                                                       # generation height
-      "kind": "reward_block"                                                 # kind of transfer
+      "kind": "reward_block",
+      "account_id": "ak_542o93BKHiANzqNaFj6UurrJuDuxU61zCGr9LJCwtTUg34kWt",
+      "height": 50002,
+      "amount": 218400000000000,
+      "ref_tx_type": null,
+      "ref_tx_hash": null,
+      "ref_block_hash": null
     },
     {
+      "kind": "reward_block",
       "account_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-      "amount": 407000327600000000000,
       "height": 50002,
-      "kind": "reward_block"
+      "amount": 407000327600000000000,
+      "ref_tx_type": null,
+      "ref_tx_hash": null,
+      "ref_block_hash": null
     },
     {
+      "kind": "fee_lock_name",
       "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
-      "amount": 3,
       "height": 50002,
-      "kind": "fee_lock_name"
+      "amount": 3,
+      "ref_tx_type": "mh_2C2KBh8e82yR1TrwrbarNmoNrL1KQG3i29ykooKSTMa7kFJtjF",
+      "ref_tx_hash": "th_zUk7eWXjqyUK49WU3ZkLinrRRhMHPRSG22CSb4NbqZjmn7xdm",
+      "ref_block_hash": "NameClaimTx"
     }
   ],
-  "next": "/v3/transfers?scope=gen:50002-70000&cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
+  "next": "/v3/transfers?cursor=6KO30C1I5GOJAC9M60S32B1G4HJ6APAVDHNM6QQVDPGMQP948DB54L2FAH356HIN6T84CGHK6GQ4UJ2O6P94ODAM9P248DI69553ECQN899J6KQ4A1CJ6DHN8D7L0GHNA58I8C9L64R30E1H4GO0&limit=3&scope=gen%3A50002-70000",
   "prev": null
 }
 ```
@@ -2425,19 +2434,25 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?direction=forward&kind=
 {
   "data": [
     {
+      "kind": "reward_dev",
       "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
-      "amount": 37496010998100000000,
       "height": 90981,
-      "kind": "reward_dev"
+      "amount": 37496010998100000000,
+      "ref_tx_type": null,
+      "ref_tx_hash": null,
+      "ref_block_hash": null
     },
     {
+      "kind": "reward_dev",
       "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
-      "amount": 37496003679840000000,
       "height": 90982,
-      "kind": "reward_dev"
+      "amount": 37496003679840000000,
+      "ref_tx_type": null,
+      "ref_tx_hash": null,
+      "ref_block_hash": null
     }
   ],
-  "next": "/v3/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
+  "next": "/v3/transfers?cursor=74O3IE1J5GO2OC94E9INEOBICHFM8PBM4HB58MAP85B4OLAE88PLIDQI9H542L219T158DI9A9658HI96DD4EJ25A4R3CHIF99BJCD1L8D2LKD2EAT2K291G4GOG&direction=forward&kind=reward_dev&limit=2",
   "prev": null
 }
 ```
@@ -2449,13 +2464,16 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/transfers?account=ak_7myFYvagcqh8
 {
   "data": [
     {
+      "kind": "fee_lock_name",
       "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
-      "amount": 3,
       "height": 51366,
-      "kind": "fee_lock_name"
+      "amount": 3,
+      "ref_tx_type": "mh_2BMVuVLTbt5rsYn8k1gjmKcSQyPwhCEtydtdSVh6TFZYZt99Z7",
+      "ref_tx_hash": "th_25CKbSP17N454zjtWdZBmJC4HSyk7USFJfQieyLufXwTKMcwna",
+      "ref_block_hash": "NameClaimTx"
     }
   ],
-  "next": "/v3/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
+  "next": "/v3/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70P3GB1G4HJ6APAVDHNM6QQVDPGMQP9488QL4HHJA57K6CIPACR5EIA79T6KKJ9I6L648HQI6LD48LQ4B93KQDPIAD1KIHAIALCK4HPLAL8J8DAKA10I8C9M6OO3GCHO4GO0&limit=1",
   "prev": null
 }
 ```
