@@ -305,6 +305,89 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
+    test "it filters by type and time scope", %{conn: conn, empty_store: store} do
+      first_time = 1_708_090_667
+      last_time = 1_718_090_667
+
+      with_blockchain %{alice: 10_000, bob: 20_000},
+        mb1: [
+          tx1: tx(:oracle_register_tx, :alice, %{}),
+          tx2: tx(:oracle_register_tx, :bob, %{}),
+          tx3: spend_tx(:alice, :bob, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, _signed_tx3]} = blocks[:mb1]
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+
+        store =
+          store
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1, block_index: {0, 0}))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: tx_hash2, block_index: {0, 0}))
+          |> Store.put(Model.Type, Model.type(index: {:spend_tx, 3}))
+          |> Store.put(Model.Time, Model.time(index: {first_time * 1000, 1}))
+          |> Store.put(Model.Time, Model.time(index: {last_time * 1000, 2}))
+
+        # Filters out transactions
+        assert %{"data" => [tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/transactions",
+                   type: "oracle_register",
+                   scope: "time:#{first_time}-#{last_time - 1}"
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        # List them forwards
+        assert %{"data" => [tx1, tx2], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/transactions",
+                   type: "oracle_register",
+                   scope: "time:#{first_time}-#{last_time}"
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash2
+               } = tx2
+
+        # List them backwards
+        assert %{"data" => [tx2, tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/transactions",
+                   type: "oracle_register",
+                   scope: "time:#{last_time}-#{first_time}"
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash2
+               } = tx2
+      end
+    end
+
     test "it filters by id and type", %{conn: conn, empty_store: store} do
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)

@@ -129,6 +129,17 @@ defmodule AeMdw.Db.Util do
     end
   end
 
+  @spec time_to_txi(state(), integer(), integer()) :: {Txs.txi(), Txs.txi()}
+  def time_to_txi(state, first, last) do
+    case {State.next(state, Model.Time, {first, -1}), State.prev(state, Model.Time, {last, nil})} do
+      {{:ok, {_first_time, first_txi}}, {:ok, {_second_time, last_txi}}} ->
+        {first_txi, last_txi}
+
+      {_first_error, _second_error} ->
+        {-1, -1}
+    end
+  end
+
   @spec height_hash(Blocks.height()) :: Blocks.block_hash()
   def height_hash(height) do
     {:ok, block} = :aec_chain.get_key_block_by_height(height)
