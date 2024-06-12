@@ -108,25 +108,17 @@ defmodule AeMdwWeb.Aex141Controller do
   end
 
   @spec owned_nfts(Conn.t(), map()) :: Conn.t() | {:error, ErrInput.t()}
-  def owned_nfts(%Conn{assigns: assigns} = conn, %{"account_id" => account_id} = params) do
+  def owned_nfts(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
     %{
       state: state,
       pagination: pagination,
-      cursor: cursor
+      cursor: cursor,
+      query: query
     } = assigns
 
-    with {:ok, account_pk} <- Validate.id(account_id),
-         {:ok, contract_pk} <- validate_optional_pubkey(params, "contract"),
-         {:ok, {prev_cursor, nfts, next_cursor}} <-
-           Aex141.fetch_owned_nfts(state, account_pk, contract_pk, cursor, pagination) do
-      Util.render(conn, prev_cursor, nfts, next_cursor)
-    end
-  end
-
-  defp validate_optional_pubkey(params, param_name) do
-    case Map.fetch(params, param_name) do
-      {:ok, id} -> Validate.id(id)
-      :error -> {:ok, nil}
+    with {:ok, paginated_tokens} <-
+           Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query) do
+      Util.render(conn, paginated_tokens)
     end
   end
 end

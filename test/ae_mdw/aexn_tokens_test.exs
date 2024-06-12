@@ -11,7 +11,6 @@ defmodule AeMdw.AexnTokensTest do
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
   import AeMdw.TestUtil, only: [empty_state: 0]
-  import AeMdwWeb.AexnView
 
   require Model
 
@@ -35,21 +34,14 @@ defmodule AeMdw.AexnTokensTest do
 
       m_tx = Model.tx(index: txi, id: decoded_tx_hash)
 
-      Database.dirty_write(Model.AexnContract, m_aexn)
-      Database.dirty_write(Model.Tx, m_tx)
+      state =
+        state
+        |> State.put(Model.AexnContract, m_aexn)
+        |> State.put(Model.Tx, m_tx)
 
       contract_id = encode_contract(contract_pk)
 
-      assert {:ok, m_aex9} = AexnTokens.fetch_contract(state, {:aex9, contract_pk})
-
-      assert %{
-               name: ^name,
-               symbol: ^symbol,
-               decimals: ^decimals,
-               contract_txi: ^txi,
-               contract_id: ^contract_id,
-               extensions: ^extensions
-             } = render_contract(state, m_aex9, false)
+      assert {:ok, aex9_contract} = AexnTokens.fetch_contract(state, :aex9, contract_pk, true)
 
       assert %{
                name: ^name,
@@ -58,7 +50,7 @@ defmodule AeMdw.AexnTokensTest do
                contract_tx_hash: ^tx_hash,
                contract_id: ^contract_id,
                extensions: ^extensions
-             } = render_contract(state, m_aex9, true)
+             } = aex9_contract
     end
 
     test "returns a AEX-141 contract meta info" do
@@ -95,17 +87,7 @@ defmodule AeMdw.AexnTokensTest do
 
       contract_id = encode_contract(contract_pk)
 
-      assert {:ok, m_aex141} = AexnTokens.fetch_contract(state, {:aex141, contract_pk})
-
-      assert %{
-               name: ^name,
-               symbol: ^symbol,
-               base_url: ^base_url,
-               contract_txi: ^txi,
-               contract_id: ^contract_id,
-               metadata_type: ^type,
-               extensions: ^extensions
-             } = render_contract(state, m_aex141, false)
+      assert {:ok, aex141_contract} = AexnTokens.fetch_contract(state, :aex141, contract_pk, true)
 
       assert %{
                name: ^name,
@@ -115,7 +97,7 @@ defmodule AeMdw.AexnTokensTest do
                contract_id: ^contract_id,
                metadata_type: ^type,
                extensions: ^extensions
-             } = render_contract(state, m_aex141, true)
+             } = aex141_contract
     end
 
     test "returns input error on AEX9 not found" do
@@ -123,7 +105,7 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = Validate.id!(contract_id)
 
       assert {:error, %ErrInput{reason: ErrInput.NotFound}} =
-               AexnTokens.fetch_contract(State.new(), {:aex9, contract_pk})
+               AexnTokens.fetch_contract(State.new(), :aex9, contract_pk, false)
     end
 
     test "returns input error AEX141 not found" do
@@ -131,7 +113,7 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = Validate.id!(contract_id)
 
       assert {:error, %ErrInput{reason: ErrInput.NotFound}} =
-               AexnTokens.fetch_contract(State.new(), {:aex141, contract_pk})
+               AexnTokens.fetch_contract(State.new(), :aex141, contract_pk, false)
     end
   end
 
@@ -181,11 +163,36 @@ defmodule AeMdw.AexnTokensTest do
 
       pagination = {:forward, false, 10, false}
 
-      assert {:ok, {nil, [^m2, ^m1], nil}} =
-               AexnTokens.fetch_contracts(state, pagination, :aex9, %{}, :name, nil)
+      assert {:ok, {nil, [contract1, contract2], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex9, %{}, :name, nil, false)
 
-      assert {:ok, {nil, [^m1, ^m2], nil}} =
-               AexnTokens.fetch_contracts(state, pagination, :aex9, %{}, :creation, nil)
+      assert %{
+               contract_id: "ct_11111111111111111111111111111118qjnEr",
+               contract_txi: 123_456_789,
+               decimals: 18,
+               event_supply: 0,
+               extensions: ["extA1"],
+               holders: 0,
+               initial_supply: 0,
+               invalid: false,
+               logs_count: 0,
+               name: "TokenA1",
+               symbol: "TKA1"
+             } = contract1
+
+      assert %{
+               contract_id: "ct_1111111111111111111111111111111Hrt6FG",
+               contract_txi: 123_456_788,
+               decimals: 18,
+               event_supply: 0,
+               extensions: ["extB1"],
+               holders: 0,
+               initial_supply: 0,
+               invalid: false,
+               logs_count: 0,
+               name: "TokenB1",
+               symbol: "TKB1"
+             } = contract2
     end
 
     test "returns AEX-141 contracts sorted by creation" do
@@ -210,6 +217,12 @@ defmodule AeMdw.AexnTokensTest do
           extensions: ["extA1"]
         )
 
+      block_index1 = {1, -1}
+      block_hash1 = <<1::256>>
+
+      block_index2 = {2, -1}
+      block_hash2 = <<2::256>>
+
       state =
         empty_state()
         |> State.put(Model.AexnContract, m1)
@@ -230,14 +243,66 @@ defmodule AeMdw.AexnTokensTest do
           Model.AexnContractName,
           Model.aexn_contract_name(index: {:aex141, "TokenA1", contract_pk2})
         )
+        |> State.put(Model.Tx, Model.tx(index: txi1, id: <<1::256>>, block_index: block_index1))
+        |> State.put(Model.Tx, Model.tx(index: txi2, id: <<2::256>>, block_index: block_index2))
+        |> State.put(
+          Model.Block,
+          Model.block(index: block_index1, tx_index: txi1, hash: block_hash1)
+        )
+        |> State.put(
+          Model.Block,
+          Model.block(index: block_index2, tx_index: txi2, hash: block_hash2)
+        )
 
       pagination = {:forward, false, 10, false}
 
-      assert {:ok, {nil, [^m2, ^m1], nil}} =
-               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :name, nil)
+      assert {:ok, {nil, [contract2, contract1], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :name, nil, false)
 
-      assert {:ok, {nil, [^m1, ^m2], nil}} =
-               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :creation, nil)
+      assert %{
+               base_url: "",
+               contract_id: "ct_1111111111111111111111111111111Hrt6FG",
+               contract_txi: 123_456_788,
+               extensions: ["extB1"],
+               invalid: false,
+               limits: nil,
+               metadata_type: :url,
+               name: "TokenB1",
+               nft_owners: 0,
+               nfts_amount: 0,
+               symbol: "TKB1"
+             } = contract1
+
+      assert %{
+               base_url: "",
+               contract_id: "ct_11111111111111111111111111111118qjnEr",
+               contract_txi: 123_456_789,
+               extensions: ["extA1"],
+               invalid: false,
+               limits: nil,
+               metadata_type: :url,
+               name: "TokenA1",
+               nft_owners: 0,
+               nfts_amount: 0,
+               symbol: "TKA1"
+             } = contract2
+
+      assert {:ok, {nil, [contract1, _contract2], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :creation, nil, true)
+
+      assert %{
+               base_url: "",
+               contract_id: "ct_1111111111111111111111111111111Hrt6FG",
+               contract_tx_hash: "th_11111111111111111111111111111118qjnEr",
+               extensions: ["extB1"],
+               invalid: false,
+               limits: nil,
+               metadata_type: :url,
+               name: "TokenB1",
+               nft_owners: 0,
+               nfts_amount: 0,
+               symbol: "TKB1"
+             } = contract1
     end
   end
 end

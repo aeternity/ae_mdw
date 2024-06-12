@@ -3,16 +3,21 @@ defmodule AeMdw.AexnTokens do
   Context module for AEX-N tokens.
   """
 
+  alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Aex141
+  alias AeMdw.Aex9
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Node.Db
+  alias AeMdw.Stats
+  alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdw.Util.Encoding, only: [encode_contract: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_block: 2]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   require Model
@@ -24,6 +29,7 @@ defmodule AeMdw.AexnTokens do
   @typep pagination :: Collection.direction_limit()
   @typep order_by() :: :name | :symbol | :creation
   @typep query :: %{binary() => binary()}
+  @typep aexn_contract() :: map()
 
   @max_sort_field_length 100
 
@@ -37,25 +43,37 @@ defmodule AeMdw.AexnTokens do
     creation: @aexn_creation_table
   }
 
-  @spec fetch_contract(State.t(), {aexn_type(), Db.pubkey()}) ::
-          {:ok, Model.aexn_contract()} | {:error, Error.t()}
-  def fetch_contract(state, {aexn_type, contract_pk}) do
-    with {:ok, m_aexn} <- State.get(state, Model.AexnContract, {aexn_type, contract_pk}),
+  @spec fetch_contract(State.t(), aexn_type(), binary(), boolean()) ::
+          {:ok, aexn_contract()} | {:error, Error.t()}
+  def fetch_contract(state, aexn_type, contract_id, v3?) do
+    with {:ok, contract_pk} <- Validate.id(contract_id),
+         {:ok, aexn_contract} <- State.get(state, Model.AexnContract, {aexn_type, contract_pk}),
          {:invalid, false} <-
            {:invalid, State.exists?(state, Model.AexnInvalidContract, {aexn_type, contract_pk})} do
-      {:ok, m_aexn}
+      {:ok, render_contract(state, aexn_contract, v3?)}
     else
-      :not_found ->
-        {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
-
       {:invalid, true} ->
-        {:error, ErrInput.AexnContractInvalid.exception(value: encode_contract(contract_pk))}
+        {:error, ErrInput.AexnContractInvalid.exception(value: contract_id)}
+
+      {:error, reason} ->
+        {:error, reason}
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: contract_id)}
     end
   end
 
-  @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
+  @spec fetch_contracts(
+          State.t(),
+          pagination(),
+          aexn_type(),
+          query(),
+          order_by(),
+          cursor() | nil,
+          boolean()
+        ) ::
           {:ok, {cursor() | nil, [Model.aexn_contract()], cursor() | nil}} | {:error, Error.t()}
-  def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
+  def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor, v3?) do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
          {:ok, params} <- validate_params(query),
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
@@ -64,7 +82,11 @@ defmodule AeMdw.AexnTokens do
       paginated_aexn_contracts =
         filters
         |> build_tokens_streamer(state, aexn_type, sorting_table, cursor)
-        |> Collection.paginate(pagination, & &1, &serialize_aexn_cursor(order_by, &1))
+        |> Collection.paginate(
+          pagination,
+          &render_contract(state, &1, v3?),
+          &serialize_aexn_cursor(order_by, &1)
+        )
 
       {:ok, paginated_aexn_contracts}
     end
@@ -179,4 +201,90 @@ defmodule AeMdw.AexnTokens do
   end
 
   defp is_valid_cursor_term?(_other_term), do: false
+
+  defp render_contract(
+         state,
+         Model.aexn_contract(
+           index: {:aex9, contract_pk} = index,
+           txi_idx: {txi, _idx},
+           meta_info: {name, symbol, decimals},
+           extensions: extensions
+         ),
+         v3?
+       ) do
+    initial_supply =
+      case State.get(state, Model.Aex9InitialSupply, contract_pk) do
+        {:ok, Model.aex9_initial_supply(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    event_supply =
+      case State.get(state, Model.Aex9ContractBalance, contract_pk) do
+        {:ok, Model.aex9_contract_balance(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    num_holders = Aex9.fetch_holders_count(state, contract_pk)
+
+    response = %{
+      name: name,
+      symbol: symbol,
+      decimals: decimals,
+      contract_id: encode_contract(contract_pk),
+      extensions: extensions,
+      initial_supply: initial_supply,
+      event_supply: event_supply,
+      holders: num_holders,
+      invalid: State.exists?(state, Model.AexnInvalidContract, index),
+      logs_count: Stats.fetch_aex9_logs_count(state, contract_pk)
+    }
+
+    case v3? do
+      true ->
+        Map.put(response, :contract_tx_hash, Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+
+      false ->
+        Map.put(response, :contract_txi, txi)
+    end
+  end
+
+  defp render_contract(
+         state,
+         Model.aexn_contract(
+           index: {:aex141, contract_pk} = index,
+           txi_idx: {txi, _idx},
+           meta_info: {name, symbol, base_url, metadata_type},
+           extensions: extensions
+         ),
+         v3?
+       ) do
+    Model.tx(block_index: block_index, time: micro_time) = DbUtil.read_tx!(state, txi)
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
+    %{
+      name: name,
+      symbol: symbol,
+      base_url: base_url,
+      contract_txi: txi,
+      contract_id: encode_contract(contract_pk),
+      metadata_type: metadata_type,
+      extensions: extensions,
+      limits: Aex141.fetch_limits(state, contract_pk, v3?),
+      invalid: State.exists?(state, Model.AexnInvalidContract, index),
+      creation_time: micro_time,
+      block_hash: encode_block(:micro, block_hash)
+    }
+    |> maybe_put_contract_tx_hash(state, txi, v3?)
+    |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
+  end
+
+  defp maybe_put_contract_tx_hash(data, state, txi, v3?) do
+    if v3? do
+      data
+      |> Map.put(:contract_tx_hash, Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+      |> Map.delete(:contract_txi)
+    else
+      data
+    end
+  end
 end
