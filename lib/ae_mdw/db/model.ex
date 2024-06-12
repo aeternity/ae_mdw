@@ -115,7 +115,7 @@ defmodule AeMdw.Db.Model do
           record(:tx,
             index: tx_index(),
             id: Txs.tx_hash(),
-            block_index: Blocks.block_index(),
+            block_index: block_index(),
             time: Blocks.time()
           )
 

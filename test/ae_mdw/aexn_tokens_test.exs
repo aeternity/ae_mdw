@@ -82,10 +82,16 @@ defmodule AeMdw.AexnTokensTest do
           extensions: extensions
         )
 
-      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+      block_index = {1, -1}
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index)
+
+      block_hash = <<1::256>>
+
+      m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
       Database.dirty_write(Model.AexnContract, m_aexn)
       Database.dirty_write(Model.Tx, m_tx)
+      Database.dirty_write(Model.Block, m_block)
 
       contract_id = encode_contract(contract_pk)
 

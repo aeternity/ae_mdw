@@ -57,6 +57,11 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         type_info = {:fcode, functions, nil, nil}
         AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
+        block_index = {i, -1}
+        block_hash = <<i::256>>
+
+        m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
+
         store
         |> Store.put(Model.AexnContract, m_aex9)
         |> Store.put(Model.AexnContractCreation, m_aexn_creation)
@@ -95,7 +100,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
             )
           end)
         end)
-        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index))
+        |> Store.put(Model.Block, m_block)
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)
@@ -135,9 +141,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         m_aexn_creation =
           Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
 
-        m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+        block_index = {i, -1}
+        block_hash = <<i::256>>
+
+        m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index)
+
+        m_block = Model.block(index: block_index, hash: block_hash)
 
         store
+        |> Store.put(Model.Block, m_block)
         |> Store.put(Model.AexnContract, m_aexn)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
@@ -769,6 +781,19 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       contract_pk = :crypto.strong_rand_bytes(32)
       aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
 
+      i = 12_345_678
+
+      block_index = {i, -1}
+      block_hash = <<i::256>>
+
+      m_tx = Model.tx(index: i, block_index: block_index)
+
+      m_block = Model.block(index: block_index, hash: block_hash)
+
+      conn.assigns.state.store
+      |> Store.put(Model.Block, m_block)
+      |> Store.put(Model.Tx, m_tx)
+
       %{store: store} =
         conn.assigns.state
         |> Contract.aexn_creation_write(
@@ -781,7 +806,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
             "ext2"
           ]
         )
-        |> State.put(Model.Tx, Model.tx(index: 12_345_678, id: <<12_345_678::256>>))
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: 12_345_678, id: <<12_345_678::256>>, block_index: block_index)
+        )
 
       contract_id = encode_contract(contract_pk)
 

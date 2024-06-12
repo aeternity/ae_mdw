@@ -176,6 +176,9 @@ defmodule AeMdwWeb.AexnView do
         ),
         v3?
       ) do
+    Model.tx(block_index: block_index, time: micro_time) = Util.read_tx!(state, txi)
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
     %{
       name: name,
       symbol: symbol,
@@ -185,7 +188,9 @@ defmodule AeMdwWeb.AexnView do
       metadata_type: metadata_type,
       extensions: extensions,
       limits: Aex141.fetch_limits(state, contract_pk, v3?),
-      invalid: State.exists?(state, Model.AexnInvalidContract, index)
+      invalid: State.exists?(state, Model.AexnInvalidContract, index),
+      creation_time: micro_time,
+      block_hash: encode_block(:micro, block_hash)
     }
     |> maybe_put_contract_tx_hash(state, txi, v3?)
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
