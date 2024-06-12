@@ -13,6 +13,7 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Stats
   alias AeMdw.Txs
   alias AeMdw.Util
+  alias AeMdw.Validate
 
   import AeMdw.Util.Encoding
 
@@ -72,15 +73,16 @@ defmodule AeMdw.Aex141 do
     end
   end
 
-  @spec fetch_owned_nfts(State.t(), pubkey(), pubkey(), cursor(), pagination()) ::
+  @spec fetch_owned_tokens(State.t(), binary(), cursor(), pagination(), map()) ::
           {:ok, {page_cursor(), [nft()], page_cursor()}} | {:error, Error.t()}
-  def fetch_owned_nfts(state, account_pk, contract_pk, cursor, pagination) do
-    with {:ok, cursor_key} <- deserialize_cursor(@ownership_table, cursor),
-         cursor_key <- update_cursor(cursor_key, account_pk, contract_pk) do
+  def fetch_owned_tokens(state, account_id, cursor, pagination, params) do
+    with {:ok, account_pk} <- Validate.id(account_id),
+         {:ok, filters} <- Util.convert_params(params, &convert_owned_tokens_param/1),
+         {:ok, cursor} <- deserialize_ownership_cursor(account_pk, cursor) do
       paginated_nfts =
         state
-        |> build_streamer(@ownership_table, cursor_key, account_pk, contract_pk)
-        |> Collection.paginate(pagination, &render_owned_nft/1, &serialize_cursor/1)
+        |> build_owned_tokens_streamer(account_pk, cursor, filters)
+        |> Collection.paginate(pagination, &render_owned_nft/1, &serialize_ownership_cursor/1)
 
       {:ok, paginated_nfts}
     end
@@ -166,13 +168,20 @@ defmodule AeMdw.Aex141 do
   #
   # Private function
   #
-  defp build_streamer(state, Model.NftOwnership, cursor_key, account_pk, contract_pk) do
+  defp build_owned_tokens_streamer(state, account_pk, cursor, %{contract: contract_pk}) do
     key_boundary =
-      {{account_pk, contract_pk || <<>>, 0},
-       {account_pk, contract_pk || Util.max_256bit_bin(), Util.max_int()}}
+      {{account_pk, contract_pk, Util.min_int()}, {account_pk, contract_pk, Util.max_int()}}
 
     fn direction ->
-      Collection.stream(state, Model.NftOwnership, direction, key_boundary, cursor_key)
+      Collection.stream(state, @ownership_table, direction, key_boundary, cursor)
+    end
+  end
+
+  defp build_owned_tokens_streamer(state, account_pk, cursor, _params) do
+    key_boundary = {{account_pk, <<>>, 0}, {account_pk, Util.max_256bit_bin(), Util.max_int()}}
+
+    fn direction ->
+      Collection.stream(state, @ownership_table, direction, key_boundary, cursor)
     end
   end
 
@@ -195,16 +204,6 @@ defmodule AeMdw.Aex141 do
   defp serialize_cursor(cursor), do: cursor |> :erlang.term_to_binary() |> Base.encode64()
 
   defp deserialize_cursor(_table, nil), do: {:ok, nil}
-
-  defp deserialize_cursor(Model.NftOwnership, cursor_bin64) do
-    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
-         {<<_pk1::256>>, <<_pk2::256>>, token_id} = cursor when is_integer(token_id) <-
-           :erlang.binary_to_term(cursor_bin) do
-      {:ok, cursor}
-    else
-      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
-    end
-  end
 
   defp deserialize_cursor(Model.NftTemplate, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
@@ -237,6 +236,30 @@ defmodule AeMdw.Aex141 do
     end
   end
 
+  defp serialize_ownership_cursor({_account_pk, contract_pk, token_id}),
+    do: serialize_cursor({contract_pk, token_id})
+
+  defp deserialize_ownership_cursor(_account_pk, nil), do: {:ok, nil}
+
+  defp deserialize_ownership_cursor(account_pk, cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
+         {<<_pk::256>> = contract_pk, token_id} when is_integer(token_id) <-
+           :erlang.binary_to_term(cursor_bin) do
+      {:ok, {account_pk, contract_pk, token_id}}
+    else
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
+  defp convert_owned_tokens_param({"contract", contract_id}) do
+    with {:ok, contract_pk} <- Validate.id(contract_id) do
+      {:ok, {:contract, contract_pk}}
+    end
+  end
+
+  defp convert_owned_tokens_param(other_param),
+    do: {:error, ErrInput.Query.exception(value: other_param)}
+
   defp call_contract(state, contract_pk, entrypoint, args) do
     with true <- State.exists?(state, Model.AexnContract, {:aex141, contract_pk}),
          {:ok, {:variant, [0, 1], 1, {result}}} <-
@@ -266,22 +289,6 @@ defmodule AeMdw.Aex141 do
         {:error, ErrInput.ContractReturn.exception(value: inspect(mismatch))}
     end
   end
-
-  defp update_cursor(nil, _account_pk, _contract_pk), do: nil
-
-  defp update_cursor({account_pk, _contract_pk, _token} = cursor_key, account_pk, nil),
-    do: cursor_key
-
-  defp update_cursor({account_pk, contract_pk, _token} = cursor_key, account_pk, contract_pk),
-    do: cursor_key
-
-  defp update_cursor({account_pk, _contract_pk1, _token}, account_pk, contract_pk2),
-    do: {account_pk, contract_pk2, 0}
-
-  defp update_cursor({_account_pk1, _contract_pk, _token}, account_pk2, contract_pk),
-    do: {account_pk2, contract_pk || <<>>, 0}
-
-  defp update_cursor(cursor_key, _account_pk, _contract_pk), do: cursor_key
 
   defp render_owned_nft({owner_pk, contract_pk, token_id}) do
     %{
