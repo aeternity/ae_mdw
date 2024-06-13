@@ -9,6 +9,7 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Stats
@@ -16,7 +17,7 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdw.Util.Encoding, only: [encode_contract: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_block: 2]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   require Model
@@ -257,6 +258,9 @@ defmodule AeMdw.AexnTokens do
          ),
          v3?
        ) do
+    Model.tx(block_index: block_index, time: micro_time) = DbUtil.read_tx!(state, txi)
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
     %{
       name: name,
       symbol: symbol,
@@ -266,7 +270,9 @@ defmodule AeMdw.AexnTokens do
       metadata_type: metadata_type,
       extensions: extensions,
       limits: Aex141.fetch_limits(state, contract_pk, v3?),
-      invalid: State.exists?(state, Model.AexnInvalidContract, index)
+      invalid: State.exists?(state, Model.AexnInvalidContract, index),
+      creation_time: micro_time,
+      block_hash: encode_block(:micro, block_hash)
     }
     |> maybe_put_contract_tx_hash(state, txi, v3?)
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))

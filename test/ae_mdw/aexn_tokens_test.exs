@@ -74,10 +74,16 @@ defmodule AeMdw.AexnTokensTest do
           extensions: extensions
         )
 
-      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+      block_index = {1, -1}
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index)
+
+      block_hash = <<1::256>>
+
+      m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
       Database.dirty_write(Model.AexnContract, m_aexn)
       Database.dirty_write(Model.Tx, m_tx)
+      Database.dirty_write(Model.Block, m_block)
 
       contract_id = encode_contract(contract_pk)
 
@@ -211,6 +217,12 @@ defmodule AeMdw.AexnTokensTest do
           extensions: ["extA1"]
         )
 
+      block_index1 = {1, -1}
+      block_hash1 = <<1::256>>
+
+      block_index2 = {2, -1}
+      block_hash2 = <<2::256>>
+
       state =
         empty_state()
         |> State.put(Model.AexnContract, m1)
@@ -231,8 +243,16 @@ defmodule AeMdw.AexnTokensTest do
           Model.AexnContractName,
           Model.aexn_contract_name(index: {:aex141, "TokenA1", contract_pk2})
         )
-        |> State.put(Model.Tx, Model.tx(index: txi1, id: <<1::256>>))
-        |> State.put(Model.Tx, Model.tx(index: txi2, id: <<2::256>>))
+        |> State.put(Model.Tx, Model.tx(index: txi1, id: <<1::256>>, block_index: block_index1))
+        |> State.put(Model.Tx, Model.tx(index: txi2, id: <<2::256>>, block_index: block_index2))
+        |> State.put(
+          Model.Block,
+          Model.block(index: block_index1, tx_index: txi1, hash: block_hash1)
+        )
+        |> State.put(
+          Model.Block,
+          Model.block(index: block_index2, tx_index: txi2, hash: block_hash2)
+        )
 
       pagination = {:forward, false, 10, false}
 

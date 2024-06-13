@@ -199,11 +199,21 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
-      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+      time = 5
+
+      block_index = {1, -1}
+
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index, time: time)
       m_limit_tx = Model.tx(index: limit_txi, id: decoded_limit_tx_hash)
+
+      block_hash = <<1::256>>
+      encoded_block_hash = Enc.encode(:micro_block_hash, block_hash)
+
+      m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
       store =
         state.store
+        |> Store.put(Model.Block, m_block)
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
@@ -221,6 +231,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_txi" => ^txi,
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
+               "creation_time" => ^time,
+               "block_hash" => ^encoded_block_hash,
                "limits" => %{
                  "token_limit" => 200,
                  "template_limit" => 100,
@@ -240,6 +252,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_tx_hash" => ^tx_hash,
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
+               "creation_time" => ^time,
                "limits" => %{
                  "token_limit" => 200,
                  "template_limit" => 100,
@@ -286,10 +299,20 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
-      m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+      time = 5
+
+      block_index = {1, -1}
+
+      m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index, time: time)
+
+      block_hash = <<1::256>>
+      encoded_block_hash = Enc.encode(:micro_block_hash, block_hash)
+
+      m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
       store =
         state.store
+        |> Store.put(Model.Block, m_block)
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
@@ -306,6 +329,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_txi" => ^txi,
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
+               "creation_time" => ^time,
+               "block_hash" => ^encoded_block_hash,
                "limits" => nil
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
 
@@ -319,6 +344,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_tx_hash" => ^tx_hash,
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
+               "creation_time" => ^time,
                "limits" => nil
              } =
                conn |> with_store(store) |> get("/v3/aex141/#{contract_id}") |> json_response(200)
@@ -346,12 +372,21 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
           m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
 
+          time = 5
+
+          block_index = {1, -1}
+
+          block_hash = <<1::256>>
+
           m_aexn_tx =
             Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
 
-          m_tx = Model.tx(index: txi, id: decoded_tx_hash)
+          m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index, time: time)
+
+          m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
           store
+          |> Store.put(Model.Block, m_block)
           |> Store.put(Model.AexnContract, m_aex141)
           |> Store.put(Model.AexnContractName, m_aexn_name)
           |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)

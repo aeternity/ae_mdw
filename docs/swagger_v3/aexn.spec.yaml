@@ -23,6 +23,8 @@ schemas:
       nfts_amount: 36
       symbol: "ASITM-T"
       invalid: false
+      creation_time: 1587577771376
+      block_hash: "mh_11111111111111111111111111111118qjnEr"
     properties:
       base_url:
         description: Metadata base url
@@ -44,6 +46,12 @@ schemas:
       invalid:
         description: True if the contract is invalid
         type: boolean
+      creation_time:
+        description: Creation time of the contract
+        type: integer
+      block_hash:
+        description: Block hash of the contract creation
+        type: string
     required:
       - base_url
       - contract_id
@@ -56,6 +64,8 @@ schemas:
       - nfts_amount
       - symbol
       - invalid
+      - creation_time
+      - block_hash
     title: Aex141Response
     type: object
   Aex141TokenResponse:
