@@ -6,7 +6,7 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
-  alias AeMdw.Sync.WealthRank
+  alias AeMdw.TestUtil
   require Model
 
   setup do
@@ -29,7 +29,7 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
     state = DbStore.new() |> State.new()
 
     state =
-      WealthRank.update_balances(state, [
+      TestUtil.update_balances(state, [
         {account_pk1, amount11},
         {account_pk2, amount21}
       ])
@@ -97,7 +97,7 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
 
     state = DbStore.new() |> State.new()
 
-    state = WealthRank.update_balances(state, account_amounts)
+    state = TestUtil.update_balances(state, account_amounts)
 
     assert state
            |> Collection.stream(Model.BalanceAccount, :backward, {nil, nil}, nil)

@@ -1,15 +1,12 @@
 defmodule AeMdwWeb.WealthControllerTest do
   @moduledoc false
-
-  alias AeMdw.Db.Store
   use AeMdwWeb.ConnCase
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
-  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Store
 
   require Model
-
-  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   describe "wealth" do
     test "gets the biggest balances in descending order", %{conn: conn, store: store} do
@@ -19,7 +16,6 @@ defmodule AeMdwWeb.WealthControllerTest do
       balance2 = 100
       a2 = <<2::256>>
       account2 = encode_account(a2)
-      table = :wealth_controller_test
 
       store
       |> Store.put(Model.BalanceAccount, Model.balance_account(index: {balance2, a2}))

@@ -8,6 +8,7 @@ defmodule AeMdw.TestUtil do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Error.Input, as: ErrInput
   alias Plug.Conn
 
@@ -57,5 +58,16 @@ defmodule AeMdw.TestUtil do
     Enum.each(store2.tables, &Database.exists?(elem(&1, 0), nil))
 
     store2
+  end
+
+  @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep balances :: [{pubkey(), integer()}]
+  @spec update_balances(State.t(), balances()) :: State.t()
+  def update_balances(state, balances) do
+    Enum.reduce(balances, state, fn {account_pk, balance}, acc ->
+      account_pk
+      |> UpdateBalanceAccountMutation.new(balance)
+      |> Mutation.execute(acc)
+    end)
   end
 end

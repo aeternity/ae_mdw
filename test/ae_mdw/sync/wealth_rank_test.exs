@@ -3,7 +3,7 @@ defmodule AeMdw.Sync.WealthRankTest do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Sync.WealthRank
+  alias AeMdw.TestUtil
 
   require Model
 
@@ -15,7 +15,7 @@ defmodule AeMdw.Sync.WealthRankTest do
       state = State.mem_state()
 
       state =
-        WealthRank.update_balances(state, [{account_pk, amount}])
+        TestUtil.update_balances(state, [{account_pk, amount}])
 
       assert {:ok, Model.balance_account(index: {^amount, ^account_pk})} =
                State.get(state, Model.BalanceAccount, {amount, account_pk})
@@ -31,7 +31,7 @@ defmodule AeMdw.Sync.WealthRankTest do
       state = State.mem_state()
 
       state =
-        WealthRank.update_balances(state, [
+        TestUtil.update_balances(state, [
           {account_pk1, amount11},
           {account_pk2, amount21}
         ])
@@ -46,7 +46,7 @@ defmodule AeMdw.Sync.WealthRankTest do
                State.get(state, Model.BalanceAccount, {amount12, account_pk1})
 
       state =
-        WealthRank.update_balances(state, [{account_pk1, amount12}])
+        TestUtil.update_balances(state, [{account_pk1, amount12}])
 
       assert :not_found =
                State.get(state, Model.BalanceAccount, {amount11, account_pk1})
