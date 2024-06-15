@@ -23,21 +23,30 @@ defmodule AeMdw.Migrations.SyncBalanceAccount do
                                         {count_acc, write_mutations_acc} ->
         new_balance = :aeapi.balance_at_height(account_id, current_height)
 
-        write_mutation =
+        balance_account_write_mutation =
           WriteMutation.new(
             Model.BalanceAccount,
             Model.balance_account(index: {new_balance, account_id})
           )
 
+        account_balance_write_mutation =
+          WriteMutation.new(
+            Model.AccountBalance,
+            Model.account_balance(index: account_id, balance: new_balance)
+          )
+
         if new_balance != old_balance do
-          {count_acc + 1, [write_mutation | write_mutations_acc]}
+          {count_acc + 1,
+           [balance_account_write_mutation, account_balance_write_mutation | write_mutations_acc]}
         else
-          {count_acc, [write_mutation | write_mutations_acc]}
+          {count_acc,
+           [balance_account_write_mutation, account_balance_write_mutation | write_mutations_acc]}
         end
       end)
 
     Logger.warning("Found #{wrong_balances_count} wrong balances")
-    _state = State.commit(state, [clear_mutation | write_mutations])
+    _state = State.commit(state, [clear_mutation])
+    _state = State.commit(state, write_mutations)
 
     {:ok, wrong_balances_count}
   end

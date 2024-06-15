@@ -3,22 +3,20 @@ defmodule AeMdw.Wealth do
   Main wealth module.
   """
 
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
+
   alias AeMdw.Collection
-  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks.WealthRank
-
-  import AeMdw.Util.Encoding, only: [encode_account: 1]
+  alias AeMdw.Sync.WealthRank
 
   require Model
 
-  @spec fetch_balances(AsyncStore.t()) :: [tuple()]
-  def fetch_balances(async_store) do
-    async_store
-    |> State.new()
+  @spec fetch_balances(State.t()) :: [tuple()]
+  def fetch_balances(state) do
+    state
     |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
-    |> Enum.map(fn {balance, pubkey} -> %{balance: balance, account: encode_account(pubkey)} end)
+    |> Stream.map(fn {balance, pubkey} -> %{balance: balance, account: encode_account(pubkey)} end)
     |> Enum.take(WealthRank.rank_size_config())
   end
 end
