@@ -165,4 +165,5 @@ USER ${USER}
 RUN rm -rf /home/aeternity/node/ae_mdw/log
 RUN mkdir -p /home/aeternity/node/ae_mdw/log
 
+HEALTHCHECK --start-period=10s --start-interval=2s --timeout=2s CMD /home/aeternity/healthcheck.sh
 CMD ["/home/aeternity/node/bin/server"]

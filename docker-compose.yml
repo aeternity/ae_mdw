@@ -1,11 +1,6 @@
 version: '3.1'
 services:
   ae_mdw:
-    healthcheck:
-      test: ["CMD", "/home/aeternity/healthcheck.sh"]
-      interval: 1m
-      timeout: 30s
-      retries: 3
     image: aeternity/ae_mdw:latest
     ports:
       - "4000:4000" #MDW's default port
