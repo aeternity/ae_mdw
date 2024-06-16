@@ -4,6 +4,7 @@ defmodule AeMdw.Contracts do
   """
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DbContract
@@ -38,6 +39,7 @@ defmodule AeMdw.Contracts do
   @typep reason() :: binary()
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
+  @typep logs_opt() :: {:v3?, boolean()}
 
   @contract_log_table Model.ContractLog
   @idx_contract_log_table Model.IdxContractLog
@@ -85,25 +87,81 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  @spec fetch_logs(State.t(), pagination(), range(), query(), cursor()) ::
+  @spec fetch_logs(State.t(), pagination(), range(), query(), cursor(), [logs_opt()]) ::
           {:ok, {cursor(), [log()], cursor()}} | {:error, Error.t()}
-  def fetch_logs(state, pagination, range, query, cursor) do
+  def fetch_logs(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_logs_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_logs_param(state, &1)) do
+      encode_args = %{
+        aexn_args?: Map.get(filters, :aexn_args, false),
+        custom_args?: Map.get(filters, :custom_args, false)
+      }
+
       paginated_logs =
         filters
         |> build_logs_pagination(state, scope, cursor)
-        |> Collection.paginate(pagination, & &1, &serialize_logs_cursor/1)
+        |> Collection.paginate(
+          pagination,
+          &render_log(state, &1, encode_args, opts),
+          &serialize_logs_cursor/1
+        )
 
       {:ok, paginated_logs}
     end
   end
 
-  @spec fetch_calls(State.t(), pagination(), range(), query(), cursor()) ::
+  @spec fetch_contract_logs(State.t(), binary(), pagination(), range(), query(), cursor()) ::
+          {:ok, {cursor(), [log()], cursor()}} | {:error, Error.t()}
+  def fetch_contract_logs(state, contract_id, pagination, range, query, cursor) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, filters} <- Util.convert_params(query, &convert_logs_param(state, &1)),
+         {:ok, create_txi} <- create_txi(state, contract_pk) do
+      cursor = deserialize_logs_cursor(cursor)
+      scope = deserialize_scope(state, range)
+
+      encode_args = %{
+        aexn_args?: Map.get(filters, :aexn_args, false),
+        custom_args?: Map.get(filters, :custom_args, false)
+      }
+
+      filters
+      |> Map.put(:create_txi, create_txi)
+      |> build_logs_pagination(state, scope, cursor)
+      |> Collection.paginate(
+        pagination,
+        &render_log(state, &1, encode_args, v3?: true),
+        &serialize_logs_cursor/1
+      )
+      |> then(&{:ok, &1})
+    end
+  end
+
+  @spec fetch_contract_calls(State.t(), binary(), pagination(), range(), query(), cursor()) ::
           {:ok, {cursor(), [call()], cursor()}} | {:error, Error.t()}
-  def fetch_calls(state, pagination, range, query, cursor) do
+  def fetch_contract_calls(state, contract_id, pagination, range, query, cursor) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)),
+         {:ok, create_txi} <- create_txi(state, contract_pk) do
+      cursor = deserialize_calls_cursor(cursor)
+      scope = deserialize_scope(state, range)
+
+      filters
+      |> Map.put(:create_txi, create_txi)
+      |> build_calls_pagination(state, scope, cursor)
+      |> Collection.paginate(
+        pagination,
+        &render_call(state, &1, v3?: true),
+        &serialize_calls_cursor/1
+      )
+      |> then(&{:ok, &1})
+    end
+  end
+
+  @spec fetch_calls(State.t(), pagination(), range(), query(), cursor(), Keyword.t()) ::
+          {:ok, {cursor(), [call()], cursor()}} | {:error, Error.t()}
+  def fetch_calls(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_calls_cursor(cursor)
     scope = deserialize_scope(state, range)
 
@@ -111,7 +169,11 @@ defmodule AeMdw.Contracts do
       paginated_calls =
         filters
         |> build_calls_pagination(state, scope, cursor)
-        |> Collection.paginate(pagination, &render_call(state, &1), &serialize_calls_cursor/1)
+        |> Collection.paginate(
+          pagination,
+          &render_call(state, &1, opts),
+          &serialize_calls_cursor/1
+        )
 
       {:ok, paginated_calls}
     end
@@ -492,11 +554,26 @@ defmodule AeMdw.Contracts do
     end)
   end
 
+  defp convert_logs_param(_state, {"aexn-args", value}) when value in ~w(true false),
+    do: {:ok, {:aexn_args, value == "true"}}
+
+  defp convert_logs_param(_state, {"aexn-args", _val}),
+    do: {:error, ErrInput.Query.exception(value: "aexn-args should be either true or false")}
+
+  defp convert_logs_param(_state, {"custom-args", value}) when value in ~w(true false),
+    do: {:ok, {:custom_args, value == "true"}}
+
+  defp convert_logs_param(_state, {"custom-args", _val}),
+    do: {:error, ErrInput.Query.exception(value: "custom-args should be either true or false")}
+
+  defp convert_logs_param(state, arg), do: convert_param(state, arg)
+
   defp convert_param(state, {"contract_id", contract_id}),
     do: convert_param(state, {"contract", contract_id})
 
   defp convert_param(state, {"contract", contract_id}) do
-    with {:ok, create_txi} <- create_txi(state, contract_id) do
+    with {:ok, contract_pk} <- Validate.id(contract_id),
+         {:ok, create_txi} <- create_txi(state, contract_pk) do
       {:ok, {:create_txi, create_txi}}
     end
   end
@@ -536,13 +613,9 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_scope(_state, {:txi, first_txi..last_txi}), do: {first_txi, last_txi}
 
-  defp create_txi(state, contract_id) do
-    with {:ok, pk} <- Validate.id(contract_id),
-         {:ok, txi} <- Origin.tx_index(state, {:contract, pk}) do
-      {:ok, txi}
-    else
-      {:error, reason} -> {:error, reason}
-      :not_found -> {:error, ErrInput.Id.exception(value: contract_id)}
+  defp create_txi(state, contract_pk) do
+    with :not_found <- Origin.tx_index(state, {:contract, contract_pk}) do
+      {:error, ErrInput.Id.exception(value: Enc.encode(:contract_pubkey, contract_pk))}
     end
   end
 
@@ -556,9 +629,16 @@ defmodule AeMdw.Contracts do
     tx_type
   end
 
-  defp render_call(state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
+  defp render_call(state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}, opts) do
     call_key = {call_txi, local_idx}
-    Format.to_map(state, call_key, @int_contract_call_table)
+
+    call = Format.to_map(state, call_key, @int_contract_call_table)
+
+    if Keyword.get(opts, :v3?, true) do
+      Map.drop(call, ~w(call_txi contract_txi)a)
+    else
+      call
+    end
   end
 
   defp render_contract(state, create_txi_idx) do
@@ -592,6 +672,170 @@ defmodule AeMdw.Contracts do
       create_tx: encoded_tx
     }
   end
+
+  defp render_log(state, {create_txi, call_txi, log_idx} = index, encode_args, opts) do
+    {contract_tx_hash, ct_pk} =
+      if create_txi == -1 do
+        {nil, Origin.pubkey(state, {:contract_call, call_txi})}
+      else
+        tx_hash = Enc.encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
+
+        {tx_hash, Origin.pubkey(state, {:contract, create_txi})}
+      end
+
+    v3? = Keyword.get(opts, :v3?, true)
+
+    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
+      State.fetch!(state, Model.Tx, call_txi)
+
+    Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
+
+    Model.contract_log(args: args, data: data, ext_contract: ext_contract, hash: event_hash) =
+      State.fetch!(state, Model.ContractLog, index)
+
+    event_name = AexnContracts.event_name(event_hash) || get_custom_event_name(event_hash)
+
+    state
+    |> render_remote_log_fields(ext_contract)
+    |> Map.merge(%{
+      contract_txi: create_txi,
+      contract_tx_hash: contract_tx_hash,
+      contract_id: encode_contract(ct_pk),
+      call_txi: call_txi,
+      call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
+      block_time: DBUtil.block_time(block_hash),
+      args: format_args(event_name, args, encode_args),
+      data: maybe_encode_base64(data),
+      event_hash: Base.hex_encode32(event_hash),
+      event_name: event_name,
+      height: height,
+      micro_index: micro_index,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      log_idx: log_idx
+    })
+    |> maybe_remove_logs_txis(v3?)
+  end
+
+  defp maybe_remove_logs_txis(log, true) do
+    Map.drop(log, [:contract_txi, :call_txi, :ext_caller_contract_txi])
+  end
+
+  defp maybe_remove_logs_txis(log, false) do
+    log
+  end
+
+  defp render_remote_log_fields(_state, nil) do
+    %{
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: nil
+    }
+  end
+
+  defp render_remote_log_fields(_state, {:parent_contract_pk, parent_pk}) do
+    %{
+      ext_caller_contract_txi: -1,
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: encode_contract(parent_pk)
+    }
+  end
+
+  defp render_remote_log_fields(state, ext_ct_pk) do
+    ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
+    ext_ct_tx_hash = Enc.encode(:tx_hash, Txs.txi_to_hash(state, ext_ct_txi))
+
+    %{
+      ext_caller_contract_txi: ext_ct_txi,
+      ext_caller_contract_tx_hash: ext_ct_tx_hash,
+      ext_caller_contract_id: encode_contract(ext_ct_pk),
+      parent_contract_id: nil
+    }
+  end
+
+  defp maybe_encode_base64(data) do
+    if String.valid?(data), do: data, else: Base.encode64(data)
+  end
+
+  defp format_args("Allowance", [account1, account2, <<amount::256>>], %{aexn_args?: true}) do
+    [encode_account(account1), encode_account(account2), amount]
+  end
+
+  defp format_args("Approval", [account1, account2, <<token_id::256>>, enable], %{
+         aexn_args?: true
+       })
+       when enable in ["true", "false"] do
+    [encode_account(account1), encode_account(account2), token_id, enable]
+  end
+
+  defp format_args("ApprovalForAll", [account1, account2, enable], %{aexn_args?: true})
+       when enable in ["true", "false"] do
+    [encode_account(account1), encode_account(account2), enable]
+  end
+
+  defp format_args(event_name, [account, <<token_id::256>>], %{aexn_args?: true})
+       when event_name in ["Burn", "Mint", "Swap"] do
+    [encode_account(account), token_id]
+  end
+
+  defp format_args("PairCreated", [pair_pk, token1, token2], %{aexn_args?: true}) do
+    [encode_contract(pair_pk), encode_contract(token1), encode_contract(token2)]
+  end
+
+  defp format_args("Transfer", [from, to, <<token_id::256>>], %{aexn_args?: true}) do
+    [encode_account(from), encode_account(to), token_id]
+  end
+
+  defp format_args(
+         "TemplateMint",
+         [account, <<template_id::256>>, <<token_id::256>>],
+         %{aexn_args?: true}
+       ) do
+    [encode_account(account), template_id, token_id]
+  end
+
+  defp format_args(
+         "TemplateMint",
+         [account, <<template_id::256>>, <<token_id::256>>, edition_serial],
+         %{aexn_args?: true}
+       ) do
+    [encode_account(account), template_id, token_id, edition_serial]
+  end
+
+  defp format_args(event_name, args, %{custom_args?: true}) do
+    case :persistent_term.get({__MODULE__, event_name}, nil) do
+      nil ->
+        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+
+      custom_args_config ->
+        encode_custom_args(args, custom_args_config)
+    end
+  end
+
+  defp format_args(_event_name, args, _format_opts) do
+    Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+  end
+
+  defp encode_custom_args(args, custom_args_config) do
+    Enum.with_index(args, fn arg, i ->
+      case Map.get(custom_args_config, i) do
+        nil ->
+          <<topic::256>> = arg
+          to_string(topic)
+
+        type ->
+          Enc.encode(type, arg)
+      end
+    end)
+  end
+
+  defp get_custom_event_name(event_hash) do
+    :persistent_term.get({__MODULE__, event_hash}, nil)
+  end
+
+  defp encode_contract(pk), do: Enc.encode(:contract_pubkey, pk)
+
+  defp encode_account(pk), do: Enc.encode(:account_pubkey, pk)
 
   defp serialize_logs_cursor({create_txi, call_txi, log_idx}),
     do: Base.hex_encode32("#{create_txi}$#{call_txi}$#{log_idx}", padding: false)
