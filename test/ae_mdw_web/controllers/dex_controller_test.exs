@@ -377,7 +377,12 @@ defmodule AeMdwWeb.DexControllerTest do
 
     exp_caller_id == caller_id and token1_symbol == exp_token1 and
       token2_symbol == exp_token2 and txi in 1_000_001..1_000_080 and log_idx == rem(txi, 2) and
-      amounts == [txi + 10, txi + 20, txi + 30, txi + 40]
+      amounts == %{
+        "amount0_in" => txi + 10,
+        "amount1_in" => txi + 20,
+        "amount0_out" => txi + 30,
+        "amount1_out" => txi + 40
+      }
   end
 
   defp valid_token_swap?(
@@ -397,6 +402,11 @@ defmodule AeMdwWeb.DexControllerTest do
 
     caller_id in @accounts and token1_symbol == exp_token1 and
       token2_symbol == exp_token2 and txi in 1_000_001..1_000_080 and log_idx == rem(txi, 2) and
-      amounts == [txi + 10, txi + 20, txi + 30, txi + 40]
+      amounts == %{
+        "amount0_in" => txi + 10,
+        "amount1_in" => txi + 20,
+        "amount0_out" => txi + 30,
+        "amount1_out" => txi + 40
+      }
   end
 end

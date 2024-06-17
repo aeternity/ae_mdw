@@ -4,10 +4,20 @@ schemas:
     type: object
     properties:
       amounts:
-        type: array
-        items:
-          type: integer
-        example: [1000050, 1000060, 1000070, 1000080]
+        type: object
+        properties:
+          amount0_in:
+            type: integer
+            example: 1000050
+          amount1_in:
+            type: integer
+            example: 1000060
+          amount0_out:
+            type: integer
+            example: 1000070
+          amount1_out:
+            type: integer
+            example: 1000080
       caller:
         type: string
         example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
