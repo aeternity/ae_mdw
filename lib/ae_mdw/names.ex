@@ -1047,7 +1047,7 @@ defmodule AeMdw.Names do
     state
     |> State.get(Model.AccountNamesCount, owned_by)
     |> case do
-      {:ok, [count: count]} -> count
+      {:ok, Model.account_names_count(count: count)} -> count
       :not_found -> 0
     end
   end
