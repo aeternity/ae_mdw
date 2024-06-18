@@ -183,6 +183,16 @@ defmodule AeMdw.Dex do
     Model.dex_account_swap_tokens(to: to_pk, amounts: amounts) =
       State.fetch!(state, Model.DexAccountSwapTokens, {caller_pk, create_txi, txi, log_idx})
 
+    Model.contract_log(ext_contract: ext_contract) =
+      State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx})
+
+    create_txi =
+      if ext_contract do
+        Origin.tx_index!(state, {:contract, ext_contract})
+      else
+        create_txi
+      end
+
     %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
 
     %{
