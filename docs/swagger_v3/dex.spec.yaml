@@ -107,7 +107,7 @@ paths:
           required: true
           type: string
           description: The account id
-          example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+          example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
       responses:
         '200':
           description: Returns paginatinated list of DEX swaps

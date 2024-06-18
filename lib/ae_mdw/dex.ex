@@ -3,8 +3,9 @@ defmodule AeMdw.Dex do
   Search for DEX swaps.
   """
 
-  alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Util.Encoding
   alias AeMdw.Collection
+  alias AeMdw.Contracts
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
@@ -21,7 +22,17 @@ defmodule AeMdw.Dex do
   @contract_swaps_table Model.DexContractSwapTokens
   @swaps_table Model.DexSwapTokens
 
-  @typep swap() :: map()
+  @typep encoded_pubkey() :: Encoding.encoded_hash()
+  @typep amount() :: non_neg_integer()
+  @typep swap() :: %{
+           caller: encoded_pubkey(),
+           to_account: encoded_pubkey(),
+           from_token: binary(),
+           to_token: binary(),
+           tx_hash: binary(),
+           log_idx: Contracts.log_idx(),
+           amounts: [amount()]
+         }
   @typep paginated_swaps() :: {page_cursor(), [swap()], page_cursor()}
   @typep cursor :: binary()
   @typep pagination :: Collection.direction_limit()
@@ -60,7 +71,7 @@ defmodule AeMdw.Dex do
   @spec fetch_swaps(State.t(), pagination(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
   def fetch_swaps(state, pagination, cursor) do
-    with {:ok, cursor} <- deserialize_swaps_cursor(cursor) do
+    with {:ok, cursor} <- deserialize_account_swaps_cursor(cursor) do
       state
       |> build_swaps_streamer(cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
@@ -73,12 +84,6 @@ defmodule AeMdw.Dex do
       {account_pk, create_txi, Util.min_int(), nil},
       {account_pk, create_txi, Util.max_int(), nil}
     }
-
-    cursor =
-      case cursor do
-        nil -> nil
-        {_account_pk, _create_txi, txi, log_idx} -> {account_pk, create_txi, txi, log_idx}
-      end
 
     fn direction ->
       Collection.stream(state, @account_swaps_table, direction, key_boundary, cursor)
@@ -137,8 +142,6 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp deserialize_swaps_cursor(cursor), do: deserialize_account_swaps_cursor(cursor)
-
   defp deserialize_account_swaps_cursor(nil), do: {:ok, nil}
 
   defp deserialize_account_swaps_cursor(cursor_hex) do
@@ -183,11 +186,11 @@ defmodule AeMdw.Dex do
     %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
 
     %{
-      caller: Enc.encode(:account_pubkey, caller_pk),
-      to_account: Enc.encode(:account_pubkey, to_pk),
+      caller: Encoding.encode(:account_pubkey, caller_pk),
+      to_account: Encoding.encode(:account_pubkey, to_pk),
       from_token: token1_symbol,
       to_token: token2_symbol,
-      tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)),
+      tx_hash: Encoding.encode(:tx_hash, Txs.txi_to_hash(state, txi)),
       log_idx: log_idx,
       amounts: amounts
     }
