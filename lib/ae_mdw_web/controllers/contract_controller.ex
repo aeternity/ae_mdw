@@ -2,9 +2,6 @@ defmodule AeMdwWeb.ContractController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Contracts
-  alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdwWeb.LogsView
-  alias AeMdwWeb.CallsView
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
@@ -33,70 +30,60 @@ defmodule AeMdwWeb.ContractController do
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
-    v3? = true
 
-    with {:ok, encode_args} <- valid_args_params(query),
-         {:ok, {prev_cursor, logs, next_cursor}} <-
-           Contracts.fetch_logs(state, pagination, scope, query, cursor) do
-      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args, v3?))
-
-      Util.render(conn, prev_cursor, logs, next_cursor)
+    with {:ok, paginated_logs} <-
+           Contracts.fetch_logs(state, pagination, scope, query, cursor, v3?: true) do
+      Util.render(conn, paginated_logs)
     end
   end
 
   @spec logs_v2(Conn.t(), map()) :: Conn.t()
   def logs_v2(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
-    v3? = false
 
-    with {:ok, encode_args} <- valid_args_params(query),
-         {:ok, {prev_cursor, logs, next_cursor}} <-
-           Contracts.fetch_logs(state, pagination, scope, query, cursor) do
-      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args, v3?))
-
-      Util.render(conn, prev_cursor, logs, next_cursor)
+    with {:ok, paginated_logs} <-
+           Contracts.fetch_logs(state, pagination, scope, query, cursor, v3?: false) do
+      Util.render(conn, paginated_logs)
     end
   end
 
   @spec calls(Conn.t(), map()) :: Conn.t()
   def calls(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
-    v3? = true
 
-    with {:ok, {prev_cursor, calls, next_cursor}} <-
-           Contracts.fetch_calls(state, pagination, scope, query, cursor) do
-      calls = Enum.map(calls, &CallsView.render_call(&1, v3?))
-      Util.render(conn, prev_cursor, calls, next_cursor)
+    with {:ok, paginated_calls} <-
+           Contracts.fetch_calls(state, pagination, scope, query, cursor, v3?: true) do
+      Util.render(conn, paginated_calls)
     end
   end
 
   @spec calls_v2(Conn.t(), map()) :: Conn.t()
   def calls_v2(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
-    v3? = false
 
-    with {:ok, {prev_cursor, calls, next_cursor}} <-
-           Contracts.fetch_calls(state, pagination, scope, query, cursor) do
-      calls = Enum.map(calls, &CallsView.render_call(&1, v3?))
-      Util.render(conn, prev_cursor, calls, next_cursor)
+    with {:ok, paginated_calls} <-
+           Contracts.fetch_calls(state, pagination, scope, query, cursor, v3?: false) do
+      Util.render(conn, paginated_calls)
     end
   end
 
-  defp valid_args_params(query_params) do
-    aexn_args = Map.get(query_params, "aexn-args", "false")
-    default_custom_args = :persistent_term.get({AeMdwWeb.LogsView, :custom_events_args}, false)
-    custom_args = Map.get(query_params, "custom-args", to_string(default_custom_args))
+  @spec contract_logs(Conn.t(), map()) :: Conn.t()
+  def contract_logs(%Conn{assigns: assigns} = conn, %{"id" => contract_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
-    if aexn_args in ["true", "false"] and custom_args in ["true", "false"] do
-      encode_args = %{
-        aexn_args: String.to_existing_atom(aexn_args),
-        custom_args: String.to_existing_atom(custom_args)
-      }
+    with {:ok, paginated_logs} <-
+           Contracts.fetch_contract_logs(state, contract_id, pagination, scope, query, cursor) do
+      Util.render(conn, paginated_logs)
+    end
+  end
 
-      {:ok, encode_args}
-    else
-      {:error,
-       ErrInput.Query.exception(value: "aexn-args and custom-args should be true or false")}
+  @spec contract_calls(Conn.t(), map()) :: Conn.t()
+  def contract_calls(%Conn{assigns: assigns} = conn, %{"id" => contract_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
+
+    with {:ok, paginated_calls} <-
+           Contracts.fetch_contract_calls(state, contract_id, pagination, scope, query, cursor) do
+      Util.render(conn, paginated_calls)
     end
   end
 end
