@@ -82,6 +82,7 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:account_id/aex9/balances", AexnTokenController, :aex9_account_balances
       get "/accounts/:account_id/aex141/tokens", Aex141Controller, :owned_nfts
       get "/accounts/:account_id/names/pointees", NameController, :pointees
+      get "/accounts/:account_id/dex/swaps", DexController, :account_swaps
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
@@ -131,7 +132,7 @@ defmodule AeMdwWeb.Router do
           :collection_template_tokens
 
       get "/dex/swaps", DexController, :swaps
-      get "/dex/:contract_id/swaps", DexController, :swaps_for_contract
+      get "/dex/:contract_id/swaps", DexController, :contract_swaps
       get "/wealth", WealthController, :wealth
 
       get "/api", UtilController, :static_file,

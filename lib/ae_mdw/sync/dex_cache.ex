@@ -9,6 +9,7 @@ defmodule AeMdw.Sync.DexCache do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Sync.SyncingQueue
+  alias AeMdw.Txs
 
   require Model
 
@@ -93,14 +94,14 @@ defmodule AeMdw.Sync.DexCache do
     end
   end
 
-  @spec get_token_pair_txi(String.t()) :: pos_integer() | nil
+  @spec get_token_pair_txi(String.t()) :: {:ok, Txs.txi()} | :not_found
   def get_token_pair_txi(token_symbol) do
     case :ets.lookup(@tokens_table, token_symbol) do
       [] ->
-        nil
+        :not_found
 
       [{^token_symbol, create_txi}] ->
-        create_txi
+        {:ok, create_txi}
     end
   end
 

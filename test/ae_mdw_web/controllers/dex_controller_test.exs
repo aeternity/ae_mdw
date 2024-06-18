@@ -164,13 +164,16 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
     end
+  end
 
-    test "gets SwapTokens from a caller by desc txi", %{conn: conn} do
+  describe "account_tokens" do
+    test "gets SwapTokens from a caller by desc txi", %{conn: conn, store: store} do
       caller_id = encode_account(@account1_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
-               |> get("/v3/dex/swaps", caller: caller_id)
+               |> with_store(store)
+               |> get("/v3/accounts/#{caller_id}/dex/swaps")
                |> json_response(200)
 
       assert @default_limit = length(swaps)
@@ -178,7 +181,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -186,15 +189,17 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
-    test "gets SwapTokens from a caller by asc txi", %{conn: conn} do
+    test "gets SwapTokens from a caller by asc txi", %{conn: conn, store: store} do
       caller_id = encode_account(@account2_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
-               |> get("/v3/dex/swaps", caller: caller_id, direction: :forward)
+               |> with_store(store)
+               |> get("/v3/accounts/#{caller_id}/dex/swaps", direction: :forward)
                |> json_response(200)
 
       assert @default_limit = length(swaps)
@@ -202,7 +207,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -210,59 +215,17 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
-    test "gets SwapTokens from a token by desc txi", %{conn: conn} do
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> get("/v3/dex/swaps", from_symbol: "TK1")
-               |> json_response(200)
-
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
-      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK1", "TK2"))
-
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
-
-      assert @default_limit = length(next_swaps)
-
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
-
-      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK1", "TK2"))
-
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
-    end
-
-    test "gets SwapTokens from a token by asc txi", %{conn: conn} do
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> get("/v3/dex/swaps", from_symbol: "TK3", direction: :forward)
-               |> json_response(200)
-
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
-      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK3", "TK4"))
-
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
-
-      assert @default_limit = length(next_swaps)
-
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
-
-      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK3", "TK4"))
-
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
-    end
-
-    test "gets SwapTokens from a caller on a token by desc txi", %{conn: conn} do
+    test "gets SwapTokens from a caller on a token by desc txi", %{conn: conn, store: store} do
       caller_id = encode_account(@account1_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
-               |> get("/v3/dex/swaps", caller: caller_id, from_symbol: "TK1")
+               |> with_store(store)
+               |> get("/v3/accounts/#{caller_id}/dex/swaps", token_symbol: "TK1")
                |> json_response(200)
 
       assert @default_limit = length(swaps)
@@ -270,7 +233,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -278,15 +241,20 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
-    test "gets SwapTokens from a caller on a token by asc txi", %{conn: conn} do
+    test "gets SwapTokens from a caller on a token by asc txi", %{conn: conn, store: store} do
       caller_id = encode_account(@account2_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
-               |> get("/v3/dex/swaps", caller: caller_id, from_symbol: "TK3", direction: :forward)
+               |> with_store(store)
+               |> get("/v3/accounts/#{caller_id}/dex/swaps",
+                 token_symbol: "TK3",
+                 direction: :forward
+               )
                |> json_response(200)
 
       assert @default_limit = length(swaps)
@@ -294,7 +262,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -302,15 +270,17 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
-    test "returns empty list when no transfer exists", %{conn: conn} do
+    test "returns empty list when no transfer exists", %{conn: conn, store: store} do
       account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
-               |> get("/v3/dex/swaps", caller: account_id_without_transfer)
+               |> with_store(store)
+               |> get("/v3/accounts/#{account_id_without_transfer}/dex/swaps")
                |> json_response(200)
     end
 
@@ -320,15 +290,18 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v3/dex/swaps", caller: invalid_id)
+               |> get("/v3/accounts/#{invalid_id}/dex/swaps")
                |> json_response(400)
     end
+  end
 
-    test "gets SwapTokens from a contract_id by desc txi", %{conn: conn} do
+  describe "contract_swaps" do
+    test "gets SwapTokens from a contract_id by desc txi", %{conn: conn, store: store} do
       contract_id = Encoding.encode_contract(@pair1_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
+               |> with_store(store)
                |> get("/v3/dex/#{contract_id}/swaps")
                |> json_response(200)
 
@@ -337,7 +310,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_token_swap?(&1, "TK1", "TK2"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -345,14 +318,16 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
-    test "gets SwapTokens from a contract_id by asc txi", %{conn: conn} do
+    test "gets SwapTokens from a contract_id by asc txi", %{conn: conn, store: store} do
       contract_id = Encoding.encode_contract(@pair2_pk)
 
       assert %{"data" => swaps, "next" => next} =
                conn
+               |> with_store(store)
                |> get("/v3/dex/#{contract_id}/swaps", direction: :forward)
                |> json_response(200)
 
@@ -361,7 +336,7 @@ defmodule AeMdwWeb.DexControllerTest do
       assert Enum.all?(swaps, &valid_token_swap?(&1, "TK3", "TK4"))
 
       assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+               conn |> with_store(store) |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_swaps)
 
@@ -369,7 +344,8 @@ defmodule AeMdwWeb.DexControllerTest do
 
       assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      assert %{"data" => ^swaps} =
+               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
     test "returns bad request when contract_id is invalid", %{conn: conn} do
