@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.CreateAccountNamesCountTable do
+  @moduledoc """
+    Creates the account names count table.
+  """
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -26,7 +29,7 @@ defmodule AeMdw.Migrations.CreateAccountNamesCountTable do
         )
       end)
 
-    State.commit(state, mutations)
+    _state = State.commit(state, mutations)
 
     updated_count = Enum.count(mutations)
 
