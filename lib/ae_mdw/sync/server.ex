@@ -374,17 +374,12 @@ defmodule AeMdw.Sync.Server do
     blocks_mutations =
       Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
 
-    all_mutations =
-      Enum.flat_map(blocks_mutations, fn {_block_index, _block, block_mutations} ->
-        block_mutations
-      end)
-
     {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
     Log.info("[sync_mem] exec until height=#{height}")
 
     {ts, new_state} =
       :timer.tc(fn ->
-        all_mutations = maybe_add_accounts_balance_mutations(all_mutations)
+        all_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
         State.commit_mem(state, all_mutations)
       end)
 
@@ -396,10 +391,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_mem_height(state, gen_mutations) do
-    blocks_mutations =
-      Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
-
-    blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
+    blocks_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
     State.commit_mem(state, blocks_mutations)
   end
 
