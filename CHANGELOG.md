@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.78.1](https://www.github.com/aeternity/ae_mdw/compare/v1.78.0...v1.78.1) (2024-06-19)
+
+
+### Bug Fixes
+
+* remove destructuring of gen_mutations for mem mutations ([#1817](https://www.github.com/aeternity/ae_mdw/issues/1817)) ([a1b84c5](https://www.github.com/aeternity/ae_mdw/commit/a1b84c50b103b6e3a133eb01c19745695ac3a261))
+
 ## [1.78.0](https://www.github.com/aeternity/ae_mdw/compare/v1.77.5...v1.78.0) (2024-06-19)
 
 
