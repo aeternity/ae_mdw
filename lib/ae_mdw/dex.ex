@@ -192,7 +192,7 @@ defmodule AeMdw.Dex do
       to_token: token2_symbol,
       tx_hash: Encoding.encode(:tx_hash, Txs.txi_to_hash(state, txi)),
       log_idx: log_idx,
-      amounts: amounts
+      amounts: render_amounts(amounts)
     }
   end
 
@@ -204,4 +204,17 @@ defmodule AeMdw.Dex do
   end
 
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
+
+  defp render_amounts([amount0_in, amount1_in, amount0_out, amount1_out]) do
+    %{
+      "amount0_in" => amount0_in,
+      "amount1_in" => amount1_in,
+      "amount0_out" => amount0_out,
+      "amount1_out" => amount1_out
+    }
+  end
+
+  defp render_amounts(_x) do
+    "invalid amounts"
+  end
 end
