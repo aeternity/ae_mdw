@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.78.0](https://www.github.com/aeternity/ae_mdw/compare/v1.77.5...v1.78.0) (2024-06-19)
+
+
+### Features
+
+* add contract calls/logs nested routes ([#1812](https://www.github.com/aeternity/ae_mdw/issues/1812)) ([80d4b58](https://www.github.com/aeternity/ae_mdw/commit/80d4b58ae27fd30803430a28cddecb878fe8ec9e))
+* add creation time and block hash to nft ([#1808](https://www.github.com/aeternity/ae_mdw/issues/1808)) ([d359312](https://www.github.com/aeternity/ae_mdw/commit/d359312b111982ae4085ac822b7f473673d77fa1))
+* mark aex9 as invalid ([#1799](https://www.github.com/aeternity/ae_mdw/issues/1799)) ([f6e1e5b](https://www.github.com/aeternity/ae_mdw/commit/f6e1e5b5b2631525ae290d2ed6b997449eb8ecb0))
+* more explicit dex amount representation ([#1814](https://www.github.com/aeternity/ae_mdw/issues/1814)) ([8e06ba5](https://www.github.com/aeternity/ae_mdw/commit/8e06ba5d4681ce5f88272be6c505ffff0b4d9b5e))
+
+
+### Bug Fixes
+
+* include opt_txi_idx when rendering transfers cursor too ([#1796](https://www.github.com/aeternity/ae_mdw/issues/1796)) ([0511351](https://www.github.com/aeternity/ae_mdw/commit/05113512958388d560ea52da131ed9f4086efc36))
+* retrieve pair from external contract when external log ([#1813](https://www.github.com/aeternity/ae_mdw/issues/1813)) ([2767a18](https://www.github.com/aeternity/ae_mdw/commit/2767a18711f18351274e26dffc5f7c9d72f291d6))
+
+
+### Testing
+
+* randmly failing tests and warnings ([#1801](https://www.github.com/aeternity/ae_mdw/issues/1801)) ([6e13a42](https://www.github.com/aeternity/ae_mdw/commit/6e13a4201ed7c660a3910c4758d117d54c49a2c6))
+
+
+### Miscellaneous
+
+* make the wealth rank task work with the database instead of AsyncStore and ets ([#1792](https://www.github.com/aeternity/ae_mdw/issues/1792)) ([42ee54f](https://www.github.com/aeternity/ae_mdw/commit/42ee54f1da4fa374ebc5cdc88e557d0984c2e9f0))
+* move aexn tokens rendering to contract modules ([#1807](https://www.github.com/aeternity/ae_mdw/issues/1807)) ([6d676cf](https://www.github.com/aeternity/ae_mdw/commit/6d676cfc995f8b3e5a0105d945190ee3ae791a71))
+* restructure DEX endpoints ([#1811](https://www.github.com/aeternity/ae_mdw/issues/1811)) ([6d78af8](https://www.github.com/aeternity/ae_mdw/commit/6d78af88a3c7a536e44ba9357e2338dd001e60d2))
+* task for generating migrations ([#1800](https://www.github.com/aeternity/ae_mdw/issues/1800)) ([4d5949e](https://www.github.com/aeternity/ae_mdw/commit/4d5949eb905c52253f86de776539179600ddca88))
+
 ### [1.77.5](https://www.github.com/aeternity/ae_mdw/compare/v1.77.4...v1.77.5) (2024-06-05)
 
 
