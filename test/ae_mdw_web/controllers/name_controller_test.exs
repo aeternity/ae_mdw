@@ -1798,7 +1798,13 @@ defmodule AeMdwWeb.NameControllerTest do
       }
     end
 
-    test "get names count", %{conn: conn, store: store, first_owner_pk: first_owner_pk} do
+    test "get names count", %{
+      conn: conn,
+      store: store,
+      first_owner_pk: first_owner_pk,
+      first_owner: first_owner,
+      second_owner: second_owner
+    } do
       assert 25 =
                conn
                |> with_store(store)
@@ -1826,15 +1832,8 @@ defmodule AeMdwWeb.NameControllerTest do
                |> with_store(store)
                |> get("/v3/names/count")
                |> json_response(200)
-    end
 
-    test "get names count by owner", %{
-      conn: conn,
-      store: store,
-      first_owner: first_owner,
-      second_owner: second_owner
-    } do
-      assert 12 =
+      assert 13 =
                conn
                |> with_store(store)
                |> get("/v3/names/count", owned_by: first_owner)
