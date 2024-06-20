@@ -72,13 +72,19 @@ defmodule AeMdw.Names do
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
 
-  @spec count_names(state(), query()) :: non_neg_integer()
+  @spec count_names(state(), query()) :: {:ok, non_neg_integer()} | {:error, reason()}
   def count_names(state, query) do
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      filters
-      |> build_height_streamer(state, nil, nil, nil)
-      |> then(fn streamer -> streamer.(:backward) end)
-      |> Enum.count()
+    query
+    |> Util.convert_params(&convert_param/1)
+    |> case do
+      {:ok, %{owned_by: owned_by}} ->
+        {:ok, count_active_names(state, owned_by)}
+
+      {:ok, %{}} ->
+        {:ok, count_active_names(state, nil)}
+
+      {:error, _} ->
+        {:error, ErrInput.Query.exception(value: query)}
     end
   end
 
@@ -1027,5 +1033,22 @@ defmodule AeMdw.Names do
       source_tx_type: Node.tx_name(tx_type),
       tx: :aens_update_tx.for_client(name_update_tx)
     }
+  end
+
+  defp count_active_names(state, nil) do
+    state
+    |> Collection.stream(Model.AccountNamesCount, :forward, nil, nil)
+    |> Enum.reduce(0, fn owner, acc ->
+      count_active_names(state, owner) + acc
+    end)
+  end
+
+  defp count_active_names(state, owned_by) do
+    state
+    |> State.get(Model.AccountNamesCount, owned_by)
+    |> case do
+      {:ok, [count: count]} -> count
+      :not_found -> 0
+    end
   end
 end

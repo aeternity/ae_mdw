@@ -1,17 +1,11 @@
 defmodule AeMdw.Migrations.CreateAccountNamesCountTable do
-  require AeMdw.Db.Model
-  alias AeMdw.Db.WriteMutation
-  alias AeMdw.Db.State
   alias AeMdw.Collection
   alias AeMdw.Db.Model
-  require Logger
+  alias AeMdw.Db.State
+  alias AeMdw.Db.WriteMutation
 
-  # index: nil,
-  # active: nil,
-  # expire: nil,
-  # revoke: nil,
-  # auction_timeout: 0,
-  # owner: nil
+  require Model
+
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
     mutations =
@@ -36,7 +30,6 @@ defmodule AeMdw.Migrations.CreateAccountNamesCountTable do
 
     updated_count = Enum.count(mutations)
 
-    raise "Not implemented yet"
     {:ok, updated_count}
   end
 end
