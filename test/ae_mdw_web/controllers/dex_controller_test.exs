@@ -64,6 +64,8 @@ defmodule AeMdwWeb.DexControllerTest do
 
           txi = 1_000_000 + i
           log_idx = rem(txi, 2)
+          block_index_number = 200_000 + i
+          block_index = {block_index_number, 0}
 
           store
           |> Store.put(
@@ -92,6 +94,20 @@ defmodule AeMdwWeb.DexControllerTest do
           |> Store.put(
             Model.Tx,
             Model.tx(index: txi, id: <<txi::256>>, block_index: {100_000 + i, 0})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: pair_txi, id: <<pair_txi::256>>, block_index: block_index)
+          )
+          |> Store.put(
+            Model.Block,
+            Model.block(index: block_index, hash: <<block_index_number::256>>)
+          )
+          |> Store.put(
+            Model.RevOrigin,
+            Model.rev_origin(
+              index: {block_index_number, :contract_create_tx, <<block_index_number::256>>}
+            )
           )
         end)
       end)
