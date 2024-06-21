@@ -3,6 +3,7 @@ defmodule AeMdw.Dex do
   Search for DEX swaps.
   """
 
+  alias AeMdw.AexnContracts
   alias AeMdw.Util.Encoding
   alias AeMdw.Collection
   alias AeMdw.Contracts
@@ -206,16 +207,44 @@ defmodule AeMdw.Dex do
           Origin.tx_index!(state, {:contract, contract_pk})
       end
 
+    Model.tx(id: _tx_hash, block_index: {height, _mbi} = block_index, time: time) =
+      State.fetch!(state, Model.Tx, create_txi)
+
+    Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
+    contract_pk = Origin.pubkey!(state, {:contract, create_txi})
+    %{token1: token1_pk, token2: token2_pk} = DexCache.get_pair(contract_pk)
+
+    {:ok, {_name, _symbol, from_decimals}} = AexnContracts.call_meta_info(:aex9, token1_pk, hash)
+    {:ok, {_name, _symbol, to_decimals}} = AexnContracts.call_meta_info(:aex9, token2_pk, hash)
+
     %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
+
+    %{token1: token1_pk, token2: token2_pk} = DexCache.get_pair(contract_pk)
+
+    %{
+      "amount0_in" => amount0_in,
+      "amount1_in" => amount1_in,
+      "amount0_out" => amount0_out,
+      "amount1_out" => amount1_out
+    } = rendered_amounts = render_amounts(amounts)
 
     %{
       caller: Encoding.encode(:account_pubkey, caller_pk),
       to_account: Encoding.encode(:account_pubkey, to_pk),
+      from_contract: Encoding.encode_contract(token1_pk),
+      to_contract: Encoding.encode_contract(token2_pk),
       from_token: token1_symbol,
       to_token: token2_symbol,
+      from_amount: amount0_in + amount1_in,
+      to_amount: amount0_out + amount1_out,
+      from_decimals: from_decimals,
+      to_decimals: to_decimals,
       tx_hash: Encoding.encode(:tx_hash, Txs.txi_to_hash(state, txi)),
       log_idx: log_idx,
-      amounts: render_amounts(amounts)
+      amounts: rendered_amounts,
+      # check this one
+      microtime: time,
+      height: height
     }
   end
 
@@ -228,12 +257,18 @@ defmodule AeMdw.Dex do
 
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
+  @spec render_amounts(list(integer())) :: %{
+          amount0_in: integer(),
+          amount1_in: integer(),
+          amount0_out: integer(),
+          amount1_out: integer()
+        }
   defp render_amounts([amount0_in, amount1_in, amount0_out, amount1_out]) do
     %{
-      "amount0_in" => amount0_in,
-      "amount1_in" => amount1_in,
-      "amount0_out" => amount0_out,
-      "amount1_out" => amount1_out
+      amount0_in: amount0_in,
+      amount1_in: amount1_in,
+      amount0_out: amount0_out,
+      amount1_out: amount1_out
     }
   end
 
