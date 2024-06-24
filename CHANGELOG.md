@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.78.2](https://www.github.com/aeternity/ae_mdw/compare/v1.78.1...v1.78.2) (2024-06-24)
+
+
+### Bug Fixes
+
+* use the correct structure for mutations when syncing ([#1820](https://www.github.com/aeternity/ae_mdw/issues/1820)) ([9ee2181](https://www.github.com/aeternity/ae_mdw/commit/9ee2181d158df9772454256fae28617b4b87bb62))
+
 ### [1.78.1](https://www.github.com/aeternity/ae_mdw/compare/v1.78.0...v1.78.1) (2024-06-19)
 
 
