@@ -17,6 +17,13 @@ config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 config :ae_mdw, :enable_v3?, true
 config :ae_mdw, memstore_lifetime_secs: 60
 
+ip =
+  if System.get_env("DISABLE_IPV6", "false") in ["true", "1"] do
+    {0, 0, 0, 0}
+  else
+    {0, 0, 0, 0, 0, 0, 0, 0}
+  end
+
 # Endpoint
 if env != :test do
   port = String.to_integer(System.get_env("PORT") || "4000")
@@ -24,7 +31,7 @@ if env != :test do
 
   config :ae_mdw, AeMdwWeb.Endpoint,
     http: [
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      ip: ip,
       port: port,
       protocol_options: protocol_opts
     ],
@@ -36,7 +43,7 @@ if env != :test do
 
   config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
     http: [
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      ip: ip,
       port: ws_port,
       protocol_options: protocol_opts ++ timeout_opts
     ]
