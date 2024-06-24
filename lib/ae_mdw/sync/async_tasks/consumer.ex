@@ -123,6 +123,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
     if mod == StoreAccountBalance do
       Logger.info("Skipping #{inspect(index)}")
+      done_fn.()
     else
       mod.process(args ++ extra_args, done_fn)
     end

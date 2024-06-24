@@ -99,21 +99,23 @@ defmodule AeMdw.Db.Sync.Block do
           IntTransfer.block_rewards_mutations(key_block)
         end
 
-      gen_mutations = [
-        kb0_mutation,
-        block_rewards_mutation,
-        NamesExpirationMutation.new(height),
-        OraclesExpirationMutation.new(height),
-        Stats.key_block_mutations(
-          height,
-          key_block,
-          micro_blocks,
-          from_txi,
-          txi,
-          starting_from_mb0?
-        ),
-        next_kb_mutation
-      ]
+      gen_mutations =
+        [
+          kb0_mutation,
+          block_rewards_mutation,
+          NamesExpirationMutation.new(height),
+          OraclesExpirationMutation.new(height),
+          Stats.key_block_mutations(
+            height,
+            key_block,
+            micro_blocks,
+            from_txi,
+            txi,
+            starting_from_mb0?
+          ),
+          next_kb_mutation
+        ]
+        |> Enum.reject(&is_nil/1)
 
       blocks_mutations = micro_blocks_gens ++ [{{height, -1}, key_block, gen_mutations}]
 

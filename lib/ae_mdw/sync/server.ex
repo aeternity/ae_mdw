@@ -359,7 +359,17 @@ defmodule AeMdw.Sync.Server do
     # start syncing from memory, then anticipates commit to avoid committing only after 10 gens
     if from_height == AeMdw.Db.Util.synced_height(State.mem_state()) do
       Enum.reduce(gens_mutations, empty_state, fn {height, gen_mutations}, state ->
-        {ts, commited_state} = :timer.tc(fn -> exec_mem_height(state, gen_mutations) end)
+        gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
+
+        {ts, commited_state} =
+          :timer.tc(fn ->
+            mutations =
+              Enum.map(gen_mutations, fn {_block_index, _mb, block_mutations} ->
+                block_mutations
+              end)
+
+            State.commit_mem(state, mutations)
+          end)
 
         :ok = profile_sync("sync_mem", height, ts, gen_mutations)
 
@@ -372,14 +382,18 @@ defmodule AeMdw.Sync.Server do
 
   defp exec_all_mem_mutations(state, gens_mutations) do
     blocks_mutations =
-      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
+      gens_mutations
+      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+      |> maybe_add_accounts_balance_mutations()
 
     {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
     Log.info("[sync_mem] exec until height=#{height}")
 
     {ts, new_state} =
       :timer.tc(fn ->
-        all_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
+        all_mutations =
+          Enum.map(blocks_mutations, fn {_height, _block, mutations} -> mutations end)
+
         State.commit_mem(state, all_mutations)
       end)
 
@@ -388,11 +402,6 @@ defmodule AeMdw.Sync.Server do
     broadcast_blocks(gens_mutations)
 
     new_state
-  end
-
-  defp exec_mem_height(state, gen_mutations) do
-    blocks_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
-    State.commit_mem(state, blocks_mutations)
   end
 
   defp spawn_task(fun) do
@@ -446,7 +455,6 @@ defmodule AeMdw.Sync.Server do
         mutations
         |> List.flatten()
         |> Enum.frequencies_by(fn
-          nil -> nil
           %mod{} -> mod
         end)
 
