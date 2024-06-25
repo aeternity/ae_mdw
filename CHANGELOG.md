@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.79.0](https://www.github.com/aeternity/ae_mdw/compare/v1.78.1...v1.79.0) (2024-06-25)
+
+
+### Features
+
+* add flag to disable ipv6 ([#1822](https://www.github.com/aeternity/ae_mdw/issues/1822)) ([a3233ed](https://www.github.com/aeternity/ae_mdw/commit/a3233ed81703626fb23d7bb2227d30ce6bd8ef2b))
+
+
+### Bug Fixes
+
+* use the correct structure for mutations when syncing ([#1820](https://www.github.com/aeternity/ae_mdw/issues/1820)) ([9ee2181](https://www.github.com/aeternity/ae_mdw/commit/9ee2181d158df9772454256fae28617b4b87bb62))
+
 ### [1.78.1](https://www.github.com/aeternity/ae_mdw/compare/v1.78.0...v1.78.1) (2024-06-19)
 
 
