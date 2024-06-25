@@ -66,6 +66,7 @@ defmodule AeMdwWeb.Router do
       get "/oracles/:id", OracleController, :oracle
       get "/oracles/:id/queries", OracleController, :oracle_queries
       get "/oracles/:id/responses", OracleController, :oracle_responses
+      get "/oracles/:id/extends", OracleController, :oracle_extends
 
       get "/channels", ChannelController, :channels
       get "/channels/:id", ChannelController, :channel

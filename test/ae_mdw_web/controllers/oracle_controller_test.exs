@@ -795,4 +795,141 @@ defmodule AeMdwWeb.OracleControllerTest do
                |> json_response(400)
     end
   end
+
+  describe "oracle_extends" do
+    test "it retrieves all oracle extends", %{conn: conn, store: store} do
+      height = 707
+      oracle_pk = <<1::256>>
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      encoded_oracle_pk = Enc.encode(:oracle_pubkey, oracle_pk)
+      txi_idx1 = {789, -1}
+      tx_hash1 = <<10::256>>
+      txi_idx2 = {791, 3}
+      tx_hash2 = <<11::256>>
+      txi_idx3 = {799, -1}
+      tx_hash3 = <<12::256>>
+      block_hash1 = <<13::256>>
+      block_index = {height, 200}
+
+      {:ok, oracle_extend_aetx1} =
+        :aeo_extend_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 1,
+          oracle_ttl: {:delta, 111},
+          fee: 11_111
+        })
+
+      {:ok, oracle_extend_aetx2} =
+        :aeo_extend_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 2,
+          oracle_ttl: {:delta, 222},
+          fee: 22_222
+        })
+
+      {:ok, oracle_extend_aetx3} =
+        :aeo_extend_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 3,
+          oracle_ttl: {:delta, 333},
+          fee: 33_333
+        })
+
+      {:oracle_extend_tx, oracle_extend_tx1} = :aetx.specialize_type(oracle_extend_aetx1)
+      {:oracle_extend_tx, oracle_extend_tx2} = :aetx.specialize_type(oracle_extend_aetx2)
+      {:oracle_extend_tx, oracle_extend_tx3} = :aetx.specialize_type(oracle_extend_aetx3)
+
+      store =
+        store
+        |> Store.put(
+          Model.ActiveOracle,
+          Model.oracle(
+            index: oracle_pk,
+            extends: [{block_index, txi_idx3}, {block_index, txi_idx2}, {block_index, txi_idx1}]
+          )
+        )
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn
+             _state, ^txi_idx1 ->
+               {oracle_extend_tx1, :oracle_extend_tx, tx_hash1, :oracle_extend_tx, block_hash1}
+
+             _state, ^txi_idx2 ->
+               {oracle_extend_tx2, :oracle_extend_tx, tx_hash2, :contract_call_tx, block_hash1}
+
+             _state, ^txi_idx3 ->
+               {oracle_extend_tx3, :oracle_extend_tx, tx_hash3, :oracle_extend_tx, block_hash1}
+           end
+         ]},
+        {:aec_db, [], [get_header: fn _key_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => [extend1, extend2], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/oracles/#{encoded_oracle_pk}/extends",
+                   direction: "forward",
+                   limit: 2
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "tx" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "nonce" => 1,
+                   "fee" => 11_111
+                 },
+                 "source_tx_type" => "OracleExtendTx"
+               } = extend1
+
+        assert %{
+                 "height" => ^height,
+                 "tx" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "nonce" => 2,
+                   "fee" => 22_222
+                 },
+                 "source_tx_type" => "ContractCallTx"
+               } = extend2
+
+        assert %{"data" => [extend3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "tx" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "nonce" => 3,
+                   "fee" => 33_333
+                 },
+                 "source_tx_type" => "OracleExtendTx"
+               } = extend3
+      end
+    end
+
+    test "cursor is invalid, it displays error", %{conn: conn} do
+      encoded_oracle_id = Enc.encode(:oracle_pubkey, <<1::256>>)
+
+      assert %{"error" => "invalid cursor: foo"} =
+               conn
+               |> get("/v3/oracles/#{encoded_oracle_id}/extends", cursor: "foo")
+               |> json_response(400)
+    end
+  end
+
+  test "oracle doesn't exist, it displays error", %{conn: conn} do
+    encoded_oracle_id = Enc.encode(:oracle_pubkey, <<1::256>>)
+    error = "not found: #{encoded_oracle_id}"
+
+    assert %{"error" => ^error} =
+             conn
+             |> get("/v3/oracles/#{encoded_oracle_id}/extends")
+             |> json_response(404)
+  end
 end
