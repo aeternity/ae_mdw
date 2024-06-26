@@ -1,11 +1,16 @@
 schemas:
   OracleTx:
     properties:
-      block_hash: string
-      block_height: integer
-      hash: string
-      micro_index: integer
-      micro_time: integer
+      block_hash:
+        type: string
+      block_height:
+        type: integer
+      hash:
+        type: string
+      micro_index:
+        type: integer
+      micro_time:
+        type: integer
       signatures:
         type: array
         items:
@@ -13,18 +18,27 @@ schemas:
       tx:
         type: object
         properties:
-          fee: integer
-          nonce: integer
-          oracle_id: string
+          fee:
+            type: integer
+          nonce:
+            type: integer
+          oracle_id:
+            type: string
           oracle_ttl:
             type: object
             properties:
-              type: string
-              value: integer
-          ttl: integer
-          type: string
-          version: integer
-          tx_hash: string
+              type:
+                type: string
+              value:
+                type: integer
+          ttl:
+            type: integer
+          type:
+            type: string
+          version:
+            type: integer
+          tx_hash:
+            type: string
   Oracle:
     example:
       active: false
@@ -79,27 +93,22 @@ schemas:
       register_time:
         description: The block time in which the oracle was registered
         type: integer
-      extends:
-        description: The transaction hashes where the oracle has been extended
-        type: array
-        items:
-          - type: "#/components/schemas/OracleTx"
-        format:
-          type: object
-          description: The oracle's query and response formats
-          example:
-            query: string
-            response: string
-          properties:
-            query:
-              description: The query format
-              type: string
-            response:
-              description: The response format
-              type: string
-          required:
-            - response
-            - query
+      format:
+        type: object
+        description: The oracle's query and response formats
+        example:
+          query: string
+          response: string
+        properties:
+          query:
+            description: The query format
+            type: string
+          response:
+            description: The response format
+            type: string
+        required:
+          - response
+          - query
       oracle:
         description: The oracle id
         type: string
@@ -107,8 +116,7 @@ schemas:
         description: The query fee
         type: integer
       register:
-        description: The tx where the oracle is registered
-        type: "#/components/schemas/OracleTx"
+        $ref: "#/components/schemas/OracleTx"
     required:
       - register
       - query_fee
@@ -310,6 +318,58 @@ schemas:
       - response_ttl
       - ttl
     type: object
+  OracleExtend:
+    example:
+      height: 961963
+      block_hash: "mh_j3kociQVYDLkCsxdPVU8J9qPFLxUzrMnoSMuLp38yubDpuTyR"
+      tx:
+        fee: 16132000000000
+        nonce: 4357
+        oracle_id: "ok_Gb6cD91w29v8csjAxyyBmfAQmdNo1aUedWkhn9HxqiXeVuGcj"
+        oracle_ttl:
+          type: "delta"
+          value: 500
+        ttl: 0
+      source_tx_hash: "th_NgGUA81Cy2VkwStujdyKQxBW9DTnEVJo3eHh7do3oAn4Zymmu"
+      source_tx_type: "OracleExtendTx"
+    properties:
+      block_hash:
+        description: The hash of the block in which it ocurred
+        type: string
+      height:
+        description: The block height
+        type: integer
+      source_tx_hash:
+        description: The hash of the transaction in which the extend was done
+        type: string
+      source_tx_type:
+        description: The type of the transaction in which the extend was done, it can be either via a contract call or an extend transaction
+        type: string
+      tx:
+        type: object
+        properties:
+          fee:
+            description: The transaction fee
+            type: integer
+          nonce:
+            description: The nonce
+            type: integer
+          oracle_id:
+            description: The oracle ID of this query
+            type: string
+          oracle_ttl:
+            description: Expiration of the oracle
+            type: object
+          ttl:
+            description: Transaction TTL
+            type: integer
+    required:
+      - block_hash
+      - height
+      - source_tx_hash
+      - source_tx_type
+      - tx
+    type: object
 paths:
   /oracles:
     get:
@@ -444,6 +504,45 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/OracleResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /oracles/{id}/extends:
+    get:
+      deprecated: false
+      description: Get an oracle's extensions.
+      operationId: GetOracleExtends
+      parameters:
+        - name: id
+          in: path
+          description: The oracle
+          required: true
+          schema:
+            type: string
+            example: ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
+      responses:
+        '200':
+          description: Returns paginated oracle extensions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OracleExtend'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
