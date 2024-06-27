@@ -9,7 +9,7 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.State
-  alias AeMdw.Db.Util, as: DBUtil
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
@@ -33,6 +33,14 @@ defmodule AeMdw.Oracles do
   @typep range :: {:gen, Range.t()} | nil
   @typep query() :: %{binary() => binary()}
   @typep pubkey() :: Db.pubkey()
+  @typep extends() :: %{
+           height: Blocks.height(),
+           block_hash: Blocks.block_hash(),
+           source_tx_hash: Txs.tx_hash(),
+           source_tx_type: Node.tx_type(),
+           tx: map()
+         }
+  @typep paginated_extends() :: {cursor() | nil, [extends()], cursor() | nil}
 
   @table_active AeMdw.Db.Model.ActiveOracle
   @table_active_expiration Model.ActiveOracleExpiration
@@ -47,7 +55,7 @@ defmodule AeMdw.Oracles do
   def fetch_oracles(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
-    last_gen_time = DBUtil.last_gen_and_time(state)
+    last_gen_time = DbUtil.last_gen_and_time(state)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       paginated_oracles =
@@ -165,7 +173,7 @@ defmodule AeMdw.Oracles do
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
     {query_tx, :oracle_query_tx, tx_hash, tx_type, block_hash} =
-      DBUtil.read_node_tx_details(state, txi_idx)
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     block_time = Db.get_block_time(block_hash)
 
@@ -197,7 +205,7 @@ defmodule AeMdw.Oracles do
 
   defp render_response(state, {txi, _idx} = txi_idx, include_query?) do
     {response_tx, :oracle_response_tx, tx_hash, tx_type, block_hash} =
-      DBUtil.read_node_tx_details(state, txi_idx)
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
@@ -267,7 +275,7 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_active_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
-    last_gen_time = DBUtil.last_gen_and_time(state)
+    last_gen_time = DbUtil.last_gen_and_time(state)
 
     Collection.paginate(
       &Collection.stream(state, @table_active_expiration, &1, nil, cursor),
@@ -281,7 +289,7 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_inactive_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
-    last_gen_time = DBUtil.last_gen_and_time(state)
+    last_gen_time = DbUtil.last_gen_and_time(state)
 
     Collection.paginate(
       &Collection.stream(state, @table_inactive_expiration, &1, nil, cursor),
@@ -293,7 +301,7 @@ defmodule AeMdw.Oracles do
 
   @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(state, oracle_pk, opts) do
-    last_gen_time = DBUtil.last_gen_and_time(state)
+    last_gen_time = DbUtil.last_gen_and_time(state)
 
     case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
@@ -301,6 +309,40 @@ defmodule AeMdw.Oracles do
 
       nil ->
         {:error, ErrInput.NotFound.exception(value: Enc.encode(:oracle_pubkey, oracle_pk))}
+    end
+  end
+
+  @spec fetch_oracle_extends(state(), binary(), pagination(), cursor() | nil) ::
+          {:ok, paginated_extends()} | {:error, Error.t()}
+  def fetch_oracle_extends(state, oracle_id, pagination, cursor) do
+    with {:ok, oracle_pk} <- Validate.id(oracle_id, [:oracle_pubkey]),
+         {:ok, cursor} <- deserialize_nested_cursor(cursor),
+         {Model.oracle(extends: extends), _source} <- Oracle.locate(state, oracle_pk) do
+      extends
+      |> build_oracle_extends_streamer(cursor)
+      |> Collection.paginate(pagination, &render_extend(state, &1), &serialize_nested_cursor/1)
+      |> then(&{:ok, &1})
+    else
+      nil -> {:error, ErrInput.NotFound.exception(value: oracle_id)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp build_oracle_extends_streamer(extends, cursor) do
+    fn
+      :forward when is_nil(cursor) ->
+        Enum.reverse(extends)
+
+      :backward when is_nil(cursor) ->
+        extends
+
+      :forward ->
+        extends
+        |> Enum.reverse()
+        |> Enum.drop_while(&(&1 < cursor))
+
+      :backward ->
+        Enum.drop_while(extends, &(&1 > cursor))
     end
   end
 
@@ -343,23 +385,43 @@ defmodule AeMdw.Oracles do
     query_format = :aeo_oracles.query_format(oracle_rec)
     response_format = :aeo_oracles.response_format(oracle_rec)
     query_fee = :aeo_oracles.query_fee(oracle_rec)
+    v3? = Keyword.get(opts, :v3?, false)
+
+    oracle =
+      %{
+        oracle: Enc.encode(:oracle_pubkey, pk),
+        active: is_active?,
+        active_from: register_height,
+        register_time: DbUtil.block_index_to_time(state, register_bi),
+        expire_height: expire_height,
+        approximate_expire_time:
+          DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
+        register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
+        register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
+        query_fee: query_fee,
+        format: %{
+          query: query_format,
+          response: response_format
+        }
+      }
+
+    if v3? do
+      oracle
+    else
+      Map.put(oracle, :extends, Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)))
+    end
+  end
+
+  defp render_extend(state, {{height, _mbi}, txi_idx}) do
+    {tx_rec, :oracle_extend_tx, tx_hash, chain_tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
-      oracle: Enc.encode(:oracle_pubkey, pk),
-      active: is_active?,
-      active_from: register_height,
-      register_time: DBUtil.block_index_to_time(state, register_bi),
-      expire_height: expire_height,
-      approximate_expire_time:
-        DBUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
-      register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
-      register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
-      extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)),
-      query_fee: query_fee,
-      format: %{
-        query: query_format,
-        response: response_format
-      }
+      height: height,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Node.tx_name(chain_tx_type),
+      tx: :aeo_extend_tx.for_client(tx_rec)
     }
   end
 
@@ -403,4 +465,21 @@ defmodule AeMdw.Oracles do
 
   defp deserialize_scope({:gen, first_gen..last_gen}),
     do: {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
+
+  defp serialize_nested_cursor({{height, mbi}, {txi, idx}}),
+    do: "#{height}-#{mbi}-#{txi}-#{idx + 1}"
+
+  defp deserialize_nested_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_nested_cursor(cursor_bin) do
+    case Regex.run(~r/\A(\d+)-(\d+)-(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      nil ->
+        {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+
+      values ->
+        [height, mbi, txi, idx] = Enum.map(values, &String.to_integer/1)
+
+        {:ok, {{height, mbi}, {txi, idx - 1}}}
+    end
+  end
 end

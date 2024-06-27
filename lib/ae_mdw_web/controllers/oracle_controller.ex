@@ -59,8 +59,9 @@ defmodule AeMdwWeb.OracleController do
       query: query
     } = assigns
 
-    with opts <- [{:v3?, true} | opts],
-         {:ok, paginated_oracles} <-
+    opts = [{:v3?, true} | opts]
+
+    with {:ok, paginated_oracles} <-
            Oracles.fetch_oracles(state, pagination, scope, query, cursor, opts) do
       Util.render(conn, paginated_oracles)
     end
@@ -100,6 +101,16 @@ defmodule AeMdwWeb.OracleController do
     with {:ok, paginated_responses} <-
            Oracles.fetch_oracle_responses(state, oracle_id, pagination, scope, cursor) do
       Util.render(conn, paginated_responses)
+    end
+  end
+
+  @spec oracle_extends(Conn.t(), map()) :: Conn.t()
+  def oracle_extends(%Conn{assigns: assigns} = conn, %{"id" => oracle_id}) do
+    %{state: state, pagination: pagination, cursor: cursor} = assigns
+
+    with {:ok, paginated_extends} <-
+           Oracles.fetch_oracle_extends(state, oracle_id, pagination, cursor) do
+      Util.render(conn, paginated_extends)
     end
   end
 end
