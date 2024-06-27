@@ -531,7 +531,6 @@ defmodule AeMdw.Sync.Server do
         |> List.flatten()
         |> Enum.frequencies_by(fn
           %mod{} -> mod
-          nil -> nil
         end)
 
       mutations_count = length(mutations)
