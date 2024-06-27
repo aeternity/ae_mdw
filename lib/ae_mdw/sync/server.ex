@@ -286,6 +286,11 @@ defmodule AeMdw.Sync.Server do
     new_state =
       gens_mutations
       |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+        blocks_mutations =
+          blocks_mutations
+          |> maybe_add_accounts_balance_mutations()
+          |> maybe_update_account_name_count_mutations()
+
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
         :ok = profile_sync("sync_db", height, ts, blocks_mutations)
@@ -300,8 +305,6 @@ defmodule AeMdw.Sync.Server do
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
     blocks_mutations
-    |> maybe_add_accounts_balance_mutations()
-    |> maybe_update_account_name_count_mutations()
     |> Enum.reduce(state, fn {_bi, _block, block_mutations}, state ->
       State.commit_db(state, block_mutations, clear_mem?)
     end)
@@ -318,16 +321,22 @@ defmodule AeMdw.Sync.Server do
       end)
 
     if MapSet.size(accounts_set) > 0 do
-      {_block_index, mb_hash, _mblock} = last_microblock(gen_mutations)
+      gen_mutations
+      |> last_microblock()
+      |> case do
+        {:ok, {block_index, mb_hash, _mblock}} ->
+          account_balances_mutations =
+            mb_hash
+            |> get_balances_from_node(accounts_set)
+            |> Enum.reduce([], fn {account_pk, balance}, acc ->
+              [UpdateBalanceAccountMutation.new(account_pk, balance) | acc]
+            end)
 
-      account_balances_mutations =
-        mb_hash
-        |> get_balances_from_node(accounts_set)
-        |> Enum.reduce([], fn {account_pk, balance}, acc ->
-          [{nil, nil, UpdateBalanceAccountMutation.new(account_pk, balance)} | acc]
-        end)
+          update_gen_mutations(gen_mutations, block_index, account_balances_mutations)
 
-      gen_mutations ++ account_balances_mutations
+        {:error, :no_mblocks} ->
+          gen_mutations
+      end
     else
       gen_mutations
     end
@@ -337,10 +346,30 @@ defmodule AeMdw.Sync.Server do
     if Enum.any?(gen_mutations, fn {_b, _mb, mutations} ->
          Enum.any?(mutations, &name_mutation?/1)
        end) do
-      gen_mutations ++ [{nil, nil, UpdateAccountNameCountsMutation.new()}]
+      gen_mutations
+      |> last_microblock()
+      |> case do
+        {:ok, {block_index, _mblock, _mutations}} ->
+          update_gen_mutations(gen_mutations, block_index, [UpdateAccountNameCountsMutation.new()])
+
+        {:error, :no_mblocks} ->
+          gen_mutations
+      end
     else
       gen_mutations
     end
+  end
+
+  defp update_gen_mutations(gen_mutations, block_index, extra_mutations) do
+    idx =
+      Enum.find_index(gen_mutations, fn
+        {^block_index, _mblock, _mutations} -> true
+        _block -> false
+      end)
+
+    List.update_at(gen_mutations, idx, fn {block_index, mblock, mutations} ->
+      {block_index, mblock, mutations ++ extra_mutations}
+    end)
   end
 
   defp name_mutation?(mutation) do
@@ -384,14 +413,20 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp last_microblock(blocks_mutations) do
-    {block_index, mblock, _mutations} =
-      blocks_mutations
-      |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
-      |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
+    blocks_mutations
+    |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
+    |> case do
+      [] ->
+        {:error, :no_mblocks}
 
-    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+      list ->
+        {block_index, mblock, _mutations} =
+          list |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
 
-    {block_index, mb_hash, mblock}
+        {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+
+        {:ok, {block_index, mb_hash, mblock}}
+    end
   end
 
   defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
@@ -496,6 +531,7 @@ defmodule AeMdw.Sync.Server do
         |> List.flatten()
         |> Enum.frequencies_by(fn
           %mod{} -> mod
+          nil -> nil
         end)
 
       mutations_count = length(mutations)
