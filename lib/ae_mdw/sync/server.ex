@@ -454,6 +454,7 @@ defmodule AeMdw.Sync.Server do
       mutations_map =
         mutations
         |> List.flatten()
+        |> Enum.reject(&is_nil/1)
         |> Enum.frequencies_by(fn
           %mod{} -> mod
         end)
