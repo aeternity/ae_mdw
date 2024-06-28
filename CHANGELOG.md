@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.80.0](https://www.github.com/aeternity/ae_mdw/compare/v1.79.0...v1.80.0) (2024-06-28)
+
+
+### Features
+
+* add oracle extends endpoint on v3 ([#1824](https://www.github.com/aeternity/ae_mdw/issues/1824)) ([e8c077f](https://www.github.com/aeternity/ae_mdw/commit/e8c077ff3f0918bee14f8b6bc53a49e7706ed0e0))
+
+
+### Bug Fixes
+
+* ignore nil mutations in sync server ([#1827](https://www.github.com/aeternity/ae_mdw/issues/1827)) ([078356f](https://www.github.com/aeternity/ae_mdw/commit/078356f054507c790f6a7518caef440c42f368af))
+
 ## [1.79.0](https://www.github.com/aeternity/ae_mdw/compare/v1.78.1...v1.79.0) (2024-06-25)
 
 
