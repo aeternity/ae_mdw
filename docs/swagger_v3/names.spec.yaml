@@ -343,7 +343,7 @@ paths:
   /names/count:
     get:
       deprecated: false
-      description: Get the total number of names.
+      description: Get the total number of active names.
       operationId: get_names_count
       parameters:
         - name: owned_by
@@ -353,16 +353,9 @@ paths:
           schema:
             type: string
             example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
-        - name: state
-          in: query
-          description: Activation state of the name (active or inactive)
-          required: false
-          schema:
-            type: string
-            example: inactive
       responses:
         '200':
-          description: Returns the total number of names
+          description: Returns the total number of active names
           content:
             application/json:
               schema:
