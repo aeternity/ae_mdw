@@ -23,7 +23,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
 
   @type source :: :node | :mdw
-  @type version :: :v1 | :v2
+  @type version :: :v1 | :v2 | :v3
 
   @spec init_tables() :: :ok
   def init_tables() do

@@ -25,6 +25,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     micro: "MicroBlocks"
   }
 
+  @versions [:v1, :v2, :v3]
+
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
@@ -74,7 +76,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
     if not already_processed?({:txs, hash, source}) do
-      versions = Enum.filter([:v1, :v2], &broadcast_transaction?(source, &1))
+      versions = Enum.filter(@versions, &broadcast_transaction?(source, &1))
 
       if Enum.any?(versions) do
         GenServer.cast(__MODULE__, {:broadcast_txs, block, source, versions})
@@ -131,12 +133,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end
   end
 
-  defp serialize_block(header, :key, :mdw, :v2) do
+  defp serialize_block(header, :key, :mdw, version) when version in [:v2, :v3] do
     height = header |> :aec_headers.height() |> Integer.to_string()
     Blocks.fetch_key_block(State.mem_state(), height)
   end
 
-  defp serialize_block(header, :micro, :mdw, :v2) do
+  defp serialize_block(header, :micro, :mdw, version) when version in [:v2, :v3] do
     {:ok, hash} = :aec_headers.hash_header(header)
     Blocks.fetch_micro_block(State.mem_state(), encode(:micro_block_hash, hash))
   end
@@ -150,7 +152,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     tx_pids = Subscriptions.subscribers(source, version, "Transactions")
 
     context =
-      if {source, version} == {:mdw, :v2} do
+      if {source, version} in [{:mdw, :v2}, {:mdw, :v3}] do
         {:state, State.mem_state()}
       else
         {:block, block}
@@ -281,7 +283,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp get_subscribed_versions(channel, source) do
-    Enum.filter([:v1, :v2], &Subscriptions.has_subscribers?(source, &1, channel))
+    Enum.filter(@versions, &Subscriptions.has_subscribers?(source, &1, channel))
   end
 
   defp broadcast_transaction?(source, version) do

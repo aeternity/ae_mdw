@@ -14,7 +14,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   @impl Phoenix.Socket.Transport
-  def connect(%{connect_info: %{version: version}}) when version in [:v1, :v2] do
+  def connect(%{connect_info: %{version: version}}) when version in [:v1, :v2, :v3] do
     {:ok, %{version: version}}
   end
 
