@@ -418,14 +418,14 @@ defmodule AeMdw.Sync.Server do
       {:ok, kb_hash} = key_block |> :aec_blocks.to_key_header() |> :aec_headers.hash_header()
       txs_count = get_txs_count(kb_hash, mbs_mutations)
 
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count, txs_count)
       Broadcaster.broadcast_key_block(key_block, :v2, :mdw, mbs_count, txs_count)
+      Broadcaster.broadcast_key_block(key_block, :v3, :mdw, mbs_count, txs_count)
 
       Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
         Broadcaster.broadcast_micro_block(micro_block, :mdw)
         Broadcaster.broadcast_txs(micro_block, :mdw)
       end)
-
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count, txs_count)
     end)
   end
 

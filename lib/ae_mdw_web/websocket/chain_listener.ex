@@ -39,6 +39,7 @@ defmodule AeMdwWeb.Websocket.ChainListener do
       {:ok, block} ->
         Broadcaster.broadcast_key_block(block, :v1, :node, nil, nil)
         Broadcaster.broadcast_key_block(block, :v2, :node, nil, nil)
+        Broadcaster.broadcast_key_block(block, :v3, :node, nil, nil)
 
       {:error, _rsn} ->
         Log.warn("gproc_ps_event with block not found: block_hash = #{inspect(info.block_hash)}")
