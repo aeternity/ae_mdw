@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.81.0](https://www.github.com/aeternity/ae_mdw/compare/v1.80.0...v1.81.0) (2024-07-02)
+
+
+### Features
+
+* add v3 for websockets ([#1828](https://www.github.com/aeternity/ae_mdw/issues/1828)) ([219417b](https://www.github.com/aeternity/ae_mdw/commit/219417b6e5ecdc93d8210875c990f84bcb99ff0b))
+* update node to 7.1.0 ([#1826](https://www.github.com/aeternity/ae_mdw/issues/1826)) ([56d2150](https://www.github.com/aeternity/ae_mdw/commit/56d215021fb0b04e5fbe3e672b49624eedf0dda6))
+
 ## [1.80.0](https://www.github.com/aeternity/ae_mdw/compare/v1.79.0...v1.80.0) (2024-06-28)
 
 
