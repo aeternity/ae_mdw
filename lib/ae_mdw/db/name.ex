@@ -214,6 +214,20 @@ defmodule AeMdw.Db.Name do
     end
   end
 
+  @spec pointers_v3(state(), Model.name()) :: map()
+  def pointers_v3(state, Model.name(index: plain_name, active: active)) do
+    case last_update(state, plain_name, active) do
+      nil ->
+        %{}
+
+      txi_idx ->
+        state
+        |> DbUtil.read_node_tx(txi_idx)
+        |> :aens_update_tx.pointers()
+        |> Enum.map(&:aens_pointer.serialize_for_client/1)
+    end
+  end
+
   @spec ownership(state(), Model.name()) :: %{
           current: Format.aeser_id(),
           original: Format.aeser_id()
