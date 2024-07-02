@@ -122,6 +122,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         |> Name.delete_inactive(plain_name)
         |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
         |> State.inc_stat(:burned_in_auctions, lock_amount)
+        |> DbUtil.increment_names_count(owner_pk)
 
       timeout ->
         auction_end = height + timeout

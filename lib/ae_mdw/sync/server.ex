@@ -32,16 +32,10 @@ defmodule AeMdw.Sync.Server do
 
   use GenStateMachine
 
-  alias AeMdw.Db.NamesExpirationMutation
-  alias AeMdw.Db.NameUpdateMutation
-  alias AeMdw.Db.NameRevokeMutation
-  alias AeMdw.Db.NameClaimMutation
-  alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Blocks
   alias AeMdw.Db.State
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
-  alias AeMdw.Db.UpdateAccountNameCountsMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
@@ -287,9 +281,7 @@ defmodule AeMdw.Sync.Server do
       gens_mutations
       |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
         blocks_mutations =
-          blocks_mutations
-          |> maybe_add_accounts_balance_mutations()
-          |> maybe_update_account_name_count_mutations()
+          maybe_add_accounts_balance_mutations(blocks_mutations)
 
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
@@ -342,24 +334,6 @@ defmodule AeMdw.Sync.Server do
     end
   end
 
-  defp maybe_update_account_name_count_mutations(gen_mutations) do
-    if Enum.any?(gen_mutations, fn {_b, _mb, mutations} ->
-         Enum.any?(mutations, &name_mutation?/1)
-       end) do
-      gen_mutations
-      |> last_microblock()
-      |> case do
-        {:ok, {block_index, _mblock, _mutations}} ->
-          update_gen_mutations(gen_mutations, block_index, [UpdateAccountNameCountsMutation.new()])
-
-        {:error, :no_mblocks} ->
-          gen_mutations
-      end
-    else
-      gen_mutations
-    end
-  end
-
   defp update_gen_mutations(gen_mutations, block_index, extra_mutations) do
     idx =
       Enum.find_index(gen_mutations, fn
@@ -372,27 +346,27 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp name_mutation?(mutation) do
-    case mutation do
-      %NameTransferMutation{} ->
-        true
+  # defp name_mutation?(mutation) do
+  #   case mutation do
+  #     %NameTransferMutation{} ->
+  #       true
 
-      %NameClaimMutation{} ->
-        true
+  #     %NameClaimMutation{} ->
+  #       true
 
-      %NameRevokeMutation{} ->
-        true
+  #     %NameRevokeMutation{} ->
+  #       true
 
-      %NameUpdateMutation{} ->
-        true
+  #     %NameUpdateMutation{} ->
+  #       true
 
-      %NamesExpirationMutation{} ->
-        true
+  #     %NamesExpirationMutation{} ->
+  #       true
 
-      _other_mutation ->
-        false
-    end
-  end
+  #     _other_mutation ->
+  #       false
+  #   end
+  # end
 
   defp get_balances_from_node(block_hash, account_set) do
     with {:value, trees} <- :aec_db.find_block_state_partial(block_hash, true, [:accounts]),
@@ -459,7 +433,6 @@ defmodule AeMdw.Sync.Server do
       gens_mutations
       |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
       |> maybe_add_accounts_balance_mutations()
-      |> maybe_update_account_name_count_mutations()
 
     {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
     Log.info("[sync_mem] exec until height=#{height}")
