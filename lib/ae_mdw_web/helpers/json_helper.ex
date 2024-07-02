@@ -3,14 +3,20 @@ defmodule AeMdwWeb.Helpers.JSONHelper do
   Special helpers to additionally pre-process JSON content.
   """
 
-  alias Phoenix.Controller
   alias Plug.Conn
 
   @spec format_json(Conn.t(), term()) :: Conn.t()
   def format_json(%Conn{assigns: %{int_as_string: true}} = conn, data),
-    do: Controller.json(conn, convert_ints_to_string(data))
+    do: render_json(conn, convert_ints_to_string(data))
 
-  def format_json(conn, data), do: Controller.json(conn, data)
+  def format_json(conn, data), do: render_json(conn, data)
+
+  defp render_json(conn, data) do
+    conn
+    |> Conn.put_resp_header("content-type", "application/json")
+    |> Conn.resp(200, :jsx.encode(data))
+    |> Conn.halt()
+  end
 
   defp convert_ints_to_string(val) when is_integer(val), do: to_string(val)
 

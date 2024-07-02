@@ -628,8 +628,6 @@ defmodule AeMdw.Names do
           nil
       end
 
-    pointers = Name.pointers(state, name)
-
     %{
       name: plain_name,
       hash: name_hash,
@@ -643,7 +641,7 @@ defmodule AeMdw.Names do
       name_fee: :aec_governance.name_claim_fee(plain_name, protocol),
       revoke: revoke && expand_txi_idx(state, revoke, opts),
       auction_timeout: auction_timeout,
-      pointers: pointers,
+      pointers: Name.pointers_v3(state, name),
       ownership: render_ownership(state, name)
     }
   end
