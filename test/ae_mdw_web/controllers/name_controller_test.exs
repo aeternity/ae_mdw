@@ -2,14 +2,16 @@ defmodule AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Store
+  alias AeMdw.Db.UpdateAccountNameCountsMutation
   alias AeMdw.Node.Db
-  alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
+  alias AeMdw.Validate
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
   import AeMdw.Db.ModelFixtures, only: [new_name: 0]
@@ -1746,6 +1748,102 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn |> get("/names?owned_by=#{owned_by}") |> json_response(400)
+    end
+  end
+
+  describe "names_count" do
+    setup %{conn: conn} do
+      first_owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      {:account_pubkey, first_owner_pk} = Enc.decode(first_owner_id)
+      second_owner_id = "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+      {:account_pubkey, second_owner_pk} = Enc.decode(second_owner_id)
+
+      state =
+        State.mem_state()
+        |> State.put(Model.Tx, Model.tx(index: 1, id: <<124::256>>))
+
+      owner_pk = fn i -> if rem(i, 2) == 0, do: first_owner_pk, else: second_owner_pk end
+
+      state =
+        1..25
+        |> Enum.reduce(state, fn i, state_acc ->
+          plain_name = "SomeLongTestName#{i}.test"
+
+          mutation =
+            NameClaimMutation.new(
+              plain_name,
+              <<i::256>>,
+              owner_pk.(i),
+              1,
+              true,
+              {0, 1},
+              {0, -1},
+              7
+            )
+
+          State.commit(state_acc, [mutation])
+        end)
+
+      update_account_name_counts = UpdateAccountNameCountsMutation.new()
+
+      %{store: store} =
+        State.commit(state, [update_account_name_counts])
+
+      %{
+        conn: conn,
+        store: store,
+        first_owner: first_owner_id,
+        second_owner: second_owner_id,
+        first_owner_pk: first_owner_pk
+      }
+    end
+
+    test "get names count", %{
+      conn: conn,
+      store: store,
+      first_owner_pk: first_owner_pk,
+      first_owner: first_owner,
+      second_owner: second_owner
+    } do
+      assert 25 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count")
+               |> json_response(200)
+
+      state = State.mem_state()
+
+      name_claim_mutation =
+        NameClaimMutation.new(
+          "SomeLongTestName1.test",
+          <<1123::256>>,
+          first_owner_pk,
+          1,
+          true,
+          {1, 1},
+          {1, -1},
+          7
+        )
+
+      State.commit(state, [name_claim_mutation, UpdateAccountNameCountsMutation.new()])
+
+      assert 26 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count")
+               |> json_response(200)
+
+      assert 13 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: first_owner)
+               |> json_response(200)
+
+      assert 13 =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/count", owned_by: second_owner)
+               |> json_response(200)
     end
   end
 

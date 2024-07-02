@@ -152,6 +152,8 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.ActiveNameOwner, m_owner)
     |> State.put(Model.ActiveName, m_name)
     |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
+    |> DbUtil.increment_names_count(new_owner)
+    |> DbUtil.decrement_names_count(old_owner)
   end
 
   @spec revoke(State.t(), Names.plain_name(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
@@ -270,6 +272,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.InactiveNameOwner, m_owner)
     |> State.put(Model.InactiveNameOwnerDeactivation, m_owner_deactivation)
     |> State.inc_stat(reason)
+    |> DbUtil.decrement_names_count(owner_pk)
   end
 
   @spec delete_inactive(state(), plain_name()) :: state()

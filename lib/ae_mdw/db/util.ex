@@ -358,4 +358,39 @@ defmodule AeMdw.Db.Util do
         {start_date, start_date}
     end
   end
+
+  @spec increment_names_count(state(), Db.pubkey()) :: State.t()
+  def increment_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        nil ->
+          Model.account_names_count(index: owner_pk, count: 1)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count + 1)
+      end
+    )
+  end
+
+  @spec decrement_names_count(state(), Db.pubkey()) :: State.t()
+  def decrement_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        nil ->
+          Model.account_names_count(index: owner_pk, count: 0)
+
+        Model.account_names_count(index: owner_pk, count: 0) ->
+          Model.account_names_count(index: owner_pk, count: 0)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count - 1)
+      end
+    )
+  end
 end
