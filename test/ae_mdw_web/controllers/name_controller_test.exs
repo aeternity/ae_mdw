@@ -7,7 +7,6 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Store
-  alias AeMdw.Db.UpdateAccountNameCountsMutation
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -1784,10 +1783,7 @@ defmodule AeMdwWeb.NameControllerTest do
           State.commit(state_acc, [mutation])
         end)
 
-      update_account_name_counts = UpdateAccountNameCountsMutation.new()
-
-      %{store: store} =
-        State.commit(state, [update_account_name_counts])
+      %{store: store} = state
 
       %{
         conn: conn,
@@ -1825,7 +1821,7 @@ defmodule AeMdwWeb.NameControllerTest do
           7
         )
 
-      State.commit(state, [name_claim_mutation, UpdateAccountNameCountsMutation.new()])
+      %{store: store} = State.commit(state, [name_claim_mutation])
 
       assert 26 =
                conn

@@ -6,7 +6,6 @@ defmodule AeMdw.Db.UpdateAccountNameCountsTest do
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.UpdateAccountNameCountsMutation
   alias AeMdw.Db.RocksDb
 
   require Model
@@ -43,16 +42,6 @@ defmodule AeMdw.Db.UpdateAccountNameCountsTest do
     all_active_names_owners =
       state
       |> Collection.stream(Model.AccountNamesCount, :forward, nil, nil)
-      |> Enum.map(& &1)
-
-    assert [] = all_active_names_owners
-
-    state =
-      State.commit(state, [UpdateAccountNameCountsMutation.new()])
-
-    all_active_names_owners =
-      state
-      |> Collection.stream(Model.AccountNamesCount, :forward, nil, nil)
 
     assert 3 = Enum.count(all_active_names_owners)
 
@@ -74,9 +63,7 @@ defmodule AeMdw.Db.UpdateAccountNameCountsTest do
       end)
 
     state =
-      state
-      |> State.commit(revoke_mutations)
-      |> State.commit([UpdateAccountNameCountsMutation.new()])
+      State.commit(state, revoke_mutations)
 
     assert 3 = Enum.count(all_active_names_owners)
 
