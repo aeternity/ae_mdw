@@ -29,6 +29,7 @@ defmodule AeMdw.Db.Name do
   @typep height :: Blocks.height()
   @typep txi_idx :: AeMdw.Txs.txi_idx()
   @typep state :: State.t()
+  @typep pointer() :: %{key: binary(), id: binary()}
 
   @typep nested_table ::
            Model.NameClaim
@@ -214,11 +215,11 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec pointers_v3(state(), Model.name()) :: map()
+  @spec pointers_v3(state(), Model.name()) :: [pointer()]
   def pointers_v3(state, Model.name(index: plain_name, active: active)) do
     case last_update(state, plain_name, active) do
       nil ->
-        %{}
+        []
 
       txi_idx ->
         state

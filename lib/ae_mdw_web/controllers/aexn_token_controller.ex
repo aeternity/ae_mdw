@@ -123,9 +123,7 @@ defmodule AeMdwWeb.AexnTokenController do
           Util.render(conn, {prev_cursor, account_balances, next_cursor})
 
         nil ->
-          conn
-          |> put_status(503)
-          |> format_json(%{error: :timeout})
+          format_json(conn, %{error: :timeout}, 503)
       end
     end
   end
