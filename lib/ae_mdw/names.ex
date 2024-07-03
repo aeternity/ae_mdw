@@ -74,17 +74,12 @@ defmodule AeMdw.Names do
 
   @spec count_names(state(), query()) :: {:ok, non_neg_integer()} | {:error, reason()}
   def count_names(state, query) do
-    query
-    |> Util.convert_params(&convert_param/1)
-    |> case do
-      {:ok, %{owned_by: owned_by}} ->
-        {:ok, count_active_names(state, owned_by)}
+    case Util.convert_params(query, &convert_param/1) do
+      {:ok, query_params} ->
+        {:ok, count_active_names(state, Map.get(query_params, :owned_by))}
 
-      {:ok, %{}} ->
-        {:ok, count_active_names(state, nil)}
-
-      {:error, _} ->
-        {:error, ErrInput.Query.exception(value: query)}
+      {:error, error} ->
+        {:error, ErrInput.Query.exception(value: error)}
     end
   end
 
@@ -313,6 +308,39 @@ defmodule AeMdw.Names do
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
     auction_end + :aec_governance.name_claim_max_expiration(Db.proto_vsn(auction_end))
+  end
+
+  @spec increment_names_count(state(), Db.pubkey()) :: State.t()
+  def increment_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        nil ->
+          Model.account_names_count(index: owner_pk, count: 1)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count + 1)
+      end
+    )
+  end
+
+  @spec decrement_names_count(state(), Db.pubkey()) :: State.t()
+  def decrement_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        Model.account_names_count(index: owner_pk, count: 0) ->
+          Model.account_names_count(index: owner_pk, count: 0)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count - 1)
+      end,
+      Model.account_names_count(index: owner_pk, count: 0)
+    )
   end
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor) do

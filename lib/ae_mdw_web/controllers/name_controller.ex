@@ -173,11 +173,8 @@ defmodule AeMdwWeb.NameController do
 
   @spec names_count(Conn.t(), map()) :: Conn.t()
   def names_count(%Conn{assigns: %{state: state, query: query}} = conn, _params) do
-    state
-    |> Names.count_names(query)
-    |> case do
-      {:ok, count} -> format_json(conn, count)
-      {:error, _} -> {:error, ErrInput.NotFound.exception(value: "names")}
+    with {:ok, count} <- Names.count_names(state, query) do
+      format_json(conn, count)
     end
   end
 
