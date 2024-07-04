@@ -187,10 +187,23 @@ defmodule AeMdw.Dex do
       State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx})
 
     create_txi =
-      if ext_contract do
-        Origin.tx_index!(state, {:contract, ext_contract})
-      else
-        create_txi
+      case ext_contract do
+        {:parent_contract_pk, contract_pk} ->
+          create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+          case State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx}) do
+            Model.contract_log(ext_contract: nil) ->
+              create_txi
+
+            Model.contract_log(ext_contract: contract_pk) ->
+              Origin.tx_index!(state, {:contract, contract_pk})
+          end
+
+        nil ->
+          create_txi
+
+        contract_pk ->
+          Origin.tx_index!(state, {:contract, contract_pk})
       end
 
     %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
