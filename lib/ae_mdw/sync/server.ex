@@ -313,60 +313,18 @@ defmodule AeMdw.Sync.Server do
       end)
 
     if MapSet.size(accounts_set) > 0 do
-      gen_mutations
-      |> last_microblock()
-      |> case do
-        {:ok, {block_index, mb_hash, _mblock}} ->
-          account_balances_mutations =
-            mb_hash
-            |> get_balances_from_node(accounts_set)
-            |> Enum.reduce([], fn {account_pk, balance}, acc ->
-              [UpdateBalanceAccountMutation.new(account_pk, balance) | acc]
-            end)
+      {block_index, mb_hash, mblock} = last_microblock(gen_mutations)
 
-          update_gen_mutations(gen_mutations, block_index, account_balances_mutations)
+      account_balances_mutations =
+        mb_hash
+        |> get_balances_from_node(accounts_set)
+        |> Enum.reduce([], fn {account_pk, balance}, acc ->
+          [{block_index, mblock, UpdateBalanceAccountMutation.new(account_pk, balance)} | acc]
+        end)
 
-        {:error, :no_mblocks} ->
-          gen_mutations
-      end
-    else
-      gen_mutations
+      gen_mutations ++ account_balances_mutations
     end
   end
-
-  defp update_gen_mutations(gen_mutations, block_index, extra_mutations) do
-    idx =
-      Enum.find_index(gen_mutations, fn
-        {^block_index, _mblock, _mutations} -> true
-        _block -> false
-      end)
-
-    List.update_at(gen_mutations, idx, fn {block_index, mblock, mutations} ->
-      {block_index, mblock, mutations ++ extra_mutations}
-    end)
-  end
-
-  # defp name_mutation?(mutation) do
-  #   case mutation do
-  #     %NameTransferMutation{} ->
-  #       true
-
-  #     %NameClaimMutation{} ->
-  #       true
-
-  #     %NameRevokeMutation{} ->
-  #       true
-
-  #     %NameUpdateMutation{} ->
-  #       true
-
-  #     %NamesExpirationMutation{} ->
-  #       true
-
-  #     _other_mutation ->
-  #       false
-  #   end
-  # end
 
   defp get_balances_from_node(block_hash, account_set) do
     with {:value, trees} <- :aec_db.find_block_state_partial(block_hash, true, [:accounts]),
