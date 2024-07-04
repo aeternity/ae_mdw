@@ -3,10 +3,7 @@ defmodule AeMdw.Names do
   Context module for dealing with Names.
   """
 
-  require AeMdw.Db.Model
-
   alias :aeser_api_encoder, as: Enc
-
   alias AeMdw.AuctionBids
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -22,6 +19,8 @@ defmodule AeMdw.Names do
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
+
+  require Model
 
   @type cursor() :: binary() | nil
   @type page_cursor() :: Collection.pagination_cursor()
@@ -74,12 +73,8 @@ defmodule AeMdw.Names do
 
   @spec count_names(state(), query()) :: {:ok, non_neg_integer()} | {:error, reason()}
   def count_names(state, query) do
-    case Util.convert_params(query, &convert_param/1) do
-      {:ok, query_params} ->
-        {:ok, count_active_names(state, Map.get(query_params, :owned_by))}
-
-      {:error, error} ->
-        {:error, ErrInput.Query.exception(value: error)}
+    with {:ok, query_params} <- Util.convert_params(query, &convert_param/1) do
+      {:ok, count_active_names(state, Map.get(query_params, :owned_by))}
     end
   end
 
@@ -1064,11 +1059,18 @@ defmodule AeMdw.Names do
   end
 
   defp count_active_names(state, nil) do
-    state
-    |> Collection.stream(Model.AccountNamesCount, :forward, nil, nil)
-    |> Enum.reduce(0, fn owner, acc ->
-      count_active_names(state, owner) + acc
-    end)
+    case State.prev(state, Model.TotalStat, nil) do
+      {:ok, index} ->
+        state
+        |> State.get(Model.TotalStat, index)
+        |> case do
+          {:ok, Model.total_stat(active_names: count)} -> count
+          :not_found -> 0
+        end
+
+      :none ->
+        0
+    end
   end
 
   defp count_active_names(state, owned_by) do
