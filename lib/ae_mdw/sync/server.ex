@@ -323,6 +323,8 @@ defmodule AeMdw.Sync.Server do
         end)
 
       gen_mutations ++ account_balances_mutations
+    else
+      gen_mutations
     end
   end
 
@@ -345,20 +347,14 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp last_microblock(blocks_mutations) do
-    blocks_mutations
-    |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
-    |> case do
-      [] ->
-        {:error, :no_mblocks}
+    {block_index, mblock, _mutations} =
+      blocks_mutations
+      |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
+      |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
 
-      list ->
-        {block_index, mblock, _mutations} =
-          list |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
+    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
 
-        {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
-
-        {:ok, {block_index, mb_hash, mblock}}
-    end
+    {block_index, mb_hash, mblock}
   end
 
   defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
