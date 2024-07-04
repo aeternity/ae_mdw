@@ -208,7 +208,9 @@ defmodule AeMdw.Dex do
       end
 
     Model.tx(id: _tx_hash, block_index: {height, _mbi} = block_index, time: time) =
-      State.fetch!(state, Model.Tx, create_txi)
+      tx = State.fetch!(state, Model.Tx, create_txi)
+
+    IO.inspect(tx)
 
     Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
     contract_pk = Origin.pubkey!(state, {:contract, create_txi})
@@ -222,10 +224,10 @@ defmodule AeMdw.Dex do
     %{token1: token1_pk, token2: token2_pk} = DexCache.get_pair(contract_pk)
 
     %{
-      "amount0_in" => amount0_in,
-      "amount1_in" => amount1_in,
-      "amount0_out" => amount0_out,
-      "amount1_out" => amount1_out
+      amount0_in: amount0_in,
+      amount1_in: amount1_in,
+      amount0_out: amount0_out,
+      amount1_out: amount1_out
     } = rendered_amounts = render_amounts(amounts)
 
     %{

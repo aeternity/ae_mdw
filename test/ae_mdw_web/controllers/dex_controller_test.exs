@@ -2,7 +2,10 @@ defmodule AeMdwWeb.DexControllerTest do
   use AeMdwWeb.ConnCase
   @moduletag skip_store: true
 
+  import Mock
+
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Store
   alias AeMdw.Sync.DexCache
   alias AeMdw.Util.Encoding
@@ -46,6 +49,8 @@ defmodule AeMdwWeb.DexControllerTest do
         Model.field(index: {:contract_create_tx, nil, @pair2_pk, @pair2_txi})
       )
       |> then(fn store ->
+        state = State.new(store)
+
         Enum.reduce(1..80, store, fn i, store ->
           {account_pk, pair_txi} =
             cond do
@@ -66,49 +71,75 @@ defmodule AeMdwWeb.DexControllerTest do
           log_idx = rem(txi, 2)
           block_index_number = 200_000 + i
           block_index = {block_index_number, 0}
+          token1_pk = :crypto.strong_rand_bytes(32)
+          token2_pk = :crypto.strong_rand_bytes(32)
+
+          store =
+            store
+            |> Store.put(
+              Model.DexAccountSwapTokens,
+              Model.dex_account_swap_tokens(
+                index: {account_pk, pair_txi, txi, log_idx},
+                to: account_pk,
+                amounts: [txi + 10, txi + 20, txi + 30, txi + 40]
+              )
+            )
+            |> Store.put(
+              Model.DexContractSwapTokens,
+              Model.dex_contract_swap_tokens(index: {pair_txi, account_pk, txi, log_idx})
+            )
+            |> Store.put(
+              Model.DexSwapTokens,
+              Model.dex_swap_tokens(index: {pair_txi, txi, log_idx})
+            )
+            |> Store.put(
+              Model.ContractLog,
+              Model.contract_log(
+                index: {pair_txi, txi, log_idx},
+                args: [account_pk, account_pk]
+              )
+            )
+            |> Store.put(
+              Model.Tx,
+              Model.tx(index: txi, id: <<txi::256>>, block_index: {100_000 + i, 0})
+            )
+            |> Store.put(
+              Model.Tx,
+              Model.tx(index: pair_txi, id: <<pair_txi::256>>, block_index: block_index)
+            )
+            |> Store.put(
+              Model.Block,
+              Model.block(index: block_index, hash: <<block_index_number::256>>)
+            )
+            |> Store.put(
+              Model.RevOrigin,
+              Model.rev_origin(
+                index: {block_index_number, :contract_create_tx, <<block_index_number::256>>}
+              )
+            )
+            |> Store.put(
+              Model.AexnContract,
+              Model.aexn_contract(index: {:aex9, token1_pk}, meta_info: {"TOKEN1", "TK1", 18})
+            )
+            |> Store.put(
+              Model.AexnContract,
+              Model.aexn_contract(index: {:aex9, token2_pk}, meta_info: {"TOKEN2", "TK2", 18})
+            )
+            |> Store.put(
+              Model.Field,
+              Model.field(
+                index: {:contract_create_tx, nil, <<block_index_number::256>>, block_index_number}
+              )
+            )
+
+          DexCache.add_pair(
+            state,
+            <<block_index_number::256>>,
+            token1_pk,
+            token2_pk
+          )
 
           store
-          |> Store.put(
-            Model.DexAccountSwapTokens,
-            Model.dex_account_swap_tokens(
-              index: {account_pk, pair_txi, txi, log_idx},
-              to: account_pk,
-              amounts: [txi + 10, txi + 20, txi + 30, txi + 40]
-            )
-          )
-          |> Store.put(
-            Model.DexContractSwapTokens,
-            Model.dex_contract_swap_tokens(index: {pair_txi, account_pk, txi, log_idx})
-          )
-          |> Store.put(
-            Model.DexSwapTokens,
-            Model.dex_swap_tokens(index: {pair_txi, txi, log_idx})
-          )
-          |> Store.put(
-            Model.ContractLog,
-            Model.contract_log(
-              index: {pair_txi, txi, log_idx},
-              args: [account_pk, account_pk]
-            )
-          )
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: txi, id: <<txi::256>>, block_index: {100_000 + i, 0})
-          )
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: pair_txi, id: <<pair_txi::256>>, block_index: block_index)
-          )
-          |> Store.put(
-            Model.Block,
-            Model.block(index: block_index, hash: <<block_index_number::256>>)
-          )
-          |> Store.put(
-            Model.RevOrigin,
-            Model.rev_origin(
-              index: {block_index_number, :contract_create_tx, <<block_index_number::256>>}
-            )
-          )
         end)
       end)
       |> then(fn store ->
@@ -134,51 +165,79 @@ defmodule AeMdwWeb.DexControllerTest do
     end
 
     test "gets SwapTokens by desc txi", %{conn: conn} do
-      caller_id = encode_account(@account2_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account2_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> get("/v3/dex/swaps")
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> get("/v3/dex/swaps")
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens by asc txi", %{conn: conn} do
-      caller_id = encode_account(@account1_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account1_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> get("/v3/dex/swaps", direction: :forward)
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> get("/v3/dex/swaps", direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens from both external and parent contracts", %{conn: conn, store: store} do
@@ -419,110 +478,166 @@ defmodule AeMdwWeb.DexControllerTest do
 
   describe "account_tokens" do
     test "gets SwapTokens from a caller by desc txi", %{conn: conn, store: store} do
-      caller_id = encode_account(@account1_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account1_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/accounts/#{caller_id}/dex/swaps")
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{caller_id}/dex/swaps")
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens from a caller by asc txi", %{conn: conn, store: store} do
-      caller_id = encode_account(@account2_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account2_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/accounts/#{caller_id}/dex/swaps", direction: :forward)
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{caller_id}/dex/swaps", direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens from a caller on a token by desc txi", %{conn: conn, store: store} do
-      caller_id = encode_account(@account1_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account1_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/accounts/#{caller_id}/dex/swaps", token_symbol: "TK1")
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{caller_id}/dex/swaps", token_symbol: "TK1")
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens from a caller on a token by asc txi", %{conn: conn, store: store} do
-      caller_id = encode_account(@account2_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account2_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/accounts/#{caller_id}/dex/swaps",
-                 token_symbol: "TK3",
-                 direction: :forward
-               )
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{caller_id}/dex/swaps",
+                   token_symbol: "TK3",
+                   direction: :forward
+                 )
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
-      assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
 
-      assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
+        assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "returns empty list when no transfer exists", %{conn: conn, store: store} do
@@ -548,55 +663,83 @@ defmodule AeMdwWeb.DexControllerTest do
 
   describe "contract_swaps" do
     test "gets SwapTokens from a contract_id by desc txi", %{conn: conn, store: store} do
-      contract_id = Encoding.encode_contract(@pair1_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        contract_id = Encoding.encode_contract(@pair1_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/dex/#{contract_id}/swaps")
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/dex/#{contract_id}/swaps")
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
-      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK1", "TK2"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert Enum.all?(swaps, &valid_token_swap?(&1, "TK1", "TK2"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]), :desc)
 
-      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK1", "TK2"))
+        assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK1", "TK2"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "gets SwapTokens from a contract_id by asc txi", %{conn: conn, store: store} do
-      contract_id = Encoding.encode_contract(@pair2_pk)
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        contract_id = Encoding.encode_contract(@pair2_pk)
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/dex/#{contract_id}/swaps", direction: :forward)
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/dex/#{contract_id}/swaps", direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(swaps)
-      assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
-      assert Enum.all?(swaps, &valid_token_swap?(&1, "TK3", "TK4"))
+        assert @default_limit = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Validate.id!(&1["tx_hash"]))
+        assert Enum.all?(swaps, &valid_token_swap?(&1, "TK3", "TK4"))
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_swaps)
+        assert @default_limit = length(next_swaps)
 
-      assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
+        assert ^next_swaps = Enum.sort_by(next_swaps, &Validate.id!(&1["tx_hash"]))
 
-      assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK3", "TK4"))
+        assert Enum.all?(next_swaps, &valid_token_swap?(&1, "TK3", "TK4"))
 
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
 
     test "returns bad request when contract_id is invalid", %{conn: conn} do

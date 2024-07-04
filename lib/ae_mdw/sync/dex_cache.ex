@@ -59,10 +59,10 @@ defmodule AeMdw.Sync.DexCache do
 
   @spec add_pair(State.t(), pubkey(), pubkey(), pubkey()) :: :ok
   def add_pair(state, contract_pk, token1_pk, token2_pk) do
-    with {:ok, Model.aexn_contract(meta_info: {_name, symbol1, _dec})} <-
-           State.get(state, Model.AexnContract, {:aex9, token1_pk}),
-         {:ok, Model.aexn_contract(meta_info: {_name, symbol2, _dec})} <-
-           State.get(state, Model.AexnContract, {:aex9, token2_pk}),
+    with {:first, {:ok, Model.aexn_contract(meta_info: {_name, symbol1, _dec})}} <-
+           {:first, State.get(state, Model.AexnContract, {:aex9, token1_pk})},
+         {:second, {:ok, Model.aexn_contract(meta_info: {_name, symbol2, _dec})}} <-
+           {:second, State.get(state, Model.AexnContract, {:aex9, token2_pk})},
          {:ok, pair_create_txi} <- Origin.tx_index(state, {:contract, contract_pk}) do
       :ets.insert(@tokens_table, {symbol1, pair_create_txi})
       :ets.insert(@pairs_table, {contract_pk, token1_pk, token2_pk})
