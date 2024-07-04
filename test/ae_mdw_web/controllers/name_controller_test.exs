@@ -6,6 +6,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Store
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
@@ -1801,17 +1802,22 @@ defmodule AeMdwWeb.NameControllerTest do
       first_owner: first_owner,
       second_owner: second_owner
     } do
+      state =
+        store
+        |> State.new()
+        |> State.put(Model.TotalStat, Model.total_stat(index: 1))
+
+      state = StatsMutation.execute(StatsMutation.new(1, "", 0, 0, 0, false), state)
+
       assert 25 =
                conn
                |> with_store(store)
                |> get("/v3/names/count")
                |> json_response(200)
 
-      state = State.mem_state()
-
       name_claim_mutation =
         NameClaimMutation.new(
-          "SomeLongTestName1.test",
+          "SomeExtraLongTestName1.test",
           <<1123::256>>,
           first_owner_pk,
           1,
@@ -1821,7 +1827,11 @@ defmodule AeMdwWeb.NameControllerTest do
           7
         )
 
-      %{store: store} = State.commit(state, [name_claim_mutation])
+      state =
+        NameClaimMutation.execute(name_claim_mutation, state)
+
+      %{store: store} =
+        StatsMutation.execute(StatsMutation.new(2, <<124::256>>, 0, 0, 0, false), state)
 
       assert 26 =
                conn
