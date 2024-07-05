@@ -244,7 +244,6 @@ defmodule AeMdw.Dex do
       tx_hash: Encoding.encode(:tx_hash, Txs.txi_to_hash(state, txi)),
       log_idx: log_idx,
       amounts: rendered_amounts,
-      # check this one
       microtime: time,
       height: height
     }
