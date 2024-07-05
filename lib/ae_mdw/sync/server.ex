@@ -280,6 +280,7 @@ defmodule AeMdw.Sync.Server do
     new_state =
       gens_mutations
       |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+        blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
         :ok = profile_sync("sync_db", height, ts, blocks_mutations)
@@ -293,9 +294,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
-    blocks_mutations
-    |> maybe_add_accounts_balance_mutations()
-    |> Enum.reduce(state, fn {_bi, _block, block_mutations}, state ->
+    Enum.reduce(blocks_mutations, state, fn {_bi, _block, block_mutations}, state ->
       State.commit_db(state, block_mutations, clear_mem?)
     end)
   end
