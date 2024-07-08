@@ -867,8 +867,6 @@ defmodule AeMdwWeb.DexControllerTest do
         Model.aexn_contract(index: {:aex9, token2_pk}, meta_info: {"TOKEN2", token2_symbol, 18})
       )
 
-    # TODO: TESTS randomly fail
-
     state = State.new(store)
 
     DexCache.add_pair(
