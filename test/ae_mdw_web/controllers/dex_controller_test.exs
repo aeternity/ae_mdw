@@ -240,239 +240,259 @@ defmodule AeMdwWeb.DexControllerTest do
       end
     end
 
-    test "gets SwapTokens from both external and parent contracts", %{conn: conn, store: store} do
-      caller_id = encode_account(@account1_pk)
-      pair_pk = <<3::256>>
-      parent_contract_pk = <<4::256>>
-      ext_contract_pk = <<5::256>>
-      parent_contract_pk2 = <<6::256>>
-      ext_contract_pk2 = <<7::256>>
+    test "gets SwapTokens from both external and parent contracts", %{conn: conn} do
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account1_pk)
+        pair_pk = <<3::256>>
+        parent_contract_pk = <<4::256>>
+        ext_contract_pk = <<5::256>>
+        parent_contract_pk2 = <<6::256>>
+        ext_contract_pk2 = <<7::256>>
 
-      pair_txi = 1
-      ext_contract_txi = 2
-      parent_contract_txi = 3
-      parent_contract2_txi = 4
-      ext_contract2_txi = 4
+        pair_txi = 1
+        ext_contract_txi = 2
+        parent_contract_txi = 3
+        parent_contract2_txi = 4
+        ext_contract2_txi = 4
 
-      txi1 = 5
-      txi2 = 6
-      txi3 = 7
-      txi4 = 8
+        txi1 = 5
+        txi2 = 6
+        txi3 = 7
+        txi4 = 8
 
-      log_idx = 0
+        log_idx = 0
 
-      store =
-        empty_store()
-        # CASE 1
-        |> Store.put(
-          Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {pair_txi, txi1, log_idx})
-        )
-        |> Store.put(
-          Model.DexAccountSwapTokens,
-          Model.dex_account_swap_tokens(
-            index: {@account1_pk, pair_txi, txi1, log_idx},
-            to: @account2_pk,
-            amounts: [90, 91, 92, 93]
+        store =
+          empty_store()
+          # CASE 1
+          |> Store.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {pair_txi, txi1, log_idx})
           )
-        )
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, pair_pk, pair_txi})
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {pair_txi, txi1, log_idx},
-            args: [@account1_pk, @account2_pk]
+          |> Store.put(
+            Model.DexAccountSwapTokens,
+            Model.dex_account_swap_tokens(
+              index: {@account1_pk, pair_txi, txi1, log_idx},
+              to: @account2_pk,
+              amounts: [90, 91, 92, 93]
+            )
           )
-        )
-        |> Store.put(
-          Model.Tx,
-          Model.tx(index: txi1, id: <<txi1::256>>, block_index: {100_001, 0})
-        )
-        # CASE 2
-        |> Store.put(
-          Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {pair_txi, txi2, log_idx})
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {pair_txi, txi2, log_idx},
-            ext_contract: ext_contract_pk,
-            args: [@account1_pk, @account2_pk]
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, pair_pk, pair_txi})
           )
-        )
-        |> Store.put(
-          Model.DexAccountSwapTokens,
-          Model.dex_account_swap_tokens(
-            index: {@account1_pk, pair_txi, txi2, log_idx},
-            to: @account2_pk,
-            amounts: [94, 95, 96, 97]
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {pair_txi, txi1, log_idx},
+              args: [@account1_pk, @account2_pk]
+            )
           )
-        )
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, ext_contract_pk, ext_contract_txi})
-        )
-        |> Store.put(
-          Model.Tx,
-          Model.tx(index: txi2, id: <<txi2::256>>, block_index: {200_002, 0})
-        )
-        # CASE 3
-        |> Store.put(
-          Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {pair_txi, txi3, log_idx})
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {pair_txi, txi3, log_idx},
-            ext_contract: {:parent_contract_pk, parent_contract_pk},
-            args: [@account1_pk, @account2_pk]
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: txi1, id: <<txi1::256>>, block_index: {100_001, 0})
           )
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {parent_contract_txi, txi3, log_idx},
-            ext_contract: nil
+          # CASE 2
+          |> Store.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {pair_txi, txi2, log_idx})
           )
-        )
-        |> Store.put(
-          Model.DexAccountSwapTokens,
-          Model.dex_account_swap_tokens(
-            index: {@account1_pk, pair_txi, txi3, log_idx},
-            to: @account2_pk,
-            amounts: [98, 99, 100, 101]
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {pair_txi, txi2, log_idx},
+              ext_contract: ext_contract_pk,
+              args: [@account1_pk, @account2_pk]
+            )
           )
-        )
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, parent_contract_pk, parent_contract_txi})
-        )
-        |> Store.put(
-          Model.Tx,
-          Model.tx(index: txi3, id: <<txi3::256>>, block_index: {300_003, 0})
-        )
-        # CASE 4
-        |> Store.put(
-          Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {pair_txi, txi4, log_idx})
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {pair_txi, txi4, log_idx},
-            ext_contract: {:parent_contract_pk, parent_contract_pk2},
-            args: [@account1_pk, @account2_pk]
+          |> Store.put(
+            Model.DexAccountSwapTokens,
+            Model.dex_account_swap_tokens(
+              index: {@account1_pk, pair_txi, txi2, log_idx},
+              to: @account2_pk,
+              amounts: [94, 95, 96, 97]
+            )
           )
-        )
-        |> Store.put(
-          Model.ContractLog,
-          Model.contract_log(
-            index: {parent_contract2_txi, txi4, log_idx},
-            ext_contract: ext_contract_pk2
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, ext_contract_pk, ext_contract_txi})
           )
-        )
-        |> Store.put(
-          Model.DexAccountSwapTokens,
-          Model.dex_account_swap_tokens(
-            index: {@account1_pk, pair_txi, txi4, log_idx},
-            to: @account2_pk,
-            amounts: [102, 103, 104, 105]
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: txi2, id: <<txi2::256>>, block_index: {200_002, 0})
           )
-        )
-        |> Store.put(
-          Model.Field,
-          Model.field(
-            index: {:contract_create_tx, nil, parent_contract_pk2, parent_contract2_txi}
+          # CASE 3
+          |> Store.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {pair_txi, txi3, log_idx})
           )
-        )
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, ext_contract_pk2, ext_contract2_txi})
-        )
-        |> Store.put(
-          Model.Tx,
-          Model.tx(index: txi4, id: <<txi4::256>>, block_index: {400_004, 0})
-        )
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {pair_txi, txi3, log_idx},
+              ext_contract: {:parent_contract_pk, parent_contract_pk},
+              args: [@account1_pk, @account2_pk]
+            )
+          )
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {parent_contract_txi, txi3, log_idx},
+              ext_contract: nil
+            )
+          )
+          |> Store.put(
+            Model.DexAccountSwapTokens,
+            Model.dex_account_swap_tokens(
+              index: {@account1_pk, pair_txi, txi3, log_idx},
+              to: @account2_pk,
+              amounts: [98, 99, 100, 101]
+            )
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(
+              index: {:contract_create_tx, nil, parent_contract_pk, parent_contract_txi}
+            )
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: txi3, id: <<txi3::256>>, block_index: {300_003, 0})
+          )
+          # CASE 4
+          |> Store.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {pair_txi, txi4, log_idx})
+          )
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {pair_txi, txi4, log_idx},
+              ext_contract: {:parent_contract_pk, parent_contract_pk2},
+              args: [@account1_pk, @account2_pk]
+            )
+          )
+          |> Store.put(
+            Model.ContractLog,
+            Model.contract_log(
+              index: {parent_contract2_txi, txi4, log_idx},
+              ext_contract: ext_contract_pk2
+            )
+          )
+          |> Store.put(
+            Model.DexAccountSwapTokens,
+            Model.dex_account_swap_tokens(
+              index: {@account1_pk, pair_txi, txi4, log_idx},
+              to: @account2_pk,
+              amounts: [102, 103, 104, 105]
+            )
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(
+              index: {:contract_create_tx, nil, parent_contract_pk2, parent_contract2_txi}
+            )
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, ext_contract_pk2, ext_contract2_txi})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: txi4, id: <<txi4::256>>, block_index: {400_004, 0})
+          )
+          |> add_supporting_dex_data(pair_txi, "TK11", "TK12")
+          |> add_supporting_dex_data(ext_contract_txi, "TK13", "TK14")
+          |> add_supporting_dex_data(parent_contract_txi, "TK15", "TK16")
+          |> add_supporting_dex_data(parent_contract2_txi, "TK17", "TK18")
 
-      :ets.insert(:dex_pairs_symbols, {pair_txi, "TK1", "TK2"})
-      :ets.insert(:dex_pairs_symbols, {ext_contract_txi, "TK3", "TK4"})
-      :ets.insert(:dex_pairs_symbols, {parent_contract_txi, "TK5", "TK6"})
-      :ets.insert(:dex_pairs_symbols, {ext_contract2_txi, "TK7", "TK8"})
+        :ets.insert(:dex_pairs_symbols, {pair_txi, "TK11", "TK12"})
+        :ets.insert(:dex_pairs_symbols, {ext_contract_txi, "TK13", "TK14"})
+        :ets.insert(:dex_pairs_symbols, {parent_contract_txi, "TK15", "TK16"})
+        :ets.insert(:dex_pairs_symbols, {ext_contract2_txi, "TK17", "TK18"})
 
-      assert %{"data" => swaps, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v3/dex/swaps", direction: :forward, limit: 2)
-               |> json_response(200)
+        assert %{"data" => swaps, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/dex/swaps", direction: :forward, limit: 2)
+                 |> json_response(200)
 
-      assert 2 = length(swaps)
+        assert 2 = length(swaps)
 
-      assert [
-               %{
-                 "amounts" => %{
-                   "amount0_in" => 90,
-                   "amount0_out" => 92,
-                   "amount1_in" => 91,
-                   "amount1_out" => 93
+        assert [
+                 %{
+                   "amounts" => %{
+                     "amount0_in" => 90,
+                     "amount0_out" => 92,
+                     "amount1_in" => 91,
+                     "amount1_out" => 93
+                   },
+                   "caller" => ^caller_id,
+                   "from_token" => "TK11",
+                   "log_idx" => 0,
+                   "to_token" => "TK12"
                  },
-                 "caller" => ^caller_id,
-                 "from_token" => "TK1",
-                 "log_idx" => 0,
-                 "to_token" => "TK2"
-               },
-               %{
-                 "amounts" => %{
-                   "amount0_in" => 94,
-                   "amount0_out" => 96,
-                   "amount1_in" => 95,
-                   "amount1_out" => 97
+                 %{
+                   "amounts" => %{
+                     "amount0_in" => 94,
+                     "amount0_out" => 96,
+                     "amount1_in" => 95,
+                     "amount1_out" => 97
+                   },
+                   "caller" => ^caller_id,
+                   "from_token" => "TK13",
+                   "log_idx" => 0,
+                   "to_token" => "TK14"
+                 }
+               ] = swaps
+
+        assert %{"data" => next_swaps, "prev" => prev_swaps} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
+
+        assert 2 = length(next_swaps)
+
+        assert [
+                 %{
+                   "amounts" => %{
+                     "amount0_in" => 98,
+                     "amount0_out" => 100,
+                     "amount1_in" => 99,
+                     "amount1_out" => 101
+                   },
+                   "caller" => ^caller_id,
+                   "from_token" => "TK15",
+                   "log_idx" => 0,
+                   "to_token" => "TK16"
                  },
-                 "caller" => ^caller_id,
-                 "from_token" => "TK3",
-                 "log_idx" => 0,
-                 "to_token" => "TK4"
-               }
-             ] = swaps
+                 %{
+                   "amounts" => %{
+                     "amount0_in" => 102,
+                     "amount0_out" => 104,
+                     "amount1_in" => 103,
+                     "amount1_out" => 105
+                   },
+                   "caller" => ^caller_id,
+                   "from_token" => "TK17",
+                   "log_idx" => 0,
+                   "to_token" => "TK18"
+                 }
+               ] = next_swaps
 
-      assert %{"data" => next_swaps, "prev" => prev_swaps} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
-
-      assert 2 = length(next_swaps)
-
-      assert [
-               %{
-                 "amounts" => %{
-                   "amount0_in" => 98,
-                   "amount0_out" => 100,
-                   "amount1_in" => 99,
-                   "amount1_out" => 101
-                 },
-                 "caller" => ^caller_id,
-                 "from_token" => "TK5",
-                 "log_idx" => 0,
-                 "to_token" => "TK6"
-               },
-               %{
-                 "amounts" => %{
-                   "amount0_in" => 102,
-                   "amount0_out" => 104,
-                   "amount1_in" => 103,
-                   "amount1_out" => 105
-                 },
-                 "caller" => ^caller_id,
-                 "from_token" => "TK7",
-                 "log_idx" => 0,
-                 "to_token" => "TK8"
-               }
-             ] = next_swaps
-
-      assert %{"data" => ^swaps} =
-               conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+        assert %{"data" => ^swaps} =
+                 conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
+      end
     end
   end
 
@@ -802,5 +822,62 @@ defmodule AeMdwWeb.DexControllerTest do
         "amount0_out" => txi + 30,
         "amount1_out" => txi + 40
       }
+  end
+
+  defp add_supporting_dex_data(store, txi, token1_symbol, token2_symbol) do
+    block_index_number = 900_000 + txi
+    block_index = {block_index_number, 0}
+
+    token1_pk = :crypto.strong_rand_bytes(32)
+    token2_pk = :crypto.strong_rand_bytes(32)
+
+    store =
+      store
+      |> Store.put(
+        Model.Tx,
+        Model.tx(
+          index: txi,
+          id: <<txi::256>>,
+          block_index: block_index
+        )
+      )
+      |> Store.put(
+        Model.Block,
+        Model.block(
+          index: block_index,
+          hash: <<block_index_number::256>>
+        )
+      )
+      |> Store.put(
+        Model.RevOrigin,
+        Model.rev_origin(index: {txi, :contract_create_tx, <<block_index_number::256>>})
+      )
+      |> Store.put(
+        Model.Field,
+        Model.field(
+          index: {:contract_create_tx, nil, <<block_index_number::256>>, block_index_number}
+        )
+      )
+      |> Store.put(
+        Model.AexnContract,
+        Model.aexn_contract(index: {:aex9, token1_pk}, meta_info: {"TOKEN1", token1_symbol, 18})
+      )
+      |> Store.put(
+        Model.AexnContract,
+        Model.aexn_contract(index: {:aex9, token2_pk}, meta_info: {"TOKEN2", token2_symbol, 18})
+      )
+
+    # TODO: TESTS randomly fail
+
+    state = State.new(store)
+
+    DexCache.add_pair(
+      state,
+      <<block_index_number::256>>,
+      token1_pk,
+      token2_pk
+    )
+
+    store
   end
 end

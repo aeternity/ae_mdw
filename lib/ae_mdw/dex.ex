@@ -208,9 +208,7 @@ defmodule AeMdw.Dex do
       end
 
     Model.tx(id: _tx_hash, block_index: {height, _mbi} = block_index, time: time) =
-      tx = State.fetch!(state, Model.Tx, create_txi)
-
-    IO.inspect(tx)
+      State.fetch!(state, Model.Tx, create_txi)
 
     Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
     contract_pk = Origin.pubkey!(state, {:contract, create_txi})
