@@ -127,7 +127,28 @@ defmodule AeMdw.AexnTokens do
       {type, prefix <> Util.max_name_bin(), <<>>}
     }
 
-    do_build_tokens_streamer(state, table, cursor, scope)
+    results = do_build_tokens_streamer(state, table, cursor, scope)
+
+    downcase_scope = {
+      {type, String.upcase(prefix), <<>>},
+      {type, String.upcase(prefix) <> Util.max_name_bin(), <<>>}
+    }
+
+    downcase_results = do_build_tokens_streamer(state, table, cursor, downcase_scope)
+
+    upcase_scope = {
+      {type, String.downcase(prefix), <<>>},
+      {type, String.downcase(prefix) <> Util.max_name_bin(), <<>>}
+    }
+
+    upcase_results = do_build_tokens_streamer(state, table, cursor, upcase_scope)
+
+    fn direction ->
+      Collection.merge(
+        [results.(direction), downcase_results.(direction), upcase_results.(direction)],
+        direction
+      )
+    end
   end
 
   defp build_tokens_streamer(_filters, state, type, table, cursor),
