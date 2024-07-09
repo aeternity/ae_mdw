@@ -36,6 +36,30 @@ schemas:
       tx_hash:
         type: string
         example: "th_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      from_contract:
+        type: string
+        example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+      to_contract:
+        type: string
+        example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+      from_amount:
+        type: integer
+        example: 1000050
+      to_amount:
+        type: integer
+        example: 1000060
+      from_decimals:
+        type: integer
+        example: 18
+      to_decimals:
+        type: integer
+        example: 18
+      microtime:
+        type: integer
+        example: 1629820800000
+      height:
+        type: integer
+        example: 123456
     required:
       - amounts
       - caller
@@ -44,6 +68,14 @@ schemas:
       - log_idx
       - to_account
       - tx_hash
+      - from_contract
+      - to_contract
+      - from_amount
+      - to_amount
+      - from_decimals
+      - to_decimals
+      - microtime
+      - height
 paths:
   /dex/swaps:
     get:
