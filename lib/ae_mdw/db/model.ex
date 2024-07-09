@@ -102,6 +102,16 @@ defmodule AeMdw.Db.Model do
             balance: non_neg_integer()
           )
 
+  @account_names_count_defaults [index: nil, count: 0]
+  defrecord :account_names_count, @account_names_count_defaults
+
+  @type account_names_count_index() :: pubkey()
+  @type account_names_count() ::
+          record(:account_names_count,
+            index: pubkey(),
+            count: non_neg_integer()
+          )
+
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     On keyblock boundary: mb_index = -1}
@@ -1305,7 +1315,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.NameRevoke,
       AeMdw.Db.Model.NameUpdate,
       AeMdw.Db.Model.NameTransfer,
-      AeMdw.Db.Model.AuctionBidClaim
+      AeMdw.Db.Model.AuctionBidClaim,
+      AeMdw.Db.Model.AccountNamesCount
     ]
   end
 
@@ -1435,4 +1446,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
+  def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
 end

@@ -3,16 +3,16 @@ defmodule AeMdw.Db.Sync.Name do
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
-  alias AeMdw.Names
-  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -152,6 +152,8 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.ActiveNameOwner, m_owner)
     |> State.put(Model.ActiveName, m_name)
     |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
+    |> Names.increment_names_count(new_owner)
+    |> Names.decrement_names_count(old_owner)
   end
 
   @spec revoke(State.t(), Names.plain_name(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
@@ -270,6 +272,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.InactiveNameOwner, m_owner)
     |> State.put(Model.InactiveNameOwnerDeactivation, m_owner_deactivation)
     |> State.inc_stat(reason)
+    |> Names.decrement_names_count(owner_pk)
   end
 
   @spec delete_inactive(state(), plain_name()) :: state()

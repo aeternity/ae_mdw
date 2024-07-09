@@ -3,10 +3,7 @@ defmodule AeMdw.Names do
   Context module for dealing with Names.
   """
 
-  require AeMdw.Db.Model
-
   alias :aeser_api_encoder, as: Enc
-
   alias AeMdw.AuctionBids
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -22,6 +19,8 @@ defmodule AeMdw.Names do
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
+
+  require Model
 
   @type cursor() :: binary() | nil
   @type page_cursor() :: Collection.pagination_cursor()
@@ -71,6 +70,13 @@ defmodule AeMdw.Names do
   @max_int Util.max_int()
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
+
+  @spec count_names(state(), query()) :: {:ok, non_neg_integer()} | {:error, reason()}
+  def count_names(state, query) do
+    with {:ok, query_params} <- Util.convert_params(query, &convert_param/1) do
+      {:ok, count_active_names(state, Map.get(query_params, :owned_by))}
+    end
+  end
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
           {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
@@ -297,6 +303,39 @@ defmodule AeMdw.Names do
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
     auction_end + :aec_governance.name_claim_max_expiration(Db.proto_vsn(auction_end))
+  end
+
+  @spec increment_names_count(state(), Db.pubkey()) :: State.t()
+  def increment_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        nil ->
+          Model.account_names_count(index: owner_pk, count: 1)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count + 1)
+      end
+    )
+  end
+
+  @spec decrement_names_count(state(), Db.pubkey()) :: State.t()
+  def decrement_names_count(state, owner_pk) do
+    State.update(
+      state,
+      Model.AccountNamesCount,
+      owner_pk,
+      fn
+        Model.account_names_count(index: owner_pk, count: 0) ->
+          Model.account_names_count(index: owner_pk, count: 0)
+
+        Model.account_names_count(index: owner_pk, count: count) ->
+          Model.account_names_count(index: owner_pk, count: count - 1)
+      end,
+      Model.account_names_count(index: owner_pk, count: 0)
+    )
   end
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor) do
@@ -1017,5 +1056,29 @@ defmodule AeMdw.Names do
       source_tx_type: Node.tx_name(tx_type),
       tx: :aens_update_tx.for_client(name_update_tx)
     }
+  end
+
+  defp count_active_names(state, nil) do
+    case State.prev(state, Model.TotalStat, nil) do
+      {:ok, index} ->
+        state
+        |> State.get(Model.TotalStat, index)
+        |> case do
+          {:ok, Model.total_stat(active_names: count)} -> count
+          :not_found -> 0
+        end
+
+      :none ->
+        0
+    end
+  end
+
+  defp count_active_names(state, owned_by) do
+    state
+    |> State.get(Model.AccountNamesCount, owned_by)
+    |> case do
+      {:ok, Model.account_names_count(count: count)} -> count
+      :not_found -> 0
+    end
   end
 end

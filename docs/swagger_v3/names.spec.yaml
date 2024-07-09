@@ -354,6 +354,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /names/count:
+    get:
+      deprecated: false
+      description: Get the total number of active names.
+      operationId: get_names_count
+      parameters:
+        - name: owned_by
+          in: query
+          description: Account that owns the name
+          required: false
+          schema:
+            type: string
+            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+      responses:
+        '200':
+          description: Returns the total number of active names
+          content:
+            application/json:
+              schema:
+                description: Total number of names
+                example: 191145
+                type: integer
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /names/auctions:
     get:
       deprecated: false

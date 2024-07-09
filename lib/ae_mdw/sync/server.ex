@@ -456,6 +456,7 @@ defmodule AeMdw.Sync.Server do
         |> Enum.reject(&is_nil/1)
         |> Enum.frequencies_by(fn
           %mod{} -> mod
+          nil -> nil
         end)
 
       mutations_count = length(mutations)
