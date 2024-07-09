@@ -29,7 +29,7 @@ defmodule AeMdw.Db.Name do
   @typep height :: Blocks.height()
   @typep txi_idx :: AeMdw.Txs.txi_idx()
   @typep state :: State.t()
-  @typep pointer() :: %{key: binary(), id: binary()}
+  @typep pointer() :: %{key: binary(), id: binary(), encoded_key: binary()}
 
   @typep nested_table ::
            Model.NameClaim
