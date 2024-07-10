@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.81.0](https://www.github.com/aeternity/ae_mdw/compare/v1.80.0...v1.81.0) (2024-07-10)
+
+
+### Features
+
+* add endpoint to get names count ([#1737](https://www.github.com/aeternity/ae_mdw/issues/1737)) ([9cbd5e6](https://www.github.com/aeternity/ae_mdw/commit/9cbd5e6debbb73072121eed5e7b2a094bc1da4bc))
+* add v3 for websockets ([#1828](https://www.github.com/aeternity/ae_mdw/issues/1828)) ([219417b](https://www.github.com/aeternity/ae_mdw/commit/219417b6e5ecdc93d8210875c990f84bcb99ff0b))
+* additional fields to dex endpoints ([#1835](https://www.github.com/aeternity/ae_mdw/issues/1835)) ([1f6835c](https://www.github.com/aeternity/ae_mdw/commit/1f6835c4782aecf5965d5f1a71ecbf79a56a2671))
+* update node to 7.1.0 ([#1826](https://www.github.com/aeternity/ae_mdw/issues/1826)) ([56d2150](https://www.github.com/aeternity/ae_mdw/commit/56d215021fb0b04e5fbe3e672b49624eedf0dda6))
+
+
+### Bug Fixes
+
+* add missing mutations in profile sync ([#1832](https://www.github.com/aeternity/ae_mdw/issues/1832)) ([e8514fa](https://www.github.com/aeternity/ae_mdw/commit/e8514fafbebfda959803ec70b3347c3bc3217ea8))
+* handle parent contract DEX swaps ([#1831](https://www.github.com/aeternity/ae_mdw/issues/1831)) ([c1c3abd](https://www.github.com/aeternity/ae_mdw/commit/c1c3abd9a83753d46129ffe6fea0dba5abd3ff19))
+
+
+### Miscellaneous
+
+* add MIX_ENV=dev on docker-compose-dev ([#1834](https://www.github.com/aeternity/ae_mdw/issues/1834)) ([b2cbe8c](https://www.github.com/aeternity/ae_mdw/commit/b2cbe8c75a7b0dce9b8f40adb8277cb59431d9a4))
+
 ## [1.80.0](https://www.github.com/aeternity/ae_mdw/compare/v1.79.0...v1.80.0) (2024-06-28)
 
 
