@@ -9,6 +9,7 @@ from pathlib import Path
 SWAGGER_DOCS_DIR = 'docs/swagger_v3/'
 MDW_VERSION_FILE = 'AEMDW_VERSION'
 SWAGGER_OUTPUT_DIR = 'priv/static/swagger'
+PATH_PREFIX = os.getenv('PATH_PREFIX', '/mdw/v3')
 
 # Read YAML file
 schemas = {}
@@ -31,6 +32,7 @@ for filepath in Path(SWAGGER_DOCS_DIR).glob("*.spec.yaml"):
 swagger['paths'] = paths
 swagger['components']['schemas'] = {**swagger['components']['schemas'], **schemas}
 swagger['info']['version'] = mdw_version
+swagger['servers'][0]['url'] = PATH_PREFIX
 
 with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v3.json"), 'w') as jsonfile:
   json.dump(swagger, jsonfile, indent=2)
