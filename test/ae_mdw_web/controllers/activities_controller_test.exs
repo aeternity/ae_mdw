@@ -11,6 +11,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
+  alias AeMdw.Util.Encoding
 
   import Mock
 
@@ -1342,6 +1343,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       {:contract_call_tx, contract_call5_tx} = :aetx.specialize_type(contract_call5_aetx)
 
+      contract_pk1 = :crypto.strong_rand_bytes(32)
+      contract_pk2 = :crypto.strong_rand_bytes(32)
+      contract_id1 = Encoding.encode_contract(contract_pk1)
+      contract_id2 = Encoding.encode_contract(contract_pk2)
+
       store =
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
@@ -1387,6 +1393,27 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
         )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk1},
+            meta_info: {"AEXName1", "AEXSymbol1", 10}
+          )
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk2},
+            meta_info: {"AEXName2", "AEXSymbol2", 10}
+          )
+        )
+        |> Store.put(
+          Model.Aex9ContractBalance,
+          Model.aex9_contract_balance(
+            index: contract_pk1,
+            amount: 100
+          )
+        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -1405,10 +1432,37 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          [
            call_fun_arg_res: fn _state, ^contract_pk, _txi ->
              %{
-               function: "fun",
-               arguments: [],
-               result: :ok,
-               return: :ok
+               return: %{
+                 type: :list,
+                 value: [
+                   %{type: :int, value: 120_000_000_000_000_000_000},
+                   %{type: :int, value: 86_742_869_754_599_234_160}
+                 ]
+               },
+               function: "swap_exact_ae_for_tokens",
+               arguments: [
+                 %{type: :int, value: 80_040_928_673_018_091_600},
+                 %{
+                   type: :list,
+                   value: [
+                     %{
+                       type: :contract,
+                       value: contract_id1
+                     },
+                     %{
+                       type: :contract,
+                       value: contract_id2
+                     }
+                   ]
+                 },
+                 %{
+                   type: :address,
+                   value: "ak_dFjYZHMpWdBSLYeMyLcdrQC5pYPCL6wdD1o5MCkrYMYCnWRS7"
+                 },
+                 %{type: :int, value: 1_669_106_707_952},
+                 %{type: :variant, value: [0]}
+               ],
+               result: :ok
              }
            end,
            get_aexn_type: fn _state, ^contract_pk -> :aex9 end
@@ -1435,7 +1489,34 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"tx" => %{"aexn_type" => "aex9"}}
+                 "payload" => %{
+                   "tx" => %{
+                     "aexn_type" => "aex9",
+                     "arguments" => [
+                       _arg0,
+                       %{
+                         "type" => "list",
+                         "value" => [
+                           %{
+                             "amount" => 100,
+                             "token_name" => "AEXName1",
+                             "type" => "contract",
+                             "value" => ^contract_id1
+                           },
+                           %{
+                             "amount" => 0,
+                             "token_name" => "AEXName2",
+                             "type" => "contract",
+                             "value" => ^contract_id2
+                           }
+                         ]
+                       },
+                       _arg2,
+                       _arg3,
+                       _arg4
+                     ]
+                   }
+                 }
                } = tx1
 
         assert %{

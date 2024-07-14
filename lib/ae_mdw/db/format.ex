@@ -17,6 +17,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Names
   alias AeMdw.Node.Db
   alias AeMdw.Txs
+  alias AeMdw.Validate
   alias AeMdw.Util
 
   require Model
@@ -27,6 +28,15 @@ defmodule AeMdw.Db.Format do
   @type aeser_id() :: {:id, atom(), binary()}
   @max_int Util.max_int()
   @min_int Util.min_int()
+  # Defined at https://github.com/aeternity/aescan/blob/develop/src/utils/constants.js
+  @swap_contract_calls [
+    "swap_exact_tokens_for_tokens",
+    "swap_tokens_for_exact_tokens",
+    "swap_exact_ae_for_tokens",
+    "swap_tokens_for_exact_ae",
+    "swap_exact_tokens_for_ae",
+    "swap_ae_for_exact_tokens"
+  ]
 
   ##########
 
@@ -419,9 +429,14 @@ defmodule AeMdw.Db.Format do
 
     contract_pk = Contract.maybe_resolve_contract_pk(contract_or_name_pk, block_hash)
 
+    %{function: function, arguments: arguments} =
+      fun_arg_res = DbContract.call_fun_arg_res(state, contract_pk, txi)
+
+    arguments = maybe_add_swap_details(state, function, arguments)
+
     fun_arg_res =
-      state
-      |> DbContract.call_fun_arg_res(contract_pk, txi)
+      fun_arg_res
+      |> Map.put(:arguments, arguments)
       |> encode_raw_values()
 
     call_details =
@@ -676,5 +691,36 @@ defmodule AeMdw.Db.Format do
     |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
     |> Stream.map(&State.fetch!(state, Model.PreviousName, &1))
     |> Enum.map(fn Model.previous_name(name: name) -> name_info_to_raw_map(state, name) end)
+  end
+
+  defp maybe_add_swap_details(state, f, arguments) when f in @swap_contract_calls do
+    Enum.map(arguments, &maybe_add_swap_details_in_arg(state, &1))
+  end
+
+  defp maybe_add_swap_details(_state, _f, arguments) do
+    arguments
+  end
+
+  defp maybe_add_swap_details_in_arg(state, %{type: :list, value: value} = argument) do
+    %{argument | value: Enum.map(value, &maybe_add_swap_details_in_arg(state, &1))}
+  end
+
+  defp maybe_add_swap_details_in_arg(state, %{type: :contract, value: contract_id} = argument) do
+    contract_pk = Validate.id!(contract_id)
+
+    Model.aexn_contract(meta_info: {name, _symbol, _dec}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
+
+    amount =
+      case State.get(state, Model.Aex9ContractBalance, contract_pk) do
+        {:ok, Model.aex9_contract_balance(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    Map.merge(argument, %{token_name: name, amount: amount})
+  end
+
+  defp maybe_add_swap_details_in_arg(_state, argument) do
+    argument
   end
 end
