@@ -84,8 +84,6 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
          {:ok, params} <- validate_params(query),
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
-      # sorting_table = Map.fetch!(@sorting_table, order_by)
-
       paginated_aexn_contracts =
         filters
         |> build_tokens_streamer(state, aexn_type, order_by, cursor)
@@ -131,12 +129,6 @@ defmodule AeMdw.AexnTokens do
   defp build_tokens_streamer(%{prefix: prefix}, state, type, order_by, cursor) do
     sorting_table = Map.fetch!(@downcased_sorting_table, order_by)
     prefix = String.slice(prefix, 0, @max_sort_field_length)
-    # scope = {
-    #   {type, prefix, <<>>},
-    #   {type, prefix <> Util.max_name_bin(), <<>>}
-    # }
-
-    # results = do_build_tokens_streamer(state, table, cursor, scope)
 
     cursor =
       if not is_nil(cursor) do
@@ -144,12 +136,12 @@ defmodule AeMdw.AexnTokens do
         {type, String.downcase(symbol_name), pubkey}
       end
 
-    downcase_scope = {
+    scope = {
       {type, String.downcase(prefix), <<>>},
       {type, String.downcase(prefix) <> Util.max_name_bin(), <<>>}
     }
 
-    do_build_tokens_streamer(state, sorting_table, cursor, downcase_scope)
+    do_build_tokens_streamer(state, sorting_table, cursor, scope)
   end
 
   defp build_tokens_streamer(_filters, state, type, table, cursor),

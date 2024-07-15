@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.AddNormalizedAexnTables do
+  @moduledoc """
+  Migration to add normalized AEX-N tables.
+  """
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
