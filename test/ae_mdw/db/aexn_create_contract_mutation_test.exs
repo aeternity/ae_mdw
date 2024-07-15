@@ -62,7 +62,21 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
         refute :not_found == Store.get(store, Model.AexnContractName, {:aex9, name, contract_pk})
 
         refute :not_found ==
+                 Store.get(
+                   store,
+                   Model.AexnContractDowncasedName,
+                   {:aex9, String.downcase(name), contract_pk}
+                 )
+
+        refute :not_found ==
                  Store.get(store, Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+
+        refute :not_found ==
+                 Store.get(
+                   store,
+                   Model.AexnContractDowncasedSymbol,
+                   {:aex9, String.downcase(symbol), contract_pk}
+                 )
       end
     end
 
@@ -120,7 +134,21 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
                  Store.get(store, Model.AexnContractName, {:aex9, truncated_name, contract_pk})
 
         refute :not_found ==
+                 Store.get(
+                   store,
+                   Model.AexnContractDowncasedName,
+                   {:aex9, String.downcase(truncated_name), contract_pk}
+                 )
+
+        refute :not_found ==
                  Store.get(store, Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+
+        refute :not_found ==
+                 Store.get(
+                   store,
+                   Model.AexnContractDowncasedSymbol,
+                   {:aex9, String.downcase(symbol), contract_pk}
+                 )
       end
     end
 
@@ -165,7 +193,21 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       refute :not_found == Store.get(store, Model.AexnContractName, {:aex141, name, contract_pk})
 
       refute :not_found ==
+               Store.get(
+                 store,
+                 Model.AexnContractDowncasedName,
+                 {:aex141, String.downcase(name), contract_pk}
+               )
+
+      refute :not_found ==
                Store.get(store, Model.AexnContractSymbol, {:aex141, symbol, contract_pk})
+
+      refute :not_found ==
+               Store.get(
+                 store,
+                 Model.AexnContractDowncasedSymbol,
+                 {:aex141, String.downcase(symbol), contract_pk}
+               )
     end
 
     test "indexes with full meta_info and truncates aex141 symbol sort field", %{store: store} do
@@ -212,8 +254,22 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       refute :not_found ==
                Store.get(
                  store,
+                 Model.AexnContractDowncasedName,
+                 {:aex141, String.downcase(name), contract_pk}
+               )
+
+      refute :not_found ==
+               Store.get(
+                 store,
                  Model.AexnContractSymbol,
                  {:aex141, truncated_symbol, contract_pk}
+               )
+
+      refute :not_found ==
+               Store.get(
+                 store,
+                 Model.AexnContractDowncasedSymbol,
+                 {:aex141, String.downcase(truncated_symbol), contract_pk}
                )
     end
 
@@ -259,7 +315,21 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       assert :not_found ==
                Store.get(
                  store,
+                 Model.AexnContractDowncasedName,
+                 {:aex141, :format_error, contract_pk}
+               )
+
+      assert :not_found ==
+               Store.get(
+                 store,
                  Model.AexnContractSymbol,
+                 {:aex141, :format_error, contract_pk}
+               )
+
+      assert :not_found ==
+               Store.get(
+                 store,
+                 Model.AexnContractDowncasedSymbol,
                  {:aex141, :format_error, contract_pk}
                )
     end

@@ -78,15 +78,33 @@ defmodule AeMdw.Db.Contract do
       m_contract_creation =
         Model.aexn_contract_creation(index: {aexn_type, txi_idx}, contract_pk: contract_pk)
 
+      truncated_name = sort_field_truncate(name)
+
       m_contract_name =
-        Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
+        Model.aexn_contract_name(index: {aexn_type, truncated_name, contract_pk})
+
+      m_downcased_contract_name =
+        Model.aexn_contract_downcased_name(
+          index: {aexn_type, String.downcase(truncated_name), contract_pk},
+          original_name: name
+        )
+
+      truncated_symbol = sort_field_truncate(symbol)
 
       m_contract_sym =
-        Model.aexn_contract_symbol(index: {aexn_type, sort_field_truncate(symbol), contract_pk})
+        Model.aexn_contract_symbol(index: {aexn_type, truncated_symbol, contract_pk})
+
+      m_downcased_contract_sym =
+        Model.aexn_contract_downcased_symbol(
+          index: {aexn_type, String.downcase(truncated_symbol), contract_pk},
+          original_symbol: symbol
+        )
 
       state2
       |> State.put(Model.AexnContractName, m_contract_name)
+      |> State.put(Model.AexnContractDowncasedName, m_downcased_contract_name)
       |> State.put(Model.AexnContractSymbol, m_contract_sym)
+      |> State.put(Model.AexnContractDowncasedSymbol, m_downcased_contract_sym)
       |> State.put(Model.AexnContractCreation, m_contract_creation)
     else
       state2

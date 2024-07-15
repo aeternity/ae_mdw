@@ -609,6 +609,22 @@ defmodule AeMdw.Db.Model do
   @type aexn_contract_name() ::
           record(:aexn_contract_name, index: aexn_contract_name_index())
 
+  # AEX_N meta info sorted by downcased name:
+  #    index: {type, downcased_name, pubkey}
+  #    original_name: name
+  @aexn_contract_downcased_name_defaults [
+    index: {nil, nil, nil},
+    original_name: nil
+  ]
+  defrecord :aexn_contract_downcased_name, @aexn_contract_downcased_name_defaults
+
+  @type aexn_contract_downcased_name_index() :: {aexn_type(), binary(), pubkey()}
+  @type aexn_contract_downcased_name() ::
+          record(:aexn_contract_downcased_name,
+            index: aexn_contract_downcased_name_index(),
+            original_name: binary()
+          )
+
   # AEX-N meta info sorted by symbol:
   #     index: {type, symbol, pubkey}
   #     unused: nil
@@ -621,6 +637,22 @@ defmodule AeMdw.Db.Model do
   @type aexn_contract_symbol_index() :: {aexn_type(), aexn_symbol(), pubkey()}
   @type aexn_contract_symbol() ::
           record(:aexn_contract_symbol, index: aexn_contract_symbol_index())
+
+  # AEX-N meta info sorted by downcased symbol:
+  #     index: {type, downcased_symbol, pubkey}
+  #     original_symbol: symbol
+  @aexn_contract_downcased_symbol_defaults [
+    index: {nil, nil, nil},
+    original_symbol: nil
+  ]
+  defrecord :aexn_contract_downcased_symbol, @aexn_contract_downcased_symbol_defaults
+
+  @type aexn_contract_downcased_symbol_index() :: {aexn_type(), binary(), pubkey()}
+  @type aexn_contract_downcased_symbol() ::
+          record(:aexn_contract_downcased_symbol,
+            index: aexn_contract_downcased_symbol_index(),
+            original_symbol: binary()
+          )
 
   # AEX-N meta info sorted by txi_idx:
   #     index: {type, {txi, idx}}
@@ -1259,7 +1291,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractCreation,
       AeMdw.Db.Model.AexnContractName,
+      AeMdw.Db.Model.AexnContractDowncasedName,
       AeMdw.Db.Model.AexnContractSymbol,
+      AeMdw.Db.Model.AexnContractDowncasedSymbol,
       AeMdw.Db.Model.AexnTransfer,
       AeMdw.Db.Model.RevAexnTransfer,
       AeMdw.Db.Model.AexnPairTransfer,
@@ -1375,7 +1409,9 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnInvalidContract), do: :aexn_invalid_contract
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
+  def record(AeMdw.Db.Model.AexnContractDowncasedName), do: :aexn_contract_downcased_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
+  def record(AeMdw.Db.Model.AexnContractDowncasedSymbol), do: :aexn_contract_downcased_symbol
   def record(AeMdw.Db.Model.AexnContractCreation), do: :aexn_contract_creation
   def record(AeMdw.Db.Model.AexnTransfer), do: :aexn_transfer
   def record(AeMdw.Db.Model.RevAexnTransfer), do: :rev_aexn_transfer
