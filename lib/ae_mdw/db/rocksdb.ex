@@ -232,7 +232,7 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   defp all_cf_names(tables_drop \\ []) do
-    [:default | Model.column_families()] ++ tables_drop
+    [:default | Model.tables()] ++ tables_drop
   end
 
   defp db_ref(), do: :persistent_term.get({__MODULE__, :db_ref})

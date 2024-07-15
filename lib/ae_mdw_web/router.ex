@@ -308,6 +308,7 @@ defmodule AeMdwWeb.Router do
     end
 
     get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger.json"}
+    get "/debug/rollback", UtilController, :rollback
 
     match :*, "/*path", UtilController, :no_route
   end

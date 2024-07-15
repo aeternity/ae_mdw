@@ -120,3 +120,5 @@ if env in [:test, :prod] do
     level: log_level || :info,
     backends: logger_backends
 end
+
+config :ae_mdw, enable_rollback: env == :dev

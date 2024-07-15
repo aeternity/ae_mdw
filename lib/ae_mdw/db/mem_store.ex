@@ -128,7 +128,7 @@ defmodule AeMdw.Db.MemStore do
   defp get_table(tables, table_name), do: Map.fetch!(tables, table_name)
 
   defp new_tables() do
-    Map.new(Model.column_families(), fn table_name ->
+    Map.new(Model.tables(), fn table_name ->
       {table_name, SortedTable.new()}
     end)
   end

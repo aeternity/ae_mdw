@@ -37,6 +37,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.UpdateBalanceAccountMutation
+  alias AeMdw.Db.RollbackMutation
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
@@ -45,7 +46,7 @@ defmodule AeMdw.Sync.Server do
 
   require Logger
 
-  defstruct [:chain_height, :chain_hash, :db_state, :mem_hash, :restarts]
+  defstruct [:chain_height, :chain_hash, :db_state, :mem_hash, :restarts, :rollback?]
 
   @typep height() :: Blocks.height()
   @typep hash() :: Blocks.block_hash()
@@ -96,6 +97,9 @@ defmodule AeMdw.Sync.Server do
   @spec restart_sync() :: :ok
   def restart_sync, do: GenStateMachine.cast(__MODULE__, :restart_sync)
 
+  @spec rollback() :: :ok
+  def rollback, do: GenStateMachine.cast(__MODULE__, :rollback)
+
   @impl true
   @spec init([]) :: :gen_statem.init_result(state())
   def init([]) do
@@ -105,7 +109,8 @@ defmodule AeMdw.Sync.Server do
       chain_height: nil,
       db_state: db_state,
       mem_hash: nil,
-      restarts: 0
+      restarts: 0,
+      rollback?: false
     }
 
     {:ok, :waiting, state_data}
@@ -132,6 +137,27 @@ defmodule AeMdw.Sync.Server do
   def handle_event(:cast, {:new_height, chain_height, chain_hash}, _state, state_data) do
     {:keep_state, %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
      @internal_check_sync}
+  end
+
+  def handle_event(:cast, :rollback, _state, state_data),
+    do: {:keep_state, %__MODULE__{state_data | rollback?: true}, @internal_check_sync}
+
+  def handle_event(
+        :internal,
+        :check_sync,
+        :idle,
+        %__MODULE__{db_state: db_state, rollback?: true} = state
+      ) do
+    ref = spawn_db_rollback(db_state)
+
+    state_data = %__MODULE__{
+      state
+      | rollback?: false,
+        chain_height: nil,
+        mem_hash: nil
+    }
+
+    {:next_state, {:syncing_db, ref}, state_data}
   end
 
   def handle_event(
@@ -251,6 +277,18 @@ defmodule AeMdw.Sync.Server do
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / exec_time
       Status.set_gens_per_min(gens_per_min)
+
+      new_state
+    end)
+  end
+
+  defp spawn_db_rollback(db_state) do
+    spawn_task(fn ->
+      gens_mutations = [RollbackMutation.new()]
+
+      new_state = exec_db_mutations(gens_mutations, db_state, true)
+
+      Status.set_gens_per_min(0)
 
       new_state
     end)

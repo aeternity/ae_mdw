@@ -20,7 +20,7 @@ defmodule AeMdw.TestUtil do
   @spec empty_state() :: State.t()
   def empty_state, do: State.new(empty_store())
 
-  Enum.each(AeMdw.Db.Model.column_families(), fn table ->
+  Enum.each(AeMdw.Db.Model.tables(), fn table ->
     @spec all_keys(State.t(), unquote(table)) :: [key()]
   end)
 
