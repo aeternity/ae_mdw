@@ -15,11 +15,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Common tests setup
-        uses: ./.github/actions/tests-common
-
       - name: Execute tests
-        run: docker-compose -f docker-compose-test.yml run --rm ae_mdw
+        run: docker compose -f docker-compose-test.yml run --rm ae_mdw
 
   test-coverage:
     name: Test coverage
