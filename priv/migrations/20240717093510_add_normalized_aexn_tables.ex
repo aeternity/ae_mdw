@@ -39,7 +39,7 @@ defmodule AeMdw.Migrations.AddNormalizedAexnTables do
         )
       end)
 
-    State.commit(state, name_mutations ++ symbol_mutations)
+    _state = State.commit(state, name_mutations ++ symbol_mutations)
 
     {:ok, name_counts}
   end
