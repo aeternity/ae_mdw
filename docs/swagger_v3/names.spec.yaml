@@ -63,7 +63,9 @@ schemas:
         type: integer
         example: 362026
       pointers:
-        type: object
+        type: array
+        items:
+          $ref: '#/components/schemas/Pointer'
         properties:
           account_pubkey:
             type: string
@@ -296,6 +298,19 @@ schemas:
       block_time:
         type: integer
         example: 1687575562705
+  Pointer:
+    description: Pointer
+    type: object
+    properties:
+      id:
+        type: string
+        example: ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5
+      key:
+        type: string
+        example: account_pubkey
+      encoded_key:
+        type: string
+        example: ba_YWNjb3VudF9wdWJrZXn8jckR
 
 paths:
   /names:
@@ -506,34 +521,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/NameClaim'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotFoundResponse'
-  /names/{id}/pointers:
-    get:
-      deprecated: false
-      description: Get name pointers
-      operationId: GetNamePointers
-      parameters:
-        - name: id
-          in: path
-          description: The name
-          required: true
-          schema:
-            type: string
-            example: trustwallet.chain
-      responses:
-        '200':
-          description: Returns a mapping of the name pointers
-          content:
-            application/json:
-              schema:
-                type: object
-              example:
-                account_pubkey: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
         '404':
           description: Not Found
           content:

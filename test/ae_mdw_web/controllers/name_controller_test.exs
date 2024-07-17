@@ -145,7 +145,10 @@ defmodule AeMdwWeb.NameControllerTest do
                  "revoke" => nil,
                  "expire_height" => ^expire2,
                  "approximate_expire_time" => ^approx_expire_time1,
-                 "pointers" => %{"account_pubkey" => ^bob_id, "oracle_pubkey" => ^bob_oracle_id}
+                 "pointers" => [
+                   %{"key" => "account_pubkey", "id" => ^bob_id},
+                   %{"key" => "oracle_pubkey", "id" => ^bob_oracle_id}
+                 ]
                } = name1
 
         assert %{"data" => [name2]} =
@@ -161,10 +164,13 @@ defmodule AeMdwWeb.NameControllerTest do
                  "active_from" => ^active_from,
                  "auction_timeout" => 0,
                  "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
-                 "pointers" => %{
-                   "account_pubkey" => ^alice_id,
-                   "oracle_pubkey" => ^alice_oracle_id
-                 },
+                 "pointers" => [
+                   %{
+                     "key" => "account_pubkey",
+                     "id" => ^alice_id
+                   },
+                   %{"key" => "oracle_pubkey", "id" => ^alice_oracle_id}
+                 ],
                  "revoke" => nil,
                  "expire_height" => ^expire1,
                  "approximate_expire_time" => ^approx_expire_time2
@@ -213,7 +219,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mname -> %{} end,
+           pointers_v3: fn _state, _mname -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -287,7 +293,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mname -> %{} end,
+           pointers_v3: fn _state, _mname -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -367,7 +373,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mname -> %{} end,
+           pointers_v3: fn _state, _mname -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -381,7 +387,7 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> json_response(200)
 
         assert 1 = length(names)
-        assert [%{"name" => ^plain_name, "pointers" => %{}}] = names
+        assert [%{"name" => ^plain_name, "pointers" => []}] = names
       end
     end
   end
@@ -506,10 +512,13 @@ defmodule AeMdwWeb.NameControllerTest do
                    "expire_height" => ^expire2,
                    "revoke" => %{"tx_hash" => ^bob_revoke_hash},
                    "approximate_expire_time" => ^approx_expire_time2,
-                   "pointers" => %{
-                     "account_pubkey" => ^bob_encoded_account_id,
-                     "oracle_pubkey" => ^bob_oracle_id
-                   }
+                   "pointers" => [
+                     %{
+                       "key" => "account_pubkey",
+                       "id" => ^bob_encoded_account_id
+                     },
+                     %{"key" => "oracle_pubkey", "id" => ^bob_oracle_id}
+                   ]
                  },
                  %{
                    "name" => ^alice_name,
@@ -521,7 +530,7 @@ defmodule AeMdwWeb.NameControllerTest do
                    "revoke" => %{"tx_hash" => ^alice_revoke_hash},
                    "expire_height" => ^expire1,
                    "approximate_expire_time" => ^approx_expire_time1,
-                   "pointers" => %{}
+                   "pointers" => []
                  }
                ] = names
       end
@@ -558,7 +567,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mname -> %{} end,
+           pointers_v3: fn _state, _mname -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -617,7 +626,7 @@ defmodule AeMdwWeb.NameControllerTest do
           Name,
           [],
           [
-            pointers: fn _state, _mnme -> %{} end,
+            pointers_v3: fn _state, _mnme -> [] end,
             ownership: fn _state, _mname -> %{current: nil, original: nil} end,
             stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
           ]
@@ -672,7 +681,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mnme -> %{} end,
+           pointers_v3: fn _state, _mnme -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -1214,7 +1223,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mnme -> %{} end,
+           pointers_v3: fn _state, _mnme -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :block end]},
@@ -1316,7 +1325,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mname -> %{} end,
+           pointers_v3: fn _state, _mname -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
@@ -1395,7 +1404,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Name, [],
          [
-           pointers: fn _state, _mnme -> %{} end,
+           pointers_v3: fn _state, _mnme -> [] end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},

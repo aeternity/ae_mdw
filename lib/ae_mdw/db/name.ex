@@ -29,6 +29,7 @@ defmodule AeMdw.Db.Name do
   @typep height :: Blocks.height()
   @typep txi_idx :: AeMdw.Txs.txi_idx()
   @typep state :: State.t()
+  @typep pointer() :: %{key: binary(), id: binary(), encoded_key: binary()}
 
   @typep nested_table ::
            Model.NameClaim
@@ -211,6 +212,20 @@ defmodule AeMdw.Db.Name do
         |> :aens_update_tx.pointers()
         |> Map.new(&pointer_kv_raw/1)
         |> Format.encode_pointers()
+    end
+  end
+
+  @spec pointers_v3(state(), Model.name()) :: [pointer()]
+  def pointers_v3(state, Model.name(index: plain_name, active: active)) do
+    case last_update(state, plain_name, active) do
+      nil ->
+        []
+
+      txi_idx ->
+        state
+        |> DbUtil.read_node_tx(txi_idx)
+        |> :aens_update_tx.pointers()
+        |> Enum.map(&:aens_pointer.serialize_for_client/1)
     end
   end
 
