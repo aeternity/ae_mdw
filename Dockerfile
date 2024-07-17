@@ -98,6 +98,7 @@ COPY config/runtime.exs config/
 
 # Generate swagger V2 file
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
+ARG PATH_PREFIX
 RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v3.yaml
 
 # Install devmode

@@ -7,6 +7,7 @@ services:
         RUNNER_IMAGE: "hexpm/elixir:1.16.2-erlang-26.2.4-debian-bullseye-20240408-slim"
         USER: root
         MIX_ENV: dev
+        PATH_PREFIX: "/v3"
     image: aeternity/ae_mdw_dev${IMAGE_NAME_SUFFIX:-}:latest
     ports:
       - "4000:4000" #MDW's default port
