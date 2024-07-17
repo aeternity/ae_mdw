@@ -46,8 +46,7 @@ defmodule AeMdw.AexnTokens do
   }
   @downcased_sorting_table %{
     name: @aexn_downcased_name_table,
-    symbol: @aexn_downcased_symbol_table,
-    creation: @aexn_creation_table
+    symbol: @aexn_downcased_symbol_table
   }
 
   @spec fetch_contract(State.t(), aexn_type(), binary(), boolean()) ::
@@ -128,7 +127,6 @@ defmodule AeMdw.AexnTokens do
 
   defp build_tokens_streamer(%{prefix: prefix}, state, type, order_by, cursor) do
     sorting_table = Map.fetch!(@downcased_sorting_table, order_by)
-    prefix = String.slice(prefix, 0, @max_sort_field_length)
 
     cursor =
       if not is_nil(cursor) do
@@ -136,9 +134,14 @@ defmodule AeMdw.AexnTokens do
         {type, String.downcase(symbol_name), pubkey}
       end
 
+    prefix =
+      prefix
+      |> String.slice(0, @max_sort_field_length)
+      |> String.downcase()
+
     scope = {
-      {type, String.downcase(prefix), <<>>},
-      {type, String.downcase(prefix) <> Util.max_name_bin(), <<>>}
+      {type, prefix, <<>>},
+      {type, prefix <> Util.max_name_bin(), <<>>}
     }
 
     do_build_tokens_streamer(state, sorting_table, cursor, scope)
