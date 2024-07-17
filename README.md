@@ -57,7 +57,7 @@ Before running it, it's recommended to use a Node database snapshot for faster s
 1. Download one of the full backups from https://downloads.aeternity.io
 2. Create a 'data' directory under the root repo dir and extract the backup to it (it creates a mnesia directory).
 
-To start a docker container on mainnet, simply run: `docker-compose up`.
+To start a docker container on mainnet, simply run: `docker compose up`.
 
 You can check on `/status` page that the `node_height` is higher than 600000.
 
@@ -3564,7 +3564,7 @@ elixir --sname aeternity@localhost -S mix test.integration
 These tests allow you to create your own transactions using the devmode (plus the JS SDK). To add newer tests you need to:
 
 1. Add the transactions creation on `node_sdk/index.js`.
-2. Run the JavaScript file using `docker-compose -f docker-compose-dev.yml run node_sdk node index.js`.
+2. Run the JavaScript file using `docker compose -f docker-compose-dev.yml run node_sdk node index.js`.
 3. Add new devmode tests under the `test/devmode/` directory.
 4. Run tests using `./scripts/test-devmode.sh`.
 
