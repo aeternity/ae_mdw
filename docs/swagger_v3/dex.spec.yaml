@@ -114,9 +114,10 @@ paths:
         - in: path
           name: contract_id
           required: true
-          type: string
           description: The contract id
-          example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+          schema:
+            type: string
+            example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
       responses:
         '200':
           description: Returns paginatinated list of DEX swaps
@@ -147,9 +148,10 @@ paths:
         - in: path
           name: account_id
           required: true
-          type: string
           description: The account id
-          example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+          schema:
+            type: string
+            example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
       responses:
         '200':
           description: Returns paginatinated list of DEX swaps
