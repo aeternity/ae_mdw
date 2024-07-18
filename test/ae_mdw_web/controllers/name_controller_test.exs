@@ -5,8 +5,6 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.NameClaimMutation
-  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Store
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
@@ -1761,88 +1759,25 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "names_count" do
-    setup %{conn: conn} do
-      first_owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
-      {:account_pubkey, first_owner_pk} = Enc.decode(first_owner_id)
-      second_owner_id = "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
-      {:account_pubkey, second_owner_pk} = Enc.decode(second_owner_id)
+    test "get names count", %{conn: conn, store: store} do
+      first_owner_pk = <<123::256>>
+      second_owner_pk = <<456::256>>
+      first_owner_id = Enc.encode(:account_pubkey, first_owner_pk)
+      second_owner_id = Enc.encode(:account_pubkey, second_owner_pk)
 
-      state =
-        State.mem_state()
-        |> State.put(Model.Tx, Model.tx(index: 1, id: <<124::256>>))
-
-      owner_pk = fn i -> if rem(i, 2) == 0, do: first_owner_pk, else: second_owner_pk end
-
-      state =
-        1..25
-        |> Enum.reduce(state, fn i, state_acc ->
-          plain_name = "SomeLongTestName#{i}.test"
-
-          mutation =
-            NameClaimMutation.new(
-              plain_name,
-              <<i::256>>,
-              owner_pk.(i),
-              1,
-              true,
-              {0, 1},
-              {0, -1},
-              7
-            )
-
-          State.commit(state_acc, [mutation])
-        end)
-
-      %{store: store} = state
-
-      %{
-        conn: conn,
-        store: store,
-        first_owner: first_owner_id,
-        second_owner: second_owner_id,
-        first_owner_pk: first_owner_pk
-      }
-    end
-
-    test "get names count", %{
-      conn: conn,
-      store: store,
-      first_owner_pk: first_owner_pk,
-      first_owner: first_owner,
-      second_owner: second_owner
-    } do
-      state =
+      store =
         store
-        |> State.new()
-        |> State.put(Model.TotalStat, Model.total_stat(index: 1))
-
-      state = StatsMutation.execute(StatsMutation.new(1, "", 0, 0, 0, false), state)
-
-      assert 25 =
-               conn
-               |> with_store(store)
-               |> get("/v3/names/count")
-               |> json_response(200)
-
-      name_claim_mutation =
-        NameClaimMutation.new(
-          "SomeExtraLongTestName1.test",
-          <<1123::256>>,
-          first_owner_pk,
-          1,
-          true,
-          {1, 1},
-          {1, -1},
-          7
+        |> Store.put(Model.TotalStat, Model.total_stat(index: 1, active_names: 27))
+        |> Store.put(
+          Model.AccountNamesCount,
+          Model.account_names_count(index: first_owner_pk, count: 13)
+        )
+        |> Store.put(
+          Model.AccountNamesCount,
+          Model.account_names_count(index: second_owner_pk, count: 14)
         )
 
-      state =
-        NameClaimMutation.execute(name_claim_mutation, state)
-
-      %{store: store} =
-        StatsMutation.execute(StatsMutation.new(2, <<124::256>>, 0, 0, 0, false), state)
-
-      assert 26 =
+      assert 27 =
                conn
                |> with_store(store)
                |> get("/v3/names/count")
@@ -1851,13 +1786,13 @@ defmodule AeMdwWeb.NameControllerTest do
       assert 13 =
                conn
                |> with_store(store)
-               |> get("/v3/names/count", owned_by: first_owner)
+               |> get("/v3/names/count", owned_by: first_owner_id)
                |> json_response(200)
 
-      assert 13 =
+      assert 14 =
                conn
                |> with_store(store)
-               |> get("/v3/names/count", owned_by: second_owner)
+               |> get("/v3/names/count", owned_by: second_owner_id)
                |> json_response(200)
     end
   end

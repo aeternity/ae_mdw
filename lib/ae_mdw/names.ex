@@ -1059,12 +1059,9 @@ defmodule AeMdw.Names do
   defp count_active_names(state, nil) do
     case State.prev(state, Model.TotalStat, nil) do
       {:ok, index} ->
-        state
-        |> State.get(Model.TotalStat, index)
-        |> case do
-          {:ok, Model.total_stat(active_names: count)} -> count
-          :not_found -> 0
-        end
+        Model.total_stat(active_names: count) = State.fetch!(state, Model.TotalStat, index)
+
+        count
 
       :none ->
         0
