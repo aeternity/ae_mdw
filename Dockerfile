@@ -21,8 +21,8 @@ ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-$
 ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
-FROM ${NODE_IMAGE} as aeternity
-FROM ${BUILDER_IMAGE} as builder
+FROM ${NODE_IMAGE} AS aeternity
+FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
 RUN apt-get update -y && apt-get install -y build-essential git sed curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
