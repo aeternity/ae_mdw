@@ -195,7 +195,7 @@ defmodule AeMdw.Db.ContractTest do
       dex_token2_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
       call_txi = Enum.random(100_000_000..999_999_999)
-      create_token1_txi = call_txi - 2
+      create_token_txi = call_txi - 2
       create_pair_txi = call_txi - 1
 
       call_rec =
@@ -216,10 +216,6 @@ defmodule AeMdw.Db.ContractTest do
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, dex_token2_pk}, meta_info: {"name2", "S1", 18})
-        )
-        |> State.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, dex_token1_pk, create_token1_txi})
         )
         |> State.put(
           Model.Field,
@@ -245,19 +241,19 @@ defmodule AeMdw.Db.ContractTest do
       call_txi = call_txi + 1
       log_idx = 0
 
-      state = Contract.logs_write(state, call_txi - 2, call_txi, call_rec2)
+      state = Contract.logs_write(state, create_token_txi, call_txi, call_rec2)
 
       assert {:ok, Model.dex_account_swap_tokens(amounts: [123, 456], to: ^account2_pk)} =
                State.get(
                  state,
                  Model.DexAccountSwapTokens,
-                 {account1_pk, create_token1_txi, call_txi, log_idx}
+                 {account1_pk, create_token_txi, call_txi, log_idx}
                )
 
       assert State.exists?(
                state,
                Model.DexContractSwapTokens,
-               {create_token1_txi, account1_pk, call_txi, log_idx}
+               {create_token_txi, account1_pk, call_txi, log_idx}
              )
     end
 

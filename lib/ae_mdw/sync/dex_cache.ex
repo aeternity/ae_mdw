@@ -113,4 +113,18 @@ defmodule AeMdw.Sync.DexCache do
       %{pair: contract_pk, token1: token1, token2: token2}
     end)
   end
+
+  @spec get_pair_contract_pk(pubkey()) :: {:ok, [pubkey()]} | :not_found
+  def get_pair_contract_pk(searched_contract_pk) do
+    match_spec = [
+      {{searched_contract_pk, :_, :_}, [], [:"$_"]},
+      {{:_, searched_contract_pk, :_}, [], [:"$_"]},
+      {{:_, :_, searched_contract_pk}, [], [:"$_"]}
+    ]
+
+    case :ets.select(@pairs_table, match_spec) do
+      [] -> :not_found
+      list -> {:ok, Enum.map(list, fn {pair_pk, _token1_pk, _token2_pk} -> pair_pk end)}
+    end
+  end
 end

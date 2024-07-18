@@ -56,11 +56,18 @@ defmodule AeMdw.Dex do
   @spec fetch_contract_swaps(State.t(), String.t(), pagination(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
   def fetch_contract_swaps(state, contract_id, pagination, cursor) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}),
+    with {:ok, searched_contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, contract_pks} <- DexCache.get_pair_contract_pk(searched_contract_pk),
+         {:ok, create_txis} <-
+           Enum.reduce_while(contract_pks, {:ok, []}, fn contract_pk, {:ok, create_txis} ->
+             case Origin.tx_index(state, {:contract, contract_pk}) do
+               {:ok, create_txi} -> {:cont, {:ok, [create_txi | create_txis]}}
+               :not_found -> {:halt, :not_found}
+             end
+           end),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
       state
-      |> build_contract_swaps_streamer(create_txi, cursor)
+      |> build_contract_swaps_streamer(create_txis, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     else
@@ -126,20 +133,24 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_contract_swaps_streamer(state, create_txi, cursor) do
-    cursor =
-      case cursor do
-        {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
-        nil -> nil
-      end
-
-    scope = {
-      {create_txi, Util.min_bin(), nil, nil},
-      {create_txi, Util.max_256bit_bin(), nil, nil}
-    }
-
+  defp build_contract_swaps_streamer(state, create_txis, cursor) do
     fn direction ->
-      Collection.stream(state, @contract_swaps_table, direction, scope, cursor)
+      create_txis
+      |> Enum.map(fn create_txi ->
+        cursor =
+          case cursor do
+            {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
+            nil -> nil
+          end
+
+        scope = {
+          {create_txi, Util.min_bin(), nil, nil},
+          {create_txi, Util.max_256bit_bin(), nil, nil}
+        }
+
+        Collection.stream(state, @contract_swaps_table, direction, scope, cursor)
+      end)
+      |> Collection.merge(direction)
     end
   end
 
