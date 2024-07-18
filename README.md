@@ -945,7 +945,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/transactions/count?tx_type=oracle
 
 ## Blocks
 
-### `/v3//key-blocks`
+### `/v3/key-blocks`
 
 There are several endpoints for querying block(s) or generation(s). A generation can be understood as key block and micro blocks containing transactions.
 
