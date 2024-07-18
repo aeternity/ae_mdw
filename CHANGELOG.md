@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.81.1](https://www.github.com/aeternity/ae_mdw/compare/v1.81.0...v1.81.1) (2024-07-18)
+
+
+### Bug Fixes
+
+* correct url in openapi specs ([#1837](https://www.github.com/aeternity/ae_mdw/issues/1837)) ([bb895ed](https://www.github.com/aeternity/ae_mdw/commit/bb895edba8e739d8fe84e67f229b5630a5dece38))
+* use same format for pointers as the node ([#1830](https://www.github.com/aeternity/ae_mdw/issues/1830)) ([a15c74c](https://www.github.com/aeternity/ae_mdw/commit/a15c74c977603ad90def980150c3293f5b5c470c))
+
+
+### Testing
+
+* simplify intermittent name count test ([#1843](https://www.github.com/aeternity/ae_mdw/issues/1843)) ([dbe35de](https://www.github.com/aeternity/ae_mdw/commit/dbe35de66e484150b0f9942e5529daceb2bf70cc))
+
 ## [1.81.0](https://www.github.com/aeternity/ae_mdw/compare/v1.80.0...v1.81.0) (2024-07-10)
 
 
