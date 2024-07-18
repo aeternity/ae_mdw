@@ -425,27 +425,28 @@ defmodule AeMdw.Db.Contract do
   defp write_pair_created(state, _contract_pk, _args), do: state
 
   defp write_swap_tokens(state, create_txi, txi, idx, [from, to], amounts) do
-    with true <- String.printable?(amounts) do
-      amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
+    case String.printable?(amounts) do
+      true ->
+        amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
 
-      state
-      |> State.put(
-        Model.DexAccountSwapTokens,
-        Model.dex_account_swap_tokens(
-          index: {from, create_txi, txi, idx},
-          to: to,
-          amounts: amounts
+        state
+        |> State.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(
+            index: {from, create_txi, txi, idx},
+            to: to,
+            amounts: amounts
+          )
         )
-      )
-      |> State.put(
-        Model.DexContractSwapTokens,
-        Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
-      )
-      |> State.put(
-        Model.DexSwapTokens,
-        Model.dex_swap_tokens(index: {create_txi, txi, idx})
-      )
-    else
+        |> State.put(
+          Model.DexContractSwapTokens,
+          Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
+        )
+        |> State.put(
+          Model.DexSwapTokens,
+          Model.dex_swap_tokens(index: {create_txi, txi, idx})
+        )
+
       false ->
         Log.warn("[write_swap_tokens] amounts not printable: #{create_txi}")
 
