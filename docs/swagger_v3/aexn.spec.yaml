@@ -597,14 +597,14 @@ paths:
             type: string
             example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
         - description: From account
-          in: path
+          in: query
           name: from
           required: false
           schema:
             type: string
             example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
         - description: To account
-          in: path
+          in: query
           name: to
           required: false
           schema:
