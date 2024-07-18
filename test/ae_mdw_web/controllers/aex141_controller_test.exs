@@ -370,7 +370,20 @@ defmodule AeMdwWeb.Aex141ControllerTest do
             )
 
           m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
+
+          m_aexn_downcased_name =
+            Model.aexn_contract_downcased_name(
+              index: {:aex141, String.downcase(name), <<i::256>>},
+              original_name: name
+            )
+
           m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
+
+          m_aexn_downcased_symbol =
+            Model.aexn_contract_downcased_symbol(
+              index: {:aex141, String.downcase(symbol), <<i::256>>},
+              original_symbol: symbol
+            )
 
           time = 5
 
@@ -389,7 +402,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           |> Store.put(Model.Block, m_block)
           |> Store.put(Model.AexnContract, m_aex141)
           |> Store.put(Model.AexnContractName, m_aexn_name)
+          |> Store.put(Model.AexnContractDowncasedName, m_aexn_downcased_name)
           |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+          |> Store.put(Model.AexnContractDowncasedSymbol, m_aexn_downcased_symbol)
           |> Store.put(Model.AexnContractCreation, m_aexn_tx)
           |> Store.put(Model.Tx, m_tx)
         end)

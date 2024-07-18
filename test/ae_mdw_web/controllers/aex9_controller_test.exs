@@ -36,7 +36,21 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         m_aex9_supply = Model.aex9_initial_supply(index: <<i::256>>, amount: txi + 10)
         m_aex9_balance = Model.aex9_contract_balance(index: <<i::256>>, amount: txi + 20)
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
+
+        m_aexn_downcased_name =
+          Model.aexn_contract_downcased_name(
+            index: {:aex9, String.downcase(name), <<i::256>>},
+            original_name: name
+          )
+
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
+
+        m_aexn_downcased_symbol =
+          Model.aexn_contract_downcased_symbol(
+            index: {:aex9, String.downcase(symbol), <<i::256>>},
+            original_symbol: symbol
+          )
+
         m_tx = Model.tx(index: txi, id: decoded_tx_hash)
 
         store
@@ -44,7 +58,9 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         |> Store.put(Model.Aex9InitialSupply, m_aex9_supply)
         |> Store.put(Model.Aex9ContractBalance, m_aex9_balance)
         |> Store.put(Model.AexnContractName, m_aexn_name)
+        |> Store.put(Model.AexnContractDowncasedName, m_aexn_downcased_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(Model.AexnContractDowncasedSymbol, m_aexn_downcased_symbol)
         |> Store.put(Model.Tx, m_tx)
       end)
 

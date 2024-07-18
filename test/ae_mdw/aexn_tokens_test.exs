@@ -157,8 +157,22 @@ defmodule AeMdw.AexnTokensTest do
           Model.aexn_contract_name(index: {:aex9, "TokenB1", contract_pk1})
         )
         |> State.put(
+          Model.AexnContractDowncasedName,
+          Model.aexn_contract_downcased_name(
+            index: {:aex9, "tokenb1", contract_pk1},
+            original_name: "TokenB1"
+          )
+        )
+        |> State.put(
           Model.AexnContractName,
           Model.aexn_contract_name(index: {:aex9, "TokenA1", contract_pk2})
+        )
+        |> State.put(
+          Model.AexnContractDowncasedName,
+          Model.aexn_contract_downcased_name(
+            index: {:aex9, "tokena1", contract_pk2},
+            original_name: "TokenA1"
+          )
         )
 
       pagination = {:forward, false, 10, false}
@@ -240,8 +254,22 @@ defmodule AeMdw.AexnTokensTest do
           Model.aexn_contract_name(index: {:aex141, "TokenB1", contract_pk1})
         )
         |> State.put(
+          Model.AexnContractDowncasedName,
+          Model.aexn_contract_downcased_name(
+            index: {:aex141, "tokenb1", contract_pk1},
+            original_name: "TokenB1"
+          )
+        )
+        |> State.put(
           Model.AexnContractName,
           Model.aexn_contract_name(index: {:aex141, "TokenA1", contract_pk2})
+        )
+        |> State.put(
+          Model.AexnContractDowncasedName,
+          Model.aexn_contract_downcased_name(
+            index: {:aex141, "tokena1", contract_pk2},
+            original_name: "TokenA1"
+          )
         )
         |> State.put(Model.Tx, Model.tx(index: txi1, id: <<1::256>>, block_index: block_index1))
         |> State.put(Model.Tx, Model.tx(index: txi2, id: <<2::256>>, block_index: block_index2))

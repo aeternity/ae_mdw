@@ -48,7 +48,20 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           Model.aexn_contract_creation(index: {:aex9, {txi, -1}}, contract_pk: contract_pk)
 
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
+
+        m_aexn_downcase_name =
+          Model.aexn_contract_downcased_name(
+            index: {:aex9, String.downcase(name), <<i::256>>},
+            original_name: name
+          )
+
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
+
+        m_aexn_downcase_symbol =
+          Model.aexn_contract_downcased_symbol(
+            index: {:aex9, String.downcase(symbol), <<i::256>>},
+            original_symbol: symbol
+          )
 
         functions =
           AeMdw.Node.aex9_signatures()
@@ -66,7 +79,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.AexnContract, m_aex9)
         |> Store.put(Model.AexnContractCreation, m_aexn_creation)
         |> Store.put(Model.AexnContractName, m_aexn_name)
+        |> Store.put(Model.AexnContractDowncasedName, m_aexn_downcase_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(Model.AexnContractDowncasedSymbol, m_aexn_downcase_symbol)
         |> then(fn store ->
           Enum.reduce(1..i, store, fn i2, store ->
             balance_txi = 1_000_000 + i2
@@ -136,7 +151,20 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           )
 
         m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
+
+        m_aexn_downcase_name =
+          Model.aexn_contract_downcased_name(
+            index: {:aex141, String.downcase(name), <<i::256>>},
+            original_name: name
+          )
+
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
+
+        m_aexn_downcase_symbol =
+          Model.aexn_contract_downcased_symbol(
+            index: {:aex141, String.downcase(symbol), <<i::256>>},
+            original_symbol: symbol
+          )
 
         m_aexn_creation =
           Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
@@ -152,7 +180,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.Block, m_block)
         |> Store.put(Model.AexnContract, m_aexn)
         |> Store.put(Model.AexnContractName, m_aexn_name)
+        |> Store.put(Model.AexnContractDowncasedName, m_aexn_downcase_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(Model.AexnContractDowncasedSymbol, m_aexn_downcase_symbol)
         |> Store.put(Model.AexnContractCreation, m_aexn_creation)
         |> Store.put(Model.Tx, m_tx)
       end)
@@ -392,7 +422,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       aex9_symbols = Enum.map(aex9_tokens, fn %{"symbol" => symbol} -> symbol end)
 
       assert @default_limit = length(aex9_tokens)
-      assert ^aex9_symbols = Enum.sort(aex9_symbols)
+
+      assert ^aex9_symbols =
+               Enum.sort(aex9_symbols, &(String.downcase(&1) < String.downcase(&2)))
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)

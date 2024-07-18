@@ -405,13 +405,20 @@ paths:
           schema:
             type: string
             enum: [creation, name, symbol]
-        - description: Sorts by name or symbol prefix
+        - description: Sorts by name or symbol prefix, this is decided by the 'by' field. If it's name, it will sort by name prefix, if it's symbol, it will sort by symbol prefix.
           in: query
           name: prefix
           required: false
           schema:
             type: string
             example: mycolle
+        - description: Gets AEX141 contracts with exact name or symbol, this is decided by the 'by' field. If it's name, it will get contracts with exact name, if it's symbol, it will get contracts with exact symbol.
+          in: query
+          name: exact
+          required: false
+          schema:
+            type: string
+            example: mycollection
       responses:
         '200':
           description: Returns paginated AEX-141 contracts
@@ -713,9 +720,16 @@ paths:
           schema:
             type: string
             enum: [creation, name, symbol]
-        - description: Sorts by name or symbol
+        - description: Sorts by name or symbol prefix, this is decided by the 'by' field. If it's name, it will sort by name prefix, if it's symbol, it will sort by symbol prefix.
           in: query
           name: prefix
+          required: false
+          schema:
+            type: string
+            x-example: AA
+        - description: Gets AEX9 tokens with exact name or symbol, this is decided by the 'by' field. If it's name, it will get tokens with exact name, if it's symbol, it will get tokens with exact symbol.
+          in: query
+          name: exact
           required: false
           schema:
             type: string

@@ -34,6 +34,8 @@ defmodule AeMdw.AexnTokens do
   @max_sort_field_length 100
 
   @aexn_table Model.AexnContract
+  @aexn_downcased_name_table Model.AexnContractDowncasedName
+  @aexn_downcased_symbol_table Model.AexnContractDowncasedSymbol
   @aexn_name_table Model.AexnContractName
   @aexn_symbol_table Model.AexnContractSymbol
   @aexn_creation_table Model.AexnContractCreation
@@ -41,6 +43,10 @@ defmodule AeMdw.AexnTokens do
     name: @aexn_name_table,
     symbol: @aexn_symbol_table,
     creation: @aexn_creation_table
+  }
+  @downcased_sorting_table %{
+    name: @aexn_downcased_name_table,
+    symbol: @aexn_downcased_symbol_table
   }
 
   @spec fetch_contract(State.t(), aexn_type(), binary(), boolean()) ::
@@ -77,11 +83,9 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
          {:ok, params} <- validate_params(query),
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
-      sorting_table = Map.fetch!(@sorting_table, order_by)
-
       paginated_aexn_contracts =
         filters
-        |> build_tokens_streamer(state, aexn_type, sorting_table, cursor)
+        |> build_tokens_streamer(state, aexn_type, order_by, cursor)
         |> Collection.paginate(
           pagination,
           &render_contract(state, &1, v3?),
@@ -92,7 +96,7 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp build_tokens_streamer(_filters, state, type, @aexn_creation_table, cursor) do
+  defp build_tokens_streamer(_filters, state, type, :creation, cursor) do
     key_boundary = {
       {type, {0, Util.max_int()}},
       {type, {Util.max_int(), Util.max_int()}}
@@ -110,24 +114,37 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp build_tokens_streamer(%{exact: exact}, state, type, table, cursor) do
+  defp build_tokens_streamer(%{exact: exact}, state, type, order_by, cursor) do
+    sorting_table = Map.fetch!(@sorting_table, order_by)
+
     scope = {
       {type, exact, <<>>},
       {type, exact, Util.max_256bit_bin()}
     }
 
-    do_build_tokens_streamer(state, table, cursor, scope)
+    do_build_tokens_streamer(state, sorting_table, cursor, scope)
   end
 
-  defp build_tokens_streamer(%{prefix: prefix}, state, type, table, cursor) do
-    prefix = String.slice(prefix, 0, @max_sort_field_length)
+  defp build_tokens_streamer(%{prefix: prefix}, state, type, order_by, cursor) do
+    sorting_table = Map.fetch!(@downcased_sorting_table, order_by)
+
+    cursor =
+      if not is_nil(cursor) do
+        {type, symbol_name, pubkey} = cursor
+        {type, String.downcase(symbol_name), pubkey}
+      end
+
+    prefix =
+      prefix
+      |> String.slice(0, @max_sort_field_length)
+      |> String.downcase()
 
     scope = {
       {type, prefix, <<>>},
       {type, prefix <> Util.max_name_bin(), <<>>}
     }
 
-    do_build_tokens_streamer(state, table, cursor, scope)
+    do_build_tokens_streamer(state, sorting_table, cursor, scope)
   end
 
   defp build_tokens_streamer(_filters, state, type, table, cursor),
