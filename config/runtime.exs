@@ -114,6 +114,7 @@ if env in [:test, :prod] do
 
   if env == :prod do
     config :ae_mdw, AeMdwWeb.Endpoint, server: true
+    config :phoenix, :serve_endpoints, true
   end
 
   config :logger,
