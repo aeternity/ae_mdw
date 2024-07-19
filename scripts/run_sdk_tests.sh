@@ -5,7 +5,7 @@ set -xe
 export AETERNITY_CONFIG=/home/aeternity/aeternity-dev.yaml
 export IMAGE_NAME_SUFFIX=devmode
 
-docker compose -f docker-compose-dev.yml build --build-arg DEV_MODE=true ae_mdw
+docker compose -f docker-compose-dev.yml build --build-arg MIX_ENV=prod --build-arg DEV_MODE=true ae_mdw
 
 docker compose -f docker-compose-dev.yml up --detach ae_mdw --wait
 
