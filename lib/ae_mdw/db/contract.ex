@@ -310,7 +310,7 @@ defmodule AeMdw.Db.Contract do
           write_pair_created(state, addr, args)
 
         event_type == :swap_tokens ->
-          write_swap_tokens(state, addr, txi, log_idx, args, data)
+          write_swap_tokens(state, create_txi, txi, log_idx, args, data)
 
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation or for child contracts on contract calls,
@@ -442,40 +442,37 @@ defmodule AeMdw.Db.Contract do
 
   defp write_pair_created(state, _contract_pk, _args), do: state
 
-  defp write_swap_tokens(state, contract_pk, txi, idx, [from, to], amounts) do
-    with true <- String.printable?(amounts),
-         %{token1: token1_pk} <- DexCache.get_pair(contract_pk),
-         {:ok, create_txi} <- Origin.tx_index(state, {:contract, token1_pk}) do
-      amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
+  defp write_swap_tokens(state, create_txi, txi, idx, [from, to], amounts) do
+    case String.printable?(amounts) do
+      true ->
+        amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
 
-      state
-      |> State.put(
-        Model.DexAccountSwapTokens,
-        Model.dex_account_swap_tokens(
-          index: {from, create_txi, txi, idx},
-          to: to,
-          amounts: amounts
+        state
+        |> State.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(
+            index: {from, create_txi, txi, idx},
+            to: to,
+            amounts: amounts
+          )
         )
-      )
-      |> State.put(
-        Model.DexContractSwapTokens,
-        Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
-      )
-      |> State.put(
-        Model.DexSwapTokens,
-        Model.dex_swap_tokens(index: {create_txi, txi, idx})
-      )
-    else
-      reason ->
-        Log.warn(
-          "[write_swap_tokens] contract not found #{inspect(contract_pk)}, reason=#{reason}"
+        |> State.put(
+          Model.DexContractSwapTokens,
+          Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
         )
+        |> State.put(
+          Model.DexSwapTokens,
+          Model.dex_swap_tokens(index: {create_txi, txi, idx})
+        )
+
+      false ->
+        Log.warn("[write_swap_tokens] amounts not printable: #{create_txi}")
 
         state
     end
   end
 
-  defp write_swap_tokens(state, _pk, _txi, _idx, _args, _amounts), do: state
+  defp write_swap_tokens(state, _create_txi, _txi, _idx, _args, _amounts), do: state
 
   defp aex9_update_balance_account(
          state,
