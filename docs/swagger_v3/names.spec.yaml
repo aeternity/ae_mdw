@@ -1,5 +1,6 @@
 schemas:
   NameTx:
+    type: object
     properties:
       block_hash:
         type: string
