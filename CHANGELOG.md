@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.82.0](https://www.github.com/aeternity/ae_mdw/compare/v1.81.0...v1.82.0) (2024-07-22)
+
+
+### Features
+
+* make aexn prefix search case insensitive ([#1836](https://www.github.com/aeternity/ae_mdw/issues/1836)) ([982e12a](https://www.github.com/aeternity/ae_mdw/commit/982e12a6135dd8b0ec55681ab70b922f5344cb5c))
+
+
+### Bug Fixes
+
+* correct url in openapi specs ([#1837](https://www.github.com/aeternity/ae_mdw/issues/1837)) ([bb895ed](https://www.github.com/aeternity/ae_mdw/commit/bb895edba8e739d8fe84e67f229b5630a5dece38))
+* dex swaps retrieval ([#1846](https://www.github.com/aeternity/ae_mdw/issues/1846)) ([503ad87](https://www.github.com/aeternity/ae_mdw/commit/503ad877d3f1f1f700e4f37037fda772bccc4fab))
+* use same format for pointers as the node ([#1830](https://www.github.com/aeternity/ae_mdw/issues/1830)) ([a15c74c](https://www.github.com/aeternity/ae_mdw/commit/a15c74c977603ad90def980150c3293f5b5c470c))
+
+
+### Testing
+
+* simplify intermittent name count test ([#1843](https://www.github.com/aeternity/ae_mdw/issues/1843)) ([dbe35de](https://www.github.com/aeternity/ae_mdw/commit/dbe35de66e484150b0f9942e5529daceb2bf70cc))
+
+
+### Miscellaneous
+
+* add MIX_ENV=prod when building for SDK usage ([#1847](https://www.github.com/aeternity/ae_mdw/issues/1847)) ([6f6f747](https://www.github.com/aeternity/ae_mdw/commit/6f6f7477a0f66dea65c8610708015df4243294f5))
+
 ## [1.81.0](https://www.github.com/aeternity/ae_mdw/compare/v1.80.0...v1.81.0) (2024-07-10)
 
 
