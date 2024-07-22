@@ -373,7 +373,7 @@ paths:
     get:
       deprecated: false
       description: Get the total number of active names.
-      operationId: get_names_count
+      operationId: GetNamesCount
       parameters:
         - name: owned_by
           in: query

@@ -90,7 +90,7 @@ paths:
   /status:
     get:
       description: Gets the current syncing status of both middleware and the node
-      operationId: getStatus
+      operationId: GetStatus
       responses:
         '200':
           description: Returns a map of status items
