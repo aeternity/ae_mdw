@@ -259,7 +259,6 @@ schemas:
       fee: 17199000000000
       nonce: 57
       oracle_id: "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
-      query: "YmFpeGluIHF1ZXJ5"
       query_fee: 2000000000000000
       response_ttl:
         type: "delta"

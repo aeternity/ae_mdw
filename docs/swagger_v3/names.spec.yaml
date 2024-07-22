@@ -66,7 +66,6 @@ schemas:
       hash:
         type: string
         example: nm_2YmgvoUhVua9wEYGpMj9ybctbQXHPbY9Ppu4CoKoUm8jjFfcsc
-        type: object
       active_from:
         type: integer
         example: 163282
