@@ -242,7 +242,7 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
-          description: Returns paginatinated activities
+          description: Returns paginated activities
           content:
             application/json:
               schema:

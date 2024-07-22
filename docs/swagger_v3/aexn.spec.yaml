@@ -188,7 +188,7 @@ schemas:
         description: The number of decimals for AEX9 token
         type: integer
       extensions:
-        description: Extensions implemnted by the contract
+        description: Extensions implemented by the contract
         type: array
         items:
           type: string

@@ -86,7 +86,7 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
-          description: Returns paginatinated list of DEX swaps
+          description: Returns paginated list of DEX swaps
           content:
             application/json:
               schema:
@@ -120,7 +120,7 @@ paths:
             example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
       responses:
         '200':
-          description: Returns paginatinated list of DEX swaps
+          description: Returns paginated list of DEX swaps
           content:
             application/json:
               schema:
@@ -154,7 +154,7 @@ paths:
             example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
       responses:
         '200':
-          description: Returns paginatinated list of DEX swaps
+          description: Returns paginated list of DEX swaps
           content:
             application/json:
               schema:
