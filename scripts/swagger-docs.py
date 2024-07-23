@@ -29,8 +29,10 @@ for filepath in Path(SWAGGER_DOCS_DIR).glob("*.spec.yaml"):
         schemas = {**schemas, **data_loaded['schemas']}
         paths = {**paths, **data_loaded['paths']}
 
-swagger['paths'] = paths
-swagger['components']['schemas'] = {**swagger['components']['schemas'], **schemas}
+sorted_dict = lambda d: dict(sorted(d.items()))
+
+swagger['paths'] = sorted_dict(paths)
+swagger['components']['schemas'] = sorted_dict({**swagger['components']['schemas'], **schemas})
 swagger['info']['version'] = mdw_version
 swagger['servers'][0]['url'] = PATH_PREFIX
 

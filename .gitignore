@@ -49,3 +49,5 @@ data
 
 /node_sdk/node_modules/
 /node_sdk/output.json
+
+/priv/static/swagger/swagger_v3.*
