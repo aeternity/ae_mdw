@@ -203,6 +203,39 @@ schemas:
     example:
       miner: ak_2whjDhTTmbN13vU7gAUsRbosBhmycho4h8LqHVqKwyGofDetQ9
       total_reward: 945000000000000000000
+  Stats:
+    type: object
+    description: Stats
+    properties:
+      miners_count:
+        description: The number of miners
+        type: integer
+      fees_trend:
+        description: The fees trend
+        type: number
+      last_24hs_average_transaction_fees:
+        description: The last 24hs average transaction fees
+        type: number
+      last_24hs_transactions:
+        description: The last 24hs transactions
+        type: integer
+      max_transactions_per_second:
+        description: The max transactions per second
+        type: number
+      max_transactions_per_second_block_hash:
+        description: The max transactions per second block hash
+        type: string
+      transactions_trend:
+        description: The transactions trend
+        type: number
+    example:
+      miners_count: 228
+      fees_trend: 0
+      last_24hs_average_transaction_fees: 46159816223980.98
+      last_24hs_transactions: 11143
+      max_transactions_per_second: 147.26
+      max_transactions_per_second_block_hash: kh_27UooKSFP8qYaymFiUvhrMfAsCUeTon48s52gfdmF8iruoi6cS
+      transactions_trend: 0
 paths:
   /deltastats:
     get:
@@ -472,6 +505,24 @@ paths:
                         items:
                           $ref: '#/components/schemas/Statistic'
                   - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats:
+    get:
+      deprecated: true
+      description: Deprecated. Use /totalstats or /deltastats instead.
+      operationId: GetStats
+      responses:
+        '200':
+          description: Returns paginated stats per generation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
         '400':
           description: Bad request
           content:
