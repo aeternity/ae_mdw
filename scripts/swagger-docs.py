@@ -14,6 +14,7 @@ PATH_PREFIX = os.getenv('PATH_PREFIX', '/mdw/v3')
 # Read YAML file
 schemas = {}
 paths = {}
+node_schemas = None
 swagger = None
 mdw_version = None
 
@@ -22,6 +23,10 @@ with open(os.path.join(SWAGGER_DOCS_DIR, 'base.yaml')) as base_stream:
 
 with open(MDW_VERSION_FILE) as mdw_version_file:
     mdw_version = mdw_version_file.read().strip()
+
+with open(os.path.join(SWAGGER_DOCS_DIR, 'node_oas3.yaml')) as node_stream:
+    node_oas3 = yaml.safe_load(node_stream)
+    node_schemas = node_oas3['components']['schemas']
 
 for filepath in Path(SWAGGER_DOCS_DIR).glob("*.spec.yaml"):
     with open(filepath, 'r') as stream:

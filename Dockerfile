@@ -97,6 +97,7 @@ RUN mix compile
 COPY config/runtime.exs config/
 
 # Generate swagger V3 file
+RUN cp /home/aeternity/node/local/lib/aehttp-$NODE_VERSION/priv/oas3.yaml docs/swagger_v3/node_oas3.yaml
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
 ARG PATH_PREFIX
 RUN scripts/swagger-docs.py
