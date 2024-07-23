@@ -11,7 +11,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
-  alias AeMdw.Util.Encoding
 
   import Mock
 
@@ -501,6 +500,165 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  |> with_store(store)
                  |> get(prev_url)
                  |> json_response(200)
+      end
+    end
+
+    test "when it has dex swap events", %{conn: conn} do
+      contract_pk1 = :crypto.strong_rand_bytes(32)
+      contract_pk2 = :crypto.strong_rand_bytes(32)
+      contract_id1 = :aeser_id.create(:contract, contract_pk1)
+      contract_id2 = :aeser_id.create(:contract, contract_pk2)
+
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      create_txi1 = 1
+      create_txi2 = 2
+      txi1 = 3
+      txi2 = 4
+
+      height = 500
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, contract_call1_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id1,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call1_tx} = :aetx.specialize_type(contract_call1_aetx)
+
+      {:ok, contract_call2_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id2,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call2_tx} = :aetx.specialize_type(contract_call2_aetx)
+
+      token_name1 = "TOKEN1"
+      token_name2 = "TOKEN2"
+      contract_amount1 = 100
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(index: {account_pk, create_txi1, txi1, 1111})
+        )
+        |> Store.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(index: {account_pk, create_txi2, txi2, 4111})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "tx-hash1"))
+        |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash2"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+        |> Store.put(
+          Model.Aex9ContractBalance,
+          Model.aex9_contract_balance(
+            index: contract_pk1,
+            amount: contract_amount1
+          )
+        )
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {create_txi1, :contract_call_tx, contract_pk1})
+        )
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {create_txi2, :contract_call_tx, contract_pk2})
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk1},
+            meta_info: {token_name1, "TK1", 18}
+          )
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk2},
+            meta_info: {token_name2, "TK2", 18}
+          )
+        )
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn
+             "tx-hash1" -> {"", :contract_call_tx, contract_call1_aetx, contract_call1_tx}
+             "tx-hash2" -> {"", :contract_call_tx, contract_call2_aetx, contract_call2_tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {DbContract, [],
+         [
+           call_fun_arg_res: fn _state, _contract_pk, _txi ->
+             %{
+               function: "fun",
+               arguments: [],
+               result: :ok,
+               return: :ok
+             }
+           end,
+           get_aexn_type: fn _state, _contract_pk -> :aex9 end
+         ]},
+        {Contract, [:passthrough],
+         call_rec: fn _signed_tx, _contract_pk, _block_hash -> {:error, :nocallrec} end},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [],
+         [
+           serialize_for_client: fn :header, aetx ->
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1, tx2], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "type" => "DexSwapEvent",
+                 "payload" => %{
+                   "token_name" => ^token_name1,
+                   "tx" => _tx,
+                   "amount" => ^contract_amount1
+                 }
+               } = tx1
+
+        assert %{
+                 "height" => ^height,
+                 "type" => "DexSwapEvent",
+                 "payload" => %{
+                   "token_name" => ^token_name2,
+                   "tx" => _tx,
+                   "amount" => 0
+                 }
+               } = tx2
       end
     end
 
@@ -1343,11 +1501,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       {:contract_call_tx, contract_call5_tx} = :aetx.specialize_type(contract_call5_aetx)
 
-      contract_pk1 = :crypto.strong_rand_bytes(32)
-      contract_pk2 = :crypto.strong_rand_bytes(32)
-      contract_id1 = Encoding.encode_contract(contract_pk1)
-      contract_id2 = Encoding.encode_contract(contract_pk2)
-
       store =
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
@@ -1393,27 +1546,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
         )
-        |> Store.put(
-          Model.AexnContract,
-          Model.aexn_contract(
-            index: {:aex9, contract_pk1},
-            meta_info: {"AEXName1", "AEXSymbol1", 10}
-          )
-        )
-        |> Store.put(
-          Model.AexnContract,
-          Model.aexn_contract(
-            index: {:aex9, contract_pk2},
-            meta_info: {"AEXName2", "AEXSymbol2", 10}
-          )
-        )
-        |> Store.put(
-          Model.Aex9ContractBalance,
-          Model.aex9_contract_balance(
-            index: contract_pk1,
-            amount: 100
-          )
-        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -1432,37 +1564,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          [
            call_fun_arg_res: fn _state, ^contract_pk, _txi ->
              %{
-               return: %{
-                 type: :list,
-                 value: [
-                   %{type: :int, value: 120_000_000_000_000_000_000},
-                   %{type: :int, value: 86_742_869_754_599_234_160}
-                 ]
-               },
-               function: "swap_exact_ae_for_tokens",
-               arguments: [
-                 %{type: :int, value: 80_040_928_673_018_091_600},
-                 %{
-                   type: :list,
-                   value: [
-                     %{
-                       type: :contract,
-                       value: contract_id1
-                     },
-                     %{
-                       type: :contract,
-                       value: contract_id2
-                     }
-                   ]
-                 },
-                 %{
-                   type: :address,
-                   value: "ak_dFjYZHMpWdBSLYeMyLcdrQC5pYPCL6wdD1o5MCkrYMYCnWRS7"
-                 },
-                 %{type: :int, value: 1_669_106_707_952},
-                 %{type: :variant, value: [0]}
-               ],
-               result: :ok
+               function: "fun",
+               arguments: [],
+               result: :ok,
+               return: :ok
              }
            end,
            get_aexn_type: fn _state, ^contract_pk -> :aex9 end
@@ -1489,34 +1594,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{
-                   "tx" => %{
-                     "aexn_type" => "aex9",
-                     "arguments" => [
-                       _arg0,
-                       %{
-                         "type" => "list",
-                         "value" => [
-                           %{
-                             "amount" => 100,
-                             "token_name" => "AEXName1",
-                             "type" => "contract",
-                             "value" => ^contract_id1
-                           },
-                           %{
-                             "amount" => 0,
-                             "token_name" => "AEXName2",
-                             "type" => "contract",
-                             "value" => ^contract_id2
-                           }
-                         ]
-                       },
-                       _arg2,
-                       _arg3,
-                       _arg4
-                     ]
-                   }
-                 }
+                 "payload" => %{"tx" => %{"aexn_type" => "aex9"}}
                } = tx1
 
         assert %{
