@@ -439,7 +439,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /aex141/{contractId}/token/{tokenId}:
+  /aex141/{contractId}/tokens/{tokenId}:
     get:
       deprecated: false
       description: Get owner of a NFT (AEX-141 token).
