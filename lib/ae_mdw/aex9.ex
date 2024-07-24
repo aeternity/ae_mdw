@@ -123,7 +123,11 @@ defmodule AeMdw.Aex9 do
       contract_id = encode_contract(contract_pk)
 
       paginated_balances =
-        (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
+        fn direction ->
+          state
+          |> Collection.stream(Model.Aex9BalanceAccount, direction, key_boundary, cursor_key)
+          |> Stream.reject(fn {_contract_pk, amount, _account_pk} -> amount == 0 end)
+        end
         |> Collection.paginate(
           pagination,
           &render_aex9_balance(state, contract_id, &1),
@@ -141,6 +145,7 @@ defmodule AeMdw.Aex9 do
 
       amounts =
         amounts
+        |> Enum.reject(fn {{:address, _pk}, amount} -> amount == 0 end)
         |> Enum.map(fn {{:address, pk}, amount} -> {pk, amount} end)
         |> Enum.sort()
 
