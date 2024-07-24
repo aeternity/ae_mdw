@@ -96,10 +96,10 @@ RUN mix compile
 # Changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/
 
-# Generate swagger V2 file
+# Generate swagger V3 file
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
 ARG PATH_PREFIX
-RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v3.yaml
+RUN scripts/swagger-docs.py
 
 # Install devmode
 COPY docker/aeplugin_dev_mode aeplugin_dev_mode
