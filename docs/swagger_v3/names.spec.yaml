@@ -1,6 +1,14 @@
 schemas:
   NameTx:
     type: object
+    required:
+      - block_hash
+      - block_height
+      - hash
+      - micro_index
+      - micro_time
+      - signatures
+      - tx
     properties:
       block_hash:
         type: string
@@ -18,9 +26,20 @@ schemas:
           type: string
       tx:
         type: object
+        required:
+          - account_id
+          - fee
+          - name_id
+          - nonce
+          - type
+          - version
         properties:
+          account_id:
+            type: string
           fee:
             type: integer
+          name_id:
+            type: string
           nonce:
             type: integer
           ttl:
@@ -49,6 +68,20 @@ schemas:
   Name:
     description: Name
     type: object
+    required:
+      - active
+      - hash
+      - active_from
+      - approximate_activation_time
+      - approximate_expire_time
+      - expire_height
+      - pointers
+      - auction
+      - auction_timeout
+      - ownership
+      - name
+      - name_fee
+      - revoke
     properties:
       active:
         type: boolean
@@ -72,7 +105,7 @@ schemas:
         type: array
         items:
           $ref: '#/components/schemas/Pointer'
-        properties:
+        properties: # TODO: can't be array and object at the same time
           account_pubkey:
             type: string
             example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
@@ -84,7 +117,7 @@ schemas:
         example: 1088448
       ownership:
         type: object
-        properties:
+        properties: # TODO: define required fields
           current:
             type: string
             example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
@@ -102,6 +135,13 @@ schemas:
   Auction:
     description: Auction
     type: object
+    required:
+      - auction_end
+      - activation_time
+      - approximate_expire_time
+      - last_bid
+      - name
+      - name_fee
     properties:
       auction_end:
         type: integer
@@ -114,6 +154,15 @@ schemas:
         example: 1692935617598
       last_bid:
         type: object
+        required:
+          - block_hash
+          - block_height
+          - encoded_tx
+          - hash
+          - micro_index
+          - micro_time
+          - signatures
+          - tx
         properties:
           block_hash:
             type: string
@@ -140,6 +189,7 @@ schemas:
               example: sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
           tx:
             type: object
+            # TODO: define properties
             example:
               account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
               fee: 16540000000000
@@ -160,6 +210,13 @@ schemas:
   NameClaim:
     description: Name Claim
     type: object
+    required:
+      - active_from
+      - source_tx_hash
+      - source_tx_type
+      - block_hash
+      - height
+      - tx
     properties:
       active_from:
         type: integer
@@ -178,6 +235,7 @@ schemas:
         example: 45784
       tx:
         type: object
+        # TODO: define properties
         example:
           account_id: "ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r"
           fee: 16540000000000
@@ -189,6 +247,13 @@ schemas:
   NameTransfer:
     description: Name Transfer
     type: object
+    required:
+      - active_from
+      - block_hash
+      - height
+      - source_tx_hash
+      - source_tx_type
+      - tx
     properties:
       active_from:
         type: integer
@@ -207,6 +272,7 @@ schemas:
         example: NameTransferTx
       tx:
         type: object
+        # TODO: define properties
         example:
           account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           fee: 30000
@@ -217,6 +283,13 @@ schemas:
   NameUpdate:
     description: Name Update
     type: object
+    required:
+      - active_from
+      - block_hash
+      - height
+      - source_tx_hash
+      - source_tx_type
+      - tx
     properties:
       active_from:
         type: integer
@@ -235,6 +308,7 @@ schemas:
         example: NameUpdateTx
       tx:
         type: object
+        # TODO: define properties
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -249,6 +323,16 @@ schemas:
   Pointee:
     description: Pointee
     type: object
+    required:
+      - active
+      - name
+      - key
+      - block_hash
+      - tx
+      - source_tx_type
+      - source_tx_hash
+      - block_height
+      - block_time
     properties:
       active:
         type: boolean
@@ -264,6 +348,7 @@ schemas:
         example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       tx:
         type: object
+        # TODO: define properties
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -290,6 +375,10 @@ schemas:
   Pointer:
     description: Pointer
     type: object
+    required:
+      - id
+      - key
+      - encoded_key
     properties:
       id:
         type: string
@@ -509,6 +598,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: array

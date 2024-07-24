@@ -1,6 +1,14 @@
 schemas:
   Transfer:
     type: object
+    required:
+      - account_id
+      - amount
+      - height
+      - kind
+      - ref_block_hash
+      - ref_tx_hash
+      - ref_tx_type
     properties:
       account_id:
         type: string

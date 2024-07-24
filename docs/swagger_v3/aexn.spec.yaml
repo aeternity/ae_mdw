@@ -468,6 +468,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: string
@@ -780,6 +782,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: integer
@@ -868,6 +872,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - account
+                  - amount
+                  - contract
                 properties:
                   account:
                     description: The account present on a AEX9
@@ -961,6 +969,11 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                            - account
+                            - amount
+                            - contract
+                            - height
                           properties:
                             account:
                               description: The account present on a AEX9

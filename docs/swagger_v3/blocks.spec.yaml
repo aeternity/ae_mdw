@@ -16,6 +16,22 @@ schemas:
       time: 1565548832164
       transactions_count: 2
       version: 3
+    required:
+      - beneficiary
+      - hash
+      - height
+      - info
+      - miner
+      - nonce
+      - pow
+      - prev_hash
+      - prev_key_hash
+      - state_hash
+      - target
+      - time
+      - version
+      - micro_blocks_count
+      - transactions_count
     properties:
       beneficiary:
         description: The beneficiary
@@ -36,7 +52,7 @@ schemas:
         description: The nonce
         type: string
       pow:
-        description: The pow
+        description: The proof of work
         type: array
         items:
           type: integer
@@ -80,6 +96,17 @@ schemas:
       time: 1668435898477
       txs_hash: "bx_2TAosDwRW2CwxbNiucN8hRfUHQcnJn2u3quDLPE9jAmgX26Qya"
       version: 5
+    required:
+      - micro_block_index
+      - transactions_count
+      - hash
+      - height
+      - pof_hash
+      - prev_hash
+      - prev_key_hash
+      - state_hash
+      - time
+      - version
     properties:
       micro_block_index:
         description: The index of the micro-block on the micro-block height, starting from 0

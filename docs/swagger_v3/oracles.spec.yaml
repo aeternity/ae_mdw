@@ -1,6 +1,14 @@
 schemas:
   OracleTx:
     type: object
+    required:
+      - block_hash
+      - block_height
+      - hash
+      - micro_index
+      - micro_time
+      - signatures
+      - tx
     properties:
       block_hash:
         type: string
@@ -18,6 +26,14 @@ schemas:
           type: string
       tx:
         type: object
+        required:
+          - fee
+          - nonce
+          - oracle_id
+          - oracle_ttl
+          - type
+          - version
+          - tx_hash
         properties:
           fee:
             type: integer
@@ -26,9 +42,16 @@ schemas:
           oracle_id:
             type: string
           oracle_ttl:
+            description: Expiration of the oracle
             type: object
+            required:
+              - type
+              - value
             properties:
               type:
+                enum:
+                - delta
+                - block
                 type: string
               value:
                 type: integer
@@ -120,11 +143,13 @@ schemas:
         $ref: "#/components/schemas/OracleTx"
     required:
       - register
+      - register_time
       - query_fee
       - oracle
       - format
       - extends
       - expire_height
+      - approximate_expire_time
       - active_from
       - active
     type: object
@@ -309,6 +334,7 @@ schemas:
       - block_time
       - height
       - query_id
+      - query
       - source_tx_hash
       - source_tx_type
       - fee
@@ -347,6 +373,11 @@ schemas:
         type: string
       tx:
         type: object
+        required:
+          - fee
+          - nonce
+          - oracle_id
+          - oracle_ttl
         properties:
           fee:
             description: The transaction fee
@@ -360,6 +391,17 @@ schemas:
           oracle_ttl:
             description: Expiration of the oracle
             type: object
+            required:
+              - type
+              - value
+            properties:
+              type:
+                enum:
+                - delta
+                - block
+                type: string
+              value:
+                type: integer
           ttl:
             description: Transaction TTL
             type: integer

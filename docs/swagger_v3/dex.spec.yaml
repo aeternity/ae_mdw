@@ -5,6 +5,11 @@ schemas:
     properties:
       amounts:
         type: object
+        required:
+          - amount0_in
+          - amount1_in
+          - amount0_out
+          - amount1_out
         properties:
           amount0_in:
             type: integer

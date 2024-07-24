@@ -2,6 +2,23 @@ schemas:
   DeltaStat:
     description: DeltaStat
     type: object
+    required:
+      - height
+      - auctions_started
+      - block_reward
+      - burned_in_auctions
+      - channels_closed
+      - channels_opened
+      - contracts_created
+      - dev_reward
+      - names_activated
+      - names_expired
+      - names_revoked
+      - oracles_expired
+      - oracles_registered
+      - last_tx_hash
+      - locked_in_auctions
+      - locked_in_channels
     properties:
       height:
         description: The generation
@@ -71,6 +88,22 @@ schemas:
   TotalStat:
     type: object
     description: TotalStat
+    required:
+      - height
+      - contracts
+      - locked_in_auctions
+      - burned_in_auctions
+      - locked_in_channels
+      - active_auctions
+      - active_names
+      - inactive_names
+      - active_oracles
+      - inactive_oracles
+      - open_channels
+      - sum_block_reward
+      - sum_dev_reward
+      - total_token_supply
+      - last_tx_hash
     properties:
       height:
         description: The generation
@@ -136,6 +169,10 @@ schemas:
   Statistic:
     type: object
     description: Statistic
+    required:
+      - count
+      - start_date
+      - end_date
     properties:
       count:
         description: The statistic count
@@ -153,6 +190,9 @@ schemas:
   Miner:
     type: object
     description: Miner
+    required:
+      - miner
+      - total_reward
     properties:
       miner:
         description: The miner (beneficiary) address
