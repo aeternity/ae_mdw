@@ -145,7 +145,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     block_index = {claim_height, 0}
     state = State.new(store)
     timeout = :aec_governance.name_claim_bid_timeout(plain_name, protocol_version)
-    extended = :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
+    extension = :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
     tx_hash = <<1::256>>
     expire_height = claim_height + timeout
 
@@ -187,7 +187,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         name_fee,
         false,
         next_txi_idx,
-        {claim_height + 1, 0},
+        {claim_height, 0},
         protocol_version
       )
 
@@ -202,6 +202,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       })
 
     {:name_claim_tx, claim_tx} = :aetx.specialize_type(claim_aetx)
+    expire_height = expire_height + extension
 
     with_mocks [
       {AeMdw.Node.Db, [:passthrough],
@@ -243,20 +244,20 @@ defmodule AeMdw.Db.NameClaimMutationTest do
           name_fee,
           false,
           {almost_expired_txi, -1},
-          {expire_height - 1, 0},
+          {claim_height + 100, 0},
           protocol_version
         )
 
       state = Mutation.execute(bid_mutation_2, state)
 
-      new_expire_height = expire_height - 1 + extended
+      expire_height = expire_height + extension
 
       assert {:ok,
               Model.auction_bid(
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^new_expire_height
+                expire_height: ^expire_height
               )} = State.get(state, Model.AuctionBid, plain_name)
 
       bid_mutation_3 =
@@ -267,18 +268,20 @@ defmodule AeMdw.Db.NameClaimMutationTest do
           name_fee,
           false,
           {almost_expired_txi + 1, -1},
-          {new_expire_height - extended - 1, 0},
+          {claim_height + 200, 0},
           protocol_version
         )
 
       state = Mutation.execute(bid_mutation_3, state)
+
+      expire_height = expire_height + extension
 
       assert {:ok,
               Model.auction_bid(
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^new_expire_height
+                expire_height: ^expire_height
               )} = State.get(state, Model.AuctionBid, plain_name)
     end
   end
