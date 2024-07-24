@@ -286,79 +286,79 @@ paths:
                 type: object
                 properties:
                   channel_close_mutual_tx:
-                    type: object
+                    type: integer
                     description: The channel close mutual transactions count
                   channel_close_solo_tx:
-                    type: object
+                    type: integer
                     description: The channel close solo transactions count
                   channel_create_tx:
-                    type: object
+                    type: integer
                     description: The channel create transactions count
                   channel_deposit_tx:
-                    type: object
+                    type: integer
                     description: The channel deposit transactions count
                   channel_force_progress_tx:
                     type: integer
                     description: The channel force progress transactions count
                   channel_offchain_tx:
-                    type: object
+                    type: integer
                     description: The channel offchain transactions count
                   channel_settle_tx:
-                    type: object
+                    type: integer
                     description: The channel settle transactions count
                   channel_slash_tx:
-                    type: object
+                    type: integer
                     description: The channel slash transactions count
                   channel_snapshot_solo_tx:
-                    type: object
+                    type: integer
                     description: The channel snapshot solo transactions count
                   channel_withdraw_tx:
-                    type: object
+                    type: integer
                     description: The channel withdraw transactions count
                   contract_call_tx:
-                    type: object
+                    type: integer
                     description: The contract call transactions count
                   contract_create_tx:
-                    type: object
+                    type: integer
                     description: The contract create transactions count
                   ga_attach_tx:
-                    type: object
+                    type: integer
                     description: The ga attach transactions count
                   ga_meta_tx:
-                    type: object
+                    type: integer
                     description: The ga meta transactions count
                   name_claim_tx:
-                    type: object
+                    type: integer
                     description: The name claim transactions count
                   name_preclaim_tx:
-                    type: object
+                    type: integer
                     description: The name preclaim transactions count
                   name_revoke_tx:
-                    type: object
+                    type: integer
                     description: The name revoke transactions count
                   name_transfer_tx:
                     type: integer
                     description: The name transfer transactions count
                   name_update_tx:
-                    type: object
+                    type: integer
                     description: The name update transactions count
                   oracle_extend_tx:
-                    type: object
+                    type: integer
                     description: The oracle extend transactions count
                   oracle_query_tx:
-                    type: object
+                    type: integer
                     description: The oracle query transactions count
                   oracle_register_tx:
-                    type: object
+                    type: integer
                     description: The oracle register transactions count
                   oracle_response_tx:
-                    type: object
+                    type: integer
                     description: The oracle response transactions count
                   paying_for_tx:
-                    type: object
+                    type: integer
                     description: The paying for transactions count
                   spend_tx:
-                    type: object
+                    type: integer
                     description: The spend transactions count
         '400':
           description: Bad request
