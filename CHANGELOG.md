@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.82.1](https://www.github.com/aeternity/ae_mdw/compare/v1.82.0...v1.82.1) (2024-07-24)
+
+
+### Bug Fixes
+
+* calculate auction expiration correctly when extension present ([#1866](https://www.github.com/aeternity/ae_mdw/issues/1866)) ([847dab4](https://www.github.com/aeternity/ae_mdw/commit/847dab41f2860fc8ecd864c81006b9d31b9a95ab))
+* rename aex141 token path to conform to the others ([#1864](https://www.github.com/aeternity/ae_mdw/issues/1864)) ([a7de382](https://www.github.com/aeternity/ae_mdw/commit/a7de3825fcdb03b05d80785c75518ec4a8fc7272))
+
 ## [1.82.0](https://www.github.com/aeternity/ae_mdw/compare/v1.81.0...v1.82.0) (2024-07-22)
 
 
