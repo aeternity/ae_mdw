@@ -23,23 +23,12 @@ schemas:
             type: integer
           nonce:
             type: integer
-          oracle_id:
-            type: string
-          oracle_ttl:
-            type: object
-            properties:
-              type:
-                type: string
-              value:
-                type: integer
           ttl:
             type: integer
           type:
             type: string
           version:
             type: integer
-          tx_hash:
-            type: string
     example:
       block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       block_height: 45784
