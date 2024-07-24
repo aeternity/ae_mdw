@@ -427,6 +427,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -499,6 +501,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -534,6 +538,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -576,6 +582,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -625,6 +633,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -667,6 +677,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -742,6 +754,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -806,6 +820,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -893,6 +909,8 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -936,6 +954,8 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array

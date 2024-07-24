@@ -192,6 +192,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -266,6 +268,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -331,6 +335,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
