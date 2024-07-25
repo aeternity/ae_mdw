@@ -1,6 +1,26 @@
 schemas:
   Channel:
     type: object
+    required:
+      - active
+      - amount
+      - channel
+      - channel_reserve
+      - delegate_ids
+      - initiator
+      - initiator_amount
+      - last_updated_height
+      - last_updated_tx_type
+      - last_updated_time
+      - last_updated_tx_hash
+      - lock_period
+      - locked_until
+      - responder
+      - responder_amount
+      - round
+      - solo_round
+      - state_hash
+      - updates_count
     properties:
       active:
         type: boolean
@@ -19,7 +39,7 @@ schemas:
         description: Minimum amount for sufficient funds
         example: 500000000000000000
       delegate_ids:
-        type: object
+        type: object # TODO: define properties
         description: Pubkeys of delegated accounts
         example: {
           "initiator": [],
@@ -110,6 +130,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array

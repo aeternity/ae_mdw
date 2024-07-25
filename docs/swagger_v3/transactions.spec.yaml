@@ -2,6 +2,15 @@ schemas:
   Transaction:
     description: Transaction
     type: object
+    required:
+      - block_hash
+      - block_height
+      - encoded_tx
+      - hash
+      - micro_index
+      - micro_time
+      - signatures
+      - tx
     properties:
       block_hash:
         description: The block hash
@@ -28,10 +37,8 @@ schemas:
           type: string
       tx:
         description: The transaction
+        # TODO: define properties
         type: object
-      ttl:
-        description: The time to live
-        type: integer
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
@@ -175,6 +182,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -282,81 +291,107 @@ paths:
                   sender_id: 2
               schema:
                 type: object
+                required:
+                  - channel_close_mutual_tx
+                  - channel_close_solo_tx
+                  - channel_create_tx
+                  - channel_deposit_tx
+                  - channel_force_progress_tx
+                  - channel_offchain_tx
+                  - channel_settle_tx
+                  - channel_slash_tx
+                  - channel_snapshot_solo_tx
+                  - channel_withdraw_tx
+                  - contract_call_tx
+                  - contract_create_tx
+                  - ga_attach_tx
+                  - ga_meta_tx
+                  - name_claim_tx
+                  - name_preclaim_tx
+                  - name_revoke_tx
+                  - name_transfer_tx
+                  - name_update_tx
+                  - oracle_extend_tx
+                  - oracle_query_tx
+                  - oracle_register_tx
+                  - oracle_response_tx
+                  - paying_for_tx
+                  - spend_tx
                 properties:
                   channel_close_mutual_tx:
-                    type: object
+                    type: integer
                     description: The channel close mutual transactions count
                   channel_close_solo_tx:
-                    type: object
+                    type: integer
                     description: The channel close solo transactions count
                   channel_create_tx:
-                    type: object
+                    type: integer
                     description: The channel create transactions count
                   channel_deposit_tx:
-                    type: object
+                    type: integer
                     description: The channel deposit transactions count
                   channel_force_progress_tx:
                     type: integer
                     description: The channel force progress transactions count
                   channel_offchain_tx:
-                    type: object
+                    type: integer
                     description: The channel offchain transactions count
                   channel_settle_tx:
-                    type: object
+                    type: integer
                     description: The channel settle transactions count
                   channel_slash_tx:
-                    type: object
+                    type: integer
                     description: The channel slash transactions count
                   channel_snapshot_solo_tx:
-                    type: object
+                    type: integer
                     description: The channel snapshot solo transactions count
                   channel_withdraw_tx:
-                    type: object
+                    type: integer
                     description: The channel withdraw transactions count
                   contract_call_tx:
-                    type: object
+                    type: integer
                     description: The contract call transactions count
                   contract_create_tx:
-                    type: object
+                    type: integer
                     description: The contract create transactions count
                   ga_attach_tx:
-                    type: object
+                    type: integer
                     description: The ga attach transactions count
                   ga_meta_tx:
-                    type: object
+                    type: integer
                     description: The ga meta transactions count
                   name_claim_tx:
-                    type: object
+                    type: integer
                     description: The name claim transactions count
                   name_preclaim_tx:
-                    type: object
+                    type: integer
                     description: The name preclaim transactions count
                   name_revoke_tx:
-                    type: object
+                    type: integer
                     description: The name revoke transactions count
                   name_transfer_tx:
                     type: integer
                     description: The name transfer transactions count
                   name_update_tx:
-                    type: object
+                    type: integer
                     description: The name update transactions count
                   oracle_extend_tx:
-                    type: object
+                    type: integer
                     description: The oracle extend transactions count
                   oracle_query_tx:
-                    type: object
+                    type: integer
                     description: The oracle query transactions count
                   oracle_register_tx:
-                    type: object
+                    type: integer
                     description: The oracle register transactions count
                   oracle_response_tx:
-                    type: object
+                    type: integer
                     description: The oracle response transactions count
                   paying_for_tx:
-                    type: object
+                    type: integer
                     description: The paying for transactions count
                   spend_tx:
-                    type: object
+                    type: integer
                     description: The spend transactions count
         '400':
           description: Bad request

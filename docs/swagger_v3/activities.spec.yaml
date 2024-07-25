@@ -2,6 +2,16 @@ schemas:
   Aex9TransferEvent:
     description: AEx9 Transfer
     type: object
+    required:
+      - amount
+      - block_height
+      - contract_id
+      - log_idx
+      - micro_index
+      - micro_time
+      - recipient_id
+      - sender_id
+      - tx_hash
     properties:
       amount:
         type: integer
@@ -33,6 +43,16 @@ schemas:
   Aex141TransferEvent:
     description: AEx141 Transfer
     type: object
+    required:
+      - block_height
+      - contract_id
+      - log_idx
+      - micro_index
+      - micro_time
+      - recipient
+      - sender
+      - token_id
+      - tx_hash
     properties:
       block_height:
         type: integer
@@ -197,6 +217,7 @@ schemas:
           - $ref: '#/components/schemas/InternalTransferEvent'
     required:
       - block_hash
+      - block_time
       - height
       - type
       - payload
@@ -247,6 +268,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array

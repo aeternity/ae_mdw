@@ -2,6 +2,13 @@ schemas:
   Contract:
     description: Contract creation info
     type: object
+    required:
+      - aexn_type
+      - block_hash
+      - contract
+      - source_tx_hash
+      - source_tx_type
+      - create_tx
     properties:
       aexn_type:
         type: string
@@ -36,6 +43,16 @@ schemas:
   ContractCall:
     description: ContractCall
     type: object
+    required:
+      - block_hash
+      - call_tx_hash
+      - contract_id
+      - contract_tx_hash
+      - function
+      - height
+      - internal_tx
+      - local_idx
+      - micro_index
     properties:
       block_hash:
         type: string
@@ -82,6 +99,22 @@ schemas:
   ContractLog:
     description: ContractLog
     type: object
+    required:
+      - args
+      - block_hash
+      - block_time
+      - call_tx_hash
+      - contract_id
+      - contract_tx_hash
+      - data
+      - event_hash
+      - event_name
+      - ext_caller_contract_id
+      - ext_caller_contract_tx_hash
+      - height
+      - log_idx
+      - micro_index
+      - parent_contract_id
     properties:
       args:
         type: array
@@ -119,6 +152,7 @@ schemas:
       ext_caller_contract_id:
         type: string
         example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
+        nullable: true
       ext_caller_contract_tx_hash:
         type: string
         example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
@@ -228,6 +262,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
@@ -257,6 +293,8 @@ paths:
               schema:
                 allOf:
                   - type: object
+                    required:
+                      - data
                     properties:
                       data:
                         type: array
