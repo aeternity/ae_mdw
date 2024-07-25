@@ -119,15 +119,11 @@ defmodule AeMdw.Aex9 do
   def fetch_event_balances(state, contract_id, pagination, cursor, :amount, _query) do
     with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
-      key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+      key_boundary = {{contract_pk, 1, <<>>}, {contract_pk, Util.max_int(), <<>>}}
       contract_id = encode_contract(contract_pk)
 
       paginated_balances =
-        fn direction ->
-          state
-          |> Collection.stream(Model.Aex9BalanceAccount, direction, key_boundary, cursor_key)
-          |> Stream.reject(fn {_contract_pk, amount, _account_pk} -> amount == 0 end)
-        end
+        (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
         |> Collection.paginate(
           pagination,
           &render_aex9_balance(state, contract_id, &1),
