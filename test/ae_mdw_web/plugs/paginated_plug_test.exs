@@ -117,6 +117,16 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> get_assigns()
 
+      assert %{"error" => "invalid unix time: 10000000000000"} =
+               conn
+               |> with_store(store)
+               |> put_query(%{
+                 "scope" => "time:10000000000000-200000000000",
+                 "direction" => "forward"
+               })
+               |> PaginatedPlug.call([])
+               |> json_response(400)
+
       assert %{"error" => "invalid scope: asdf"} =
                conn
                |> with_store(store)
