@@ -119,7 +119,7 @@ defmodule AeMdw.Aex9 do
   def fetch_event_balances(state, contract_id, pagination, cursor, :amount, _query) do
     with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
-      key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+      key_boundary = {{contract_pk, 1, <<>>}, {contract_pk, Util.max_int(), <<>>}}
       contract_id = encode_contract(contract_pk)
 
       paginated_balances =
@@ -141,6 +141,7 @@ defmodule AeMdw.Aex9 do
 
       amounts =
         amounts
+        |> Enum.reject(fn {{:address, _pk}, amount} -> amount == 0 end)
         |> Enum.map(fn {{:address, pk}, amount} -> {pk, amount} end)
         |> Enum.sort()
 

@@ -939,6 +939,52 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
     end
 
+    test "ignores balances where the amount is 0", %{
+      contract_pk2: contract_pk2
+    } do
+      contract_id = encode_contract(contract_pk2)
+
+      txi_with_amount = 3
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.Aex9BalanceAccount,
+          Model.aex9_balance_account(
+            index: {contract_pk2, 0, <<1::256>>},
+            txi: 1,
+            log_idx: 2
+          )
+        )
+        |> Store.put(
+          Model.Aex9BalanceAccount,
+          Model.aex9_balance_account(
+            index: {contract_pk2, 1, <<1::256>>},
+            txi: txi_with_amount,
+            log_idx: 4
+          )
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(
+            index: txi_with_amount,
+            id: <<txi_with_amount::256>>,
+            block_index: {txi_with_amount, -1}
+          )
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {txi_with_amount, -1}, hash: <<0::256>>)
+        )
+
+      conn = with_store(build_conn(), store)
+
+      assert %{"data" => [%{"amount" => 1}]} =
+               conn
+               |> get("/v3/aex9/#{contract_id}/balances", by: "amount")
+               |> json_response(200)
+    end
+
     test "gets event balances for a contract with limit", %{conn: conn} do
       contract_id = encode_contract(<<200::256>>)
       limit = 8
