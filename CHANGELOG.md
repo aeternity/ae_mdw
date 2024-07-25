@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.82.2](https://www.github.com/aeternity/ae_mdw/compare/v1.82.1...v1.82.2) (2024-07-25)
+
+
+### Bug Fixes
+
+* filter aex9 balances by amount correctly ([#1867](https://www.github.com/aeternity/ae_mdw/issues/1867)) ([d689d47](https://www.github.com/aeternity/ae_mdw/commit/d689d47b5e7db923b0bbb3c5ef8081053501a7c3))
+* take max expiration between extension and prev expiration ([#1871](https://www.github.com/aeternity/ae_mdw/issues/1871)) ([7dd50b8](https://www.github.com/aeternity/ae_mdw/commit/7dd50b8bc44a9defe9236469dbd0ab885dc90061))
+
+
+### Miscellaneous
+
+* remove overwrite of network_id and use values from aeternity.yaml ([#1848](https://www.github.com/aeternity/ae_mdw/issues/1848)) ([3ee3b28](https://www.github.com/aeternity/ae_mdw/commit/3ee3b289955bc63a3b40f0260612cdaa9aebc2d0))
+
 ### [1.82.1](https://www.github.com/aeternity/ae_mdw/compare/v1.82.0...v1.82.1) (2024-07-24)
 
 
