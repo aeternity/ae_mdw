@@ -152,8 +152,10 @@ defmodule AeMdw.Db.NameClaimMutation do
              owner: prev_owner
            ) = auction_bid} ->
             auction_end =
-              prev_auction_end +
-                :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
+              max(
+                prev_auction_end,
+                height + :aec_governance.name_claim_bid_extension(plain_name, protocol_version)
+              )
 
             prev_name_claim_tx = DbUtil.read_node_tx(state, prev_txi_idx)
             prev_name_fee = :aens_claim_tx.name_fee(prev_name_claim_tx)
