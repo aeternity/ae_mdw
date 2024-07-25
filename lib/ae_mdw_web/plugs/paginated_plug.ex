@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   import Plug.Conn
 
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias Phoenix.Controller
   alias Plug.Conn
@@ -86,7 +87,9 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
-    case extract_range(range) do
+    range
+    |> extract_range()
+    |> case do
       {:ok, first, last} when first < last ->
         {:forward, generate_range(state, scope_type, first, last)}
 
