@@ -202,7 +202,6 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       })
 
     {:name_claim_tx, claim_tx} = :aetx.specialize_type(claim_aetx)
-    expire_height = expire_height + extension
 
     with_mocks [
       {AeMdw.Node.Db, [:passthrough],
@@ -250,8 +249,6 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
       state = Mutation.execute(bid_mutation_2, state)
 
-      expire_height = expire_height + extension
-
       assert {:ok,
               Model.auction_bid(
                 index: ^plain_name,
@@ -268,13 +265,13 @@ defmodule AeMdw.Db.NameClaimMutationTest do
           name_fee,
           false,
           {almost_expired_txi + 1, -1},
-          {claim_height + 200, 0},
+          {claim_height + timeout - 10, 0},
           protocol_version
         )
 
       state = Mutation.execute(bid_mutation_3, state)
 
-      expire_height = expire_height + extension
+      expire_height = claim_height + timeout - 10 + extension
 
       assert {:ok,
               Model.auction_bid(
