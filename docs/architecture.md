@@ -518,7 +518,7 @@ middleware stores the output of the sync data in two separate places:
 ...--- Synced into Rocksdb ----> <----------- Synced into memory ------------->
 ```
 
-Every time any of the last 10 genenerations change (via forks or new blocks
+Every time any of the last 10 generations change (via forks or new blocks
 added), the new generations needed to be added onto the database are first
 processed (if any), and then the new in-memory generations are processed.
 
@@ -566,7 +566,7 @@ accordingly:
   not yet been synced, it spawns an new `Task` to store these changes and
   enters into `{:syncing_db, ref}` state. When the task is done, it triggers
   a `:done` event.
-* If there's at least 1 key or micro block that is not yet part of the memmory,
+* If there's at least 1 key or micro block that is not yet part of the memory,
   it spawns a new `Task` to store these changes and enters into
   `{:syncing_mem, ref}` state. When the task is done it triggers a `:done`
   event.

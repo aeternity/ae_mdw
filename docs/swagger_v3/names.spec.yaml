@@ -1,5 +1,6 @@
 schemas:
   NameTx:
+    type: object
     properties:
       block_hash:
         type: string
@@ -39,6 +40,23 @@ schemas:
             type: integer
           tx_hash:
             type: string
+    example:
+      block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+      block_height: 45784
+      hash: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+      micro_index: 2
+      micro_time: 1687575562705
+      signatures:
+        - sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
+      tx:
+        account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao,
+        fee: 16660000000000,
+        name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain,
+        name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff,
+        nonce: 4,
+        ttl: 2762,
+        type: NameRevokeTx,
+        version: 1
   Name:
     description: Name
     type: object
@@ -49,7 +67,6 @@ schemas:
       hash:
         type: string
         example: nm_2YmgvoUhVua9wEYGpMj9ybctbQXHPbY9Ppu4CoKoUm8jjFfcsc
-        type: object
       active_from:
         type: integer
         example: 163282
@@ -93,23 +110,6 @@ schemas:
         example: 134626900000000000000
       revoke:
         $ref: '#/components/schemas/NameTx'
-        example:
-            block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
-            block_height: 45784
-            hash: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
-            micro_index: 2
-            micro_time: 1687575562705
-            signatures:
-              - sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
-            tx:
-              account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao,
-              fee: 16660000000000,
-              name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain,
-              name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff,
-              nonce: 4,
-              ttl: 2762,
-              type: NameRevokeTx,
-              version: 1
   Auction:
     description: Auction
     type: object
@@ -373,7 +373,7 @@ paths:
     get:
       deprecated: false
       description: Get the total number of active names.
-      operationId: get_names_count
+      operationId: GetNamesCount
       parameters:
         - name: owned_by
           in: query

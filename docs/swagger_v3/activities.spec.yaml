@@ -222,14 +222,13 @@ paths:
             type: boolean
             example: true
         - name: type
-          description: Filter by activity type
           in: query
           required: false
           schema:
             type: string
             enum: [transactions, aexn, aex9, aex141, contract, transfers, claims]
           description: >
-            Activity type:
+            Filter by activity type. Supported values:
              * `transactions` - Transactions containing the account in any of the transaction fields
              * `aexn` - AExN (aex9 and aex141) activities
              * `aex9` - AEx9 activities
@@ -242,7 +241,7 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
-          description: Returns paginatinated activities
+          description: Returns paginated activities
           content:
             application/json:
               schema:

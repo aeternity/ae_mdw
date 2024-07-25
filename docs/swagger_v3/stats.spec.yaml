@@ -168,7 +168,7 @@ paths:
     get:
       deprecated: false
       description: Get delta stats.
-      operationId: GetDeltastats
+      operationId: GetDeltaStats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -197,7 +197,7 @@ paths:
     get:
       deprecated: false
       description: Get total accumulated stats.
-      operationId: GetTotalstats
+      operationId: GetTotalStats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
@@ -226,7 +226,7 @@ paths:
     get:
       deprecated: false
       description: Get miners list with total rewards obtained through mining.
-      operationId: GetMinerstats
+      operationId: GetMinerStats
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'

@@ -179,7 +179,7 @@ GET /v3/aex9/:contract_id                              - aex9 contract tokens
 GET /v3/aex9/:contract_id/balances                     - aex9 contract balances
 GET /v3/aex9/:contract_id/balances/:account_id         - aex9 contract account balance
 GET /v3/aex9/transfers                                 - aex9 transfers that can be filtered by sender/recipient
-GET /v3/aex9/:contract_id/balances/:account_id/history - aex9 contract account balanances history
+GET /v3/aex9/:contract_id/balances/:account_id/history - aex9 contract account balances history
 
 GET /v3/aex141                                         - nft contracts meta info and stats
 GET /v3/aex141/:contract_id                            - nft contract meta info and stats

@@ -188,7 +188,7 @@ schemas:
         description: The number of decimals for AEX9 token
         type: integer
       extensions:
-        description: Extensions implemnted by the contract
+        description: Extensions implemented by the contract
         type: array
         items:
           type: string
@@ -851,21 +851,20 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - type: object
-                    properties:
-                      account:
-                        description: The account present on a AEX9
-                        type: string
-                        example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
-                      amount:
-                        description: The amount of AEX9 token
-                        type: integer
-                        example: 4050000000000
-                      contract:
-                        description: The contract id of given token
-                        type: string
-                        example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
+                type: object
+                properties:
+                  account:
+                    description: The account present on a AEX9
+                    type: string
+                    example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
+                  amount:
+                    description: The amount of AEX9 token
+                    type: integer
+                    example: 4050000000000
+                  contract:
+                    description: The contract id of given token
+                    type: string
+                    example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
         '400':
           description: Bad request
           content:

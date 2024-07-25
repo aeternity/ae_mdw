@@ -48,7 +48,6 @@ components:
       required:
         - error
       title: Error response
-      type: object
     NotFoundResponse:
       description: Resource not found on the API
       type: object
@@ -61,7 +60,6 @@ components:
       required:
         - error
       title: Not found response
-      type: object
     PaginatedResponse:
       type: object
       properties:

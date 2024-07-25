@@ -169,7 +169,7 @@ paths:
 
       responses:
         '200':
-          description: Returns paginatinated transactions
+          description: Returns paginated transactions
           content:
             application/json:
               schema:
