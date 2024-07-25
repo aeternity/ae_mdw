@@ -1,8 +1,5 @@
 import Config
 
-# Chain
-config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
-
 # Telemetry
 config :ae_mdw, :enable_livedashboard, true
 

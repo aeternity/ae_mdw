@@ -15,8 +15,6 @@ if System.get_env("INTEGRATION_TEST") != "1" do
   config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "test_data.db"
 end
 
-config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
-
 # HTTP
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4002],
