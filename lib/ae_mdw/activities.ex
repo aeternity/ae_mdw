@@ -339,8 +339,8 @@ defmodule AeMdw.Activities do
       case txi_scope do
         nil ->
           {
-            {account_pk, 0, Util.min_int(), nil},
-            {account_pk, nil, Util.max_int(), nil}
+            {account_pk, Util.min_int(), Util.min_int(), nil},
+            {account_pk, Util.max_int(), Util.max_int(), nil}
           }
 
         {first_txi, last_txi} ->
