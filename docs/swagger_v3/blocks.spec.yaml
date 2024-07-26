@@ -103,6 +103,8 @@ schemas:
       - prev_hash
       - prev_key_hash
       - state_hash
+      - txs_hash
+      - signature
       - time
       - version
     properties:
@@ -129,6 +131,12 @@ schemas:
         type: string
       state_hash:
         description: The state hash
+        type: string
+      txs_hash:
+        description: Transactions hash
+        type: string
+      signature:
+        description: Micro block signature
         type: string
       time:
         description: The time
