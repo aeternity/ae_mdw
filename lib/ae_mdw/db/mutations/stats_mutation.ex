@@ -13,6 +13,7 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.ObjectKeys
+  alias AeMdw.Node
   alias AeMdw.Stats
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -191,7 +192,7 @@ defmodule AeMdw.Db.StatsMutation do
       locked_in_channels: prev_locked_in_channels
     ) = fetch_total_stat(state, height - 1)
 
-    token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
+    token_supply_delta = Node.token_supply_delta(height - 1)
     auctions_expired = get(state, :auctions_expired, 0)
 
     Model.total_stat(

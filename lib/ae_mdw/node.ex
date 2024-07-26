@@ -1,16 +1,21 @@
 defmodule AeMdw.Node do
   @moduledoc """
-  Sample module to understand all of the functions the AwMdw.Node module
-  provides. Including it's specs as well.
+  Node module that contains most of the logic for communicating with the node and
+  accessing oftenly used information.
 
-  Right now this module and its functions are defined using the
-  SmartGlobal library at runtime. The purpose of the module is to make
-  all of these functions more explicit.
+  Since this module is used often, most of the functions are defined using Memoize
+  for rapid access.
   """
 
   alias AeMdw.AexnContracts
   alias AeMdw.Contract
   alias AeMdw.Contracts
+  alias AeMdw.Db.HardforkPresets
+  alias AeMdw.Extract
+  alias AeMdw.Extract.AbsCode
+  alias AeMdw.Util
+
+  import AeMdw.Util.Memoize
 
   @type tx_group :: :channel | :contract | :ga | :name | :oracle | :paying | :spend
   @type tx_type ::
@@ -41,6 +46,11 @@ defmodule AeMdw.Node do
           | :channel_offchain_tx
           | :channel_client_reconnect_tx
           | :paying_for_tx
+  @type height() :: non_neg_integer()
+  @type amount() :: non_neg_integer()
+  @type id_tag() :: :account | :oracle | :name | :commitment | :contract | :channel
+  @type tx_field() :: atom()
+  @type tx_field_pos() :: non_neg_integer()
 
   @opaque signed_tx() :: tuple()
   @opaque aetx() :: tuple()
@@ -69,100 +79,109 @@ defmodule AeMdw.Node do
   @typep method_signature :: {list(), any()}
 
   @spec aex9_signatures :: %{method_hash() => method_signature()}
-  def aex9_signatures do
+  defmemo aex9_signatures() do
     Contract.aex9_signatures()
     |> map_by_function_hash()
   end
 
   @spec aex141_signatures :: %{method_hash() => method_signature()}
-  def aex141_signatures do
+  defmemo aex141_signatures() do
     Contract.aex141_signatures()
     |> map_by_function_hash()
   end
 
   @spec previous_aex141_signatures :: %{method_hash() => method_signature()}
-  def previous_aex141_signatures do
+  defmemo previous_aex141_signatures() do
     Contract.previous_aex141_signatures()
     |> map_by_function_hash()
   end
 
   @spec aexn_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
-  def aexn_event_hash_types() do
-    map_event_hash_to_type([
-      :allowance,
-      :approval,
-      :approval_for_all,
-      :burn,
-      :mint,
-      :swap,
-      :edition_limit,
-      :edition_limit_decrease,
-      :template_creation,
-      :template_deletion,
-      :template_mint,
-      :template_limit,
-      :template_limit_decrease,
-      :token_limit,
-      :token_limit_decrease,
-      :transfer
-    ])
+  defmemo aexn_event_hash_types() do
+    map_event_hash_to_type(~w(
+      allowance
+      approval
+      approval_for_all
+      burn
+      mint
+      swap
+      edition_limit
+      edition_limit_decrease
+      template_creation
+      template_deletion
+      template_mint
+      template_limit
+      template_limit_decrease
+      token_limit
+      token_limit_decrease
+      transfer
+    )a)
   end
 
   @spec aexn_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
-  def aexn_event_names() do
+  defmemo aexn_event_names() do
     aexn_event_hash_types()
     |> map_event_hash_to_name()
   end
 
   @spec dex_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
-  def dex_event_hash_types() do
-    map_event_hash_to_type([
-      :pair_created,
-      :swap_tokens
-    ])
+  defmemo dex_event_hash_types() do
+    map_event_hash_to_type(~w(
+      pair_created
+      swap_tokens
+    )a)
   end
 
   @spec dex_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
-  def dex_event_names() do
+  defmemo dex_event_names() do
     dex_event_hash_types()
     |> map_event_hash_to_name()
   end
 
-  @spec hdr_fields(:key | :micro) :: [atom()]
-  def hdr_fields(_arg) do
-    ~w(height prev_hash)a
-  end
-
-  @spec height_proto :: [{non_neg_integer(), non_neg_integer()}]
-  def height_proto do
+  @spec height_proto() :: [{non_neg_integer(), non_neg_integer()}]
+  defmemo height_proto() do
     :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(:desc)
   end
 
-  @spec id_field_type(atom()) :: %{atom() => non_neg_integer()} | nil
-  def id_field_type(_field) do
-    %{}
-  end
-
   @spec id_fields :: MapSet.t()
-  def id_fields do
-    MapSet.new()
+  defmemo id_fields() do
+    {_tx_field_types, _tx_fields, tx_ids} = types_fields_ids()
+
+    tx_ids
+    |> Enum.reduce(%{}, fn {type, ids_map}, acc ->
+      for {field, pos} <- ids_map,
+          reduce: acc,
+          do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
+    end)
+    |> Map.keys()
+    |> Enum.map(Util.compose(&to_string/1, &hd/1))
+    |> MapSet.new()
   end
 
-  @spec id_prefix(binary()) :: atom()
-  def id_prefix(_arg) do
+  @spec id_prefixes() :: MapSet.t()
+  defmemo id_prefixes() do
+    aeser_code()
+    |> AbsCode.reduce({:pfx2type, 1}, [], fn {:clause, _loc1,
+                                              [
+                                                {:bin, _loc2,
+                                                 [
+                                                   {:bin_element, _loc3, {:string, _loc4, pfx},
+                                                    _rep_size, _rep_tsl}
+                                                 ]}
+                                              ], [], [{:atom, _loc5, _type}]},
+                                             acc ->
+      ["#{pfx}" | acc]
+    end)
+    |> MapSet.new()
   end
 
-  @spec id_prefixes :: MapSet.t()
-  def id_prefixes do
-    MapSet.new()
-  end
-
-  @spec id_type(atom()) :: atom()
-  def id_type(_arg) do
+  @spec id_type(atom()) :: id_tag()
+  defmemo id_type(id_type) do
+    Map.fetch!(id_type(), id_type)
   end
 
   @spec lima_height :: non_neg_integer()
-  def lima_height do
+  defmemo lima_height() do
     :aec_governance.get_network_id()
     |> :aec_hard_forks.protocols_from_network_id()
     |> Enum.find_value(fn {vsn, height} ->
@@ -170,87 +189,85 @@ defmodule AeMdw.Node do
     end)
   end
 
-  @spec max_blob :: binary()
-  def max_blob do
-    ""
+  @spec min_block_reward_height :: height()
+  defmemo min_block_reward_height() do
+    :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
   end
 
-  @spec min_block_reward_height :: non_neg_integer()
-  def min_block_reward_height do
-    123
+  @spec token_supply_delta(height()) :: amount()
+  defmemo token_supply_delta(height) do
+    Map.get(token_supply_delta(), height, 0)
   end
 
-  @spec token_supply_delta(non_neg_integer()) :: non_neg_integer()
-  def token_supply_delta(_arg) do
-    0
-  end
+  @spec tx_field_types(tx_field()) :: MapSet.t()
+  defmemo tx_field_types(tx_field) do
+    {tx_field_types, _tx_fields, _tx_ids} = types_fields_ids()
 
-  @spec tx_field_types(atom()) :: MapSet.t()
-  def tx_field_types(_arg) do
-    MapSet.new()
+    Map.fetch!(tx_field_types, tx_field)
   end
 
   @spec tx_fields(tx_type()) :: [atom()]
-  def tx_fields(_arg) do
-    []
+  def tx_fields(tx_type) do
+    {_tx_field_types, tx_fields, _tx_ids} = types_fields_ids()
+
+    Map.fetch!(tx_fields, tx_type)
   end
 
-  @spec tx_group(atom()) :: [atom()]
-  def tx_group(_arg) do
-    []
+  @spec tx_group(tx_group()) :: [tx_type()]
+  def tx_group(tx_group) do
+    Map.fetch!(tx_groups_map(), tx_group)
   end
 
   @spec tx_groups :: MapSet.t()
   def tx_groups do
-    MapSet.new()
+    tx_groups_map()
+    |> Map.keys()
+    |> MapSet.new()
   end
 
-  @spec tx_ids(atom()) :: %{atom() => non_neg_integer()}
-  def tx_ids(:spend_tx) do
-    %{sender_id: 1, recipient_id: 2}
+  @spec tx_ids(tx_type()) :: %{tx_field() => tx_field_pos()}
+  def tx_ids(tx_type) do
+    {_tx_field_types, _tx_fields, tx_ids} = types_fields_ids()
+
+    Map.fetch!(tx_ids, tx_type)
   end
 
-  def tx_ids(_arg) do
-    %{}
+  @spec tx_ids_positions(tx_type()) :: [tx_field_pos()]
+  def tx_ids_positions(tx_type) do
+    Map.fetch!(tx_ids_positions(), tx_type)
   end
 
-  @spec tx_ids_positions(atom()) :: [non_neg_integer()]
-  def tx_ids_positions(_tx_type) do
-    []
+  @spec inner_field_positions(tx_field()) :: [tx_field_pos()]
+  def inner_field_positions(tx_field) do
+    inner_field_positions() |> Map.fetch!(tx_field)
   end
 
-  @spec inner_field_positions(atom()) :: [non_neg_integer()]
-  def inner_field_positions(_tx_field) do
-    []
+  @spec tx_mod(tx_type()) :: module()
+  def tx_mod(tx_type) do
+    Map.fetch!(tx_mod_map(), tx_type)
   end
 
-  @spec tx_mod(module()) :: module()
-  def tx_mod(_arg) do
-    :foo
-  end
-
-  @spec tx_name(atom()) :: binary()
-  def tx_name(_arg) do
-    ""
+  @spec tx_name(tx_type()) :: binary()
+  def tx_name(tx_type) do
+    :aetx.type_to_swagger_name(tx_type)
   end
 
   @spec tx_prefixes :: MapSet.t()
-  def tx_prefixes do
-    MapSet.new()
-  end
-
-  @spec tx_type(binary()) :: atom()
-  def tx_type(_arg) do
-    :foo
+  defmemo tx_prefixes() do
+    tx_types()
+    |> Enum.map(fn tx_type ->
+      str = to_string(tx_type)
+      # drop "_tx"
+      String.slice(str, 0, String.length(str) - 3)
+    end)
+    |> MapSet.new()
   end
 
   @spec tx_types :: MapSet.t()
-  def tx_types do
-    MapSet.new()
-  end
-
-  @spec type_id(atom()) :: atom()
-  def type_id(_arg) do
+  defmemo tx_types() do
+    tx_mod_map()
+    |> Map.keys()
+    |> MapSet.new()
   end
 
   defp map_by_function_hash(signatures) do
@@ -267,6 +284,102 @@ defmodule AeMdw.Node do
   defp map_event_hash_to_name(events) do
     Map.new(events, fn {hash, type} ->
       {hash, Macro.camelize("#{type}")}
+    end)
+  end
+
+  defmemop tx_mod_map() do
+    AbsCode.reduce(aetx_code(), {:type_to_cb, 1}, %{}, fn {:clause, _loc1, [{:atom, _loc2, t}],
+                                                           [], [{:atom, _loc3, m}]},
+                                                          acc ->
+      Map.put(acc, t, m)
+    end)
+  end
+
+  defmemop types_fields_ids() do
+    type_mod_map = tx_mod_map()
+
+    Enum.reduce(type_mod_map, {%{}, %{}, %{}}, fn {type, _tx_mod},
+                                                  {tx_field_types, tx_fields, tx_ids} ->
+      {fields, ids} =
+        Extract.tx_record_info(type, fn tx_type ->
+          Map.fetch!(type_mod_map, tx_type)
+        end)
+
+      tx_field_types =
+        for {id_field, _pos} <- ids, reduce: tx_field_types do
+          acc ->
+            update_in(acc, [id_field], fn set -> MapSet.put(set || MapSet.new(), type) end)
+        end
+
+      {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
+    end)
+  end
+
+  defmemop aeser_code() do
+    {:ok, mod_code} = AbsCode.module(:aeser_api_encoder)
+    mod_code
+  end
+
+  defmemop aetx_code() do
+    {:ok, mod_code} = AbsCode.module(:aetx)
+    mod_code
+  end
+
+  defmemop tx_groups_map() do
+    type_groups_map =
+      ~w(oracle name contract channel spend ga paying)a
+      |> Map.new(&{to_string(&1), &1})
+
+    tx_types()
+    |> Enum.group_by(&("#{&1}" |> String.split("_") |> List.first()))
+    |> Map.new(fn {k, v} -> {Map.fetch!(type_groups_map, k), v} end)
+  end
+
+  defmemop id_type() do
+    AbsCode.reduce(aeser_code(), {:id2type, 1}, %{}, fn {:clause, _loc1, [{:atom, _loc2, id}], [],
+                                                         [{:atom, _loc3, type}]},
+                                                        acc ->
+      Map.put(acc, id, type)
+    end)
+  end
+
+  defmemop token_supply_delta() do
+    [
+      {HardforkPresets.hardfork_height(:genesis), HardforkPresets.mint_sum(:genesis)}
+      | :aec_hard_forks.protocols()
+        |> Map.keys()
+        |> Enum.sort()
+        |> Enum.map(fn proto ->
+          proto_vsn = :aec_hard_forks.protocol_vsn_name(proto)
+          {HardforkPresets.hardfork_height(proto_vsn), HardforkPresets.mint_sum(proto_vsn)}
+        end)
+    ]
+    |> Map.new()
+  end
+
+  defmemop tx_ids_positions() do
+    {_tx_field_types, _tx_fields, tx_ids} = types_fields_ids()
+
+    Map.new(tx_ids, fn {type, field_ids} ->
+      {type, Map.values(field_ids)}
+    end)
+  end
+
+  defmemop inner_field_positions() do
+    {_tx_field_types, _tx_fields, tx_ids} = types_fields_ids()
+
+    tx_ids
+    |> Map.values()
+    |> Enum.flat_map(fn fields_pos_map ->
+      Enum.map(fields_pos_map, fn
+        {:ga_id, pos} -> {:ga_id, pos}
+        {:payer_id, pos} -> {:payer_id, pos}
+        {field, pos} -> {field, AeMdw.Fields.field_pos_mask(:ga_meta_tx, pos)}
+      end)
+    end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {field, positions} ->
+      {field, Enum.uniq(positions)}
     end)
   end
 end
