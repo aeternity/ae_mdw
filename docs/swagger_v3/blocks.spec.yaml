@@ -119,10 +119,8 @@ schemas:
         description: The block height
         type: integer
       pof_hash:
-        description: The pow
-        type: array
-        items:
-          type: integer
+        description: \"no_fraud\" or api encoded Proof of Fraud hash
+        type: string
       prev_hash:
         description: The previous block hash
         type: string
