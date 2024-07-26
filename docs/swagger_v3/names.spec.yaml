@@ -240,6 +240,8 @@ schemas:
           name_salt: 7095609104934055
           nonce: 225
           ttl: 818002
+      internal_source:
+        type: boolean
   NameTransfer:
     description: Name Transfer
     type: object
@@ -276,6 +278,8 @@ schemas:
           nonce: 18550
           recipient_id: "ak_2WZoa13VKHCamt2zL9Wid8ovmyvTEUzqBjDNGDNwuqwUQJZG4t"
           ttl: 42420
+      internal_source:
+        type: boolean
   NameUpdate:
     description: Name Update
     type: object
@@ -316,6 +320,8 @@ schemas:
             - id: "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5"
               key: "account_pubkey"
           ttl: 60000
+      internal_source:
+        type: boolean
   Pointee:
     description: Pointee
     type: object
