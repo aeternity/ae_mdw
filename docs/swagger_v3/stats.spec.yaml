@@ -398,7 +398,7 @@ paths:
           required: false
           schema:
             type: string
-            x-example: contract_call
+            example: contract_call
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
       responses:
