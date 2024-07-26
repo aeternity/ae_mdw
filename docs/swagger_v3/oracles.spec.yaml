@@ -5,9 +5,11 @@ schemas:
       - block_hash
       - block_height
       - hash
+      - tx_hash
       - micro_index
       - micro_time
       - signatures
+      - encoded_tx
       - tx
     properties:
       block_hash:
@@ -15,6 +17,10 @@ schemas:
       block_height:
         type: integer
       hash:
+        type: string
+      tx_hash:
+        deprecated: true
+        description: use `hash` instead
         type: string
       micro_index:
         type: integer
@@ -24,6 +30,8 @@ schemas:
         type: array
         items:
           type: string
+      encoded_tx:
+        type: string
       tx:
         type: object
         required:
@@ -33,7 +41,11 @@ schemas:
           - oracle_ttl
           - type
           - version
-          - tx_hash
+          - abi_version
+          - account_id
+          - query_fee
+          - query_format
+          - response_format
         properties:
           fee:
             type: integer
@@ -61,7 +73,15 @@ schemas:
             type: string
           version:
             type: integer
-          tx_hash:
+          abi_version:
+            type: number
+          account_id:
+            type: string
+          query_fee:
+            type: number
+          query_format:
+            type: string
+          response_format:
             type: string
   Oracle:
     example:
@@ -115,8 +135,13 @@ schemas:
         description: The block height when the oracle expires
         type: integer
       register_time:
-        description: The block time in which the oracle was registered
+        deprecated: true
+        description: The block time in which the oracle was registered, use `register.micro_time` instead
         type: integer
+      register_tx_hash:
+        deprecated: true
+        description: The transaction hash in which the oracle was registered, use `register.hash` instead
+        type: string
       format:
         type: object
         description: The oracle's query and response formats
@@ -144,6 +169,7 @@ schemas:
     required:
       - register
       - register_time
+      - register_tx_hash
       - query_fee
       - oracle
       - format
