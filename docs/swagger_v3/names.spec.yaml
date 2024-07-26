@@ -1,5 +1,6 @@
 schemas:
   NameTx:
+    nullable: true
     type: object
     required:
       - block_hash
