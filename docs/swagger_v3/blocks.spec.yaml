@@ -22,8 +22,6 @@ schemas:
       - height
       - info
       - miner
-      - nonce
-      - pow
       - prev_hash
       - prev_key_hash
       - state_hash
