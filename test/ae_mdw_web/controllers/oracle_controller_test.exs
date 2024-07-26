@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.OracleControllerTest do
+  alias AeMdw.Db.Format
   use AeMdwWeb.ConnCase
   @moduletag skip_store: true
 
@@ -156,6 +157,77 @@ defmodule AeMdwWeb.OracleControllerTest do
   end
 
   describe "oracles" do
+    test "it retrieves an oracle", %{
+      conn: conn,
+      store: store,
+      inactive_oracles: [oracle_id1 | _],
+      encoded_pks: [encoded_oracle_id | _]
+    } do
+      account_pk1 = <<7::256>>
+      account_id1 = :aeser_id.create(:account, account_pk1)
+      oracle_id = :aeser_id.create(:oracle, oracle_id1)
+
+      {:ok, oracle_query_aetx1} =
+        :aeo_query_tx.new(%{
+          sender_id: account_id1,
+          nonce: 1,
+          oracle_id: oracle_id,
+          query: "query-1",
+          query_fee: 11,
+          query_ttl: {:delta, 111},
+          response_ttl: {:delta, 1_111},
+          fee: 11_111
+        })
+
+      signed_tx1 = :aetx_sign.new(oracle_query_aetx1, [])
+      block_hash = <<950::256>>
+
+      with_mocks [
+        {Oracle, [:passthrough], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {Format, [:passthrough],
+         [
+           to_map: fn _state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} ->
+             %{
+               "hash" => hash,
+               "tx" => %{
+                 "abi_version" => 0,
+                 "account_id" => Enc.encode(:account_pubkey, account_pk1),
+                 "nonce" => 1,
+                 "fee" => 11_111,
+                 "oracle_ttl" => %{"type" => "delta", "value" => 111},
+                 "query_fee" => 11,
+                 "type" => "OracleRegisterTx",
+                 "version" => 1
+               }
+             }
+           end
+         ]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [],
+         [
+           get_header: fn <<height::256>> -> <<height::256>> end,
+           find_tx_with_location: fn _tx_hash -> {block_hash, signed_tx1} end
+         ]},
+        {:aec_headers, [:passthrough],
+         [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
+      ] do
+        assert oracle =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/oracles/#{encoded_oracle_id}")
+                 |> json_response(200)
+
+        exp1_time = @node_times[@exp1]
+        reg_time1 = @node_times[901]
+
+        assert %{
+                 "oracle" => ^encoded_oracle_id,
+                 "approximate_expire_time" => ^exp1_time,
+                 "register_time" => ^reg_time1
+               } = oracle
+      end
+    end
+
     test "it retrieves active oracles first", %{
       conn: conn,
       store: store,

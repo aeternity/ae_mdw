@@ -385,31 +385,24 @@ defmodule AeMdw.Oracles do
     query_format = :aeo_oracles.query_format(oracle_rec)
     response_format = :aeo_oracles.response_format(oracle_rec)
     query_fee = :aeo_oracles.query_fee(oracle_rec)
-    v3? = Keyword.get(opts, :v3?, false)
 
-    oracle =
-      %{
-        oracle: Enc.encode(:oracle_pubkey, pk),
-        active: is_active?,
-        active_from: register_height,
-        register_time: DbUtil.block_index_to_time(state, register_bi),
-        expire_height: expire_height,
-        approximate_expire_time:
-          DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
-        register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
-        register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
-        query_fee: query_fee,
-        format: %{
-          query: query_format,
-          response: response_format
-        }
-      }
-
-    if v3? do
-      oracle
-    else
-      Map.put(oracle, :extends, Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)))
-    end
+    %{
+      oracle: Enc.encode(:oracle_pubkey, pk),
+      active: is_active?,
+      active_from: register_height,
+      register_time: DbUtil.block_index_to_time(state, register_bi),
+      expire_height: expire_height,
+      approximate_expire_time:
+        DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
+      register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
+      register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
+      query_fee: query_fee,
+      format: %{
+        query: query_format,
+        response: response_format
+      },
+      extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts))
+    }
   end
 
   defp render_extend(state, {{height, _mbi}, txi_idx}) do
