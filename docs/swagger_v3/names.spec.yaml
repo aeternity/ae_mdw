@@ -1,5 +1,6 @@
 schemas:
   NameTx:
+    nullable: true
     type: object
     required:
       - block_hash
@@ -102,13 +103,8 @@ schemas:
         type: integer
         example: 362026
       pointers:
-        type: array
-        items:
-          $ref: '#/components/schemas/Pointer'
-        properties: # TODO: can't be array and object at the same time
-          account_pubkey:
-            type: string
-            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+        type: object
+        additionalProperties: true
       auction:
         $ref: '#/components/schemas/Auction'
         nullable: true
@@ -244,6 +240,8 @@ schemas:
           name_salt: 7095609104934055
           nonce: 225
           ttl: 818002
+      internal_source:
+        type: boolean
   NameTransfer:
     description: Name Transfer
     type: object
@@ -280,6 +278,8 @@ schemas:
           nonce: 18550
           recipient_id: "ak_2WZoa13VKHCamt2zL9Wid8ovmyvTEUzqBjDNGDNwuqwUQJZG4t"
           ttl: 42420
+      internal_source:
+        type: boolean
   NameUpdate:
     description: Name Update
     type: object
@@ -320,6 +320,8 @@ schemas:
             - id: "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5"
               key: "account_pubkey"
           ttl: 60000
+      internal_source:
+        type: boolean
   Pointee:
     description: Pointee
     type: object
@@ -372,23 +374,6 @@ schemas:
       block_time:
         type: integer
         example: 1687575562705
-  Pointer:
-    description: Pointer
-    type: object
-    required:
-      - id
-      - key
-      - encoded_key
-    properties:
-      id:
-        type: string
-        example: ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5
-      key:
-        type: string
-        example: account_pubkey
-      encoded_key:
-        type: string
-        example: ba_YWNjb3VudF9wdWJrZXn8jckR
 
 paths:
   /names:

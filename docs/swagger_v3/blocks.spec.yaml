@@ -22,8 +22,6 @@ schemas:
       - height
       - info
       - miner
-      - nonce
-      - pow
       - prev_hash
       - prev_key_hash
       - state_hash
@@ -105,6 +103,8 @@ schemas:
       - prev_hash
       - prev_key_hash
       - state_hash
+      - txs_hash
+      - signature
       - time
       - version
     properties:
@@ -121,10 +121,8 @@ schemas:
         description: The block height
         type: integer
       pof_hash:
-        description: The pow
-        type: array
-        items:
-          type: integer
+        description: \"no_fraud\" or api encoded Proof of Fraud hash
+        type: string
       prev_hash:
         description: The previous block hash
         type: string
@@ -133,6 +131,12 @@ schemas:
         type: string
       state_hash:
         description: The state hash
+        type: string
+      txs_hash:
+        description: Transactions hash
+        type: string
+      signature:
+        description: Micro block signature
         type: string
       time:
         description: The time

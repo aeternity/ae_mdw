@@ -12,6 +12,7 @@ schemas:
     properties:
       aexn_type:
         type: string
+        nullable: true
         example: aex9
       block_hash:
         type: string

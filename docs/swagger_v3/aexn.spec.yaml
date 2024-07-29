@@ -670,7 +670,7 @@ paths:
           required: false
           schema:
             type: string
-            x-example: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+            example: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
       responses:
         '200':
           description: Returns paginated AEX-141 tokens
@@ -705,7 +705,7 @@ paths:
           required: true
           schema:
             type: string
-            x-example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
+            example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
       responses:
         '200':
           description: Returns AEX-9 information by contract id
@@ -740,14 +740,14 @@ paths:
           required: false
           schema:
             type: string
-            x-example: AA
+            example: AA
         - description: Gets AEX9 tokens with exact name or symbol, this is decided by the 'by' field. If it's name, it will get tokens with exact name, if it's symbol, it will get tokens with exact symbol.
           in: query
           name: exact
           required: false
           schema:
             type: string
-            x-example: AA
+            example: AA
       responses:
         '200':
           description: Returns paginated AEX-9 tokens
@@ -801,14 +801,14 @@ paths:
           required: true
           schema:
             type: string
-            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Order by
           in: query
           name: by
           required: false
           schema:
             type: string
-            x-example: amount
+            example: amount
         - description: Block hash
           in: query
           name: block_hash
@@ -850,21 +850,21 @@ paths:
           required: true
           schema:
             type: string
-            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
           name: accountId
           required: true
           schema:
             type: string
-            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
         - description: Block hash
           in: query
           name: hash
           required: false
           schema:
             type: string
-            x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
+            example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
       responses:
         '200':
           description: Returns a the balance of an account on a contract
@@ -945,14 +945,14 @@ paths:
           required: true
           schema:
             type: string
-            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
           name: accountId
           required: true
           schema:
             type: string
-            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
       responses:
         '200':
           description: Account balance history on a token contract
