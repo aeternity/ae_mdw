@@ -1,5 +1,18 @@
 NAME="aeternity@localhost"
 
+maybe_create_db_directory() {
+  if [[ ! -e $1 ]]; then
+    while true; do
+      read -p "Do you want to create the $(realpath $1) directory? [y/n] " answer
+      case $answer in
+        [Yy] ) mkdir $1; return 0;;
+        [Nn] ) return 0;;
+        * ) echo "Please answer y or n.";;
+      esac
+    done
+  fi
+}
+
 case $1 in
   "volumes")
     mkdir -p data/mnesia data/mdw.db
@@ -17,6 +30,11 @@ case $1 in
 
   "docker-shell")
     docker-compose -f docker-compose-dev.yml run --rm --workdir=/app --entrypoint="" --use-aliases --service-ports ae_mdw /bin/bash
+    ;;
+
+  "testnet-docker-shell")
+    maybe_create_db_directory "./data_testnet"
+    docker-compose -f docker-compose-dev-testnet.yml run --rm --workdir=/app --entrypoint="" --use-aliases --service-ports ae_mdw_testnet /bin/bash
     ;;
 
   "test-integration")
