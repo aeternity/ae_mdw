@@ -262,7 +262,7 @@ paths:
     get:
       deprecated: false
       description: Get transactions count and its type for given aeternity ID.
-      operationId: GetTransactionsCountById
+      operationId: GetAccountTransactionsCount
       parameters:
         - description: The ID of the address/name/oracle/etc
           in: path
