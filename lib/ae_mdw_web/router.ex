@@ -84,6 +84,7 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:account_id/aex141/tokens", Aex141Controller, :owned_nfts
       get "/accounts/:account_id/names/pointees", NameController, :pointees
       get "/accounts/:account_id/dex/swaps", DexController, :account_swaps
+      get "/accounts/:id/transactions/count", TxController, :count_id
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats

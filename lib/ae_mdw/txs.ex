@@ -159,13 +159,15 @@ defmodule AeMdw.Txs do
 
   @spec id_counts(State.t(), pubkey()) :: %{tx_type() => non_neg_integer()}
   def id_counts(state, pubkey) do
-    Enum.reduce(Node.tx_types(), %{}, fn tx_type, counts ->
+    Enum.reduce(Node.tx_types(), %{total: 0}, fn tx_type, %{total: total} = counts ->
       field_counts = tx_count_per_field(state, tx_type, pubkey)
 
       if map_size(field_counts) == 0 do
         counts
       else
-        Map.put(counts, tx_type, field_counts)
+        counts
+        |> Map.put(tx_type, field_counts)
+        |> Map.put(:total, field_counts |> Map.values() |> Enum.sum() |> Kernel.+(total))
       end
     end)
   end

@@ -258,7 +258,7 @@ paths:
                 description: The transactions count
                 example: 15479090
                 type: integer
-  /transactions/count/{id}:
+  /accounts/{id}/transactions/count:
     get:
       deprecated: false
       description: Get transactions count and its type for given aeternity ID.
@@ -276,123 +276,250 @@ paths:
           description: Response schema for transactions count by id
           content:
             application/json:
-              example:
-                oracle_extend_tx:
-                  oracle_id: 2
-                oracle_query_tx:
-                  oracle_id: 2
-                  sender_id: 2
-                oracle_register_tx:
-                  account_id: 1
-                oracle_response_tx:
-                  oracle_id: 2
-                spend_tx:
-                  recipient_id: 1
-                  sender_id: 2
               schema:
                 type: object
                 required:
-                  - channel_close_mutual_tx
-                  - channel_close_solo_tx
-                  - channel_create_tx
-                  - channel_deposit_tx
-                  - channel_force_progress_tx
-                  - channel_offchain_tx
-                  - channel_settle_tx
-                  - channel_slash_tx
-                  - channel_snapshot_solo_tx
-                  - channel_withdraw_tx
-                  - contract_call_tx
-                  - contract_create_tx
-                  - ga_attach_tx
-                  - ga_meta_tx
-                  - name_claim_tx
-                  - name_preclaim_tx
-                  - name_revoke_tx
-                  - name_transfer_tx
-                  - name_update_tx
-                  - oracle_extend_tx
-                  - oracle_query_tx
-                  - oracle_register_tx
-                  - oracle_response_tx
-                  - paying_for_tx
-                  - spend_tx
+                  - total
                 properties:
-                  channel_close_mutual_tx:
-                    type: integer
-                    description: The channel close mutual transactions count
-                  channel_close_solo_tx:
-                    type: integer
-                    description: The channel close solo transactions count
-                  channel_create_tx:
-                    type: integer
-                    description: The channel create transactions count
-                  channel_deposit_tx:
-                    type: integer
-                    description: The channel deposit transactions count
-                  channel_force_progress_tx:
-                    type: integer
-                    description: The channel force progress transactions count
-                  channel_offchain_tx:
-                    type: integer
-                    description: The channel offchain transactions count
-                  channel_settle_tx:
-                    type: integer
-                    description: The channel settle transactions count
-                  channel_slash_tx:
-                    type: integer
-                    description: The channel slash transactions count
-                  channel_snapshot_solo_tx:
-                    type: integer
-                    description: The channel snapshot solo transactions count
-                  channel_withdraw_tx:
-                    type: integer
-                    description: The channel withdraw transactions count
-                  contract_call_tx:
-                    type: integer
-                    description: The contract call transactions count
                   contract_create_tx:
-                    type: integer
+                    type: object
                     description: The contract create transactions count
+                    properties:
+                      owner_id:
+                        type: integer
+                        description: The number of times the account was owner id in contract create transaction
+                  contract_call_tx:
+                    type: object
+                    description: The contract call transactions count
+                    properties:
+                      contract_id:
+                        type: integer
+                        description: The number of times the account was contract id in contract call transaction
+                      caller_id:
+                        type: integer
+                        description: The number of times the account was caller id in contract call transaction
                   ga_attach_tx:
-                    type: integer
+                    type: object
                     description: The ga attach transactions count
+                    properties:
+                      owner_id:
+                        type: integer
+                        description: The number of times the account was owner id in ga attach transaction
                   ga_meta_tx:
-                    type: integer
+                    type: object
                     description: The ga meta transactions count
+                    properties:
+                      ga_id:
+                        type: integer
+                        description: The number of times the account was ga id in ga meta transaction
+                  channel_close_mutual_tx:
+                    type: object
+                    description: The channel close mutual transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel close mutual transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel close mutual transaction
+                  channel_close_solo_tx:
+                    type: object
+                    description: The channel close solo transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel close solo transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel close solo transaction
+                  channel_create_tx:
+                    type: object
+                    description: The channel create transactions count
+                    properties:
+                      initiator_id:
+                        type: integer
+                        description: The number of times the account was initiator id in channel create transaction
+                      responder_id:
+                        type: integer
+                        description: The number of times the account was responder id in channel create transaction
+                  channel_deposit_tx:
+                    type: object
+                    description: The channel deposit transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel deposit transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel deposit transaction
+                  channel_force_progress_tx:
+                    type: object
+                    description: The channel force progress transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel force progress transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel force progress transaction
+                  channel_set_delegates_tx:
+                    type: object
+                    description: The channel set delegates transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel set delegates transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel set delegates transaction
+                  channel_settle_tx:
+                    type: object
+                    description: The channel settle transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel settle transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel settle transaction
+                  channel_slash_tx:
+                    type: object
+                    description: The channel slash transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel slash transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel slash transaction
+                  channel_snapshot_solo_tx:
+                    type: object
+                    description: The channel snapshot solo transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel snapshot solo transaction
+                      from_id:
+                        type: integer
+                        description: The number of times the account was from id in channel snapshot solo transaction
+                  channel_withdraw_tx:
+                    type: object
+                    description: The channel withdraw transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel withdraw transaction
+                      to_id:
+                        type: integer
+                        description: The number of times the account was to id in channel withdraw transaction
                   name_claim_tx:
-                    type: integer
+                    type: object
                     description: The name claim transactions count
+                    properties:
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in name claim transaction
                   name_preclaim_tx:
-                    type: integer
+                    type: object
                     description: The name preclaim transactions count
+                    properties:
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in name preclaim transaction
+                      commitment_id:
+                        type: integer
+                        description: The number of times the account was commitment id in name preclaim transaction
                   name_revoke_tx:
-                    type: integer
+                    type: object
                     description: The name revoke transactions count
+                    properties:
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in name revoke transaction
+                      name_id:
+                        type: integer
+                        description: The number of times the account was name id in name revoke transaction
                   name_transfer_tx:
-                    type: integer
+                    type: object
                     description: The name transfer transactions count
+                    properties:
+                      recipient_id:
+                        type: integer
+                        description: The number of times the account was recipient id in name transfer transaction
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in name transfer transaction
+                      name_id:
+                        type: integer
+                        description: The number of times the account was name id in name transfer transaction
                   name_update_tx:
-                    type: integer
+                    type: object
                     description: The name update transactions count
+                    properties:
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in name update transaction
+                      name_id:
+                        type: integer
+                        description: The number of times the account was name id in name update transaction
                   oracle_extend_tx:
-                    type: integer
+                    type: object
                     description: The oracle extend transactions count
+                    properties:
+                      oracle_id:
+                        type: integer
+                        description: The number of times the account was oracle id in oracle extend transaction
                   oracle_query_tx:
-                    type: integer
+                    type: object
                     description: The oracle query transactions count
+                    properties:
+                      sender_id:
+                        type: integer
+                        description: The number of times the account was sender id in oracle query transaction
+                      oracle_id:
+                        type: integer
+                        description: The number of times the account was oracle id in oracle query transaction
                   oracle_register_tx:
-                    type: integer
+                    type: object
                     description: The oracle register transactions count
+                    properties:
+                      account_id:
+                        type: integer
+                        description: The number of times the account was account id in oracle register transaction
                   oracle_response_tx:
-                    type: integer
+                    type: object
                     description: The oracle response transactions count
+                    properties:
+                      oracle_id:
+                        type: integer
+                        description: The number of times the account was oracle id in oracle response transaction
                   paying_for_tx:
-                    type: integer
+                    type: object
                     description: The paying for transactions count
+                    properties:
+                      payer_id:
+                        type: integer
+                        description: The number of times the account was payer id in paying for transaction
                   spend_tx:
-                    type: integer
+                    type: object
                     description: The spend transactions count
+                    properties:
+                      sender_id:
+                        type: integer
+                        description: The number of times the account was sender id in spend transaction
+                      recipient_id:
+                        type: integer
+                        description: The number of times the account was recipient id in spend transaction
+                  channel_offchain_tx:
+                    type: object
+                    description: The channel offchain transactions count
+                    properties:
+                      channel_id:
+                        type: integer
+                        description: The number of times the account was channel id in channel offchain transaction
+                  total:
+                    type: integer
+                    description: The total transactions count
         '400':
           description: Bad request
           content:
