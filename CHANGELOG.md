@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.82.3](https://www.github.com/aeternity/ae_mdw/compare/v1.82.2...v1.82.3) (2024-07-30)
+
+
+### Miscellaneous
+
+* fetch aexn tokens on render only ([#1851](https://www.github.com/aeternity/ae_mdw/issues/1851)) ([761b635](https://www.github.com/aeternity/ae_mdw/commit/761b635fd0dc7989b6954ff7af4aa84bbddc506c))
+
 ### [1.82.2](https://www.github.com/aeternity/ae_mdw/compare/v1.82.1...v1.82.2) (2024-07-25)
 
 
