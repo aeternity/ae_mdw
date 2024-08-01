@@ -503,6 +503,165 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when it has dex swap events", %{conn: conn} do
+      contract_pk1 = :crypto.strong_rand_bytes(32)
+      contract_pk2 = :crypto.strong_rand_bytes(32)
+      contract_id1 = :aeser_id.create(:contract, contract_pk1)
+      contract_id2 = :aeser_id.create(:contract, contract_pk2)
+
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      create_txi1 = 1
+      create_txi2 = 2
+      txi1 = 3
+      txi2 = 4
+
+      height = 500
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, contract_call1_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id1,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call1_tx} = :aetx.specialize_type(contract_call1_aetx)
+
+      {:ok, contract_call2_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id2,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call2_tx} = :aetx.specialize_type(contract_call2_aetx)
+
+      token_name1 = "TOKEN1"
+      token_name2 = "TOKEN2"
+      contract_amount1 = 100
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(index: {account_pk, create_txi1, txi1, 1111})
+        )
+        |> Store.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(index: {account_pk, create_txi2, txi2, 4111})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "tx-hash1"))
+        |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash2"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+        |> Store.put(
+          Model.Aex9ContractBalance,
+          Model.aex9_contract_balance(
+            index: contract_pk1,
+            amount: contract_amount1
+          )
+        )
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {create_txi1, :contract_call_tx, contract_pk1})
+        )
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {create_txi2, :contract_call_tx, contract_pk2})
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk1},
+            meta_info: {token_name1, "TK1", 18}
+          )
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(
+            index: {:aex9, contract_pk2},
+            meta_info: {token_name2, "TK2", 18}
+          )
+        )
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn
+             "tx-hash1" -> {"", :contract_call_tx, contract_call1_aetx, contract_call1_tx}
+             "tx-hash2" -> {"", :contract_call_tx, contract_call2_aetx, contract_call2_tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {DbContract, [],
+         [
+           call_fun_arg_res: fn _state, _contract_pk, _txi ->
+             %{
+               function: "fun",
+               arguments: [],
+               result: :ok,
+               return: :ok
+             }
+           end,
+           get_aexn_type: fn _state, _contract_pk -> :aex9 end
+         ]},
+        {Contract, [:passthrough],
+         call_rec: fn _signed_tx, _contract_pk, _block_hash -> {:error, :nocallrec} end},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [],
+         [
+           serialize_for_client: fn :header, aetx ->
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1, tx2], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "type" => "DexSwapEvent",
+                 "payload" => %{
+                   "token_name" => ^token_name1,
+                   "tx" => _tx,
+                   "amount" => ^contract_amount1
+                 }
+               } = tx1
+
+        assert %{
+                 "height" => ^height,
+                 "type" => "DexSwapEvent",
+                 "payload" => %{
+                   "token_name" => ^token_name2,
+                   "tx" => _tx,
+                   "amount" => 0
+                 }
+               } = tx2
+      end
+    end
+
     test "when it has int transfers from oracle rewards or name fees", %{conn: conn} do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)

@@ -199,7 +199,8 @@ defmodule AeMdw.Activities do
                   ownership_only?
                 ),
               :claims =>
-                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
+                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor),
+              :swaps => build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor)
             }
             |> filter_by_stream_types(stream_types)
             |> Collection.merge(direction)
@@ -331,6 +332,35 @@ defmodule AeMdw.Activities do
       :not_found -> []
       nil -> []
     end
+  end
+
+  defp build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+    key_boundary =
+      case txi_scope do
+        nil ->
+          {
+            {account_pk, Util.min_int(), Util.min_int(), nil},
+            {account_pk, Util.max_int(), Util.max_int(), nil}
+          }
+
+        {first_txi, last_txi} ->
+          {
+            {account_pk, first_txi, Util.min_int(), nil},
+            {account_pk, last_txi, Util.max_int(), nil}
+          }
+      end
+
+    cursor =
+      case txi_cursor do
+        nil -> nil
+        txi -> {account_pk, txi, Util.min_int(), nil}
+      end
+
+    state
+    |> Collection.stream(Model.DexAccountSwapTokens, direction, key_boundary, cursor)
+    |> Stream.map(fn {^account_pk, create_txi, txi, log_idx} ->
+      {txi, {:dex_swap, create_txi, log_idx}}
+    end)
   end
 
   defp build_gens_stream(gen_activities, direction) do
@@ -775,6 +805,32 @@ defmodule AeMdw.Activities do
       |> Map.put(:token_name, name)
 
     {"Aex141TransferEvent", payload}
+  end
+
+  defp render_payload(
+         state,
+         _account_pk,
+         _height,
+         txi,
+         {:dex_swap, create_txi, _y}
+       ) do
+    tx =
+      state
+      |> Txs.fetch!(txi)
+      |> Map.delete("tx_index")
+
+    contract_pk = Origin.pubkey!(state, {:contract, create_txi})
+
+    Model.aexn_contract(meta_info: {name, _symbol, _dec}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
+
+    amount =
+      case State.get(state, Model.Aex9ContractBalance, contract_pk) do
+        {:ok, Model.aex9_contract_balance(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    {"DexSwapEvent", %{tx: tx, token_name: name, amount: amount}}
   end
 
   defp serialize_cursor({{height, txi, local_idx}, _data}),
