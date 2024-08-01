@@ -513,8 +513,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /stats:
     get:
-      deprecated: true
-      description: Deprecated. Use /totalstats or /deltastats instead.
+      deprecated: false
+      description: Get stats.
       operationId: GetStats
       responses:
         '200':
