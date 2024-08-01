@@ -13,7 +13,6 @@ defmodule AeMdw.Node do
   alias AeMdw.Db.HardforkPresets
   alias AeMdw.Extract
   alias AeMdw.Extract.AbsCode
-  alias AeMdw.Util
 
   import AeMdw.Util.Memoize
 
@@ -147,15 +146,9 @@ defmodule AeMdw.Node do
   defmemo id_fields() do
     {_tx_field_types, _tx_fields, tx_ids} = types_fields_ids()
 
-    tx_ids
-    |> Enum.reduce(%{}, fn {type, ids_map}, acc ->
-      for {field, pos} <- ids_map,
-          reduce: acc,
-          do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
-    end)
-    |> Map.keys()
-    |> Enum.map(Util.compose(&to_string/1, &hd/1))
-    |> MapSet.new()
+    for {_type, ids_map} <- tx_ids, {field, _pos} <- ids_map, reduce: MapSet.new() do
+      acc -> MapSet.put(acc, to_string(field))
+    end
   end
 
   @spec id_prefixes() :: MapSet.t()
