@@ -486,7 +486,7 @@ defmodule AeMdw.Db.Sync.NameTest do
   end
 
   defp assert_same(state1, state2) do
-    Model.column_families()
+    Model.tables()
     |> Enum.all?(fn table ->
       all_keys(state1, table) == all_keys(state2, table)
     end)

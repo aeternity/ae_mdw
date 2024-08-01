@@ -6,6 +6,7 @@ defmodule AeMdwWeb.UtilController do
 
   alias AeMdw.Db.Status
   alias AeMdw.Error.Input
+  alias AeMdw.Sync.Server
   alias AeMdwWeb.Util
   alias Plug.Conn
 
@@ -23,6 +24,17 @@ defmodule AeMdwWeb.UtilController do
 
     if File.exists?(filepath) do
       send_file(conn, 200, filepath)
+    else
+      Util.send_error(conn, Input.NotFound, "no such route")
+    end
+  end
+
+  @spec rollback(Conn.t(), map()) :: Conn.t()
+  def rollback(conn, _params) do
+    if Application.fetch_env!(:ae_mdw, :enable_rollback?) do
+      Server.rollback()
+
+      format_json(conn, %{})
     else
       Util.send_error(conn, Input.NotFound, "no such route")
     end

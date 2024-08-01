@@ -121,21 +121,21 @@ defmodule AeMdw.Db.State do
   @spec create_mem_state() :: t()
   def create_mem_state, do: new(MemStoreCreator.create())
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()
   end)
 
   def put(%__MODULE__{store: store} = state, tab, record),
     do: %__MODULE__{state | store: Store.put(store, tab, record)}
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec get(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
             get_return(Model.unquote(Model.record(table_name))())
   end)
 
   def get(%__MODULE__{store: store}, table, key), do: Store.get(store, table, key)
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec fetch!(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
             Model.unquote(Model.record(table_name))()
   end)
@@ -150,14 +150,14 @@ defmodule AeMdw.Db.State do
   @spec count_keys(t(), table()) :: Enumerable.t()
   def count_keys(%__MODULE__{store: store}, table), do: Store.count_keys(store, table)
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec exists?(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
             boolean()
   end)
 
   def exists?(state, table, key), do: match?({:ok, _record}, get(state, table, key))
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec delete(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
             t()
   end)
@@ -165,21 +165,21 @@ defmodule AeMdw.Db.State do
   def delete(%__MODULE__{store: store} = state, tab, key),
     do: %__MODULE__{state | store: Store.delete(store, tab, key)}
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec next(t(), unquote(table_name), key()) ::
             {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
   end)
 
   def next(%__MODULE__{store: store}, table, key), do: Store.next(store, table, key)
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec prev(t(), unquote(table_name), key()) ::
             {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
   end)
 
   def prev(%__MODULE__{store: store}, table, key), do: Store.prev(store, table, key)
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec next(t(), unquote(table_name), direction(), key()) ::
             {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
   end)
@@ -188,7 +188,7 @@ defmodule AeMdw.Db.State do
 
   def next(state, table, :forward, cursor), do: next(state, table, cursor)
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec update(
             t(),
             unquote(table_name),
@@ -205,7 +205,7 @@ defmodule AeMdw.Db.State do
     end
   end
 
-  Enum.each(Model.column_families(), fn table_name ->
+  Enum.each(Model.tables(), fn table_name ->
     @spec update!(
             t(),
             unquote(table_name),
