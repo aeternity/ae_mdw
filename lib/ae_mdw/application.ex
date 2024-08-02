@@ -14,10 +14,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
-  alias AeMdw.Extract
-  alias AeMdw.NodeHelper
   alias AeMdw.Sync.Watcher
-  alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.DexCache
   alias AeMdw.Sync.MutationsCache
@@ -35,7 +32,6 @@ defmodule AeMdw.Application do
 
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
 
-    init(:meta)
     init_public(:contract_cache)
     init(:app_ctrl_server)
     init(:aecore_services)
@@ -68,112 +64,6 @@ defmodule AeMdw.Application do
     {:ok, _apps1} = Application.ensure_all_started(:aehttp)
     {:ok, _apps2} = Application.ensure_all_started(:aestratum)
     {:ok, _apps3} = Application.ensure_all_started(:aemon)
-  end
-
-  defp init(:meta) do
-    {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
-    [:header, :hash, :type | _txs] = NodeHelper.record_keys(chain_state_code, :node)
-
-    {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
-    {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
-
-    type_mod_map = Extract.tx_mod_map(aetx_code)
-    type_name_map = Extract.tx_name_map(aetx_code)
-    id_prefix_type_map = Extract.id_prefix_type_map(aeser_code)
-    id_type_map = Extract.id_type_map(aeser_code)
-    type_mod_mapper = &Map.fetch!(type_mod_map, &1)
-
-    {tx_field_types, tx_fields, tx_ids} =
-      Enum.reduce(type_mod_map, {%{}, %{}, %{}}, fn {type, _},
-                                                    {tx_field_types, tx_fields, tx_ids} ->
-        {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
-
-        tx_field_types =
-          for {id_field, _} <- ids, reduce: tx_field_types do
-            acc ->
-              update_in(acc, [id_field], fn set -> MapSet.put(set || MapSet.new(), type) end)
-          end
-
-        {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
-      end)
-
-    inner_field_positions =
-      tx_ids
-      |> Map.values()
-      |> Enum.flat_map(fn fields_pos_map ->
-        Enum.map(fields_pos_map, fn
-          {:ga_id, pos} -> {:ga_id, pos}
-          {:payer_id, pos} -> {:payer_id, pos}
-          {field, pos} -> {field, AeMdw.Fields.field_pos_mask(:ga_meta_tx, pos)}
-        end)
-      end)
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Map.new(fn {field, positions} ->
-        {field, Enum.uniq(positions)}
-      end)
-
-    tx_ids_positions =
-      Map.new(tx_ids, fn {type, field_ids} ->
-        {type, Map.values(field_ids)}
-      end)
-
-    id_field_type_map =
-      Enum.reduce(tx_ids, %{}, fn {type, ids_map}, acc ->
-        for {field, pos} <- ids_map,
-            reduce: acc,
-            do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
-      end)
-
-    id_fields = id_field_type_map |> Map.keys() |> Enum.map(Util.compose(&to_string/1, &hd/1))
-
-    tx_types = Map.keys(type_mod_map)
-    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
-    tx_group_map = Enum.group_by(tx_types, tx_group)
-
-    tx_prefix = fn tx_type ->
-      str = to_string(tx_type)
-      # drop "_tx"
-      String.slice(str, 0, String.length(str) - 3)
-    end
-
-    min_block_reward_height =
-      :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
-
-    SmartGlobal.new(
-      AeMdw.Node,
-      %{
-        tx_mod: type_mod_map,
-        tx_name: type_name_map,
-        tx_type: Util.inverse(type_name_map),
-        tx_fields: tx_fields,
-        tx_ids: tx_ids,
-        tx_ids_positions: tx_ids_positions,
-        inner_field_positions: inner_field_positions,
-        id_prefix: id_prefix_type_map,
-        id_field_type: id_field_type_map |> Enum.concat([{[:_], nil}]),
-        id_fields: [{[], MapSet.new(id_fields)}],
-        tx_field_types: tx_field_types,
-        tx_types: [{[], MapSet.new(tx_types)}],
-        tx_prefixes: [{[], MapSet.new(tx_types |> Enum.map(tx_prefix))}],
-        id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
-        tx_group: tx_group_map,
-        tx_groups: [{[], MapSet.new(Map.keys(tx_group_map))}],
-        id_type: id_type_map,
-        type_id: Util.inverse(id_type_map),
-        aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
-        aexn_event_hash_types: [{[], AeMdw.Node.aexn_event_hash_types()}],
-        aexn_event_names: [{[], AeMdw.Node.aexn_event_names()}],
-        dex_event_hash_types: [{[], AeMdw.Node.dex_event_hash_types()}],
-        dex_event_names: [{[], AeMdw.Node.dex_event_names()}],
-        aex141_signatures: [{[], AeMdw.Node.aex141_signatures()}],
-        previous_aex141_signatures: [{[], AeMdw.Node.previous_aex141_signatures()}],
-        height_proto: [{[], AeMdw.Node.height_proto()}],
-        lima_height: [{[], AeMdw.Node.lima_height()}],
-        min_block_reward_height: [{[], min_block_reward_height}],
-        token_supply_delta:
-          Enum.map(NodeHelper.token_supply_delta(), fn {h, xs} -> {[h], xs} end) ++ [{[:_], 0}]
-      }
-    )
   end
 
   defp init(:app_ctrl_server) do
