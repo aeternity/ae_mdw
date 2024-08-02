@@ -483,8 +483,8 @@ defmodule AeMdw.Db.Model do
   defrecord :dex_contract_swap_tokens, @dex_contract_swap_tokens_defaults
 
   # DEX swap tokens indexed by contract:
-  #     index: {create_txi, txi, log_idx}
-  @type dex_swap_tokens_index() :: {integer(), integer(), integer()}
+  #     index: {txi, log_idx, create_txi}
+  @type dex_swap_tokens_index() :: {txi(), log_idx(), txi()}
   @type dex_swap_tokens ::
           record(:dex_swap_tokens,
             index: dex_swap_tokens_index()

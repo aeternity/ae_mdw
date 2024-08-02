@@ -462,7 +462,7 @@ defmodule AeMdw.Db.Contract do
         )
         |> State.put(
           Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {create_txi, txi, idx})
+          Model.dex_swap_tokens(index: {txi, idx, create_txi})
         )
 
       false ->
