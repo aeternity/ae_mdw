@@ -385,27 +385,25 @@ defmodule AeMdw.Oracles do
     query_format = :aeo_oracles.query_format(oracle_rec)
     response_format = :aeo_oracles.response_format(oracle_rec)
     query_fee = :aeo_oracles.query_fee(oracle_rec)
-    v3? = Keyword.get(opts, :v3?, false)
 
-    oracle =
-      %{
-        oracle: Enc.encode(:oracle_pubkey, pk),
-        active: is_active?,
-        active_from: register_height,
-        register_time: DbUtil.block_index_to_time(state, register_bi),
-        expire_height: expire_height,
-        approximate_expire_time:
-          DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
-        register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
-        register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
-        query_fee: query_fee,
-        format: %{
-          query: query_format,
-          response: response_format
-        }
+    oracle = %{
+      oracle: Enc.encode(:oracle_pubkey, pk),
+      active: is_active?,
+      active_from: register_height,
+      register_time: DbUtil.block_index_to_time(state, register_bi),
+      expire_height: expire_height,
+      approximate_expire_time:
+        DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
+      register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
+      register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
+      query_fee: query_fee,
+      format: %{
+        query: query_format,
+        response: response_format
       }
+    }
 
-    if v3? do
+    if Keyword.get(opts, :v3?, false) do
       oracle
     else
       Map.put(oracle, :extends, Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)))
@@ -447,7 +445,7 @@ defmodule AeMdw.Oracles do
       Keyword.get(opts, :v3?, false) ->
         state
         |> Txs.fetch!(txi)
-        |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+        |> put_in(["tx", "tx_hash"], Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
         |> Map.drop(["tx_index"])
 
       Keyword.get(opts, :expand?, false) ->
