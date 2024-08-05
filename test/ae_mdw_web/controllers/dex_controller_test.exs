@@ -90,7 +90,7 @@ defmodule AeMdwWeb.DexControllerTest do
             )
             |> Store.put(
               Model.DexSwapTokens,
-              Model.dex_swap_tokens(index: {pair_txi, txi, log_idx})
+              Model.dex_swap_tokens(index: {txi, log_idx, pair_txi})
             )
             |> Store.put(
               Model.ContractLog,
@@ -279,7 +279,7 @@ defmodule AeMdwWeb.DexControllerTest do
           # CASE 1
           |> Store.put(
             Model.DexSwapTokens,
-            Model.dex_swap_tokens(index: {pair_txi, txi1, log_idx})
+            Model.dex_swap_tokens(index: {txi1, log_idx, pair_txi})
           )
           |> Store.put(
             Model.DexAccountSwapTokens,
@@ -307,7 +307,7 @@ defmodule AeMdwWeb.DexControllerTest do
           # CASE 2
           |> Store.put(
             Model.DexSwapTokens,
-            Model.dex_swap_tokens(index: {pair_txi, txi2, log_idx})
+            Model.dex_swap_tokens(index: {txi2, log_idx, pair_txi})
           )
           |> Store.put(
             Model.ContractLog,
@@ -336,7 +336,7 @@ defmodule AeMdwWeb.DexControllerTest do
           # CASE 3
           |> Store.put(
             Model.DexSwapTokens,
-            Model.dex_swap_tokens(index: {pair_txi, txi3, log_idx})
+            Model.dex_swap_tokens(index: {txi3, log_idx, pair_txi})
           )
           |> Store.put(
             Model.ContractLog,
@@ -374,7 +374,7 @@ defmodule AeMdwWeb.DexControllerTest do
           # CASE 4
           |> Store.put(
             Model.DexSwapTokens,
-            Model.dex_swap_tokens(index: {pair_txi, txi4, log_idx})
+            Model.dex_swap_tokens(index: {txi4, log_idx, pair_txi})
           )
           |> Store.put(
             Model.ContractLog,

@@ -120,12 +120,13 @@ defmodule AeMdw.Dex do
       cursor =
         case cursor do
           nil -> nil
-          {_account_pk, create_txi, txi, log_idx} -> {create_txi, txi, log_idx}
+          {_account_pk, create_txi, txi, log_idx} -> {txi, log_idx, create_txi}
         end
 
       state
       |> Collection.stream(@swaps_table, direction, nil, cursor)
-      |> Stream.map(fn {create_txi, txi, log_idx} = index ->
+      |> Stream.map(fn {txi, log_idx, create_txi} ->
+        index = {create_txi, txi, log_idx}
         Model.contract_log(args: [from, _to]) = State.fetch!(state, Model.ContractLog, index)
 
         {from, create_txi, txi, log_idx}
