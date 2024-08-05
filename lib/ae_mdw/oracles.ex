@@ -386,7 +386,7 @@ defmodule AeMdw.Oracles do
     response_format = :aeo_oracles.response_format(oracle_rec)
     query_fee = :aeo_oracles.query_fee(oracle_rec)
 
-    %{
+    oracle = %{
       oracle: Enc.encode(:oracle_pubkey, pk),
       active: is_active?,
       active_from: register_height,
@@ -400,9 +400,14 @@ defmodule AeMdw.Oracles do
       format: %{
         query: query_format,
         response: response_format
-      },
-      extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts))
+      }
     }
+
+    if Keyword.get(opts, :v3?, false) do
+      oracle
+    else
+      Map.put(oracle, :extends, Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)))
+    end
   end
 
   defp render_extend(state, {{height, _mbi}, txi_idx}) do
@@ -440,7 +445,7 @@ defmodule AeMdw.Oracles do
       Keyword.get(opts, :v3?, false) ->
         state
         |> Txs.fetch!(txi)
-        |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
+        |> put_in(["tx", "tx_hash"], Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
         |> Map.drop(["tx_index"])
 
       Keyword.get(opts, :expand?, false) ->

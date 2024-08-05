@@ -188,7 +188,7 @@ defmodule AeMdwWeb.OracleControllerTest do
          [
            to_map: fn _state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} ->
              %{
-               "hash" => hash,
+               "hash" => Enc.encode(:tx_hash, hash),
                "tx" => %{
                  "abi_version" => 0,
                  "account_id" => Enc.encode(:account_pubkey, account_pk1),
@@ -197,7 +197,8 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "oracle_ttl" => %{"type" => "delta", "value" => 111},
                  "query_fee" => 11,
                  "type" => "OracleRegisterTx",
-                 "version" => 1
+                 "version" => 1,
+                 "tx_hash" => Enc.encode(:tx_hash, hash)
                }
              }
            end
@@ -223,7 +224,12 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "oracle" => ^encoded_oracle_id,
                  "approximate_expire_time" => ^exp1_time,
-                 "register_time" => ^reg_time1
+                 "register_time" => ^reg_time1,
+                 "register_tx_hash" => tx_hash,
+                 "register" => %{
+                   "hash" => tx_hash,
+                   "tx" => %{"type" => "OracleRegisterTx", "tx_hash" => tx_hash}
+                 }
                } = oracle
       end
     end
