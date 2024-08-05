@@ -41,6 +41,31 @@ swagger['components']['schemas'] = sorted_dict({**swagger['components']['schemas
 swagger['info']['version'] = mdw_version
 swagger['servers'][0]['url'] = PATH_PREFIX
 
+old_swagger_schema_len = len(swagger['components']['schemas'])
+
+is_missing_refs = True
+while is_missing_refs:
+    swagger_str = json.dumps(swagger, indent=2)
+    refs = set([ref for ref in swagger_str.split('\n') if '$ref' in ref and 'components/schemas' in ref])
+    cleaned_refs = [ref.split('#/components/schemas/')[-1].split('"')[0] for ref in refs]
+
+    missing_refs = []
+    for ref in cleaned_refs:
+        if ref not in swagger['components']['schemas'].keys():
+            missing_refs.append(ref)
+            is_missing_refs = True
+
+    if missing_refs != []:
+        for missing_ref in missing_refs:
+            node_schema = node_schemas[missing_ref]
+            swagger['components']['schemas'][missing_ref] = node_schema
+    else:
+        is_missing_refs = False
+
+swagger_schema_len = len(swagger['components']['schemas'])
+
+print(f"Added {swagger_schema_len - old_swagger_schema_len} missing schemas")
+
 with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v3.json"), 'w') as jsonfile:
   json.dump(swagger, jsonfile, indent=2)
 
