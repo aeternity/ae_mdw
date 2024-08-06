@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.83.0](https://www.github.com/aeternity/ae_mdw/compare/v1.82.2...v1.83.0) (2024-08-06)
+
+
+### Features
+
+* add ability to roll back database on dev env ([#1839](https://www.github.com/aeternity/ae_mdw/issues/1839)) ([56fba66](https://www.github.com/aeternity/ae_mdw/commit/56fba6628b866cd2b3d4b69132e8dd6518862bb0))
+* add amount and name to activities info ([#1838](https://www.github.com/aeternity/ae_mdw/issues/1838)) ([fe0975a](https://www.github.com/aeternity/ae_mdw/commit/fe0975a2e8f7889c24065d6310f9ec773135c680))
+* add openapi missing stats route ([#1863](https://www.github.com/aeternity/ae_mdw/issues/1863)) ([232723b](https://www.github.com/aeternity/ae_mdw/commit/232723b6085a638fb615a9b307eb7a50c3f72220))
+* simplify setup for testnet ([#1875](https://www.github.com/aeternity/ae_mdw/issues/1875)) ([07db9c6](https://www.github.com/aeternity/ae_mdw/commit/07db9c6db7e572db1237785a42011d52fe5917ba))
+* transfer transactions count summary to v3 ([#1878](https://www.github.com/aeternity/ae_mdw/issues/1878)) ([76a6d33](https://www.github.com/aeternity/ae_mdw/commit/76a6d33ddef83349b32e7ec8acc72f15bdd4e68d))
+
+
+### Bug Fixes
+
+* handle invalid unix dates in filter ([#1870](https://www.github.com/aeternity/ae_mdw/issues/1870)) ([bb44c54](https://www.github.com/aeternity/ae_mdw/commit/bb44c544ba7fc24111b5b2d09330ba96c99053dc))
+
+
+### Miscellaneous
+
+* fetch aexn tokens on render only ([#1851](https://www.github.com/aeternity/ae_mdw/issues/1851)) ([761b635](https://www.github.com/aeternity/ae_mdw/commit/761b635fd0dc7989b6954ff7af4aa84bbddc506c))
+* redefine node module functions directly and avoid SmartGlobal ([#1876](https://www.github.com/aeternity/ae_mdw/issues/1876)) ([e4daf3f](https://www.github.com/aeternity/ae_mdw/commit/e4daf3f4d0799d63f377efec3dcf88aeb52af04c))
+* sort DEX swaps by creation instead of contract creation ([#1882](https://www.github.com/aeternity/ae_mdw/issues/1882)) ([5bdcf70](https://www.github.com/aeternity/ae_mdw/commit/5bdcf709dd65045dbd3aeae4271b92191846eef2))
+* update node version to 1.72 ([#1881](https://www.github.com/aeternity/ae_mdw/issues/1881)) ([e53cee5](https://www.github.com/aeternity/ae_mdw/commit/e53cee5c9317472275ad9568c04bf9b7f4184523))
+
 ### [1.82.2](https://www.github.com/aeternity/ae_mdw/compare/v1.82.1...v1.82.2) (2024-07-25)
 
 
