@@ -5,6 +5,7 @@ import os
 import json
 from glob import glob
 from pathlib import Path
+import re
 
 SWAGGER_DOCS_DIR = 'docs/swagger_v3/'
 MDW_VERSION_FILE = 'AEMDW_VERSION'
@@ -43,24 +44,21 @@ swagger['servers'][0]['url'] = PATH_PREFIX
 
 old_swagger_schema_len = len(swagger['components']['schemas'])
 
-is_missing_refs = True
-while is_missing_refs:
+while True:
     swagger_str = json.dumps(swagger, indent=2)
-    refs = set([ref for ref in swagger_str.split('\n') if '$ref' in ref and 'components/schemas' in ref])
-    cleaned_refs = [ref.split('#/components/schemas/')[-1].split('"')[0] for ref in refs]
+    cleaned_refs = re.findall(r'(?m)"\$ref": "#/components/schemas/(\w+)"', swagger_str)
 
     missing_refs = []
     for ref in cleaned_refs:
-        if ref not in swagger['components']['schemas'].keys():
+        if ref not in swagger['components']['schemas']:
             missing_refs.append(ref)
-            is_missing_refs = True
 
-    if missing_refs != []:
-        for missing_ref in missing_refs:
-            node_schema = node_schemas[missing_ref]
-            swagger['components']['schemas'][missing_ref] = node_schema
-    else:
-        is_missing_refs = False
+    if missing_refs == []:
+        break
+
+    for missing_ref in missing_refs:
+        node_schema = node_schemas[missing_ref]
+        swagger['components']['schemas'][missing_ref] = node_schema
 
 swagger_schema_len = len(swagger['components']['schemas'])
 
