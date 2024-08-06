@@ -394,7 +394,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /statistics/transactions:
+  /stats/transactions:
     get:
       deprecated: false
       description: Get total transactions count stats.
