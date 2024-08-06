@@ -86,4 +86,15 @@ config :ae_mdw, :dex_factories, %{
       107, 208, 117, 185, 160, 135, 239, 247, 134, 40, 7, 80>>
 }
 
+config :ae_mdw, :ae_token, %{
+  # "ct_J3zBY8xxjsRr3QojETNw48Eb38fjvEuJKkQ6KzECvubvEcvCa"
+  "ae_mainnet" =>
+    <<38, 183, 172, 84, 94, 51, 242, 135, 60, 130, 44, 59, 52, 52, 110, 37, 13, 210, 14, 54, 144,
+      24, 53, 177, 117, 211, 247, 18, 109, 117, 189, 41>>,
+  # "ct_JDp175ruWd7mQggeHewSLS1PFXt9AzThCDaFedxon8mF8xTRF"
+  "ae_uat" =>
+    <<39, 26, 34, 124, 164, 250, 243, 90, 198, 12, 74, 70, 137, 147, 70, 150, 174, 68, 138, 188,
+      64, 12, 26, 227, 206, 15, 221, 211, 50, 4, 47, 82>>
+}
+
 import_config "#{Mix.env()}.exs"
