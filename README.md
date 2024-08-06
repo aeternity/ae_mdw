@@ -190,13 +190,13 @@ GET /v3/aex141/:contract_id/templates                  - nft templates
 GET /v3/aex141/:contract_id/templates/:id/tokens       - nft supply from a template
 GET /v3/aex141/transfers                               - nft transfers that can be filtered by sender/recipient
 
-GET /v3/deltastats                       - statistics for generations from tip of the chain
-GET /v3/totalstats                       - aggregated statistics for generations from tip of the chain
-GET /v3/minerstats                       - total rewards for each miner
+GET /v3/stats/delta                       - statistics for generations from tip of the chain
+GET /v3/stats/total                       - aggregated statistics for generations from tip of the chain
+GET /v3/stats/miners                       - total rewards for each miner
 
-GET /v3/statistics/transactions                - statistics over time of transactions count
-GET /v3/statistics/blocks                      - statistics over time of blocks count
-GET /v3/statistics/names                       - statistics over time of names count
+GET /v3/stats/transactions                - statistics over time of transactions count
+GET /v3/stats/blocks                      - statistics over time of blocks count
+GET /v3/stats/names                       - statistics over time of names count
 
 GET /v3/status                           - middleware status
 ```
@@ -3247,14 +3247,14 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/transfers?to=ak_QVSUoGrJ31
 
 ---
 
-## Statistics
+## Stats
 
-### `/v3/deltastats`
+### `/v3/stats/delta`
 
 To show a statistics for a given height, we can use "stats" endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/deltastats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/delta?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3276,16 +3276,16 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/deltastats?limit=1" | jq '.'
       "oracles_registered": 0
     }
   ],
-  "next": "/v3/deltastats?limit=1&cursor=419208"
+  "next": "/v3/stats/delta?limit=1&cursor=419208"
 }
 ```
 
-### `/v3/totalstats`
+### `/v3/stats/total`
 
 Aggregated (summarized) statistics are also available, showing the total sum of rewards and the token supply:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/totalstats?scope=gen:421454-0&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/total?scope=gen:421454-0&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3306,18 +3306,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/totalstats?scope=gen:421454-0&lim
       "total_token_supply": 8.945137682239798e+25
     }
   ],
-  "next": "/v3/totalstats?scope=gen:421454-0&limit=1&cursor=42152"
+  "next": "/v3/stats/total?scope=gen:421454-0&limit=1&cursor=42152"
 }
 ```
 
 These endpoints allow pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
 
-### `/v3/minerstats`
+### `/v3/stats/miners`
 
 Total reward given to each chain miner.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/minerstats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3325,7 +3325,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/minerstats?limit=1" | jq '.'
       "total_reward": 76626041292504000000
     }
   ],
-  "next": "/v3/totalminers?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
+  "next": "/v3/stats/miners?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
   "prev": null
 }
 ```

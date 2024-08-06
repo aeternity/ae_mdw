@@ -56,7 +56,7 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"prev" => nil, "data" => [stat1], "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/deltastats")
+               |> get("/v3/stats/delta")
                |> json_response(200)
 
       assert %{
@@ -68,12 +68,12 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/deltastats")
+               |> get("/v3/stats/delta")
                |> json_response(200)
     end
   end
 
-  describe "transactions_statistics" do
+  describe "transactions_stats" do
     test "it returns the count of transactions for the latest daily periods", %{
       conn: conn,
       store: store
@@ -95,7 +95,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/transactions", limit: 2)
+               |> get("/v3/stats/transactions", limit: 2)
                |> json_response(200)
 
       assert %{"start_date" => "1970-02-01", "count" => 3} = st1
@@ -137,7 +137,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/transactions",
+               |> get("/v3/stats/transactions",
                  limit: 2,
                  tx_type: "spend",
                  direction: "forward"
@@ -183,7 +183,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/transactions", limit: 2, interval_by: "week")
+               |> get("/v3/stats/transactions", limit: 2, interval_by: "week")
                |> json_response(200)
 
       assert %{"start_date" => "1970-01-29", "count" => 3} = st1
@@ -228,7 +228,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
+               |> get("/v3/stats/transactions", limit: 2, interval_by: "month")
                |> json_response(200)
 
       assert %{"start_date" => "1970-05-01", "count" => 8} = st1
@@ -265,7 +265,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
+               |> get("/v3/stats/transactions", limit: 2, interval_by: "month")
                |> json_response(200)
 
       assert %{"start_date" => "1970-05-01", "count" => 0} = st1
@@ -286,7 +286,7 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
   end
 
-  describe "blocks_statistics" do
+  describe "blocks_stats" do
     test "it returns the count of blocks for the latest daily periods", %{
       conn: conn,
       store: store
@@ -310,7 +310,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/blocks", limit: 2)
+               |> get("/v3/stats/blocks", limit: 2)
                |> json_response(200)
 
       assert %{"start_date" => "1970-02-01", "count" => 0} = st1
@@ -352,7 +352,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/blocks",
+               |> get("/v3/stats/blocks",
                  limit: 2,
                  type: "micro",
                  direction: "forward"
@@ -393,7 +393,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2], "next" => nil} =
                conn
-               |> get("/v3/statistics/blocks",
+               |> get("/v3/stats/blocks",
                  limit: 2,
                  min_start_date: "1970-01-02",
                  max_start_date: "1970-01-03",
@@ -427,7 +427,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
                conn
-               |> get("/v3/statistics/blocks", limit: 2, interval_by: "week")
+               |> get("/v3/stats/blocks", limit: 2, interval_by: "week")
                |> json_response(200)
 
       assert %{"start_date" => "1970-01-29", "count" => 0} = st1
@@ -453,24 +453,24 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v3/statistics/blocks", type: block_type)
+               |> get("/v3/stats/blocks", type: block_type)
                |> json_response(400)
     end
 
     test "when limit is less than 1000, it doesn't return an error", %{conn: conn} do
       assert %{"data" => _data} =
                conn
-               |> get("/v3/statistics/blocks", limit: 1000)
+               |> get("/v3/stats/blocks", limit: 1000)
                |> json_response(200)
 
       assert %{"data" => _data} =
                conn
-               |> get("/v3/statistics/blocks", limit: 301)
+               |> get("/v3/stats/blocks", limit: 301)
                |> json_response(200)
 
       assert %{"error" => "limit too large: 1001"} =
                conn
-               |> get("/v3/statistics/blocks", limit: 1001)
+               |> get("/v3/stats/blocks", limit: 1001)
                |> json_response(400)
     end
   end

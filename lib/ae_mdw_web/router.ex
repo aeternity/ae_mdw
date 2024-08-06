@@ -86,9 +86,13 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:account_id/dex/swaps", DexController, :account_swaps
       get "/accounts/:id/transactions/count", TxController, :count_id
 
-      get "/deltastats", StatsController, :delta_stats
+      get "/stats/transactions", StatsController, :transactions_stats
+      get "/stats/blocks", StatsController, :blocks_stats
+      get "/stats/names", StatsController, :names_stats
+      get "/stats/total", StatsController, :total_stats
+      get "/stats/delta", StatsController, :delta_stats
+      get "/stats/miners", StatsController, :miners_stats
       get "/stats", StatsController, :stats
-      get "/minerstats", StatsController, :miners
 
       get "/names", NameController, :names
       get "/names/count", NameController, :names_count
@@ -101,12 +105,7 @@ defmodule AeMdwWeb.Router do
       get "/names/:id/transfers", NameController, :name_transfers
       get "/names/:id/history", NameController, :name_history
 
-      get "/statistics/transactions", StatsController, :transactions_statistics
-      get "/statistics/blocks", StatsController, :blocks_statistics
-      get "/statistics/names", StatsController, :names_statistics
-
       get "/transfers", TransferController, :transfers
-      get "/totalstats/", StatsController, :total_stats
       get "/status", UtilController, :status
 
       get "/aex9", AexnTokenController, :aex9_contracts
@@ -216,7 +215,7 @@ defmodule AeMdwWeb.Router do
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
-      get "/minerstats", StatsController, :miners
+      get "/minerstats", StatsController, :miners_stats
       get "/wealth", WealthController, :wealth
 
       get "/api", UtilController, :static_file,
