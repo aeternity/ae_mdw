@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   import Plug.Conn
 
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias Phoenix.Controller
   alias Plug.Conn
@@ -86,22 +87,28 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
-    case extract_range(range) do
+    range
+    |> extract_range()
+    |> case do
       {:ok, first, last} when first < last ->
-        {:ok, :forward, generate_range(state, scope_type, first, last)}
+        {:forward, generate_range(state, scope_type, first, last)}
 
       {:ok, first, last} when first > last ->
-        {:ok, :backward, generate_range(state, scope_type, last, first)}
+        {:backward, generate_range(state, scope_type, last, first)}
 
       {:ok, first, last} ->
         if Map.get(params, "direction", "backward") == "forward" do
-          {:ok, :forward, generate_range(state, scope_type, last, first)}
+          {:forward, generate_range(state, scope_type, last, first)}
         else
-          {:ok, :backward, generate_range(state, scope_type, last, first)}
+          {:backward, generate_range(state, scope_type, last, first)}
         end
 
       {:error, reason} ->
-        {:error, reason}
+        {nil, {:error, reason}}
+    end
+    |> case do
+      {_direction, {:error, reason}} -> {:error, reason}
+      {direction, range} -> {:ok, direction, range}
     end
   end
 
@@ -222,15 +229,23 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
+  @spec generate_range(State.t(), atom(), pos_integer(), pos_integer()) ::
+          {atom(), Range.t()} | {:error, atom()}
   defp generate_range(state, :time, first, last) do
-    {first_txi, last_txi} =
-      DbUtil.time_to_txi(
-        state,
-        first |> DateTime.from_unix!() |> DateTime.to_unix(:millisecond),
-        last |> DateTime.from_unix!() |> DateTime.to_unix(:millisecond)
-      )
+    with {_first, {:ok, first_parsed}} <- {first, DateTime.from_unix(first)},
+         {_last, {:ok, last_parsed}} <- {last, DateTime.from_unix(last)} do
+      {first_txi, last_txi} =
+        DbUtil.time_to_txi(
+          state,
+          DateTime.to_unix(first_parsed, :millisecond),
+          DateTime.to_unix(last_parsed, :millisecond)
+        )
 
-    generate_range(state, :txi, first_txi, last_txi)
+      generate_range(state, :txi, first_txi, last_txi)
+    else
+      {invalid_unix_time, {:error, _reason}} ->
+        {:error, "invalid unix time: #{invalid_unix_time}"}
+    end
   end
 
   defp generate_range(_state, scope_type, first, last) do
