@@ -37,8 +37,7 @@ schemas:
           type: string
       tx:
         description: The transaction
-        # TODO: define properties
-        type: object
+        $ref: '#/components/schemas/Tx' 
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
@@ -57,7 +56,6 @@ schemas:
         sender_id: ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5
         type: SpendTx
         version: 1
-        ttl: 10000
 paths:
   /transactions:
     get:
