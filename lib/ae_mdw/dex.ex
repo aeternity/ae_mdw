@@ -10,6 +10,7 @@ defmodule AeMdw.Dex do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
@@ -39,23 +40,24 @@ defmodule AeMdw.Dex do
   @typep pagination :: Collection.direction_limit()
   @typep page_cursor :: Collection.pagination_cursor()
   @typep query() :: map()
+  @typep range :: {:gen, Range.t()} | nil
 
-  @spec fetch_account_swaps(State.t(), binary(), pagination(), cursor(), query()) ::
+  @spec fetch_account_swaps(State.t(), binary(), pagination(), range(), cursor(), query()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
-  def fetch_account_swaps(state, account_id, pagination, cursor, query) do
+  def fetch_account_swaps(state, account_id, pagination, scope, cursor, query) do
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, cursor} <- deserialize_account_swaps_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       state
-      |> build_account_swaps_streamer(account_pk, filters, cursor)
+      |> build_account_swaps_streamer(account_pk, filters, scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(&{:ok, &1})
     end
   end
 
-  @spec fetch_contract_swaps(State.t(), String.t(), pagination(), cursor()) ::
+  @spec fetch_contract_swaps(State.t(), String.t(), pagination(), range(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
-  def fetch_contract_swaps(state, contract_id, pagination, cursor) do
+  def fetch_contract_swaps(state, contract_id, pagination, scope, cursor) do
     with {:ok, searched_contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, contract_pks} <- DexCache.get_pair_contract_pk(searched_contract_pk),
          {:ok, create_txis} <-
@@ -67,7 +69,7 @@ defmodule AeMdw.Dex do
            end),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
       state
-      |> build_contract_swaps_streamer(create_txis, cursor)
+      |> build_contract_swaps_streamer(create_txis, scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     else
@@ -76,33 +78,53 @@ defmodule AeMdw.Dex do
     end
   end
 
-  @spec fetch_swaps(State.t(), pagination(), cursor()) ::
+  @spec fetch_swaps(State.t(), pagination(), range(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
-  def fetch_swaps(state, pagination, cursor) do
+  def fetch_swaps(state, pagination, scope, cursor) do
     with {:ok, cursor} <- deserialize_account_swaps_cursor(cursor) do
       state
-      |> build_swaps_streamer(cursor)
+      |> build_swaps_streamer(scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(&{:ok, &1})
     end
   end
 
-  defp build_account_swaps_streamer(state, account_pk, %{create_txi: create_txi}, cursor) do
-    key_boundary = {
-      {account_pk, create_txi, Util.min_int(), nil},
-      {account_pk, create_txi, Util.max_int(), nil}
-    }
+  defp build_account_swaps_streamer(state, account_pk, %{create_txi: create_txi}, scope, cursor) do
+    key_boundary =
+      if scope do
+        first_txi..last_txi = gen_range_to_txi(state, scope)
+
+        {
+          {account_pk, create_txi, first_txi, nil},
+          {account_pk, create_txi, last_txi, nil}
+        }
+      else
+        {
+          {account_pk, create_txi, Util.min_int(), nil},
+          {account_pk, create_txi, Util.max_int(), nil}
+        }
+      end
 
     fn direction ->
       Collection.stream(state, @account_swaps_table, direction, key_boundary, cursor)
     end
   end
 
-  defp build_account_swaps_streamer(state, account_pk, _query, cursor) do
-    key_boundary = {
-      {account_pk, Util.min_int(), nil, nil},
-      {account_pk, Util.max_int(), nil, nil}
-    }
+  defp build_account_swaps_streamer(state, account_pk, _query, scope, cursor) do
+    key_boundary =
+      if scope do
+        first_txi..last_txi = gen_range_to_txi(state, scope)
+
+        {
+          {account_pk, first_txi, nil, nil},
+          {account_pk, last_txi, nil, nil}
+        }
+      else
+        {
+          {account_pk, Util.min_int(), nil, nil},
+          {account_pk, Util.max_int(), nil, nil}
+        }
+      end
 
     cursor =
       case cursor do
@@ -115,16 +137,26 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_swaps_streamer(state, cursor) do
-    fn direction ->
-      cursor =
-        case cursor do
-          nil -> nil
-          {_account_pk, create_txi, txi, log_idx} -> {txi, log_idx, create_txi}
-        end
+  defp build_swaps_streamer(state, scope, cursor) do
+    key_boundary =
+      if scope do
+        first_txi..last_txi = gen_range_to_txi(state, scope)
 
+        {
+          {first_txi, Util.min_int(), nil},
+          {last_txi, Util.max_int(), nil}
+        }
+      end
+
+    cursor =
+      case cursor do
+        nil -> nil
+        {_account_pk, create_txi, txi, log_idx} -> {txi, log_idx, create_txi}
+      end
+
+    fn direction ->
       state
-      |> Collection.stream(@swaps_table, direction, nil, cursor)
+      |> Collection.stream(@swaps_table, direction, key_boundary, cursor)
       |> Stream.map(fn {txi, log_idx, create_txi} ->
         index = {create_txi, txi, log_idx}
         Model.contract_log(args: [from, _to]) = State.fetch!(state, Model.ContractLog, index)
@@ -134,7 +166,7 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_contract_swaps_streamer(state, create_txis, cursor) do
+  defp build_contract_swaps_streamer(state, create_txis, _scope, cursor) do
     fn direction ->
       create_txis
       |> Enum.map(fn create_txi ->
@@ -144,12 +176,12 @@ defmodule AeMdw.Dex do
             nil -> nil
           end
 
-        scope = {
+        key_boundary = {
           {create_txi, Util.min_bin(), nil, nil},
           {create_txi, Util.max_256bit_bin(), nil, nil}
         }
 
-        Collection.stream(state, @contract_swaps_table, direction, scope, cursor)
+        Collection.stream(state, @contract_swaps_table, direction, key_boundary, cursor)
       end)
       |> Collection.merge(direction)
     end
@@ -283,7 +315,14 @@ defmodule AeMdw.Dex do
     }
   end
 
-  defp render_amounts(_x) do
+  defp render_amounts(_amounts) do
     "invalid amounts"
+  end
+
+  defp gen_range_to_txi(state, {:gen, first_gen..last_gen}) do
+    first_txi = DbUtil.first_gen_to_txi(state, first_gen)
+    last_txi = DbUtil.last_gen_to_txi(state, last_gen)
+
+    first_txi..last_txi
   end
 end
