@@ -190,6 +190,66 @@ defmodule AeMdw.Names do
     end
   end
 
+  @spec fetch_account_claims(state(), binary(), binary(), pagination(), range(), cursor() | nil) ::
+          {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
+  def fetch_account_claims(state, account_id, plain_name_or_hash, pagination, _scope, cursor) do
+    with {:ok, account_pk} <- Validate.id(account_id),
+         {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
+      {id_int_contract_call_cursor, name_or_auction_cursor} =
+        case deserialize_account_claims_cursor(cursor) do
+          nil ->
+            {nil, fn _plain_name -> nil end}
+
+          {{idx, call_txi, local_idx}, {height, call_idx}} ->
+            {{account_pk, idx, call_txi, local_idx},
+             fn plain_name -> {plain_name, height, call_idx} end}
+        end
+
+      fn direction ->
+        state
+        |> Collection.stream(
+          Model.IdIntContractCall,
+          direction,
+          {{account_pk, -1, -1, -1}, {account_pk, @max_int, @max_int, @max_int}},
+          id_int_contract_call_cursor
+        )
+        |> Stream.flat_map(fn {_account_pk, idx, call_txi, local_idx} ->
+          name_or_auction
+          |> case do
+            Model.auction_bid(index: plain_name) ->
+              Collection.stream(
+                state,
+                Model.AuctionBidClaim,
+                direction,
+                {{plain_name, -1, {call_txi, @min_int}},
+                 {plain_name, @max_int, {call_txi, @max_int}}},
+                name_or_auction_cursor.(plain_name)
+              )
+
+            Model.name(index: plain_name) ->
+              Collection.stream(
+                state,
+                Model.NameClaim,
+                direction,
+                {{plain_name, -1, {call_txi, @min_int}},
+                 {plain_name, @max_int, {call_txi, @max_int}}},
+                name_or_auction_cursor.(plain_name)
+              )
+          end
+          |> Stream.map(&{account_pk, idx, local_idx, &1})
+        end)
+
+        # |> Collection.merge(direction)
+      end
+      |> Collection.paginate(
+        pagination,
+        &inspect/1,
+        &serialize_account_claims_cursor/1
+      )
+      |> then(&{:ok, &1})
+    end
+  end
+
   @spec fetch_auction_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do
@@ -804,6 +864,27 @@ defmodule AeMdw.Names do
     else
       _invalid ->
         {:error, ErrInput.Cursor.exception(value: cursor_str)}
+    end
+  end
+
+  defp serialize_account_claims_cursor(
+         {_account_pk, idx, local_idx, {_name, height, {call_txi, ids}}}
+       ) do
+    {{idx, call_txi, local_idx}, {height, ids}}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
+  end
+
+  defp serialize_account_claims_cursor(nil), do: nil
+
+  defp deserialize_account_claims_cursor(nil), do: nil
+
+  defp deserialize_account_claims_cursor(cursor_str) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_str, padding: false),
+         {{idx, call_txi, local_idx}, {height, ids}} <- :erlang.binary_to_term(cursor_bin) do
+      {{idx, call_txi, local_idx}, {height, {call_txi, ids}}}
+    else
+      _invalid -> nil
     end
   end
 

@@ -287,6 +287,24 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+  @spec name_account_claims(Conn.t(), map()) :: Conn.t()
+  def name_account_claims(%Conn{assigns: assigns} = conn, %{
+        "name" => name_or_hash,
+        "account_id" => account_id
+      }) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    with {:ok, account_claims} <-
+           Names.fetch_account_claims(state, account_id, name_or_hash, pagination, scope, cursor) do
+      Util.render(conn, account_claims)
+    end
+  end
+
   ##########
 
   defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do

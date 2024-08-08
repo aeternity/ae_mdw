@@ -51,6 +51,8 @@ defmodule AeMdw.Collection do
         {prev_cursor, Enum.map(records, render_record_fn), nil}
 
       {records, [next_cursor]} ->
+        IO.inspect(next_cursor, label: "next_cursor")
+
         {prev_cursor, Enum.map(records, render_record_fn),
          {serialize_cursor_fn.(next_cursor), false}}
     end
