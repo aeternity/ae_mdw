@@ -18,29 +18,29 @@ defmodule AeMdwWeb.DexController do
 
   @spec swaps(Conn.t(), map()) :: Conn.t()
   def swaps(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor} = assigns
+    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
 
-    with {:ok, paginated_swaps} <- Dex.fetch_swaps(state, pagination, cursor) do
+    with {:ok, paginated_swaps} <- Dex.fetch_swaps(state, pagination, scope, cursor) do
       Util.render(conn, paginated_swaps)
     end
   end
 
   @spec account_swaps(Conn.t(), map()) :: Conn.t()
   def account_swaps(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
-    %{state: state, pagination: pagination, cursor: cursor, query: query} = assigns
+    %{state: state, pagination: pagination, scope: scope, cursor: cursor, query: query} = assigns
 
     with {:ok, paginated_swaps} <-
-           Dex.fetch_account_swaps(state, account_id, pagination, cursor, query) do
+           Dex.fetch_account_swaps(state, account_id, pagination, scope, cursor, query) do
       Util.render(conn, paginated_swaps)
     end
   end
 
   @spec contract_swaps(Conn.t(), map()) :: Conn.t()
   def contract_swaps(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
-    %{state: state, pagination: pagination, cursor: cursor} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
     with {:ok, paginated_swaps} <-
-           Dex.fetch_contract_swaps(state, contract_id, pagination, cursor) do
+           Dex.fetch_contract_swaps(state, contract_id, pagination, scope, cursor) do
       Util.render(conn, paginated_swaps)
     end
   end
