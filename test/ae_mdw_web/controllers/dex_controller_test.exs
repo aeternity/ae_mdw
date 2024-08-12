@@ -807,7 +807,8 @@ defmodule AeMdwWeb.DexControllerTest do
            "to_token" => token2_symbol,
            "tx_hash" => tx_hash,
            "log_idx" => log_idx,
-           "amounts" => amounts
+           "amounts" => amounts,
+           "action" => action
          },
          exp_token1,
          exp_token2
@@ -815,6 +816,7 @@ defmodule AeMdwWeb.DexControllerTest do
     <<txi::256>> = Validate.id!(tx_hash)
 
     caller_id in @accounts and token1_symbol == exp_token1 and
+      action in ["SELL", "BUY", "SWAP"] and
       token2_symbol == exp_token2 and txi in 1_000_001..1_000_080 and log_idx == rem(txi, 2) and
       amounts == %{
         "amount0_in" => txi + 10,

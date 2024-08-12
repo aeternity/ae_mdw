@@ -23,6 +23,8 @@ defmodule AeMdw.Dex do
   @contract_swaps_table Model.DexContractSwapTokens
   @swaps_table Model.DexSwapTokens
 
+  @ae_token_contract_pks Application.compile_env(:ae_mdw, :ae_token)
+
   @typep encoded_pubkey() :: Encoding.encoded_hash()
   @typep amount() :: non_neg_integer()
   @typep swap() :: %{
@@ -241,6 +243,7 @@ defmodule AeMdw.Dex do
     } = rendered_amounts = render_amounts(amounts)
 
     %{
+      action: action(token1_pk, token2_pk),
       caller: Encoding.encode(:account_pubkey, caller_pk),
       to_account: Encoding.encode(:account_pubkey, to_pk),
       from_contract: Encoding.encode_contract(token1_pk),
@@ -257,6 +260,16 @@ defmodule AeMdw.Dex do
       microtime: time,
       height: height
     }
+  end
+
+  defp action(t1, t2) do
+    ae_token = Map.get(@ae_token_contract_pks, :aec_governance.get_network_id())
+
+    case {t1, t2} do
+      {^ae_token, _t2} -> "BUY"
+      {_t1, ^ae_token} -> "SELL"
+      {_t1, _t2} -> "SWAP"
+    end
   end
 
   defp convert_param({"token_symbol", token_symbol}) when is_binary(token_symbol) do

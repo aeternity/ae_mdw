@@ -23,6 +23,13 @@ schemas:
           amount1_out:
             type: integer
             example: 1000080
+      action:
+        type: string
+        enum:
+          - "SWAP"
+          - "BUY"
+          - "SELL"
+        example: "SWAP"
       caller:
         type: string
         example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
@@ -67,6 +74,7 @@ schemas:
         example: 123456
     required:
       - amounts
+      - action
       - caller
       - from_token
       - to_token
