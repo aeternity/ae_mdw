@@ -353,7 +353,7 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _txi, _block_hash),
-    do: update_in(tx, ["response"], &maybe_base64/1)
+    do: update_in(tx, ["response"], &Base.encode64/1)
 
   defp custom_encode(_state, :oracle_query_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     query_id = :aeo_query_tx.query_id(tx_rec)
@@ -466,15 +466,6 @@ defmodule AeMdw.Db.Format do
        do: key
 
   defp maybe_base64_pointer_key(key), do: Base.encode64(key)
-
-  defp maybe_base64(bin) do
-    try do
-      dec = :base64.decode(bin)
-      (String.valid?(dec) && dec) || bin
-    rescue
-      _ -> :erlang.binary_to_list(bin)
-    end
-  end
 
   defp maybe_to_list(bin) do
     if String.valid?(bin) do
