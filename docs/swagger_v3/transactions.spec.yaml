@@ -56,6 +56,7 @@ schemas:
         sender_id: ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5
         type: SpendTx
         version: 1
+        ttl: 10000
 paths:
   /transactions:
     get:
