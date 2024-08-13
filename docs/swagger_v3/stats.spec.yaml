@@ -166,9 +166,9 @@ schemas:
       sum_dev_reward: 33027000000000000000
       total_token_supply: 10000000000000000000000000000
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
-  Statistic:
+  Stat:
     type: object
-    description: Statistic
+    description: Stat
     required:
       - count
       - start_date
@@ -329,14 +329,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /statistics/blocks:
+  /stats/blocks:
     get:
       deprecated: false
-      description: Get total blocks count statistics.
-      operationId: GetBlocksStatistics
+      description: Get total blocks count stats.
+      operationId: GetBlocksStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the statistics.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -386,7 +386,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Statistic'
+                          $ref: '#/components/schemas/Stat'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -394,14 +394,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /statistics/transactions:
+  /stats/transactions:
     get:
       deprecated: false
-      description: Get total transactions count statistics.
-      operationId: GetTransactionsStatistics
+      description: Get total transactions count stats.
+      operationId: GetTransactionsStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the statistics.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -448,7 +448,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Statistic'
+                          $ref: '#/components/schemas/Stat'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -456,14 +456,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /statistics/names:
+  /stats/names:
     get:
       deprecated: false
-      description: Get total names count statistics.
-      operationId: GetNamesStatistics
+      description: Get total names count stats.
+      operationId: GetNamesStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the statistics.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -503,7 +503,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Statistic'
+                          $ref: '#/components/schemas/Stats'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request

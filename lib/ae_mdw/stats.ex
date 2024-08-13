@@ -218,9 +218,9 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_transactions_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+  @spec fetch_transactions_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
-  def fetch_transactions_statistics(state, pagination, query, range, cursor) do
+  def fetch_transactions_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
       tx_tag = Map.get(filters, :tx_type, :all)
 
@@ -228,9 +228,9 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_blocks_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+  @spec fetch_blocks_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
-  def fetch_blocks_statistics(state, pagination, query, range, cursor) do
+  def fetch_blocks_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
       type_tag = Map.get(filters, :block_type, :all)
 
@@ -238,9 +238,9 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_names_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+  @spec fetch_names_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
-  def fetch_names_statistics(state, pagination, query, range, cursor) do
+  def fetch_names_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       fetch_statistics(state, pagination, filters, range, cursor, :names_activated)
     end
