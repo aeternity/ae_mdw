@@ -14,6 +14,7 @@ defmodule AeMdw.Activities do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Dex
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Fields
@@ -59,7 +60,8 @@ defmodule AeMdw.Activities do
     "aex141" => ~w(aex141)a,
     "contract" => ~w(int_calls ext_calls)a,
     "transfers" => ~w(int_transfers)a,
-    "claims" => ~w(claims)a
+    "claims" => ~w(claims)a,
+    "swaps" => ~w(swaps)a
   }
 
   @doc """
@@ -211,19 +213,17 @@ defmodule AeMdw.Activities do
 
           if local_idx_cursor do
             Stream.drop_while(stream, fn
-              {{^gen_cursor, txi, _local_idx}, _data} when direction == :forward ->
-                txi < txi_cursor
+              {{^gen_cursor, _txi, _local_idx} = index, _data}
+              when direction == :forward and index < {gen_cursor, txi_cursor, local_idx_cursor}
+              when direction == :backward and index > {gen_cursor, txi_cursor, local_idx_cursor} ->
+                IO.inspect({index, {gen_cursor, txi_cursor, local_idx_cursor}})
+                true
 
-              {{^gen_cursor, ^txi_cursor, local_idx}, _data} when direction == :forward ->
-                local_idx < local_idx_cursor
+              {{^gen_cursor, _txi, _local_idx} = index, _data} ->
+                IO.inspect({index, {gen_cursor, txi_cursor, local_idx_cursor}},
+                  label: "not dropped"
+                )
 
-              {{^gen_cursor, txi, _local_idx}, _data} when direction == :backward ->
-                txi > txi_cursor
-
-              {{^gen_cursor, ^txi_cursor, local_idx}, _data} when direction == :backward ->
-                local_idx > local_idx_cursor
-
-              _activity_pair ->
                 false
             end)
           else
@@ -359,7 +359,7 @@ defmodule AeMdw.Activities do
     state
     |> Collection.stream(Model.DexAccountSwapTokens, direction, key_boundary, cursor)
     |> Stream.map(fn {^account_pk, create_txi, txi, log_idx} ->
-      {txi, {:dex_swap, create_txi, log_idx}}
+      {create_txi, {:dex_swap, txi, log_idx}}
     end)
   end
 
@@ -527,11 +527,11 @@ defmodule AeMdw.Activities do
           nil ->
             nil
 
-          {txi_cursor, local_idx_cursor} when direction == :forward ->
-            {account_pk, pos, txi_cursor, local_idx_cursor}
+          {txi_cursor, _local_idx_cursor} when direction == :forward ->
+            {account_pk, pos, txi_cursor, @min_int}
 
-          {txi_cursor, local_idx_cursor} when direction == :backward ->
-            {account_pk, pos, txi_cursor, local_idx_cursor}
+          {txi_cursor, _local_idx_cursor} when direction == :backward ->
+            {account_pk, pos, txi_cursor, @max_int}
         end
 
       state
@@ -561,11 +561,11 @@ defmodule AeMdw.Activities do
             nil ->
               nil
 
-            {txi_cursor, local_idx_cursor} when direction == :forward ->
-              {create_txi, txi_cursor, local_idx_cursor}
+            {txi_cursor, _local_idx_cursor} when direction == :forward ->
+              {create_txi, txi_cursor, @min_int}
 
-            {txi_cursor, local_idx_cursor} when direction == :backward ->
-              {create_txi, txi_cursor, local_idx_cursor}
+            {txi_cursor, _local_idx_cursor} when direction == :backward ->
+              {create_txi, txi_cursor, @max_int}
           end
 
         state
@@ -811,15 +811,17 @@ defmodule AeMdw.Activities do
          state,
          _account_pk,
          _height,
-         txi,
-         {:dex_swap, create_txi, _y}
+         create_txi,
+         {:dex_swap, txi, log_idx}
        ) do
     tx =
       state
-      |> Txs.fetch!(txi)
+      |> Txs.fetch!(create_txi)
       |> Map.delete("tx_index")
 
-    contract_pk = Origin.pubkey!(state, {:contract, create_txi})
+    real_create_txi = Dex.get_create_txi(state, create_txi, txi, log_idx)
+
+    contract_pk = Origin.pubkey!(state, {:contract, real_create_txi})
 
     Model.aexn_contract(meta_info: {name, _symbol, _dec}) =
       State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})

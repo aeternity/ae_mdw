@@ -563,11 +563,19 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.dex_account_swap_tokens(index: {account_pk, create_txi1, txi1, 1111})
         )
         |> Store.put(
+          Model.ContractLog,
+          Model.contract_log(index: {create_txi1, txi1, 1111})
+        )
+        |> Store.put(
           Model.DexAccountSwapTokens,
           Model.dex_account_swap_tokens(index: {account_pk, create_txi2, txi2, 4111})
         )
-        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "tx-hash1"))
-        |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash2"))
+        |> Store.put(
+          Model.ContractLog,
+          Model.contract_log(index: {create_txi2, txi2, 4111})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
+        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
         |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
         |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
         |> Store.put(
