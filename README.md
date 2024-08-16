@@ -197,6 +197,7 @@ GET /v3/stats/miners                       - total rewards for each miner
 GET /v3/stats/transactions                - statistics over time of transactions count
 GET /v3/stats/blocks                      - statistics over time of blocks count
 GET /v3/stats/names                       - statistics over time of names count
+GET /v3/stats                             - global statistics
 
 GET /v3/status                           - middleware status
 ```
@@ -3329,6 +3330,105 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
   "prev": null
 }
 ```
+
+### `/v3/stats/blocks`
+
+Retrieve the total count of blocks over time, with an optional filter by block type (`key` or `micro`). By default, this will count all blocks.
+
+You can adjust the time granularity of the results using the `interval_by` query parameter, which supports `day` (default), `week`, or `month`.
+
+Additionally, filter results by specifying a date range with the `min_start_date` and/or `max_start_date` parameters. Dates should be provided in ISO 8601 format.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/blocks?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "count": 38150,
+      "end_date": "2023-07-22",
+      "start_date": "2023-07-21"
+    },
+    {
+      "count": 117685,
+      "end_date": "2023-07-21",
+      "start_date": "2023-07-20"
+    }
+  ],
+  "next": "/v3/stats/blocks?cursor=19557&limit=2",
+  "prev": null
+}
+```
+
+### `/v3/stats/names`
+
+Retrieve the count of names over time.
+
+Similar to block stats, `interval_by`, `min_start_date` and `max_start_date` can be used.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/names?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "count": 38150,
+      "end_date": "2023-07-22",
+      "start_date": "2023-07-21"
+    },
+    {
+      "count": 117685,
+      "end_date": "2023-07-21",
+      "start_date": "2023-07-20"
+    }
+  ],
+  "next": "/v3/stats/names?cursor=19557&limit=2",
+  "prev": null
+}
+```
+
+### `/v3/stats/transactions`
+
+Retrieve the count of transactions over time, with an optional filter by transaction type. By default, this will count all transactions.
+
+Similar to blocks stats, `interval_by`, `min_start_date` and `max_start_date` can be used.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/transactions?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "count": 38150,
+      "end_date": "2023-07-22",
+      "start_date": "2023-07-21"
+    },
+    {
+      "count": 117685,
+      "end_date": "2023-07-21",
+      "start_date": "2023-07-20"
+    }
+  ],
+  "next": "/v3/stats/transactions?cursor=19557&limit=2",
+  "prev": null
+}
+```
+
+### `/v3/stats`
+
+Global statistics.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats" | jq '.'
+{
+  "miners_count": 228,
+  "fees_trend": -0.86,
+  "last_24hs_average_transaction_fees": 25816293013087.883,
+  "last_24hs_transactions": 9606,
+  "max_transactions_per_second": 147.26,
+  "max_transactions_per_second_block_hash": "kh_27UooKSFP8qYaymFiUvhrMfAsCUeTon48s52gfdmF8iruoi6cS",
+  "transactions_trend": -0.12
+}
+```
+
+
 ---
 
 ## Activities
