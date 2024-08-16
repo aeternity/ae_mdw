@@ -808,7 +808,15 @@ defmodule AeMdwWeb.DexControllerTest do
            "tx_hash" => tx_hash,
            "log_idx" => log_idx,
            "amounts" => amounts,
-           "action" => action
+           "action" => action,
+           "micro_time" => _micro_time,
+           "from_contract" => _from_contract,
+           "to_contract" => _to_contract,
+           "from_amount" => _from_amount,
+           "to_amount" => _to_amount,
+           "from_decimals" => _from_decimals,
+           "to_decimals" => _to_decimals,
+           "height" => _height
          },
          exp_token1,
          exp_token2

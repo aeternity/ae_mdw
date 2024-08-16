@@ -66,7 +66,7 @@ schemas:
       to_decimals:
         type: integer
         example: 18
-      microtime:
+      micro_time:
         type: integer
         example: 1629820800000
       height:
@@ -87,7 +87,7 @@ schemas:
       - to_amount
       - from_decimals
       - to_decimals
-      - microtime
+      - micro_time
       - height
 paths:
   /dex/swaps:
