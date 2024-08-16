@@ -1076,6 +1076,128 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when there are two different activities with the same txi", %{conn: conn} do
+      contract_pk = TS.address(0)
+      account_pk = TS.address(1)
+      account_id = :aeser_id.create(:account, account_pk)
+      height = 398
+      mbi = 2
+      create_txi = 4
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: account_id,
+          amount: 2,
+          fee: 3,
+          nonce: 4,
+          payload: ""
+        })
+
+      {:spend_tx, tx} = :aetx.specialize_type(aetx)
+
+      next_account_pk = TS.address(1)
+      account = Enc.encode(:account_pubkey, account_pk)
+      decoded_tx_hash1 = TS.tx_hash(0)
+      decoded_tx_hash2 = TS.tx_hash(1)
+
+      store =
+        empty_store()
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 1, block_index: {height, mbi}, id: decoded_tx_hash1)
+        )
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 2, account_pk, 1}))
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 2, block_index: {height, mbi}, id: decoded_tx_hash2)
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, 1, 0})
+        )
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 0}))
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, 1, 1})
+        )
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {1, 1}))
+        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "hash1"))
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, 2, 0})
+        )
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}))
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, 2, 1})
+        )
+        |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 1}))
+        |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "hash2"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn _tx_hash ->
+             {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [], [serialize_for_client: fn :header, _aetx -> %{} end]},
+        {Format, [],
+         [to_map: fn _state, _record, _tab -> %{} end, to_map: fn _state, _record -> %{} end]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", limit: 1)
+                 |> json_response(200)
+
+        assert %{
+                 "type" => "ContractCallTxEvent"
+               } = tx1
+
+        assert %{"data" => [tx2], "prev" => prev_url} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert tx1 != tx2
+
+        assert %{
+                 "type" => "InternalContractCallEvent"
+               } = tx2
+
+        assert %{"data" => [tx3]} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
+
+        assert tx3 == tx1
+      end
+    end
+
     test "when backwards and when activities contain aexn tokens, it returns them as AexnEvent",
          %{conn: conn} do
       account_pk = TS.address(0)

@@ -216,14 +216,9 @@ defmodule AeMdw.Activities do
               {{^gen_cursor, _txi, _local_idx} = index, _data}
               when direction == :forward and index < {gen_cursor, txi_cursor, local_idx_cursor}
               when direction == :backward and index > {gen_cursor, txi_cursor, local_idx_cursor} ->
-                IO.inspect({index, {gen_cursor, txi_cursor, local_idx_cursor}})
                 true
 
-              {{^gen_cursor, _txi, _local_idx} = index, _data} ->
-                IO.inspect({index, {gen_cursor, txi_cursor, local_idx_cursor}},
-                  label: "not dropped"
-                )
-
+              {_index, _data} ->
                 false
             end)
           else
