@@ -70,7 +70,7 @@ defmodule AeMdwWeb.DexControllerTest do
           txi = 1_000_000 + i
           log_idx = rem(txi, 2)
           block_index_number = 200_000 + i
-          block_index = {block_index_number, 0}
+          block_index = {block_index_number, -1}
           token1_pk = :crypto.strong_rand_bytes(32)
           token2_pk = :crypto.strong_rand_bytes(32)
 
@@ -109,7 +109,7 @@ defmodule AeMdwWeb.DexControllerTest do
             )
             |> Store.put(
               Model.Block,
-              Model.block(index: block_index, hash: <<block_index_number::256>>)
+              Model.block(index: block_index, tx_index: txi, hash: <<block_index_number::256>>)
             )
             |> Store.put(
               Model.RevOrigin,
@@ -237,6 +237,36 @@ defmodule AeMdwWeb.DexControllerTest do
         assert Enum.all?(next_swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
 
         assert %{"data" => ^swaps} = conn |> get(prev_swaps) |> json_response(200)
+      end
+    end
+
+    test "gets scoped SwapTokens", %{conn: conn} do
+      first_gen = 200_001
+      last_gen = 200_002
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn _mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn _contract_pk, {:micro, _test, _mb_hash}, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        caller_id = encode_account(@account1_pk)
+
+        assert %{"data" => swaps, "next" => nil} =
+                 conn
+                 |> get("/v3/dex/swaps", scope: "gen:#{first_gen}-#{last_gen}")
+                 |> json_response(200)
+
+        assert 2 = length(swaps)
+        assert ^swaps = Enum.sort_by(swaps, &Map.fetch!(&1, "height"), :desc)
+        assert Enum.all?(swaps, &valid_caller_swap?(&1, caller_id, "TK1", "TK2"))
       end
     end
 
@@ -847,6 +877,7 @@ defmodule AeMdwWeb.DexControllerTest do
         Model.Block,
         Model.block(
           index: block_index,
+          tx_index: txi,
           hash: <<block_index_number::256>>
         )
       )
