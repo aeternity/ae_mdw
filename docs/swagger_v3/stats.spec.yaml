@@ -503,7 +503,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Stats'
+                          $ref: '#/components/schemas/Stat'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
