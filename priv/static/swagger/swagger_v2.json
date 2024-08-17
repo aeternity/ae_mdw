@@ -30,7 +30,7 @@
         "description": "Scopes results in a txi or generation range",
         "schema": {
           "type": "string",
-          "pattern": "(txi|gen):\\d+(-\\d+)?"
+          "pattern": "^(txi|gen):\\d+(-\\d+)?$"
         }
       },
       "DirectionParam": {
