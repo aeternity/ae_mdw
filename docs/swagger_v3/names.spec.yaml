@@ -402,7 +402,6 @@ paths:
           required: false
           schema:
             type: string
-            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
         - name: state
           in: query
           description: Activation state of the name (active or inactive)
