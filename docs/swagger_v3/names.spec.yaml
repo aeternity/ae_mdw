@@ -12,11 +12,11 @@ schemas:
       - tx
     properties:
       block_hash:
-        type: string
+        $ref: '#/components/schemas/MicroBlockHash'
       block_height:
         type: integer
       hash:
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       micro_index:
         type: integer
       micro_time:
@@ -24,7 +24,7 @@ schemas:
       signatures:
         type: array
         items:
-          type: string
+          $ref: '#/components/schemas/Signature'
       tx:
         type: object
         required:
@@ -36,11 +36,11 @@ schemas:
           - version
         properties:
           account_id:
-            type: string
+            $ref: '#/components/schemas/AccountAddress'
           fee:
             type: integer
           name_id:
-            type: string
+            $ref: '#/components/schemas/NameHash'
           nonce:
             type: integer
           ttl:
@@ -88,8 +88,7 @@ schemas:
         type: boolean
         example: true
       hash:
-        type: string
-        example: nm_2YmgvoUhVua9wEYGpMj9ybctbQXHPbY9Ppu4CoKoUm8jjFfcsc
+        $ref: '#/components/schemas/NameHash'
       active_from:
         type: integer
         example: 163282
@@ -115,14 +114,11 @@ schemas:
         type: object
         properties: # TODO: define required fields
           current:
-            type: string
-            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+            $ref: '#/components/schemas/AccountAddress'
           original:
-            type: string
-            example: ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is
+            $ref: '#/components/schemas/AccountAddress'
       name:
-        type: string
-        example: trustwallet.chain
+        $ref: '#/components/schemas/NameString'
       name_fee:
         type: integer
         example: 134626900000000000000
@@ -161,17 +157,14 @@ schemas:
           - tx
         properties:
           block_hash:
-            type: string
-            example: mh_28pH6wARaeMcdvMfe7nMJV2yYQMP9E36mmk6g9r9kkpEgao9MQ
+            $ref: '#/components/schemas/MicroBlockHash'
           block_height:
             type: integer
             example: 608242
           encoded_tx:
-            type: string
-            example: tx_+JYLAfhCuECFZmpTCOnm3v0zZ3g2BVIZApsjxGt4Q4MWck+gEw0j09Jq61XEgQWafn3fP2oesqcsy6wYGpGWT6eFW/iE7IoCuE74TCACoQH7BL4bl7Y/NrliWEMKWaxk9besmKUYp6PkFk7ZZeieHYIyZ4ptZXRhLmNoYWluhwUXe6y8hW+JB0xS1EQgCUAAhg8PrOrgAADImXsf
+            $ref: '#/components/schemas/TransactionEncoded'
           hash:
-            type: string
-            example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+            $ref: '#/components/schemas/TransactionHash'
           micro_index:
             type: integer
             example: 2
@@ -181,8 +174,7 @@ schemas:
           signatures:
             type: array
             items:
-              type: string
-              example: sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
+              $ref: '#/components/schemas/Signature'
           tx:
             type: object
             # TODO: define properties
@@ -198,8 +190,7 @@ schemas:
               type: NameClaimTx
               version: 2
       name:
-        type: string
-        example: 1996.chain
+        $ref: '#/components/schemas/NameString'
       name_fee:
         type: integer
         example: 134626900000000000000
@@ -218,14 +209,12 @@ schemas:
         type: integer
         example: 163282
       source_tx_hash:
-        type: string
-        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+        $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
         example: NameClaimTx
       block_hash:
-        type: string
-        example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+        $ref: '#/components/schemas/MicroBlockHash'
       height:
         type: integer
         example: 45784
@@ -257,14 +246,12 @@ schemas:
         type: integer
         example: 163282
       block_hash:
-        type: string
-        example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+        $ref: '#/components/schemas/MicroBlockHash'
       height:
         type: integer
         example: 45784
       source_tx_hash:
-        type: string
-        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+        $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
         example: NameTransferTx
@@ -295,14 +282,12 @@ schemas:
         type: integer
         example: 163282
       block_hash:
-        type: string
-        example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+        $ref: '#/components/schemas/MicroBlockHash'
       height:
         type: integer
         example: 45784
       source_tx_hash:
-        type: string
-        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+        $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
         example: NameUpdateTx
@@ -340,14 +325,11 @@ schemas:
         type: boolean
         example: true
       name:
-        type: string
-        example: trustwallet.chain
+        $ref: '#/components/schemas/NameString'
       key:
-        type: string
-        example: account_pubkey
+        $ref: '#/components/schemas/AccountAddress'
       block_hash:
-        type: string
-        example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+        $ref: '#/components/schemas/MicroBlockHash'
       tx:
         type: object
         # TODO: define properties
@@ -366,8 +348,7 @@ schemas:
         type: string
         example: NameUpdateTx
       source_tx_hash:
-        type: string
-        example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+        $ref: '#/components/schemas/TransactionHash'
       block_height:
         type: integer
         example: 45784
@@ -394,8 +375,7 @@ paths:
           description: Account that owns the name
           required: false
           schema:
-            type: string
-            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+            $ref: '#/components/schemas/AccountAddress'
         - name: prefix
           in: query
           description: Name prefix filter (case insensitive). Requires by=name parameter
@@ -444,8 +424,7 @@ paths:
           description: Account that owns the name
           required: false
           schema:
-            type: string
-            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns the total number of active names
@@ -503,8 +482,9 @@ paths:
           description: The name
           required: true
           schema:
-            type: string
-            example: trustwallet.chain
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
       responses:
         '200':
           description: Returns single name
@@ -535,8 +515,8 @@ paths:
           description: The name
           required: true
           schema:
-            type: string
-            example: foo.chain
+            $ref: '#/components/schemas/NameString'
+            # TODO: also accept NameHash
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -570,8 +550,8 @@ paths:
           description: The name
           required: true
           schema:
-            type: string
-            example: foo.chain
+            $ref: '#/components/schemas/NameString'
+            # TODO: also accept NameHash
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -606,8 +586,7 @@ paths:
           description: The account that names point to
           required: true
           schema:
-            type: string
-            example: ak_27PLE5ATTcJ5DC18oLsPpW3xf9vzvTvNR4ggt5p3u95zfR2qm9
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns the name the active and inactive name pointees
@@ -641,8 +620,9 @@ paths:
           description: The name or name hash
           required: true
           schema:
-            type: string
-            example: trustwallet.chain
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -679,8 +659,9 @@ paths:
           description: The name or name hash
           required: true
           schema:
-            type: string
-            example: trustwallet.chain
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -717,8 +698,9 @@ paths:
           description: The name or name hash
           required: true
           schema:
-            type: string
-            example: trustwallet.chain
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'

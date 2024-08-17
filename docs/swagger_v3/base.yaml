@@ -36,6 +36,66 @@ components:
           - forward
           - backward
   schemas:
+    KeyBlockHash:
+      description: Key block hash
+      type: string
+      example: kh_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
+      pattern: ^kh_\w{38,50}$
+    MicroBlockHash:
+      description: Micro block hash
+      type: string
+      example: mh_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
+      pattern: ^mh_\w{38,50}$
+    TransactionHash:
+      description: Transaction hash
+      type: string
+      example: th_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
+      pattern: ^th_\w{38,50}$
+    TransactionEncoded:
+      description: Encoded transaction
+      type: string
+      example: tx_+E8hAaEB4TK48d23oE5jt/qWR5pUu8UlpTGn8bwM5JISGQMGf7ABoQOvDVCf43V7alNbsUvTarXaCf7rjtWX36YLS4+JTa4jn4YPHaUyOAAAxRZ6Sg==
+      pattern: ^tx_\w+$
+    AccountAddress:
+      description: Account address
+      type: string
+      example: "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
+      pattern: ^ak_\w{38,50}$
+    NameString:
+      description: AENS name
+      type: string
+      example: trustwallet.chain
+      pattern: ^\w+\.chain$
+    NameHash:
+      description: AENS name hash
+      type: string
+      example: nm_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
+      pattern: ^nm_\w{38,50}$
+    ContractAddress:
+      description: Contract address
+      type: string
+      example: ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch
+      pattern: ^ct_\w{38,50}$
+    ContractBytearray:
+      description: Contract bytearray
+      type: string
+      example: cb_AAAAAfy4hFE=
+      pattern: ^cb_\w+$
+    OracleAddress:
+      description: Oracle address
+      type: string
+      example: ok_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch
+      pattern: ^ok_\w{38,50}$
+    ChannelId:
+      description: Channel ID
+      type: string
+      example: ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
+      pattern: ^ch_\w{38,50}$
+    Signature:
+      description: Signature
+      type: string
+      example: sg_8hhU15cVMbukFj4FbdrFwwYnbzXYPnstu9PDnWZGbfQNpeHcB6tK1F3wvG1MPYySARgDRJYUh3YPJD3HctFwg6Y4rUGSR
+      pattern: ^sg_\w+$
     ErrorResponse:
       description: Error response from the API
       type: object

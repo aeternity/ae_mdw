@@ -15,14 +15,11 @@ schemas:
         nullable: true
         example: aex9
       block_hash:
-        type: string
-        example: mh_mZ15v6q3eF8mUBVQ6shmWz6AXGvufMDTfcG9DXYY9uADuenHg
+        $ref: '#/components/schemas/MicroBlockHash'
       contract:
-        type: string
-        example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
+        $ref: '#/components/schemas/ContractAddress'
       source_tx_hash:
-        type: string
-        example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
+        $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
         example: ContractCreateTx
@@ -56,17 +53,13 @@ schemas:
       - micro_index
     properties:
       block_hash:
-        type: string
-        example: mh_mZ15v6q3eF8mUBVQ6shmWz6AXGvufMDTfcG9DXYY9uADuenHg
+        $ref: '#/components/schemas/MicroBlockHash'
       call_tx_hash:
-        type: string
-        example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
+        $ref: '#/components/schemas/TransactionHash'
       contract_id:
-        type: string
-        example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
+        $ref: '#/components/schemas/ContractAddress'
       contract_tx_hash:
-        type: string
-        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+        $ref: '#/components/schemas/TransactionHash'
       function:
         type: string
         example: Oracle.query
@@ -126,20 +119,16 @@ schemas:
           - 70455690283454580784062717387189552611484838031419336802117080415662207780030
           - 1050376320000000000
       block_hash:
-        type: string
-        example: mh_27wa1cRsbEGV5N9N6BVKEtX1ycaomL5Q9w1NpL2iRjRt4aZhiV
+        $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         type: integer
         example: 1615820000000
       call_tx_hash:
-        type: string
-        example: th_DXhneXz8xk1RW2rSWtjzMFBsqkQ7qwhZzzYbdumq3hiZJHPig
+        $ref: '#/components/schemas/TransactionHash'
       contract_id:
-        type: string
-        example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo
+        $ref: '#/components/schemas/ContractAddress'
       contract_tx_hash:
-        type: string
-        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+        $ref: '#/components/schemas/TransactionHash'
       data:
         type: string
         example: ""
@@ -151,13 +140,11 @@ schemas:
         example: "Transfer"
         nullable: true
       ext_caller_contract_id:
-        type: string
-        example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
         nullable: true
+        $ref: '#/components/schemas/ContractAddress'
       ext_caller_contract_tx_hash:
-        type: string
-        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
         nullable: true
+        $ref: '#/components/schemas/TransactionHash'
       height:
         type: integer
         example: 609854
@@ -183,8 +170,7 @@ paths:
           description: Contract that emitted the logs
           required: true
           schema:
-            type: string
-            example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns single contract
@@ -215,8 +201,7 @@ paths:
           description: Contract that emitted the logs
           required: false
           schema:
-            type: string
-            example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
+            $ref: '#/components/schemas/ContractAddress'
         - name: event
           in: query
           description: Name of the event

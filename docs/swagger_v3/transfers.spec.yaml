@@ -11,8 +11,7 @@ schemas:
       - ref_tx_type
     properties:
       account_id:
-        type: string
-        example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+        $ref: '#/components/schemas/AccountAddress'
       amount:
         type: integer
         example: 9592000000000000000
@@ -25,13 +24,11 @@ schemas:
           - reward_dev
           - reward_block
       ref_block_hash:
-        type: string
         nullable: true
-        example: mh_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+        $ref: '#/components/schemas/MicroBlockHash'
       ref_tx_hash:
-        type: string
         nullable: true
-        example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF
+        $ref: '#/components/schemas/TransactionHash'
       ref_tx_type:
         type: string
         nullable: true

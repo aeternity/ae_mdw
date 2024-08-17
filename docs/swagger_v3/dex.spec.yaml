@@ -31,8 +31,7 @@ schemas:
           - "SELL"
         example: "SWAP"
       caller:
-        type: string
-        example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        $ref: '#/components/schemas/AccountAddress'
       from_token:
         type: string
         example: "TK1"
@@ -43,17 +42,13 @@ schemas:
         type: integer
         example: 0
       to_account:
-        type: string
-        example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        $ref: '#/components/schemas/AccountAddress'
       tx_hash:
-        type: string
-        example: "th_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        $ref: '#/components/schemas/TransactionHash'
       from_contract:
-        type: string
-        example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+        $ref: '#/components/schemas/ContractAddress'
       to_contract:
-        type: string
-        example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+        $ref: '#/components/schemas/ContractAddress'
       from_amount:
         type: integer
         example: 1000050
@@ -131,8 +126,7 @@ paths:
           required: true
           description: The contract id
           schema:
-            type: string
-            example: "ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru"
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns paginated list of DEX swaps
@@ -167,8 +161,7 @@ paths:
           required: true
           description: The account id
           schema:
-            type: string
-            example: "ak_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns paginated list of DEX swaps
