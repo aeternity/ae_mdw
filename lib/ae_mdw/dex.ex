@@ -91,6 +91,31 @@ defmodule AeMdw.Dex do
     end
   end
 
+  @spec get_create_txi(State.t(), Txs.txi(), Txs.txi(), Contracts.log_idx()) :: Txs.txi()
+  def get_create_txi(state, create_txi, txi, log_idx) do
+    Model.contract_log(ext_contract: ext_contract) =
+      State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx})
+
+    case ext_contract do
+      {:parent_contract_pk, contract_pk} ->
+        create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+        case State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx}) do
+          Model.contract_log(ext_contract: nil) ->
+            create_txi
+
+          Model.contract_log(ext_contract: contract_pk) ->
+            Origin.tx_index!(state, {:contract, contract_pk})
+        end
+
+      nil ->
+        create_txi
+
+      contract_pk ->
+        Origin.tx_index!(state, {:contract, contract_pk})
+    end
+  end
+
   defp build_account_swaps_streamer(state, account_pk, %{create_txi: create_txi}, scope, cursor) do
     key_boundary =
       if scope do
@@ -230,28 +255,7 @@ defmodule AeMdw.Dex do
     Model.dex_account_swap_tokens(to: to_pk, amounts: amounts) =
       State.fetch!(state, Model.DexAccountSwapTokens, {caller_pk, create_txi, txi, log_idx})
 
-    Model.contract_log(ext_contract: ext_contract) =
-      State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx})
-
-    create_txi =
-      case ext_contract do
-        {:parent_contract_pk, contract_pk} ->
-          create_txi = Origin.tx_index!(state, {:contract, contract_pk})
-
-          case State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx}) do
-            Model.contract_log(ext_contract: nil) ->
-              create_txi
-
-            Model.contract_log(ext_contract: contract_pk) ->
-              Origin.tx_index!(state, {:contract, contract_pk})
-          end
-
-        nil ->
-          create_txi
-
-        contract_pk ->
-          Origin.tx_index!(state, {:contract, contract_pk})
-      end
+    create_txi = get_create_txi(state, create_txi, txi, log_idx)
 
     Model.tx(id: _tx_hash, block_index: {height, _mbi} = block_index, time: time) =
       State.fetch!(state, Model.Tx, create_txi)

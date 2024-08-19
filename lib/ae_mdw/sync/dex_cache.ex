@@ -83,7 +83,7 @@ defmodule AeMdw.Sync.DexCache do
     end
   end
 
-  @spec get_pair_symbols(pubkey()) :: pair_symbols() | nil
+  @spec get_pair_symbols(Txs.txi()) :: pair_symbols() | nil
   def get_pair_symbols(create_txi) do
     case :ets.lookup(@pairs_symbols_table, create_txi) do
       [] ->

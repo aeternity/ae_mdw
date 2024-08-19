@@ -247,7 +247,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [transactions, aexn, aex9, aex141, contract, transfers, claims]
+            enum: [transactions, aexn, aex9, aex141, contract, transfers, claims, swaps]
           description: >
             Filter by activity type. Supported values:
              * `transactions` - Transactions containing the account in any of the transaction fields
@@ -257,6 +257,7 @@ paths:
              * `contract` - Internal and external contract calls
              * `transfers` - Internal (both gen-based and tx-based) transfers
              * `claims` - Name claims related to the name hash
+             * `swaps` - Dex swaps related to the name hash
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
