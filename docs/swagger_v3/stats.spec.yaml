@@ -237,7 +237,7 @@ schemas:
       max_transactions_per_second_block_hash: kh_27UooKSFP8qYaymFiUvhrMfAsCUeTon48s52gfdmF8iruoi6cS
       transactions_trend: 0
 paths:
-  /deltastats:
+  /stats/delta:
     get:
       deprecated: false
       description: Get delta stats.
@@ -268,7 +268,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /totalstats:
+  /stats/total:
     get:
       deprecated: false
       description: Get total accumulated stats.
@@ -299,7 +299,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /minerstats:
+  /stats/miners:
     get:
       deprecated: false
       description: Get miners list with total rewards obtained through mining.
