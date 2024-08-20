@@ -2,6 +2,7 @@ schemas:
   KeyBlock:
     example:
       beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
+      beneficiary_reward: 5000000
       hash: kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6
       height: 123008
       info: cb_AAAAAfy4hFE=
@@ -34,6 +35,9 @@ schemas:
       beneficiary:
         description: The beneficiary
         type: string
+      beneficiary_reward:
+        description: The beneficiary reward
+        type: integer
       hash:
         description: The block hash
         type: string

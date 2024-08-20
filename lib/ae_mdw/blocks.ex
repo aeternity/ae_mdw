@@ -212,10 +212,13 @@ defmodule AeMdw.Blocks do
     Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
     header = :aec_db.get_header(hash)
 
+    Model.delta_stat(block_reward: block_reward) = State.fetch!(state, Model.DeltaStat, gen)
+
     header
     |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
     |> Map.put(:micro_blocks_count, mbi_count)
     |> Map.put(:transactions_count, txs_count)
+    |> Map.put(:beneficiary_reward, block_reward)
   end
 
   defp render_micro_block(state, height, mbi) do
