@@ -201,13 +201,13 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       time = 5
 
-      block_index = {1, -1}
+      height = 1
+      block_index = {height, -1}
 
       m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index, time: time)
       m_limit_tx = Model.tx(index: limit_txi, id: decoded_limit_tx_hash)
 
       block_hash = <<1::256>>
-      encoded_block_hash = Enc.encode(:micro_block_hash, block_hash)
 
       m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
@@ -232,7 +232,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
                "creation_time" => ^time,
-               "block_hash" => ^encoded_block_hash,
+               "block_height" => ^height,
                "limits" => %{
                  "token_limit" => 200,
                  "template_limit" => 100,
@@ -301,12 +301,12 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       time = 5
 
-      block_index = {1, -1}
+      height = 1
+      block_index = {height, -1}
 
       m_tx = Model.tx(index: txi, id: decoded_tx_hash, block_index: block_index, time: time)
 
       block_hash = <<1::256>>
-      encoded_block_hash = Enc.encode(:micro_block_hash, block_hash)
 
       m_block = Model.block(index: block_index, tx_index: 10, hash: block_hash)
 
@@ -330,7 +330,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
                "creation_time" => ^time,
-               "block_hash" => ^encoded_block_hash,
+               "block_height" => ^height,
                "limits" => nil
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
 

@@ -24,7 +24,7 @@ schemas:
       symbol: "ASITM-T"
       invalid: false
       creation_time: 1587577771376
-      block_hash: "mh_11111111111111111111111111111118qjnEr"
+      block_height: 234208
     properties:
       base_url:
         description: Metadata base url
@@ -49,9 +49,9 @@ schemas:
       creation_time:
         description: Creation time of the contract
         type: integer
-      block_hash:
-        description: Block hash of the contract creation
-        type: string
+      block_height:
+        description: Block height of the contract creation
+        type: integer
     required:
       - base_url
       - contract_id
@@ -65,7 +65,7 @@ schemas:
       - symbol
       - invalid
       - creation_time
-      - block_hash
+      - block_height
     title: Aex141Response
     type: object
   Aex141TokenResponse:
