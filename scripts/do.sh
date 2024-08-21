@@ -48,4 +48,13 @@ case $1 in
 
   "docker-sdk")
     docker-compose -f docker-compose-dev.yml run --rm node_sdk /bin/bash
+    ;;
+
+  "generate-swagger")
+    docker compose -f docker-compose-dev.yml up -d
+    docker exec ae_mdw-ae_mdw-1 bash -c "mkdir -p /app/swagger_v3; cp -f /home/aeternity/node/local/lib/aehttp-*/priv/oas3.yaml /app/swagger_v3/node_oas3.yaml"
+    docker cp ae_mdw-ae_mdw-1:/app/swagger_v3/ docs/
+    docker compose -f docker-compose-dev.yml down
+    scripts/swagger-docs.py
+    ;;
 esac
