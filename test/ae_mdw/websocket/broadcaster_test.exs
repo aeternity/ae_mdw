@@ -63,6 +63,9 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             Model.Block,
             Model.block(index: {2, -1}, hash: Validate.id!(kb_hash2), tx_index: 0)
           )
+          |> State.put(Model.DeltaStat, Model.delta_stat(index: 0, block_reward: 5000))
+          |> State.put(Model.DeltaStat, Model.delta_stat(index: 1, block_reward: 5000))
+          |> State.put(Model.DeltaStat, Model.delta_stat(index: 2, block_reward: 5000))
 
         :persistent_term.put(:global_state, state)
 
