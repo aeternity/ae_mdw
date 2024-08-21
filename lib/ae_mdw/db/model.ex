@@ -336,6 +336,14 @@ defmodule AeMdw.Db.Model do
   @type name_claim_index() :: {name_index(), height(), txi_idx()}
   @type name_claim() :: record(:name_claim, index: name_claim_index())
 
+  # claim_call :
+  #     index = {account_pk, call_idx, height, plain_name}
+  @claim_call_defaults [index: nil, unused: nil]
+  defrecord :claim_call, @claim_call_defaults
+
+  @type claim_call_index() :: {pubkey(), txi_idx(), height(), Names.plain_name()}
+  @type claim_call() :: record(:claim_call, index: claim_call_index())
+
   # name_expired :
   #     index = {plain_name, name_activation_height, {nil, expiration_height}}
   @name_expired_defaults [index: nil, unused: nil]
@@ -1350,7 +1358,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.NameUpdate,
       AeMdw.Db.Model.NameTransfer,
       AeMdw.Db.Model.AuctionBidClaim,
-      AeMdw.Db.Model.AccountNamesCount
+      AeMdw.Db.Model.AccountNamesCount,
+      AeMdw.Db.Model.ClaimCall
     ]
   end
 
@@ -1464,6 +1473,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.NameRevoke), do: :name_revoke
   def record(AeMdw.Db.Model.NameUpdate), do: :name_update
   def record(AeMdw.Db.Model.NameTransfer), do: :name_transfer
+  def record(AeMdw.Db.Model.ClaimCall), do: :claim_call
   def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveOracle), do: :oracle

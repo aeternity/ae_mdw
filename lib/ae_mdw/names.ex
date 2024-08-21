@@ -70,6 +70,7 @@ defmodule AeMdw.Names do
   @max_int Util.max_int()
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
+  @max_name_bin Util.max_name_bin()
 
   @spec count_names(state(), query()) :: {:ok, non_neg_integer()} | {:error, reason()}
   def count_names(state, query) do
@@ -190,60 +191,31 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_account_claims(state(), binary(), binary(), pagination(), range(), cursor() | nil) ::
+  @spec fetch_account_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
-  def fetch_account_claims(state, account_id, plain_name_or_hash, pagination, _scope, cursor) do
-    with {:ok, account_pk} <- Validate.id(account_id),
-         {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {id_int_contract_call_cursor, name_or_auction_cursor} =
-        case deserialize_account_claims_cursor(cursor) do
-          nil ->
-            {nil, fn _plain_name -> nil end}
-
-          {{idx, call_txi, local_idx}, {height, call_idx}} ->
-            {{account_pk, idx, call_txi, local_idx},
-             fn plain_name -> {plain_name, height, call_idx} end}
-        end
+  def fetch_account_claims(state, account_id, pagination, _scope, cursor) do
+    with {:ok, account_pk} <- Validate.id(account_id) do
+      cursor =
+        deserialize_account_claims_cursor(cursor)
 
       fn direction ->
-        state
-        |> Collection.stream(
-          Model.IdIntContractCall,
+        Collection.stream(
+          state,
+          Model.ClaimCall,
           direction,
-          {{account_pk, -1, -1, -1}, {account_pk, @max_int, @max_int, @max_int}},
-          id_int_contract_call_cursor
+          {{account_pk, {-1, -1}, -1, nil},
+           {account_pk, {@max_int, @max_int}, @max_int, @max_name_bin}},
+          cursor
         )
-        |> Stream.flat_map(fn {_account_pk, idx, call_txi, local_idx} ->
-          name_or_auction
-          |> case do
-            Model.auction_bid(index: plain_name) ->
-              Collection.stream(
-                state,
-                Model.AuctionBidClaim,
-                direction,
-                {{plain_name, -1, {call_txi, @min_int}},
-                 {plain_name, @max_int, {call_txi, @max_int}}},
-                name_or_auction_cursor.(plain_name)
-              )
+        |> Stream.map(fn {_account_pk, call_idx, height, plain_name} ->
+          {:ok, name_or_auction} = name_or_auction_bid_claim(state, plain_name, height, call_idx)
 
-            Model.name(index: plain_name) ->
-              Collection.stream(
-                state,
-                Model.NameClaim,
-                direction,
-                {{plain_name, -1, {call_txi, @min_int}},
-                 {plain_name, @max_int, {call_txi, @max_int}}},
-                name_or_auction_cursor.(plain_name)
-              )
-          end
-          |> Stream.map(&{account_pk, idx, local_idx, &1})
+          {name_or_auction, account_pk}
         end)
-
-        # |> Collection.merge(direction)
       end
       |> Collection.paginate(
         pagination,
-        &inspect/1,
+        &render_claim(state, &1),
         &serialize_account_claims_cursor/1
       )
       |> then(&{:ok, &1})
@@ -867,10 +839,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_account_claims_cursor(
-         {_account_pk, idx, local_idx, {_name, height, {call_txi, ids}}}
-       ) do
-    {{idx, call_txi, local_idx}, {height, ids}}
+  defp serialize_account_claims_cursor({{_type, {plain_name, height, call_idx}, nil}, account_pk}) do
+    {account_pk, call_idx, height, plain_name}
     |> :erlang.term_to_binary()
     |> Base.encode64(padding: false)
   end
@@ -881,8 +851,8 @@ defmodule AeMdw.Names do
 
   defp deserialize_account_claims_cursor(cursor_str) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_str, padding: false),
-         {{idx, call_txi, local_idx}, {height, ids}} <- :erlang.binary_to_term(cursor_bin) do
-      {{idx, call_txi, local_idx}, {height, {call_txi, ids}}}
+         {account_pk, call_idx, height, plain_name} <- :erlang.binary_to_term(cursor_bin) do
+      {account_pk, call_idx, height, plain_name}
     else
       _invalid -> nil
     end
@@ -981,6 +951,27 @@ defmodule AeMdw.Names do
       DbUtil.read_node_tx_details(state, txi_idx)
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
+
+    %{
+      active_from: active_from,
+      height: height,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Node.tx_name(chain_tx_type),
+      internal_source: chain_tx_type != tx_type,
+      tx: Node.tx_mod(tx_type).for_client(tx_rec)
+    }
+  end
+
+  defp render_claim(
+         state,
+         {{_type, {_plain_name, active_from, {call_txi, _local_idx} = call_idx}, nil},
+          _account_pk}
+       ) do
+    {tx_rec, tx_type, tx_hash, chain_tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, call_idx)
+
+    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, call_txi)
 
     %{
       active_from: active_from,
@@ -1155,6 +1146,13 @@ defmodule AeMdw.Names do
     |> case do
       {:ok, Model.account_names_count(count: count)} -> count
       :not_found -> 0
+    end
+  end
+
+  defp name_or_auction_bid_claim(state, plain_name, height, call_idx) do
+    with :not_found <- State.get(state, Model.NameClaim, {plain_name, height, call_idx}),
+         :not_found <- State.get(state, Model.AuctionBidClaim, {plain_name, height, call_idx}) do
+      :not_found
     end
   end
 end

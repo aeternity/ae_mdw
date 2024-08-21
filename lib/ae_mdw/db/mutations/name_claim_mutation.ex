@@ -117,6 +117,10 @@ defmodule AeMdw.Db.NameClaimMutation do
       |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
       |> State.inc_stat(:burned_in_auctions, lock_amount)
       |> Names.increment_names_count(owner_pk)
+      |> State.put(
+        Model.ClaimCall,
+        Model.claim_call(index: {owner_pk, txi_idx, height, plain_name})
+      )
     else
       state3 =
         IntTransfer.fee(state2, {height, txi_idx}, :spend_name, owner_pk, txi_idx, name_fee)
@@ -143,6 +147,10 @@ defmodule AeMdw.Db.NameClaimMutation do
             |> State.put(Model.AuctionBidClaim, auction_claim)
             |> State.put(Model.AuctionBid, m_auction_bid)
             |> State.put(Model.AuctionExpiration, m_auction_exp)
+            |> State.put(
+              Model.ClaimCall,
+              Model.claim_call(index: {owner_pk, txi_idx, height, plain_name})
+            )
 
           {:ok,
            Model.auction_bid(
@@ -188,6 +196,10 @@ defmodule AeMdw.Db.NameClaimMutation do
             |> State.put(
               Model.AuctionExpiration,
               Model.expiration(index: {auction_end, plain_name})
+            )
+            |> State.put(
+              Model.ClaimCall,
+              Model.claim_call(index: {owner_pk, txi_idx, start_height, plain_name})
             )
         end
 
