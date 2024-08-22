@@ -113,6 +113,7 @@ defmodule AeMdwWeb.BlockchainSim do
       elem(unquote(mocked_tx), 0) in [
         :spend_tx,
         :oracle_register_tx,
+        :oracle_response_tx,
         :oracle_query_tx,
         :name_claim_tx,
         :name_update_tx,
@@ -399,6 +400,20 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aeo_query_tx.new()
+  end
+
+  defp create_aetx({:oracle_response_tx, oracle_id, args}, _accounts) do
+    %{
+      nonce: 1,
+      oracle_id: oracle_id,
+      query_id: "query1",
+      response: "",
+      response_ttl: {:delta, 3},
+      fee: 20_000,
+      ttl: 1
+    }
+    |> Map.merge(args)
+    |> :aeo_response_tx.new()
   end
 
   defp create_aetx({:oracle_register_tx, register_name, args}, accounts) do
