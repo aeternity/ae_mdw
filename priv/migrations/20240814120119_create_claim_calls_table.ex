@@ -1,13 +1,12 @@
 defmodule AeMdw.Migrations.CreateClaimCallsTable do
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Util
 
   require Model
-  require Logger
 
-  # @min_int Util.min_int()
   @max_int Util.max_int()
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
@@ -29,7 +28,7 @@ defmodule AeMdw.Migrations.CreateClaimCallsTable do
 
     IO.inspect(field_count, label: "Field count")
 
-    {count, _state} =
+    count =
       state
       |> Collection.stream(
         Model.Field,
@@ -60,17 +59,18 @@ defmodule AeMdw.Migrations.CreateClaimCallsTable do
           {account_pk, call_idx, height, plain_name}
         end)
       end)
-      |> Enum.reduce({0, state}, fn {account_pk, call_idx, height, plain_name},
-                                    {count, state_acc} ->
-        Logger.info("Started claim call #{count + 1} out of #{field_count}")
-
-        {count + 1,
-         State.put(
-           state_acc,
-           Model.ClaimCall,
-           Model.claim_call(index: {account_pk, call_idx, height, plain_name})
-         )}
+      |> Stream.map(fn {account_pk, call_idx, height, plain_name} ->
+        WriteMutation.new(
+          Model.ClaimCall,
+          Model.claim_call(index: {account_pk, call_idx, plain_name, height})
+        )
       end)
+      |> Stream.chunk_every(1000)
+      |> Stream.map(fn mutations ->
+        _state = State.commit_db(state, mutations)
+        length(mutations)
+      end)
+      |> Enum.sum()
 
     if count == field_count do
       raise "Claim calls count mismatch"

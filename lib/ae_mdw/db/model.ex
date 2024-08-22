@@ -337,11 +337,11 @@ defmodule AeMdw.Db.Model do
   @type name_claim() :: record(:name_claim, index: name_claim_index())
 
   # claim_call :
-  #     index = {account_pk, call_idx, height, plain_name}
+  #     index = {account_pk, call_idx, plain_name, height}
   @claim_call_defaults [index: nil, unused: nil]
   defrecord :claim_call, @claim_call_defaults
 
-  @type claim_call_index() :: {pubkey(), txi_idx(), height(), Names.plain_name()}
+  @type claim_call_index() :: {pubkey(), txi_idx(), Names.plain_name(), height()}
   @type claim_call() :: record(:claim_call, index: claim_call_index())
 
   # name_expired :

@@ -3,6 +3,7 @@ defmodule AeMdw.Names do
   Context module for dealing with Names.
   """
 
+  alias AeMdw.Names
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.AuctionBids
   alias AeMdw.Blocks
@@ -191,23 +192,60 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_account_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
+  @spec fetch_account_claims(
+          state(),
+          binary(),
+          pagination(),
+          range(),
+          cursor() | nil,
+          Names.plain_name() | nil
+        ) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
-  def fetch_account_claims(state, account_id, pagination, _scope, cursor) do
+  def fetch_account_claims(state, account_id, pagination, scope, cursor, maybe_plain_name) do
     with {:ok, account_pk} <- Validate.id(account_id) do
       cursor =
         deserialize_account_claims_cursor(cursor)
+
+      scope =
+        case scope do
+          nil ->
+            {
+              {account_pk, {-1, -1}, @min_bin, -1},
+              {account_pk, {@max_int, @max_int}, @max_name_bin, @max_int}
+            }
+
+          {:gen, first_gen..last_gen} ->
+            {
+              {account_pk, {DbUtil.first_gen_to_txi(state, first_gen), -1}, @min_bin, -1},
+              {account_pk, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}, @max_name_bin,
+               @max_int}
+            }
+
+          {:txi, first_txi..last_txi} ->
+            {
+              {account_pk, {first_txi, -1}, @min_bin, -1},
+              {account_pk, {last_txi, @max_int}, @max_name_bin, @max_int}
+            }
+        end
 
       fn direction ->
         Collection.stream(
           state,
           Model.ClaimCall,
           direction,
-          {{account_pk, {-1, -1}, -1, nil},
-           {account_pk, {@max_int, @max_int}, @max_int, @max_name_bin}},
+          scope,
           cursor
         )
-        |> Stream.map(fn {_account_pk, call_idx, height, plain_name} ->
+        |> then(fn stream ->
+          if not is_nil(maybe_plain_name) do
+            Stream.filter(stream, fn {_account_pk, _call_idx, plain_name, _height} ->
+              plain_name == maybe_plain_name
+            end)
+          else
+            stream
+          end
+        end)
+        |> Stream.map(fn {_account_pk, call_idx, plain_name, height} ->
           {:ok, name_or_auction} = name_or_auction_bid_claim(state, plain_name, height, call_idx)
 
           {name_or_auction, account_pk}

@@ -288,6 +288,33 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec name_account_claims(Conn.t(), map()) :: Conn.t()
+  def name_account_claims(%Conn{assigns: assigns} = conn, %{
+        "account_id" => account_id,
+        "name" => name_or_hash
+      })
+      when name_or_hash != "" do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    with {:ok, plain_name} <- Validate.plain_name(state, name_or_hash),
+         {:ok, account_claims} <-
+           Names.fetch_account_claims(
+             state,
+             account_id,
+             pagination,
+             scope,
+             cursor,
+             plain_name
+           ) do
+      Util.render(conn, account_claims)
+    end
+  end
+
+  @spec name_account_claims(Conn.t(), map()) :: Conn.t()
   def name_account_claims(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
     %{
       state: state,
@@ -297,7 +324,7 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     with {:ok, account_claims} <-
-           Names.fetch_account_claims(state, account_id, pagination, scope, cursor) do
+           Names.fetch_account_claims(state, account_id, pagination, scope, cursor, nil) do
       Util.render(conn, account_claims)
     end
   end

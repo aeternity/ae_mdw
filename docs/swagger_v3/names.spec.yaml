@@ -609,6 +609,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
+  /accounts/{id}/names/claims:
+    get:
+      deprecated: false
+      description: Get account name claims
+      operationId: GetAccountNameClaims
+      parameters:
+        - name: id
+          in: path
+          description: The account that claimed names
+          required: true
+          schema:
+            type: string
+            example: ak_27PLE5ATTcJ5DC18oLsPpW3xf9vzvTvNR4ggt5p3u95zfR2qm9
+        - name: name
+          in: query
+          description: A specific name to filter by. Can be a plain name or a name hash
+          required: false
+          schema:
+            type: string
+            example: sometestwallet.chain
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the name claims
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NameClaim'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
   /names/{id}/claims:
     get:
       deprecated: false
