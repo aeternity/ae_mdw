@@ -28,20 +28,15 @@ defmodule AeMdw.Db.BlockDificultyMutation do
     |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
       index = {:block_dificulty, interval_by, interval_start}
 
-      increment_statistic(state, index, dificulty)
+      insert_stat(state, index, dificulty)
     end)
-    |> State.clear_stat(:block_dificulty)
   end
 
-  defp increment_statistic(state, index, increment) do
-    State.update(
+  defp insert_stat(state, index, dificulty) do
+    State.put(
       state,
       Model.Statistic,
-      index,
-      fn Model.statistic(count: _count) = statistic ->
-        Model.statistic(statistic, count: increment)
-      end,
-      Model.statistic(index: index, count: 0)
+      Model.statistic(index: index, count: dificulty)
     )
   end
 end

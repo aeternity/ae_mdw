@@ -16,7 +16,6 @@ defmodule AeMdw.Db.Sync.Block do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Db.BlockDificultyMutation
   alias AeMdw.Db.BlockStatisticsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.IntTransfer
@@ -60,9 +59,6 @@ defmodule AeMdw.Db.Sync.Block do
     |> Stream.transform(from_txi, fn {key_block, micro_blocks, next_kb_hash}, txi ->
       height = :aec_blocks.height(key_block)
       kb_header = :aec_blocks.to_key_header(key_block)
-      dificulty = :aec_blocks.difficulty(key_block)
-      time = :aec_blocks.time_in_msecs(key_block)
-      IO.inspect(dificulty, label: "dificulty")
       {:ok, kb_hash} = :aec_headers.hash_header(kb_header)
       starting_from_mb0? = from_height != height or from_mbi == 0
 
@@ -117,8 +113,7 @@ defmodule AeMdw.Db.Sync.Block do
             txi,
             starting_from_mb0?
           ),
-          next_kb_mutation,
-          BlockDificultyMutation.new(time, dificulty)
+          next_kb_mutation
         ]
         |> Enum.reject(&is_nil/1)
 

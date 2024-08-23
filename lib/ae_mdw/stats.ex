@@ -238,6 +238,33 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_blocks_difficulty_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_blocks_difficulty_stats(state, pagination, _query, range, cursor) do
+    IO.inspect(range, label: "range")
+    IO.inspect(cursor, label: "cursor")
+
+    fn direction ->
+      state
+      |> Collection.stream(Model.Block, direction, range, cursor)
+      |> Stream.map(fn {height, _idx} ->
+        IO.inspect(pagination, label: "pagination")
+        {:ok, res} = State.prev(State.mem_state(), Model.Block, {height + 1, 0})
+        Model.block(hash: hash) = State.fetch!(State.mem_state(), Model.Block, res)
+
+        hash
+        |> :aec_db.get_block()
+        |> :aec_blocks.difficulty()
+      end)
+    end
+    |> Collection.paginate(
+      pagination,
+      & &1,
+      &inspect(&1)
+    )
+    |> then(&{:ok, &1})
+  end
+
   @spec fetch_names_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_names_stats(state, pagination, query, range, cursor) do
