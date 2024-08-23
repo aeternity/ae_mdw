@@ -51,10 +51,10 @@ case $1 in
     ;;
 
   "generate-swagger")
-    docker compose -f docker-compose-dev.yml up -d
-    docker exec ae_mdw-ae_mdw-1 bash -c "mkdir -p /app/swagger_v3; cp -f /home/aeternity/node/local/lib/aehttp-*/priv/oas3.yaml /app/swagger_v3/node_oas3.yaml"
-    docker cp ae_mdw-ae_mdw-1:/app/swagger_v3/ docs/
-    docker compose -f docker-compose-dev.yml down
+    docker compose -f docker-compose-dev.yml up ae_mdw -d
+    docker compose -f docker-compose-dev.yml exec ae_mdw bash -c "mkdir -p /app/swagger_v3; cp -f /home/aeternity/node/local/lib/aehttp-*/priv/oas3.yaml /app/swagger_v3/node_oas3.yaml"
+    docker compose -f docker-compose-dev.yml cp ae_mdw:/app/swagger_v3/ docs/
+    docker compose -f docker-compose-dev.yml down ae_mdw
     scripts/swagger-docs.py
     ;;
 esac
