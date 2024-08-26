@@ -100,8 +100,8 @@ defmodule AeMdwWeb.StatsController do
     end
   end
 
-  @spec blocks_dificulty_stats(Conn.t(), map()) :: Conn.t()
-  def blocks_dificulty_stats(%Conn{assigns: assigns} = conn, _params) do
+  @spec blocks_difficulty_stats(Conn.t(), map()) :: Conn.t()
+  def blocks_difficulty_stats(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
 
     # Collection.stream(State.mem_state(), Model.Block, :backward, nil, nil)
@@ -116,7 +116,6 @@ defmodule AeMdwWeb.StatsController do
 
     with {:ok, paginated_stats} <-
            Stats.fetch_blocks_difficulty_stats(state, pagination, query, scope, cursor) do
-      IO.inspect(paginated_stats, label: "lol")
       Util.render(conn, paginated_stats)
     end
   end

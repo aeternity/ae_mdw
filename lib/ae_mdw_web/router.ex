@@ -88,7 +88,7 @@ defmodule AeMdwWeb.Router do
 
       get "/stats/transactions", StatsController, :transactions_stats
       get "/stats/blocks", StatsController, :blocks_stats
-      get "/stats/blocks_dificulty", StatsController, :blocks_dificulty_stats
+      get "/stats/blocks_difficulty", StatsController, :blocks_difficulty_stats
       get "/stats/names", StatsController, :names_stats
       get "/stats/total", StatsController, :total_stats
       get "/stats/delta", StatsController, :delta_stats

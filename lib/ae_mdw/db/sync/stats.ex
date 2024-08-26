@@ -5,7 +5,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
-  alias AeMdw.Db.BlockDificultyMutation
+  alias AeMdw.Db.BlockDifficultyMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -114,12 +114,12 @@ defmodule AeMdw.Db.Sync.Stats do
       end)
 
     tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
-    dificulty = :aec_blocks.difficulty(key_block)
+    difficulty = :aec_blocks.difficulty(key_block)
 
     [
       StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
       StatisticsMutation.new(statistics),
-      BlockDificultyMutation.new(time, dificulty)
+      BlockDifficultyMutation.new(time, difficulty)
     ]
   end
 
