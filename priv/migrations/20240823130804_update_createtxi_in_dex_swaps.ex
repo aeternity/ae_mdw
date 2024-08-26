@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.UpdateCreatetxiInDexSwaps do
+  @moduledoc """
+  Reindex dex contract swaps with correct create_txi
+  """
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
