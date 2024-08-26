@@ -1229,6 +1229,46 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
+    test "returns an oracle_response_tx with base64 response", %{
+      conn: conn,
+      empty_store: store
+    } do
+      response_bin = <<0, 1, 2, 3, 4, 5>>
+      oracle_pk = <<2::256>>
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      encoded_oracle_id = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)
+
+      with_blockchain %{},
+        mb: [
+          tx: {:oracle_response_tx, oracle_id, %{response: response_bin}}
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "oracle_id" => ^encoded_oracle_id,
+                   "response" => response
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/transactions/#{tx_hash}")
+                 |> json_response(200)
+
+        assert {:ok, ^response_bin} = Base.decode64(response)
+      end
+    end
+
     test "returns a spend_tx with inactive name recipient", %{conn: conn, empty_store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
