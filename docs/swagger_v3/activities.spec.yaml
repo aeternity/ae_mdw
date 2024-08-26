@@ -20,8 +20,7 @@ schemas:
         type: integer
         example: 534443
       contract_id:
-        type: string
-        example: "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        $ref: '#/components/schemas/ContractAddress'
       log_idx:
         type: integer
         example: 0
@@ -32,14 +31,11 @@ schemas:
         type: integer
         example: 1640350612991
       recipient_id:
-        type: string
-        example: "ak_kFZkYQMsU47oQsTxEimTybAWUozSVmCXJBNZwetEr87hG3M1z"
+        $ref: '#/components/schemas/AccountAddress'
       sender_id:
-        type: string
-        example: "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
+        $ref: '#/components/schemas/AccountAddress'
       tx_hash:
-        type: string
-        example: "th_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz"
+        $ref: '#/components/schemas/TransactionHash'
   Aex141TransferEvent:
     description: AEx141 Transfer
     type: object
@@ -58,8 +54,7 @@ schemas:
         type: integer
         example: 653289
       contract_id:
-        type: string
-        example: "ct_2MFbjHcaFJXqLH9WrSZcX6EjbWKPhos1fv8nqXfPLoHMV1qVZz"
+        $ref: '#/components/schemas/ContractAddress'
       log_idx:
         type: integer
         example: 0
@@ -70,24 +65,21 @@ schemas:
         type: integer
         example: 1662654259282
       recipient:
-        type: string
-        example: "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa"
+        $ref: '#/components/schemas/AccountAddress'
       sender:
-        type: string
-        example: "ak_11111111111111111111111111111111273Yts"
+        $ref: '#/components/schemas/AccountAddress'
       token_id:
         type: integer
         example: 1
       tx_hash:
-        type: string
-        example: "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh"
+        $ref: '#/components/schemas/TransactionHash'
   NameClaimEvent:
     description: Name claim
     type: object
     properties:
       tx_hash:
         description: The hash of the transaction (either a name claim or a contract call transaction)
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       tx:
         description: The claim transaction (internal or not)
         type: object
@@ -100,13 +92,12 @@ schemas:
     properties:
       contract_tx_hash:
         description: The contract creation transaction hash
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       contract_id:
-        description: The contract pubkey
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       call_tx_hash:
         description: The contract call transaction hash
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       function:
         description: The name of the function
         type: string
@@ -121,7 +112,7 @@ schemas:
         type: integer
       block_hash:
         description: The micro block hash in which the transaction happened
-        type: string
+        $ref: '#/components/schemas/MicroBlockHash'
     required:
     - contract_tx_hash
     - contract_id
@@ -156,7 +147,7 @@ schemas:
           - reward_oracle
       ref_tx_hash:
         description: The transaction hash of a transaction related to the internal transfer
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
     required:
     - amount
     - kind
@@ -166,9 +157,7 @@ schemas:
     type: object
     properties:
       block_hash:
-        description: The block hash
-        type: string
-        example: mh_2voSWMaC6hmhyCc8qZ7AxmenrK2CkqKeUg4bkFA8gcRTd4RwVB
+        $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         description: The time in which the block happened
         type: integer
@@ -233,8 +222,7 @@ paths:
           description: The account address
           required: true
           schema:
-            type: string
-            example: ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+            $ref: '#/components/schemas/AccountAddress'
         - name: owned_only
           in: query
           description: Indicate to filter only activities initiated by the account

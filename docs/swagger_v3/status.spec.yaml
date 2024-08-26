@@ -49,7 +49,7 @@ schemas:
       mdw_version:
         description: The middleware's version
         type: string
-        example: 1.49.0
+        example: "1.49.0"
       node_height:
         description: The node generation of the last block synced
         type: integer

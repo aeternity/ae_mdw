@@ -61,7 +61,7 @@ schemas:
         type: integer
       last_tx_hash:
         description: The last transaction hash for this height
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       locked_in_auctions:
         description: The amount locked in auctions
         type: integer
@@ -149,7 +149,7 @@ schemas:
         type: integer
       last_tx_hash:
         description: The last transaction hash for this height
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
     example:
       height: 121804
       contracts: 0
@@ -196,7 +196,7 @@ schemas:
     properties:
       miner:
         description: The miner (beneficiary) address
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       total_reward:
         description: The accumulated reward on the miner (beneficiary) address
         type: integer
@@ -224,7 +224,7 @@ schemas:
         type: number
       max_transactions_per_second_block_hash:
         description: The max transactions per second block hash
-        type: string
+        $ref: '#/components/schemas/KeyBlockHash'
       transactions_trend:
         description: The transactions trend
         type: number
@@ -503,7 +503,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Stats'
+                          $ref: '#/components/schemas/Stat'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request

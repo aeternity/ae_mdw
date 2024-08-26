@@ -13,17 +13,14 @@ schemas:
       - tx
     properties:
       block_hash:
-        description: The block hash
-        type: string
+        $ref: '#/components/schemas/MicroBlockHash'
       block_height:
         description: The block height
         type: integer
       encoded_tx:
-        description: The encoded transaction
-        type: string
+        $ref: '#/components/schemas/TransactionEncoded'
       hash:
-        description: The transaction hash
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       micro_index:
         description: The micro block index
         type: integer
@@ -34,7 +31,7 @@ schemas:
         description: The signatures
         type: array
         items:
-          type: string
+          $ref: '#/components/schemas/Signature'
       tx:
         description: The transaction
         $ref: '#/components/schemas/Tx' 
@@ -125,43 +122,37 @@ paths:
           in: query
           required: false
           schema:
-            type: string
-          example: ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
+            $ref: '#/components/schemas/AccountAddress'
         - name: contract
           description: The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)
           in: query
           required: false
           schema:
-            type: string
-          example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
+            $ref: '#/components/schemas/ContractAddress'
         - name: channel
           description: The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)
           in: query
           required: false
           schema:
-            type: string
-          example: ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD
+            $ref: '#/components/schemas/ChannelId'
         - name: oracle
           description: The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)
           in: query
           required: false
           schema:
-            type: string
-          example: ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR
+            $ref: '#/components/schemas/OracleAddress'
         - name: sender_id
           description: The sender ID
-          example: ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5
           in: query
           required: false
           schema:
-            type: string
+            $ref: '#/components/schemas/AccountAddress'
         - name: recipient_id
           description: The recipient ID
-          example: ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2
           in: query
           required: false
           schema:
-            type: string
+            $ref: '#/components/schemas/AccountAddress'
         - name: entrypoint
           description: Entrypoint of a contract call
           example: put_listing
@@ -206,8 +197,7 @@ paths:
           description: The transaction encoded hash
           required: true
           schema:
-            type: string
-            example: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZFk
+            $ref: '#/components/schemas/TransactionHash'
       responses:
         '200':
           description: Returns single transaction
@@ -245,8 +235,7 @@ paths:
         in: query
         required: false
         schema:
-          type: string
-          example: ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
+          $ref: '#/components/schemas/AccountAddress'
       - $ref: '#/components/parameters/ScopeParam'
       responses:
         '200':
@@ -268,8 +257,7 @@ paths:
           name: id
           required: true
           schema:
-            type: string
-            example: ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Response schema for transactions count by id

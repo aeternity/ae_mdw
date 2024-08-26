@@ -1,4 +1,9 @@
 schemas:
+  BlockStateHash:
+    description: Blocks state hash
+    type: string
+    example: bs_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
+    pattern: ^bs_\w{38,50}$
   KeyBlock:
     example:
       beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
@@ -34,25 +39,24 @@ schemas:
     properties:
       beneficiary:
         description: The beneficiary
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       beneficiary_reward:
         description: The beneficiary reward
         type: integer
       hash:
-        description: The block hash
-        type: string
+        $ref: '#/components/schemas/KeyBlockHash'
       height:
         description: The block height
         type: integer
       info:
         description: The info
-        type: string
+        $ref: '#/components/schemas/ContractBytearray'
       miner:
         description: The miner public key
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       nonce:
         description: The nonce
-        type: string
+        type: integer
       pow:
         description: The proof of work
         type: array
@@ -60,13 +64,14 @@ schemas:
           type: integer
       prev_hash:
         description: The previous block hash
-        type: string
+        oneOf:
+          - $ref: '#/components/schemas/KeyBlockHash'
+          - $ref: '#/components/schemas/MicroBlockHash'
       prev_key_hash:
         description: The previous key block hash
-        type: string
+        $ref: '#/components/schemas/KeyBlockHash'
       state_hash:
-        description: The state hash
-        type: string
+        $ref: '#/components/schemas/BlockStateHash'
       target:
         description: The target
         type: integer
@@ -120,28 +125,33 @@ schemas:
         type: integer
       hash:
         description: The micro block hash
-        type: string
+        $ref: '#/components/schemas/MicroBlockHash'
       height:
         description: The block height
         type: integer
       pof_hash:
         description: \"no_fraud\" or api encoded Proof of Fraud hash
         type: string
+        pattern: ^no_fraud|bf_\w{38,50}$
+        example: no_fraud
       prev_hash:
         description: The previous block hash
-        type: string
+        oneOf:
+          - $ref: '#/components/schemas/KeyBlockHash'
+          - $ref: '#/components/schemas/MicroBlockHash'
       prev_key_hash:
         description: The previous key block hash
-        type: string
+        $ref: '#/components/schemas/KeyBlockHash'
       state_hash:
-        description: The state hash
-        type: string
+        $ref: '#/components/schemas/BlockStateHash'
       txs_hash:
         description: Transactions hash
         type: string
+        example: "bx_2TAosDwRW2CwxbNiucN8hRfUHQcnJn2u3quDLPE9jAmgX26Qya"
+        pattern: ^bx_\w{38,50}$
       signature:
         description: Micro block signature
-        type: string
+        $ref: '#/components/schemas/Signature'
       time:
         description: The time
         type: integer
@@ -194,8 +204,7 @@ paths:
           required: true
           schema:
             oneOf:
-              - type: string
-                example: kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+              - $ref: '#/components/schemas/KeyBlockHash'
               - type: integer
                 example: 123
       responses:
@@ -229,8 +238,7 @@ paths:
           required: true
           schema:
             oneOf:
-              - type: string
-                example: kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+              - $ref: '#/components/schemas/KeyBlockHash'
               - type: integer
                 example: 123
         - $ref: '#/components/parameters/LimitParam'
@@ -269,8 +277,7 @@ paths:
           description: The micro block encoded hash
           required: true
           schema:
-            type: string
-            example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+            $ref: '#/components/schemas/MicroBlockHash'
       responses:
         '200':
           description: Returns a single micro block
@@ -301,8 +308,7 @@ paths:
           description: The micro block encoded hash
           required: true
           schema:
-            type: string
-            example: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
+            $ref: '#/components/schemas/MicroBlockHash'
       responses:
         '200':
           description: Returns paginated micro blocks

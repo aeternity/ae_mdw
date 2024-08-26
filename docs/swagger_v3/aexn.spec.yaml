@@ -31,10 +31,10 @@ schemas:
         type: string
       contract_id:
         description: NFT contract id
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       contract_tx_hash:
         description: Transaction hash of the contract creation
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       extensions:
         description: Extensions implemented by the contract
         type: array
@@ -77,10 +77,9 @@ schemas:
     properties:
       contract_id:
         description: NFT contract id
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       owner_id:
-        description: Account id
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       token_id:
         description: Non-fungible token id
         type: integer
@@ -108,7 +107,7 @@ schemas:
     properties:
       contract_id:
         description: NFT contract id
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       edition:
         description: Template edition details
         type: object
@@ -120,7 +119,7 @@ schemas:
         type: integer
       tx_hash:
         description: Transaction hash of the TemplateCreation
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
     required:
       - contract_id
       - log_idx
@@ -138,7 +137,7 @@ schemas:
     properties:
       owner_id:
         description: Owner wallet address
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       log_idx:
         description: Mint event index
         type: integer
@@ -147,7 +146,7 @@ schemas:
         type: integer
       tx_hash:
         description: Mint transaction hash
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
     required:
       - log_idx
       - owner_id
@@ -174,10 +173,10 @@ schemas:
     properties:
       contract_id:
         description: Id of the contract of the AEX9 tokens
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       contract_tx_hash:
         description: Transaction hash of the contract creation
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       initial_supply:
         description: Token supply right after contract's creation
         type: integer
@@ -238,8 +237,7 @@ schemas:
         description: AEX9 token transfer index
         type: integer
       contract_id:
-        description: Contract identifier
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       log_idx:
         description: Log index
         type: integer
@@ -248,10 +246,10 @@ schemas:
         type: integer
       recipient:
         description: Recipient of AEX9 transfer
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       sender:
         description: Sender of AEX9 transfer
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
     required:
       - contract_id
       - micro_time
@@ -285,7 +283,7 @@ schemas:
         type: integer
       contract_id:
         description: Contract id of AEX9 token
-        type: string
+        $ref: '#/components/schemas/ContractAddress'
       decimals:
         description: Number of decimals of AEX9 token
         type: integer
@@ -300,7 +298,7 @@ schemas:
         type: string
       tx_hash:
         description: Transaction hash, indicating a state of a balance for that block height
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       tx_index:
         description: Transaction index, indicating a state of a balance for that block height
         type: integer
@@ -333,7 +331,7 @@ schemas:
     properties:
       account_id:
         description: The wallet pubkey
-        type: string
+        $ref: '#/components/schemas/AccountAddress'
       amount:
         description: The balance amount
         type: integer
@@ -348,7 +346,7 @@ schemas:
         type: integer
       last_tx_hash:
         description: The hash of the last transaction that changed the balance
-        type: string
+        $ref: '#/components/schemas/TransactionHash'
       last_log_idx:
         description: The index of the event log that changed the balance
         type: integer
@@ -375,8 +373,7 @@ paths:
           name: id
           required: true
           schema:
-            type: string
-            example: ct_2w7MHbcyk5iM4yijZmjGcUF2DSZuVM1Mueppx5SSvPn5cgLJuZ
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns AEX-141 information by contract id
@@ -452,8 +449,7 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
+            $ref: '#/components/schemas/ContractAddress'
         - description: The nft token id
           in: path
           name: tokenId
@@ -472,8 +468,7 @@ paths:
                   - data
                 properties:
                   data:
-                    type: string
-                    example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+                    $ref: '#/components/schemas/AccountAddress'
         '400':
           description: Bad request
           content:
@@ -493,8 +488,7 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns paginated AEX-141 contracts
@@ -530,8 +524,7 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns paginated AEX-141 templates
@@ -567,8 +560,7 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j
+            $ref: '#/components/schemas/ContractAddress'
         - description: Template id
           in: path
           name: templateId
@@ -611,22 +603,19 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_2uiqD8jf1zkKzYwbjRVH5VSSth9KsV6hfC6dYf9o8kcdiRVLRk
+            $ref: '#/components/schemas/ContractAddress'
         - description: From account
           in: query
           name: from
           required: false
           schema:
-            type: string
-            example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+            $ref: '#/components/schemas/AccountAddress'
         - description: To account
           in: query
           name: to
           required: false
           schema:
-            type: string
-            example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns paginated AEX-141 transfers
@@ -662,15 +651,13 @@ paths:
           name: accountId
           required: true
           schema:
-            type: string
-            example: ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa
+            $ref: '#/components/schemas/AccountAddress'
         - description: Collection contract pubkey
           in: query
           name: contract
           required: false
           schema:
-            type: string
-            example: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns paginated AEX-141 tokens
@@ -704,8 +691,7 @@ paths:
           name: id
           required: true
           schema:
-            type: string
-            example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
+            $ref: '#/components/schemas/ContractAddress'
       responses:
         '200':
           description: Returns AEX-9 information by contract id
@@ -800,8 +786,7 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            $ref: '#/components/schemas/ContractAddress'
         - description: Order by
           in: query
           name: by
@@ -814,8 +799,7 @@ paths:
           name: block_hash
           required: false
           schema:
-            type: string
-            example: mh_22uNd2u5ogsFCua2kU3fSag758fTcwJ4kKJwvHpRVedeKwFRHc
+            $ref: '#/components/schemas/MicroBlockHash'
       responses:
         '200':
           description: Returns paginated contract balances
@@ -849,22 +833,19 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            $ref: '#/components/schemas/ContractAddress'
         - description: Account id
           in: path
           name: accountId
           required: true
           schema:
-            type: string
-            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            $ref: '#/components/schemas/AccountAddress'
         - description: Block hash
           in: query
           name: hash
           required: false
           schema:
-            type: string
-            example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
+            $ref: '#/components/schemas/MicroBlockHash'
       responses:
         '200':
           description: Returns a the balance of an account on a contract
@@ -879,16 +860,14 @@ paths:
                 properties:
                   account:
                     description: The account present on a AEX9
-                    type: string
-                    example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
+                    $ref: '#/components/schemas/AccountAddress'
                   amount:
                     description: The amount of AEX9 token
                     type: integer
                     example: 4050000000000
                   contract:
                     description: The contract id of given token
-                    type: string
-                    example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
+                    $ref: '#/components/schemas/ContractAddress'
         '400':
           description: Bad request
           content:
@@ -906,8 +885,7 @@ paths:
           name: accountId
           required: true
           schema:
-            type: string
-            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns all the balances of an account
@@ -944,15 +922,13 @@ paths:
           name: contractId
           required: true
           schema:
-            type: string
-            example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+            $ref: '#/components/schemas/ContractAddress'
         - description: Account id
           in: path
           name: accountId
           required: true
           schema:
-            type: string
-            example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Account balance history on a token contract
@@ -977,16 +953,14 @@ paths:
                           properties:
                             account:
                               description: The account present on a AEX9
-                              type: string
-                              example: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
+                              $ref: '#/components/schemas/AccountAddress'
                             amount:
                               description: The amount of AEX9 token
                               type: integer
                               example: 4050000000000
                             contract:
                               description: The contract id of given token
-                              type: string
-                              example: ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9
+                              $ref: '#/components/schemas/ContractAddress'
                             height:
                               description: The block height, indicating a state of a balance for that block height
                               type: integer
