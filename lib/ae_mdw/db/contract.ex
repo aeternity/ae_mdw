@@ -318,7 +318,7 @@ defmodule AeMdw.Db.Contract do
           update_balance? = not is_contract_creation?(state, addr, txi)
 
           state2
-          |> SyncStats.increment_aex9_logs(contract_pk)
+          |> SyncStats.increment_aex9_logs(aex9_contract_pk)
           |> write_aex9_records(event_type, {addr, update_balance?}, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
