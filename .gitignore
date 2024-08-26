@@ -51,3 +51,4 @@ data
 /node_sdk/output.json
 
 /priv/static/swagger/swagger_v3.*
+/docs/swagger_v3/node_oas3.yaml

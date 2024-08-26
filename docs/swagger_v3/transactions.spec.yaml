@@ -37,8 +37,7 @@ schemas:
           type: string
       tx:
         description: The transaction
-        # TODO: define properties
-        type: object
+        $ref: '#/components/schemas/Tx' 
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
