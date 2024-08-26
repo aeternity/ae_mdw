@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
+  @moduledoc """
+    Generate block difficulty statistics.
+  """
   alias AeMdw.Collection
   alias AeMdw.Db.BlockDifficultyMutation
   alias AeMdw.Db.Model
