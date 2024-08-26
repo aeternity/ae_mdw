@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.84.0](https://www.github.com/aeternity/ae_mdw/compare/v1.83.0...v1.84.0) (2024-08-26)
+
+
+### Features
+
+* add beneficiary reward to key block response ([#1905](https://www.github.com/aeternity/ae_mdw/issues/1905)) ([d06934b](https://www.github.com/aeternity/ae_mdw/commit/d06934bee98c97f2cccdb642469e27a86af1a395))
+* add block height to aex141 ([#1906](https://www.github.com/aeternity/ae_mdw/issues/1906)) ([11c8475](https://www.github.com/aeternity/ae_mdw/commit/11c84750a40c4933759cf1fccd555609ab0a59cf))
+* add node schemas to swagger definitions for mdw ([#1862](https://www.github.com/aeternity/ae_mdw/issues/1862)) ([ffa7238](https://www.github.com/aeternity/ae_mdw/commit/ffa7238137c7dbec8a3608d85aab33e1a6c4dd04))
+* handle dex swaps scoping ([#1886](https://www.github.com/aeternity/ae_mdw/issues/1886)) ([6248a65](https://www.github.com/aeternity/ae_mdw/commit/6248a656b39f0d16a824f61ed6a6174b00a01102))
+
+
+### Bug Fixes
+
+* activities pagination ([#1900](https://www.github.com/aeternity/ae_mdw/issues/1900)) ([9d70528](https://www.github.com/aeternity/ae_mdw/commit/9d705288544be7a65cbe29d276bbebfdcef2aa32))
+* inconsistent micro time naming ([#1902](https://www.github.com/aeternity/ae_mdw/issues/1902)) ([d5a259f](https://www.github.com/aeternity/ae_mdw/commit/d5a259fbac7ba9709d44fc78886060fe88e8f91e))
+* new stats paths in openapi ([#1904](https://www.github.com/aeternity/ae_mdw/issues/1904)) ([9e5e305](https://www.github.com/aeternity/ae_mdw/commit/9e5e305c0a21b53035c8802a91494a728d9888d4))
+* specify right aex9 contract to count aex9 logs ([#1908](https://www.github.com/aeternity/ae_mdw/issues/1908)) ([0e223fe](https://www.github.com/aeternity/ae_mdw/commit/0e223fe3e62c631f5ea639ff1f012510f17f16aa))
+
+
+### Miscellaneous
+
+* structure oracle response as base64 ([#1889](https://www.github.com/aeternity/ae_mdw/issues/1889)) ([b213694](https://www.github.com/aeternity/ae_mdw/commit/b2136943586965158e55808002265fe8beab14cd))
+
 ## [1.83.0](https://www.github.com/aeternity/ae_mdw/compare/v1.82.2...v1.83.0) (2024-08-13)
 
 
