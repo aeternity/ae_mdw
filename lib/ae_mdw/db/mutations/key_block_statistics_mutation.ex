@@ -26,7 +26,7 @@ defmodule AeMdw.Db.KeyBlockStatsMutation do
     time
     |> Stats.time_intervals()
     |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
-      index = {:block_difficulty, interval_by, interval_start}
+      index = {:blocks_difficulty, interval_by, interval_start}
 
       average_statistic(state, index, difficulty)
     end)

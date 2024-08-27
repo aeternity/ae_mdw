@@ -6,17 +6,14 @@ defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
   alias AeMdw.Db.KeyBlockStatsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Util
 
   require Model
-
-  @max_int Util.max_int()
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
     {_state, block_difficulties_added} =
       state
-      |> Collection.stream(Model.Block, :backward, {{0, -1}, {@max_int, -1}}, nil)
+      |> Collection.stream(Model.Block, :backward, nil, nil)
       |> Stream.filter(fn {_height, idx} -> idx == -1 end)
       |> Stream.map(fn {height, idx} ->
         State.fetch!(state, Model.Block, {height, idx})

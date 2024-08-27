@@ -242,7 +242,7 @@ defmodule AeMdw.Stats do
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_blocks_difficulty_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
-      fetch_statistics(state, pagination, filters, range, cursor, :block_difficulty)
+      fetch_statistics(state, pagination, filters, range, cursor, :blocks_difficulty)
     end
   end
 
