@@ -5,6 +5,7 @@ defmodule AeMdw.Collection do
 
   alias AeMdw.Database
   alias AeMdw.Db.State
+  alias AeMdw.Util
 
   @typep table() :: Database.table()
   @typep key() :: Database.key()
@@ -117,6 +118,38 @@ defmodule AeMdw.Collection do
     |> merge_streams_by(direction)
     |> remove_dups()
   end
+
+  @spec generate_key_boundary(tuple()) :: key_boundary()
+  def generate_key_boundary(key) do
+    size = tuple_size(key)
+
+    (size - 1)..0
+    |> Enum.reduce({[], []}, fn i, {first, last} ->
+      {[get_min_key(elem(key, i)) | first], [get_max_key(elem(key, i)) | last]}
+    end)
+    |> then(fn {first, last} -> {List.to_tuple(first), List.to_tuple(last)} end)
+  end
+
+  @spec pos_integer() :: :pos_integer
+  def pos_integer(), do: :pos_integer
+  @spec integer() :: :integer
+  def integer(), do: :integer
+  @spec integer_256bit() :: :integer_256bit
+  def integer_256bit(), do: :integer_256bit
+  @spec binary() :: :binary
+  def binary(), do: :binary
+
+  defp get_min_key(:pos_integer), do: 0
+  defp get_min_key(:integer), do: Util.min_int()
+  defp get_min_key(:integer_256bit), do: Util.min_256bit_int()
+  defp get_min_key(:binary), do: Util.min_bin()
+  defp get_min_key(x), do: x
+
+  defp get_max_key(:pos_integer), do: Util.max_int()
+  defp get_max_key(:integer), do: Util.max_int()
+  defp get_max_key(:integer_256bit), do: Util.max_int()
+  defp get_max_key(:binary), do: Util.max_256bit_bin()
+  defp get_max_key(x), do: x
 
   defp remove_dups(stream) do
     Stream.transform(stream, [], fn
