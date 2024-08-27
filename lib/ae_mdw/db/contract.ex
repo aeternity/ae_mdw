@@ -13,6 +13,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.ActiveEntities
   alias AeMdw.Db.Sync.Stats, as: SyncStats
+  alias AeMdw.Dex
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -80,8 +81,7 @@ defmodule AeMdw.Db.Contract do
 
       truncated_name = sort_field_truncate(name)
 
-      m_contract_name =
-        Model.aexn_contract_name(index: {aexn_type, truncated_name, contract_pk})
+      m_contract_name = Model.aexn_contract_name(index: {aexn_type, truncated_name, contract_pk})
 
       m_downcased_contract_name =
         Model.aexn_contract_downcased_name(
@@ -446,6 +446,8 @@ defmodule AeMdw.Db.Contract do
     case String.printable?(amounts) do
       true ->
         amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
+
+        create_txi = Dex.get_create_txi(state, create_txi, txi, idx)
 
         state
         |> State.put(
