@@ -37,10 +37,13 @@ defmodule AeMdw.Db.KeyBlockStatsMutation do
       state,
       Model.Statistic,
       index,
-      fn Model.statistic(count: old_difficulty) = statistic ->
-        Model.statistic(statistic, count: round((old_difficulty + new_difficulty) / 2))
-      end,
-      Model.statistic(index: index, count: new_difficulty)
+      fn
+        Model.statistic(count: nil) = statistic ->
+          Model.statistic(statistic, count: new_difficulty)
+
+        Model.statistic(count: old_difficulty) = statistic ->
+          Model.statistic(statistic, count: round((old_difficulty + new_difficulty) / 2))
+      end
     )
   end
 end
