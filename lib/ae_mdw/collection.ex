@@ -121,12 +121,10 @@ defmodule AeMdw.Collection do
 
   @spec generate_key_boundary(tuple()) :: key_boundary()
   def generate_key_boundary(key) do
-    size = tuple_size(key)
-
-    (size - 1)..0
-    |> Enum.reduce({[], []}, fn i, {first, last} ->
-      {[get_min_key(elem(key, i)) | first], [get_max_key(elem(key, i)) | last]}
-    end)
+    key
+    |> Tuple.to_list()
+    |> Enum.map(&{get_min_key(&1), get_max_key(&1)})
+    |> Enum.unzip()
     |> then(fn {first, last} -> {List.to_tuple(first), List.to_tuple(last)} end)
   end
 
