@@ -24,7 +24,6 @@ defmodule AeMdw.Db.Contract do
   require Record
 
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
-  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
@@ -39,6 +38,7 @@ defmodule AeMdw.Db.Contract do
   @type account_balance :: {pubkey(), integer()}
 
   @dex_factory_pubkeys Application.compile_env(:ae_mdw, :dex_factories)
+  @ae_token_contract_pks Application.compile_env(:ae_mdw, :ae_token)
 
   @spec dex_factory_pubkey :: pubkey()
   def dex_factory_pubkey, do: Map.get(@dex_factory_pubkeys, :aec_governance.get_network_id())
@@ -267,8 +267,8 @@ defmodule AeMdw.Db.Contract do
     |> ActiveEntities.track(result, create_txi, txi, fname, args)
   end
 
-  @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()
-  def logs_write(state, create_txi, txi, call_rec) do
+  @spec logs_write(state(), txi(), txi(), Contract.call(), boolean()) :: state()
+  def logs_write(state, create_txi, txi, call_rec, is_contract_creation?) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
 
     call_rec
@@ -305,6 +305,8 @@ defmodule AeMdw.Db.Contract do
         Map.get(Node.aexn_event_hash_types(), evt_hash) ||
           Map.get(Node.dex_event_hash_types(), evt_hash)
 
+      event_type = maybe_fix_event_type_for_wae(event_type, contract_pk)
+
       cond do
         event_type == :pair_created ->
           write_pair_created(state, addr, args)
@@ -315,7 +317,7 @@ defmodule AeMdw.Db.Contract do
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation or for child contracts on contract calls,
           # the balance is updated via dry-run to get minted tokens without events
-          update_balance? = not is_contract_creation?(state, addr, txi)
+          update_balance? = not is_contract_creation?
 
           state2
           |> SyncStats.increment_aex9_logs(aex9_contract_pk)
@@ -983,14 +985,17 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  defp is_contract_creation?(state, contract_pk, txi) do
-    case State.get(state, Model.AexnContract, {:aex9, contract_pk}) do
-      {:ok, Model.aexn_contract(txi_idx: {contract_txi, _idx})} ->
-        contract_txi == txi
+  defp maybe_fix_event_type_for_wae(:deposit, contract_pk) do
+    ae_token = Map.get(@ae_token_contract_pks, :aec_governance.get_network_id())
 
-      :not_found ->
-        Log.error("[is_contract_creation?] Contract #{encode_contract(contract_pk)} not found")
-        false
-    end
+    if ae_token == contract_pk, do: :mint, else: nil
   end
+
+  defp maybe_fix_event_type_for_wae(:withdrawal, contract_pk) do
+    ae_token = Map.get(@ae_token_contract_pks, :aec_governance.get_network_id())
+
+    if ae_token == contract_pk, do: :burn, else: nil
+  end
+
+  defp maybe_fix_event_type_for_wae(event_name, _contract_pk), do: event_name
 end

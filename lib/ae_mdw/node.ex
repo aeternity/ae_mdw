@@ -102,6 +102,7 @@ defmodule AeMdw.Node do
       approval
       approval_for_all
       burn
+      deposit
       mint
       swap
       edition_limit
@@ -114,6 +115,7 @@ defmodule AeMdw.Node do
       token_limit
       token_limit_decrease
       transfer
+      withdrawal
     )a)
   end
 

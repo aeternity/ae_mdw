@@ -50,7 +50,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
-        |> Contract.logs_write(create_txi, call_txi, call_rec)
+        |> Contract.logs_write(create_txi, call_txi, call_rec, false)
 
       m_log0 =
         Model.contract_log(
@@ -131,7 +131,7 @@ defmodule AeMdw.Db.ContractTest do
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
         |> State.cache_put(:ct_create_sync_cache, remote_pk, remote_txi)
-        |> Contract.logs_write(create_txi, call_txi, call_rec)
+        |> Contract.logs_write(create_txi, call_txi, call_rec, false)
 
       m_log0 =
         Model.contract_log(
@@ -221,7 +221,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, dex_pair_pk, create_pair_txi})
         )
-        |> Contract.logs_write(create_pair_txi, call_txi, call_rec)
+        |> Contract.logs_write(create_pair_txi, call_txi, call_rec, false)
 
       assert %{token1: dex_token1_pk, token2: dex_token2_pk} ==
                DexCache.get_pair(dex_pair_pk)
@@ -241,7 +241,7 @@ defmodule AeMdw.Db.ContractTest do
       call_txi = call_txi + 1
       log_idx = 0
 
-      state = Contract.logs_write(state, create_token_txi, call_txi, call_rec2)
+      state = Contract.logs_write(state, create_token_txi, call_txi, call_rec2, false)
 
       assert {:ok, Model.dex_account_swap_tokens(amounts: [123, 456], to: ^account2_pk)} =
                State.get(
@@ -302,7 +302,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
         )
-        |> Contract.logs_write(txi, txi, call_rec)
+        |> Contract.logs_write(txi, txi, call_rec, true)
 
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
@@ -354,7 +354,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk2}, txi_idx: {create_txi2, -1})
         )
-        |> Contract.logs_write(create_txi1, txi, call_rec)
+        |> Contract.logs_write(create_txi1, txi, call_rec, true)
 
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk2, account_pk1})
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk2, account_pk2})
@@ -406,7 +406,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
         )
-        |> Contract.logs_write(txi, txi + 1, call_rec)
+        |> Contract.logs_write(txi, txi + 1, call_rec, false)
 
       assert Model.aex9_contract_balance(amount: 700) =
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
@@ -453,7 +453,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
         )
-        |> Contract.logs_write(txi, txi + 1, call_rec)
+        |> Contract.logs_write(txi, txi + 1, call_rec, false)
 
       assert Model.aex9_contract_balance(amount: -1000) =
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
@@ -507,7 +507,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, remote_pk2}, txi_idx: {txi - 1, -1})
         )
-        |> Contract.logs_write(txi - 1, txi, call_rec)
+        |> Contract.logs_write(txi - 1, txi, call_rec, false)
 
       assert {:ok, Model.aex9_event_balance(amount: ^mint_amount)} =
                State.get(state, Model.Aex9EventBalance, {remote_pk1, account_pk1})
@@ -551,7 +551,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi - 1, -1})
         )
-        |> Contract.logs_write(txi - 1, txi, call_rec)
+        |> Contract.logs_write(txi - 1, txi, call_rec, false)
 
       assert {:ok, Model.aex9_event_balance(amount: -2_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
@@ -611,7 +611,7 @@ defmodule AeMdw.Db.ContractTest do
 
       {state, _txi} =
         Enum.reduce(call_rec_list, {state, txi}, fn call_rec, {state, txi} ->
-          {Contract.logs_write(state, create_txi, txi, call_rec), txi + 1}
+          {Contract.logs_write(state, create_txi, txi, call_rec, false), txi + 1}
         end)
 
       assert {:ok, Model.aex9_event_balance(amount: 1_190_000_000_000_000_000)} =
@@ -663,7 +663,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
         )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
-        |> Contract.logs_write(txi, txi, call_rec)
+        |> Contract.logs_write(txi, txi, call_rec, true)
 
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
@@ -746,7 +746,7 @@ defmodule AeMdw.Db.ContractTest do
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
-        |> Contract.logs_write(txi, txi, call_rec)
+        |> Contract.logs_write(txi, txi, call_rec, false)
 
       assert :not_found == State.get(state, Model.NftContractLimits, contract_pk)
       assert :none == State.prev(state, Model.NftOwnership, {account_pk1, contract_pk, nil})
@@ -787,7 +787,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
         )
-        |> Contract.logs_write(create_txi, txi, call_rec)
+        |> Contract.logs_write(create_txi, txi, call_rec, false)
 
       assert {:ok, Model.aex9_event_balance(txi: ^txi, log_idx: 0, amount: 1_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
