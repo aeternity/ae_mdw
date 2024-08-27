@@ -394,11 +394,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /stats/blocks_difficulty:
+  /stats/difficulty:
     get:
       deprecated: false
       description: Get total blocks difficulty stats.
-      operationId: GetBlocksDifficultyStats
+      operationId: GetDifficultyStats
       parameters:
         - name: interval_by
           description: The interval in which to return the stats.

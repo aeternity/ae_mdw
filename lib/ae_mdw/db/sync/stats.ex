@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
-  alias AeMdw.Db.KeyBlockStatsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -92,6 +91,7 @@ defmodule AeMdw.Db.Sync.Stats do
   def key_block_mutations(height, key_block, micro_blocks, from_txi, next_txi, starting_from_mb0?) do
     header = :aec_blocks.to_header(key_block)
     time = :aec_headers.time_in_msecs(header)
+    difficulty = :aec_blocks.difficulty(key_block)
     {:ok, key_hash} = :aec_headers.hash_header(header)
 
     statistics =
@@ -100,7 +100,8 @@ defmodule AeMdw.Db.Sync.Stats do
       |> Enum.flat_map(fn {interval, interval_start} ->
         [
           {{{:blocks, :key}, interval, interval_start}, 1},
-          {{{:blocks, :all}, interval, interval_start}, 1}
+          {{{:blocks, :all}, interval, interval_start}, 1},
+          {{:difficulty, interval, interval_start}, difficulty}
         ]
       end)
 
@@ -114,12 +115,10 @@ defmodule AeMdw.Db.Sync.Stats do
       end)
 
     tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
-    difficulty = :aec_blocks.difficulty(key_block)
 
     [
       StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
-      StatisticsMutation.new(statistics),
-      KeyBlockStatsMutation.new(time, difficulty)
+      StatisticsMutation.new(statistics)
     ]
   end
 

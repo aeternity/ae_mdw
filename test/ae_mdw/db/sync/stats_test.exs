@@ -2,7 +2,6 @@ defmodule AeMdw.Db.Sync.StatsTest do
   use ExUnit.Case
 
   import Mock
-  alias AeMdw.Db.KeyBlockStatsMutation
   alias AeMdw.Db.StatisticsMutation
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Stats
@@ -102,34 +101,39 @@ defmodule AeMdw.Db.Sync.StatsTest do
           StatisticsMutation.new([
             {{{:blocks, :key}, :day, 0}, 1},
             {{{:blocks, :all}, :day, 0}, 1},
+            {{:difficulty, :day, 0}, 2},
             {{{:blocks, :key}, :week, 0}, 1},
             {{{:blocks, :all}, :week, 0}, 1},
+            {{:difficulty, :week, 0}, 2},
             {{{:blocks, :key}, :month, 0}, 1},
-            {{{:blocks, :all}, :month, 0}, 1}
+            {{{:blocks, :all}, :month, 0}, 1},
+            {{:difficulty, :month, 0}, 2}
           ])
 
         mutation2 =
           StatisticsMutation.new([
             {{{:blocks, :key}, :day, 365}, 1},
             {{{:blocks, :all}, :day, 365}, 1},
+            {{:difficulty, :day, 365}, 2},
             {{{:blocks, :key}, :week, 52}, 1},
             {{{:blocks, :all}, :week, 52}, 1},
+            {{:difficulty, :week, 52}, 2},
             {{{:blocks, :key}, :month, 12}, 1},
-            {{{:blocks, :all}, :month, 12}, 1}
+            {{{:blocks, :all}, :month, 12}, 1},
+            {{:difficulty, :month, 12}, 2}
           ])
 
         key_block1_mutations = Stats.key_block_mutations(1, key_block1, [], 1, 2, false)
         assert mutation1 in key_block1_mutations
         assert mutation2 in Stats.key_block_mutations(1, key_block2, [], 1, 2, false)
 
-        assert Enum.count(key_block1_mutations) == 3
+        assert Enum.count(key_block1_mutations) == 2
 
         assert Enum.filter(
                  key_block1_mutations,
                  fn
                    %StatsMutation{} -> true
                    %StatisticsMutation{} -> true
-                   %KeyBlockStatsMutation{} -> true
                    _otherwise -> false
                  end
                ) == key_block1_mutations
