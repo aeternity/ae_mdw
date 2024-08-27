@@ -5,12 +5,12 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
-  alias AeMdw.Db.BlockDifficultyMutation
+  alias AeMdw.Db.KeyBlockStatsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Stats
@@ -119,7 +119,7 @@ defmodule AeMdw.Db.Sync.Stats do
     [
       StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
       StatisticsMutation.new(statistics),
-      BlockDifficultyMutation.new(time, difficulty)
+      KeyBlockStatsMutation.new(time, difficulty)
     ]
   end
 

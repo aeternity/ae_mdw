@@ -1,6 +1,6 @@
-defmodule AeMdw.Db.BlockDifficultyMutation do
+defmodule AeMdw.Db.KeyBlockStatsMutation do
   @moduledoc """
-  Creates a statistic record for the block difficulty.
+  Creates a statistic records for key blocks.
   """
   alias AeMdw.Blocks
   alias AeMdw.Db.Model

@@ -3,7 +3,7 @@ defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
     Generate block difficulty statistics.
   """
   alias AeMdw.Collection
-  alias AeMdw.Db.BlockDifficultyMutation
+  alias AeMdw.Db.KeyBlockStatsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Util
@@ -25,7 +25,7 @@ defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
         block = :aec_db.get_block(hash)
         difficulty = :aec_blocks.difficulty(block)
         time = :aec_blocks.time_in_msecs(block)
-        BlockDifficultyMutation.new(time, difficulty)
+        KeyBlockStatsMutation.new(time, difficulty)
       end)
       |> Stream.chunk_every(1000)
       |> Enum.reduce({state, 0}, fn mutations, {acc_state, count} ->
