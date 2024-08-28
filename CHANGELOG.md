@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.84.1](https://www.github.com/aeternity/ae_mdw/compare/v1.84.0...v1.84.1) (2024-08-28)
+
+
+### Bug Fixes
+
+* dex contract swaps ([#1912](https://www.github.com/aeternity/ae_mdw/issues/1912)) ([ca0d83c](https://www.github.com/aeternity/ae_mdw/commit/ca0d83c14c3c8c8a51c16bb1c05b6ec788f04bab))
+
+
+### Miscellaneous
+
+* add generation of key boundaries ([#1915](https://www.github.com/aeternity/ae_mdw/issues/1915)) ([cfaac71](https://www.github.com/aeternity/ae_mdw/commit/cfaac71bc257e15ca788f24527c6e0de39c9e3a3))
+
 ## [1.84.0](https://www.github.com/aeternity/ae_mdw/compare/v1.83.0...v1.84.0) (2024-08-26)
 
 
