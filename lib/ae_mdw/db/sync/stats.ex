@@ -92,6 +92,7 @@ defmodule AeMdw.Db.Sync.Stats do
     header = :aec_blocks.to_header(key_block)
     time = :aec_headers.time_in_msecs(header)
     difficulty = :aec_blocks.difficulty(key_block)
+    hashrate = Node.difficulty_to_hashrate(difficulty)
     {:ok, key_hash} = :aec_headers.hash_header(header)
 
     statistics =
@@ -101,7 +102,8 @@ defmodule AeMdw.Db.Sync.Stats do
         [
           {{{:blocks, :key}, interval, interval_start}, 1},
           {{{:blocks, :all}, interval, interval_start}, 1},
-          {{:difficulty, interval, interval_start}, difficulty}
+          {{:difficulty, interval, interval_start}, difficulty},
+          {{:hashrate, interval, interval_start}, hashrate}
         ]
       end)
 

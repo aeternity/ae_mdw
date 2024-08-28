@@ -241,16 +241,29 @@ defmodule AeMdw.Stats do
   @spec fetch_difficulty_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_difficulty_stats(state, pagination, query, range, cursor) do
-    with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1),
-         {:ok, {prev, counts, next}} <-
+    with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
+      average_per_block(state, :difficulty, pagination, filters, range, cursor)
+    end
+  end
+
+  @spec fetch_hashrate_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_hashrate_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
+      average_per_block(state, :hashrate, pagination, filters, range, cursor)
+    end
+  end
+
+  defp average_per_block(state, tag, pagination, filters, range, cursor) do
+    with {:ok, {prev, counts, next}} <-
            fetch_statistics(state, pagination, filters, range, cursor, {:blocks, :key}),
-         {:ok, {^prev, difficulties, ^next}} <-
-           fetch_statistics(state, pagination, filters, range, cursor, :difficulty) do
-      [difficulties, counts]
+         {:ok, {^prev, stats, ^next}} <-
+           fetch_statistics(state, pagination, filters, range, cursor, tag) do
+      [stats, counts]
       |> Enum.zip()
-      |> Enum.map(fn {%{count: difficulty, start_date: start_date, end_date: end_date},
+      |> Enum.map(fn {%{count: stat, start_date: start_date, end_date: end_date},
                       %{count: count, start_date: start_date, end_date: end_date}} ->
-        average = if count == 0, do: 0, else: round(difficulty / count)
+        average = if count == 0, do: 0, else: round(stat / count)
         %{start_date: start_date, end_date: end_date, count: average}
       end)
       |> then(&{:ok, {prev, &1, next}})
