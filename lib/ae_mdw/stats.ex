@@ -250,7 +250,7 @@ defmodule AeMdw.Stats do
       |> Enum.zip()
       |> Enum.map(fn {%{count: difficulty, start_date: start_date, end_date: end_date},
                       %{count: count, start_date: start_date, end_date: end_date}} ->
-        average = if count == 0, do: 0, else: Float.round(difficulty / count, 2)
+        average = if count == 0, do: 0, else: round(difficulty / count)
         %{start_date: start_date, end_date: end_date, count: average}
       end)
       |> then(&{:ok, {prev, &1, next}})
