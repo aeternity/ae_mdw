@@ -8,8 +8,8 @@ defmodule AeMdw.Db.Sync.Stats do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Stats
@@ -91,6 +91,7 @@ defmodule AeMdw.Db.Sync.Stats do
   def key_block_mutations(height, key_block, micro_blocks, from_txi, next_txi, starting_from_mb0?) do
     header = :aec_blocks.to_header(key_block)
     time = :aec_headers.time_in_msecs(header)
+    difficulty = :aec_blocks.difficulty(key_block)
     {:ok, key_hash} = :aec_headers.hash_header(header)
 
     statistics =
@@ -99,7 +100,8 @@ defmodule AeMdw.Db.Sync.Stats do
       |> Enum.flat_map(fn {interval, interval_start} ->
         [
           {{{:blocks, :key}, interval, interval_start}, 1},
-          {{{:blocks, :all}, interval, interval_start}, 1}
+          {{{:blocks, :all}, interval, interval_start}, 1},
+          {{:difficulty, interval, interval_start}, difficulty}
         ]
       end)
 

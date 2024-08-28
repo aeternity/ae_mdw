@@ -394,6 +394,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /stats/difficulty:
+    get:
+      deprecated: false
+      description: Get total blocks difficulty stats.
+      operationId: GetDifficultyStats
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the stats.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Stat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /stats/transactions:
     get:
       deprecated: false

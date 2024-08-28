@@ -238,6 +238,25 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_difficulty_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_difficulty_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1),
+         {:ok, {prev, counts, next}} <-
+           fetch_statistics(state, pagination, filters, range, cursor, {:blocks, :key}),
+         {:ok, {^prev, difficulties, ^next}} <-
+           fetch_statistics(state, pagination, filters, range, cursor, :difficulty) do
+      [difficulties, counts]
+      |> Enum.zip()
+      |> Enum.map(fn {%{count: difficulty, start_date: start_date, end_date: end_date},
+                      %{count: count, start_date: start_date, end_date: end_date}} ->
+        average = if count == 0, do: 0, else: round(difficulty / count)
+        %{start_date: start_date, end_date: end_date, count: average}
+      end)
+      |> then(&{:ok, {prev, &1, next}})
+    end
+  end
+
   @spec fetch_names_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_names_stats(state, pagination, query, range, cursor) do

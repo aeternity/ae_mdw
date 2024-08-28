@@ -100,6 +100,16 @@ defmodule AeMdwWeb.StatsController do
     end
   end
 
+  @spec difficulty_stats(Conn.t(), map()) :: Conn.t()
+  def difficulty_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_stats} <-
+           Stats.fetch_difficulty_stats(state, pagination, query, scope, cursor) do
+      Util.render(conn, paginated_stats)
+    end
+  end
+
   @spec names_stats(Conn.t(), map()) :: Conn.t()
   def names_stats(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
