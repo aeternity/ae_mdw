@@ -317,15 +317,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/difficulty", limit: 2)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-02-01", "count" => 0.33} = st1
-      assert %{"start_date" => "1970-01-31", "count" => 0.5} = st2
+      assert %{"start_date" => "1970-02-01", "count" => 0} = st1
+      assert %{"start_date" => "1970-01-31", "count" => 1} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-30", "count" => 1.0} = st3
+      assert %{"start_date" => "1970-01-30", "count" => 1} = st3
       assert %{"start_date" => "1970-01-29", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
@@ -365,15 +365,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/difficulty", limit: 2, interval_by: "week")
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-29", "count" => 0.33} = st1
-      assert %{"start_date" => "1970-01-22", "count" => 0.5} = st2
+      assert %{"start_date" => "1970-01-29", "count" => 0} = st1
+      assert %{"start_date" => "1970-01-22", "count" => 1} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-01-15", "count" => 1.0} = st3
+      assert %{"start_date" => "1970-01-15", "count" => 1} = st3
       assert %{"start_date" => "1970-01-08", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
@@ -456,15 +456,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/difficulty", limit: 2, interval_by: "month")
                |> json_response(200)
 
-      assert %{"start_date" => "1970-05-01", "count" => 0.5} = st1
-      assert %{"start_date" => "1970-04-01", "count" => 0.33} = st2
+      assert %{"start_date" => "1970-05-01", "count" => 1} = st1
+      assert %{"start_date" => "1970-04-01", "count" => 0} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1970-03-01", "count" => 0.5} = st3
+      assert %{"start_date" => "1970-03-01", "count" => 1} = st3
       assert %{"start_date" => "1970-02-01", "count" => 0} = st4
 
       assert %{"data" => ^statistics} =
