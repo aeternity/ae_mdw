@@ -190,6 +190,20 @@ defmodule AeMdw.Names do
     end
   end
 
+  @spec fetch_auction(state(), binary(), opts()) :: {:ok, claim()} | {:error, Error.t()}
+  def fetch_auction(state, plain_name_or_hash, opts) do
+    case locate_name_or_auction(state, plain_name_or_hash) do
+      {:ok, Model.auction_bid(index: plain_name, start_height: _start_height)} ->
+        AuctionBids.fetch(state, plain_name, opts)
+
+      {:ok, Model.name()} ->
+        {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   @spec fetch_auction_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do

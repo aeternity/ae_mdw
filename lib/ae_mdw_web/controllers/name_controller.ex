@@ -60,15 +60,12 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec auction(Conn.t(), map()) :: Conn.t()
-  def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}) do
+  def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => plain_name_or_hash}) do
     opts = [{:render_v3?, true} | opts]
 
-    case AuctionBids.fetch(state, ident, opts) do
-      {:ok, auction_bid} ->
-        format_json(conn, auction_bid)
-
-      :not_found ->
-        {:error, ErrInput.NotFound.exception(value: ident)}
+    with {:ok, plain_name} <- Validate.plain_name(state, plain_name_or_hash),
+         {:ok, auction_bid} <- Names.fetch_auction(state, plain_name, opts) do
+      format_json(conn, auction_bid)
     end
   end
 
@@ -108,11 +105,12 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec auction_claims(Conn.t(), map()) :: Conn.t()
-  def auction_claims(%Conn{assigns: assigns} = conn, %{"id" => name_id}) do
+  def auction_claims(%Conn{assigns: assigns} = conn, %{"id" => plain_name_or_hash}) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    with {:ok, paginated_bids} <-
-           Names.fetch_auction_claims(state, name_id, pagination, scope, cursor) do
+    with {:ok, plain_name} <- Validate.plain_name(state, plain_name_or_hash),
+         {:ok, paginated_bids} <-
+           Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor) do
       Util.render(conn, paginated_bids)
     end
   end

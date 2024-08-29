@@ -2,6 +2,7 @@ defmodule AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Db.Format
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -1183,6 +1184,113 @@ defmodule AeMdwWeb.NameControllerTest do
                conn
                |> get("/v2/names/auctions", by: by, direction: direction)
                |> json_response(400)
+    end
+
+    test "it returns the auction info", %{conn: conn, store: store} do
+      plain_name = "asd.chain"
+      start_height = 500
+      end_height = start_height + 500
+      claim_txi_idx1 = {567, -1}
+      claim_txi_idx2 = {678, -1}
+      claim_txi_idx3 = {788, -1}
+
+      auction_bid =
+        Model.auction_bid(
+          index: plain_name,
+          start_height: start_height,
+          block_index_txi_idx: {{start_height, -1}, {788, -1}},
+          expire_height: end_height
+        )
+
+      {:ok, name_hash_id} = :aens.get_name_hash(plain_name)
+      name_hash = Enc.encode(:name, name_hash_id)
+
+      store =
+        store
+        |> Store.put(Model.AuctionBid, auction_bid)
+        |> Store.put(Model.Block, Model.block(index: {start_height, -1}, hash: <<0::256>>))
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx1})
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx2})
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx3})
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(
+            index: 788,
+            id: <<1::256>>,
+            block_index: {start_height, -1}
+          )
+        )
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: plain_name))
+
+      conn = with_store(conn, store)
+      time = 123
+
+      with_mocks([
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> time end]},
+        {Format, [],
+         [
+           to_map: fn _state, Model.tx(index: txi) ->
+             %{"tx" => %{"type" => "NameClaimTx"}, "tx_index" => txi}
+           end
+         ]}
+      ]) do
+        assert resp =
+                 %{
+                   "name" => ^plain_name,
+                   "name_fee" => 0,
+                   "auction_end" => ^end_height,
+                   "last_bid" => %{"tx" => %{"ttl" => 51_000, "type" => "NameClaimTx"}},
+                   "approximate_expire_time" => 90_000_123,
+                   "activation_time" => ^time
+                 } =
+                 conn
+                 |> get("/v3/names/auctions/#{plain_name}")
+                 |> json_response(200)
+
+        assert ^resp =
+                 conn
+                 |> get("/v3/names/auctions/#{name_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "it returns error if missing name or hash", %{conn: conn} do
+      name = "asd.chain"
+      {:ok, name_id} = :aens.get_name_hash(name)
+      hash = Enc.encode(:name, name_id)
+
+      error = "not found: #{name}"
+      error_hash = "not found: #{hash}"
+
+      assert %{"error" => ^error} =
+               conn |> get("/v3/names/auctions/#{name}") |> json_response(404)
+
+      assert %{"error" => ^error_hash} =
+               conn |> get("/v3/names/auctions/#{hash}") |> json_response(404)
+    end
+
+    test "it returns error if invalid name or hash", %{conn: conn} do
+      name = "asd"
+      hash = "nm_invalid_hash"
+
+      error = "not found: #{name}.chain"
+      error_hash = "not found: #{hash}"
+
+      assert %{"error" => ^error} =
+               conn |> get("/v3/names/auctions/#{name}") |> json_response(404)
+
+      assert %{"error" => ^error_hash} =
+               conn |> get("/v3/names/auctions/#{hash}") |> json_response(404)
     end
   end
 
@@ -3358,6 +3466,9 @@ defmodule AeMdwWeb.NameControllerTest do
           start_height: start_height
         )
 
+      {:ok, name_hash_id} = :aens.get_name_hash(plain_name)
+      name_hash = Enc.encode(:name, name_hash_id)
+
       store =
         store
         |> Store.put(Model.AuctionBid, auction_bid)
@@ -3378,6 +3489,7 @@ defmodule AeMdwWeb.NameControllerTest do
           Model.AuctionBidClaim,
           Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx3})
         )
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: plain_name))
 
       conn = with_store(conn, store)
 
@@ -3440,17 +3552,28 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get("/v3/names/auctions/#{plain_name}/claims", limit: 2, direction: "forward")
                  |> json_response(200)
 
+        assert %{"data" => [^claim1, ^claim2], "next" => hash_next_url} =
+                 conn
+                 |> get("/v3/names/auctions/#{name_hash}/claims", limit: 2, direction: "forward")
+                 |> json_response(200)
+
         refute is_nil(next_url)
+        refute is_nil(hash_next_url)
         assert %{"height" => 123, "tx" => %{"fee" => 111_111}} = claim1
         assert %{"height" => 123, "tx" => %{"fee" => 222_222}} = claim2
 
         assert %{"data" => [claim3], "prev" => prev_url} =
                  conn |> get(next_url) |> json_response(200)
 
+        assert %{"data" => [^claim3], "prev" => hash_prev_url} =
+                 conn |> get(hash_next_url) |> json_response(200)
+
         refute is_nil(prev_url)
+        refute is_nil(hash_prev_url)
         assert %{"height" => 124, "tx" => %{"fee" => 333_333}} = claim3
 
         assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
+        assert %{"data" => ^claims} = conn |> get(hash_prev_url) |> json_response(200)
       end
     end
   end
