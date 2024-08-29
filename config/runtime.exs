@@ -70,6 +70,10 @@ base_logger_backends = Application.get_env(:logger, :backends, [])
 logger_backends =
   if enable_console_log, do: [:console | base_logger_backends], else: base_logger_backends
 
+config :logger,
+  level: log_level || :info,
+  backends: logger_backends
+
 formatters = %{
   "datadog" => :datadog,
   "standard" => :standard
@@ -113,10 +117,6 @@ if env in [:test, :prod] do
     config :ae_mdw, AeMdwWeb.Endpoint, server: true
     config :phoenix, :serve_endpoints, true
   end
-
-  config :logger,
-    level: log_level || :info,
-    backends: logger_backends
 end
 
 config :ae_mdw, enable_rollback: env == :dev
