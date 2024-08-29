@@ -14,8 +14,6 @@ defmodule AeMdwWeb.Aex141Controller do
 
   alias Plug.Conn
 
-  import AeMdw.Util.Encoding, only: [encode_account: 1]
-
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
@@ -91,19 +89,18 @@ defmodule AeMdwWeb.Aex141Controller do
         "contract_id" => contract_id,
         "token_id" => token_id
       }) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
-         {:ok, account_pk} <- Aex141.fetch_nft_owner(state, contract_pk, token_id) do
-      format_json(conn, %{data: encode_account(account_pk)})
-    else
-      :error ->
-        {:error, ErrInput.NotFound.exception(value: token_id)}
+    with {:ok, nft} <- Aex141.fetch_nft(state, contract_id, token_id, v3?: true) do
+      format_json(conn, nft)
+    end
+  end
 
-      {:int, _invalid_int} ->
-        {:error, ErrInput.NotFound.exception(value: token_id)}
-
-      {:error, reason} ->
-        {:error, reason}
+  @spec nft_owner_v2(Conn.t(), map()) :: Conn.t()
+  def nft_owner_v2(%Conn{assigns: %{state: state}} = conn, %{
+        "contract_id" => contract_id,
+        "token_id" => token_id
+      }) do
+    with {:ok, nft} <- Aex141.fetch_nft(state, contract_id, token_id, v3?: false) do
+      format_json(conn, nft)
     end
   end
 

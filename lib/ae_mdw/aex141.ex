@@ -44,6 +44,8 @@ defmodule AeMdw.Aex141 do
           tx_hash: Txs.tx_hash(),
           log_idx: AeMdw.Contracts.log_idx()
         }
+  @type opt() :: {:v3?, boolean()}
+  @type opts() :: [opt()]
 
   @type metadata :: %{url: String.t()} | %{id: String.t()} | %{map: map()}
 
@@ -55,22 +57,64 @@ defmodule AeMdw.Aex141 do
   @spec fetch_nft_metadata(State.t(), pubkey(), token_id()) ::
           {:ok, metadata()} | {:error, Error.t()}
   def fetch_nft_metadata(state, contract_pk, token_id) do
-    with {:ok, return} <- call_contract(state, contract_pk, "metadata", [token_id]) do
-      Model.aexn_contract(meta_info: {_name, _symbol, _url, metadata_type}) =
-        State.fetch!(state, Model.AexnContract, {:aex141, contract_pk})
-
+    with {:ok, Model.aexn_contract(meta_info: {_name, _symbol, _url, metadata_type})} <-
+           get_contract(state, contract_pk),
+         {:ok, return} <- call_contract(contract_pk, "metadata", [token_id]) do
       decode_metadata(metadata_type, return)
     end
   end
 
-  @spec fetch_nft_owner(State.t(), pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
-  def fetch_nft_owner(state, contract_pk, token_id) do
-    with {:ok, return} <- call_contract(state, contract_pk, "owner", [token_id]) do
-      case return do
-        {:address, account_pk} -> {:ok, account_pk}
-        mismatch -> {:error, ErrInput.ContractReturn.exception(value: inspect(mismatch))}
-      end
+  @spec fetch_nft(State.t(), binary(), binary(), opts()) :: {:ok, map()} | {:error, Error.t()}
+  def fetch_nft(state, contract_id, token_id, opts) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
+         {:ok, Model.aexn_contract(meta_info: {_name, _symbol, _url, metadata_type})} <-
+           get_contract(state, contract_pk),
+         {:owner, {:ok, {:address, account_pk}}} <-
+           {:owner, call_contract(contract_pk, "owner", [token_id])} do
+      {:ok, render_nft(contract_pk, account_pk, token_id, metadata_type, opts)}
+    else
+      :error ->
+        {:error, ErrInput.NotFound.exception(value: token_id)}
+
+      {:int, _invalid_int} ->
+        {:error, ErrInput.NotFound.exception(value: token_id)}
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: token_id)}
+
+      {:owner, {:ok, mismatch}} ->
+        {:error, ErrInput.ContractReturn.exception(value: inspect(mismatch))}
+
+      {:owner, {:error, reason}} ->
+        {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  def render_nft(contract_pk, account_pk, token_id, metadata_type, opts) do
+    if Keyword.get(opts, :v3?, true) do
+      render_nft(contract_pk, account_pk, token_id, metadata_type)
+    else
+      render_nft_v2(contract_pk, account_pk, token_id, metadata_type)
+    end
+  end
+
+  defp render_nft(contract_pk, account_pk, token_id, metadata_type) do
+    {:ok, return_metadata} = call_contract(contract_pk, "metadata", [token_id])
+    {:ok, decoded_metadata} = decode_metadata(metadata_type, return_metadata)
+
+    %{
+      token_id: token_id,
+      owner: encode_account(account_pk),
+      metadata: decoded_metadata
+    }
+  end
+
+  defp render_nft_v2(_contract_pk, account_pk, _token_id, _metadata_type) do
+    %{data: encode_account(account_pk)}
   end
 
   @spec fetch_owned_tokens(State.t(), binary(), cursor(), pagination(), map()) ::
@@ -260,14 +304,16 @@ defmodule AeMdw.Aex141 do
   defp convert_owned_tokens_param(other_param),
     do: {:error, ErrInput.Query.exception(value: other_param)}
 
-  defp call_contract(state, contract_pk, entrypoint, args) do
-    with true <- State.exists?(state, Model.AexnContract, {:aex141, contract_pk}),
-         {:ok, {:variant, [0, 1], 1, {result}}} <-
-           AexnContracts.call_contract(contract_pk, entrypoint, args) do
-      {:ok, result}
-    else
-      false ->
-        {:error, ErrInput.NotAex141.exception(value: encode_contract(contract_pk))}
+  defp get_contract(state, contract_pk) do
+    with :not_found <- State.get(state, Model.AexnContract, {:aex141, contract_pk}) do
+      {:error, ErrInput.NotAex141.exception(value: encode_contract(contract_pk))}
+    end
+  end
+
+  defp call_contract(contract_pk, entrypoint, args) do
+    case AexnContracts.call_contract(contract_pk, entrypoint, args) do
+      {:ok, {:variant, [0, 1], 1, {result}}} ->
+        {:ok, result}
 
       {:error, _reason} ->
         {:error, ErrInput.ContractDryRun.exception(value: encode_contract(contract_pk))}
