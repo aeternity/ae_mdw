@@ -38,40 +38,42 @@ defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
       {create_txi, nil, nil}
     }
 
-    balances =
+    {balances, transfers} =
       state
       |> Collection.stream(Model.ContractLog, :forward, key_boundary, nil)
       |> Stream.map(&State.fetch!(state, Model.ContractLog, &1))
-      |> Enum.reduce(%{}, fn Model.contract_log(
-                               index: {^create_txi, txi, idx} = index,
-                               args: args,
-                               hash: event_hash
-                             ),
-                             balances ->
+      |> Enum.reduce({%{}, []}, fn Model.contract_log(
+                                     index: {^create_txi, txi, idx} = index,
+                                     args: args,
+                                     hash: event_hash
+                                   ),
+                                   balances_transfers ->
         event_name = AexnContracts.event_name(event_hash) || event_hash
 
         case {event_name, args} do
           {"Transfer", [from_pk, to_pk, <<transfered_value::256>>]} ->
-            balances
+            balances_transfers
             |> update_balance(from_pk, txi, idx, -transfered_value)
             |> update_balance(to_pk, txi, idx, transfered_value)
 
           # Mint
           {"Deposit", [to_pk, <<mint_value::256>>]} ->
-            balances
+            balances_transfers
+            |> add_transfer(contract_pk, to_pk, mint_value, txi, idx)
             |> update_balance(to_pk, txi, idx, mint_value)
 
           # Burn
           {"Withdrawal", [from_pk, <<burn_value::256>>]} ->
-            balances
+            balances_transfers
+            |> add_transfer(from_pk, contract_pk, burn_value, txi, idx)
             |> update_balance(from_pk, txi, idx, -burn_value)
 
           {"Allowance", [_from_pk, _to_pk, <<_allowance_value::256>>]} ->
-            balances
+            balances_transfers
 
           {event, args} ->
             IO.puts("UNKNOWN EVENT: #{inspect(event)}, args: #{inspect(args)}, #{inspect(index)}")
-            balances
+            balances_transfers
         end
       end)
 
@@ -94,6 +96,27 @@ defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
               log_idx: idx,
               amount: balance
             )
+          ),
+          WriteMutation.new(
+            Model.Aex9AccountPresence,
+            Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
+          )
+        ]
+      end)
+
+    transfers_mutations =
+      Enum.flat_map(transfers, fn {from_pk, to_pk, value, txi, log_idx} ->
+        [
+          WriteMutation.new(
+            Model.AexnTransfer,
+            Model.aexn_transfer(
+              index: {:aex9, from_pk, txi, to_pk, value, log_idx},
+              contract_pk: contract_pk
+            )
+          ),
+          WriteMutation.new(
+            Model.RevAexnTransfer,
+            Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, from_pk, value, log_idx})
           )
         ]
       end)
@@ -136,6 +159,7 @@ defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
     total_mutations =
       mutations
       |> Stream.concat(balances_mutations)
+      |> Stream.concat(transfers_mutations)
       |> Stream.chunk_every(1000)
       |> Stream.map(fn mutations ->
         _state = State.commit_db(state, mutations)
@@ -146,13 +170,17 @@ defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
     {:ok, total_mutations}
   end
 
-  defp update_balance(balances, account_pk, txi, idx, amount) do
+  defp update_balance({balances, transfers}, account_pk, txi, idx, amount) do
     old_balance =
       case Map.get(balances, account_pk) do
         nil -> 0
         {balance, _txi, _idx} -> balance
       end
 
-    Map.put(balances, account_pk, {old_balance + amount, txi, idx})
+    {Map.put(balances, account_pk, {old_balance + amount, txi, idx}), transfers}
+  end
+
+  defp add_transfer({balances, transfers}, from_pk, to_pk, value, txi, log_idx) do
+    {balances, [{from_pk, to_pk, value, txi, log_idx} | transfers]}
   end
 end
