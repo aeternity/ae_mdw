@@ -6,6 +6,7 @@ defmodule AeMdw.Db.HardforkPresets do
   alias AeMdw.Db.IntTransfersMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Node
 
   @type hardfork :: :genesis | :minerva | :fortuna | :lima
 
@@ -50,14 +51,14 @@ defmodule AeMdw.Db.HardforkPresets do
 
   defp accounts(:lima) do
     contract_account =
-      :aec_fork_block_settings.lima_contracts()
+      Node.lima_contracts()
       |> Enum.map(fn %{pubkey: pk, amount: amount} ->
         {pk, amount}
       end)
 
     contract_account ++
-      :aec_fork_block_settings.lima_accounts() ++
-      :aec_fork_block_settings.lima_extra_accounts()
+      Node.lima_accounts() ++
+      Node.lima_extra_accounts()
   end
 
   defp accounts(_hf), do: %{}
@@ -70,7 +71,7 @@ defmodule AeMdw.Db.HardforkPresets do
           hardfork_mutation(:genesis, &:aec_fork_block_settings.genesis_accounts/0),
           hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0),
           hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0),
-          hardfork_mutation(:lima, &:aec_fork_block_settings.lima_accounts/0),
+          hardfork_mutation(:lima, &Node.lima_accounts/0),
           lima_contracts_mutation(),
           lima_extra_accounts_mutation()
         ]
@@ -87,8 +88,7 @@ defmodule AeMdw.Db.HardforkPresets do
   end
 
   defp lima_extra_accounts_mutation do
-    transfers =
-      hardfork_transfers("accounts_extra_lima", &:aec_fork_block_settings.lima_extra_accounts/0)
+    transfers = hardfork_transfers("accounts_extra_lima", &Node.lima_extra_accounts/0)
 
     :lima
     |> hardfork_height()
@@ -97,7 +97,7 @@ defmodule AeMdw.Db.HardforkPresets do
 
   defp lima_contracts_mutation do
     transfers =
-      :aec_fork_block_settings.lima_contracts()
+      Node.lima_contracts()
       |> Enum.map(fn %{pubkey: pk, amount: amount} ->
         {"contracts_lima", pk, amount}
       end)
