@@ -94,7 +94,7 @@ defmodule AeMdw.Aex141 do
     end
   end
 
-  def render_nft(contract_pk, account_pk, token_id, metadata_type, opts) do
+  defp render_nft(contract_pk, account_pk, token_id, metadata_type, opts) do
     if Keyword.get(opts, :v3?, true) do
       render_nft(contract_pk, account_pk, token_id, metadata_type)
     else
