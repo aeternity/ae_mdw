@@ -51,6 +51,9 @@ defmodule AeMdw.Node do
   @type tx_field() :: atom()
   @type tx_field_pos() :: non_neg_integer()
 
+  @type hashrate() :: non_neg_integer()
+  @type difficulty() :: non_neg_integer()
+
   @opaque signed_tx() :: tuple()
   @opaque aetx() :: tuple()
   @opaque tx() :: tuple()
@@ -180,6 +183,12 @@ defmodule AeMdw.Node do
     |> Enum.find_value(fn {vsn, height} ->
       if vsn == :aec_hard_forks.protocol_vsn(:lima), do: height
     end)
+  end
+
+  # The calculation is the same as in the node in aehttp_dispatch_ext.erl
+  @spec difficulty_to_hashrate(difficulty()) :: hashrate()
+  defmemo difficulty_to_hashrate(difficulty) do
+    round(difficulty * 42 / :aec_governance.expected_block_mine_rate() / 1000)
   end
 
   @spec min_block_reward_height :: height()

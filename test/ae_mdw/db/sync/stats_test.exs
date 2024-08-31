@@ -102,12 +102,15 @@ defmodule AeMdw.Db.Sync.StatsTest do
             {{{:blocks, :key}, :day, 0}, 1},
             {{{:blocks, :all}, :day, 0}, 1},
             {{:difficulty, :day, 0}, 2},
+            {{:hashrate, :day, 0}, 0},
             {{{:blocks, :key}, :week, 0}, 1},
             {{{:blocks, :all}, :week, 0}, 1},
             {{:difficulty, :week, 0}, 2},
+            {{:hashrate, :week, 0}, 0},
             {{{:blocks, :key}, :month, 0}, 1},
             {{{:blocks, :all}, :month, 0}, 1},
-            {{:difficulty, :month, 0}, 2}
+            {{:difficulty, :month, 0}, 2},
+            {{:hashrate, :month, 0}, 0}
           ])
 
         mutation2 =
@@ -115,12 +118,15 @@ defmodule AeMdw.Db.Sync.StatsTest do
             {{{:blocks, :key}, :day, 365}, 1},
             {{{:blocks, :all}, :day, 365}, 1},
             {{:difficulty, :day, 365}, 2},
+            {{:hashrate, :day, 365}, 0},
             {{{:blocks, :key}, :week, 52}, 1},
             {{{:blocks, :all}, :week, 52}, 1},
             {{:difficulty, :week, 52}, 2},
+            {{:hashrate, :week, 52}, 0},
             {{{:blocks, :key}, :month, 12}, 1},
             {{{:blocks, :all}, :month, 12}, 1},
-            {{:difficulty, :month, 12}, 2}
+            {{:difficulty, :month, 12}, 2},
+            {{:hashrate, :month, 12}, 0}
           ])
 
         key_block1_mutations = Stats.key_block_mutations(1, key_block1, [], 1, 2, false)
