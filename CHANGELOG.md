@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.85.0](https://www.github.com/aeternity/ae_mdw/compare/v1.84.0...v1.85.0) (2024-09-02)
+
+
+### Features
+
+* Add block dificulty stat ([#1911](https://www.github.com/aeternity/ae_mdw/issues/1911)) ([d2c8b00](https://www.github.com/aeternity/ae_mdw/commit/d2c8b00a58e0a28930013078855a26c68bf3cf07))
+* add hashrate stats endpoint ([#1918](https://www.github.com/aeternity/ae_mdw/issues/1918)) ([c304bfe](https://www.github.com/aeternity/ae_mdw/commit/c304bfe0e714e0294c8ad2d278d171b1db743e10))
+
+
+### Bug Fixes
+
+* dex contract swaps ([#1912](https://www.github.com/aeternity/ae_mdw/issues/1912)) ([ca0d83c](https://www.github.com/aeternity/ae_mdw/commit/ca0d83c14c3c8c8a51c16bb1c05b6ec788f04bab))
+
+
+### Miscellaneous
+
+* add generation of key boundaries ([#1915](https://www.github.com/aeternity/ae_mdw/issues/1915)) ([cfaac71](https://www.github.com/aeternity/ae_mdw/commit/cfaac71bc257e15ca788f24527c6e0de39c9e3a3))
+* make lima files not required ([#1924](https://www.github.com/aeternity/ae_mdw/issues/1924)) ([9695796](https://www.github.com/aeternity/ae_mdw/commit/9695796e26645d53b71078bbf26eb4091e7e9392))
+
 ## [1.84.0](https://www.github.com/aeternity/ae_mdw/compare/v1.83.0...v1.84.0) (2024-08-26)
 
 
