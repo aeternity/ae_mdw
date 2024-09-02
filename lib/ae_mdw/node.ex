@@ -13,6 +13,7 @@ defmodule AeMdw.Node do
   alias AeMdw.Db.HardforkPresets
   alias AeMdw.Extract
   alias AeMdw.Extract.AbsCode
+  alias AeMdw.Node.Db
 
   import AeMdw.Util.Memoize
 
@@ -50,6 +51,16 @@ defmodule AeMdw.Node do
   @type id_tag() :: :account | :oracle | :name | :commitment | :contract | :channel
   @type tx_field() :: atom()
   @type tx_field_pos() :: non_neg_integer()
+  @type lima_contract() :: %{
+          pubkey: Db.pubkey(),
+          amount: non_neg_integer(),
+          abi_version: non_neg_integer(),
+          code: binary(),
+          nonce: non_neg_integer(),
+          vm_version: non_neg_integer(),
+          call_data: binary()
+        }
+  @type lima_account() :: {pk :: Db.pubkey(), amount :: non_neg_integer()}
 
   @type hashrate() :: non_neg_integer()
   @type difficulty() :: non_neg_integer()
@@ -180,7 +191,7 @@ defmodule AeMdw.Node do
   defmemo lima_height() do
     :aec_governance.get_network_id()
     |> :aec_hard_forks.protocols_from_network_id()
-    |> Enum.find_value(fn {vsn, height} ->
+    |> Enum.find_value(0, fn {vsn, height} ->
       if vsn == :aec_hard_forks.protocol_vsn(:lima), do: height
     end)
   end
@@ -189,6 +200,45 @@ defmodule AeMdw.Node do
   @spec difficulty_to_hashrate(difficulty()) :: hashrate()
   defmemo difficulty_to_hashrate(difficulty) do
     round(difficulty * 42 / :aec_governance.expected_block_mine_rate() / 1000)
+  end
+
+  @spec lima_contracts() :: list(lima_contract())
+  defmemo lima_contracts() do
+    try do
+      :aec_fork_block_settings.lima_contracts()
+    rescue
+      _e in ErlangError ->
+        []
+
+      e ->
+        reraise(e, __STACKTRACE__)
+    end
+  end
+
+  @spec lima_accounts() :: list(lima_account())
+  defmemo lima_accounts() do
+    try do
+      :aec_fork_block_settings.lima_accounts()
+    rescue
+      _e in ErlangError ->
+        []
+
+      e ->
+        reraise(e, __STACKTRACE__)
+    end
+  end
+
+  @spec lima_extra_accounts() :: list(lima_account())
+  defmemo lima_extra_accounts() do
+    try do
+      :aec_fork_block_settings.lima_extra_accounts()
+    rescue
+      _e in ErlangError ->
+        []
+
+      e ->
+        reraise(e, __STACKTRACE__)
+    end
   end
 
   @spec min_block_reward_height :: height()

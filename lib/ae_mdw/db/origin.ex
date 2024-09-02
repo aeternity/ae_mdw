@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Origin do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -135,7 +136,7 @@ defmodule AeMdw.Db.Origin do
   defp hardforks_contracts do
     with nil <- :persistent_term.get({__MODULE__, :hardforks_contracts}, nil) do
       lima_contracts =
-        :aec_fork_block_settings.lima_contracts()
+        Node.lima_contracts()
         |> Enum.map(fn %{pubkey: pubkey} -> pubkey end)
 
       contracts = lima_contracts ++ hc_contracts()
