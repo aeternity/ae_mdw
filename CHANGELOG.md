@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.86.0](https://www.github.com/aeternity/ae_mdw/compare/v1.85.0...v1.86.0) (2024-09-02)
+
+
+### Features
+
+* add support for handling WAE contracts as special AEx9 ones ([#1913](https://www.github.com/aeternity/ae_mdw/issues/1913)) ([7b76954](https://www.github.com/aeternity/ae_mdw/commit/7b769542ca5e5bcf460b0d912d6363c6a23225ab))
+
 ## [1.85.0](https://www.github.com/aeternity/ae_mdw/compare/v1.84.0...v1.85.0) (2024-09-02)
 
 
