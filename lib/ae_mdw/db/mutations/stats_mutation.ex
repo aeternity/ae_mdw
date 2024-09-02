@@ -13,6 +13,7 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.ObjectKeys
+  alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Node
   alias AeMdw.Stats
   alias AeMdw.Txs
@@ -58,7 +59,9 @@ defmodule AeMdw.Db.StatsMutation do
         },
         state
       ) do
-    m_delta_stat = make_delta_stat(state, height, from_txi, next_txi, all_cached?)
+    Model.delta_stat(contracts_created: contracts_created) =
+      m_delta_stat = make_delta_stat(state, height, from_txi, next_txi, all_cached?)
+
     # delta/transitions are only reflected on total stats at height + 1
     m_total_stat = make_total_stat(state, height + 1, m_delta_stat)
 
@@ -75,6 +78,14 @@ defmodule AeMdw.Db.StatsMutation do
 
       nil ->
         Model.stat(index: Stats.max_tps_key(), payload: {tps, key_hash})
+    end)
+    |> then(fn state ->
+      time =
+        key_hash
+        |> :aec_db.get_block()
+        |> :aec_blocks.time_in_msecs()
+
+      SyncStats.increase_statistics(state, :contracts, time, contracts_created)
     end)
   end
 

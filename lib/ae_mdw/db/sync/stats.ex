@@ -173,6 +173,25 @@ defmodule AeMdw.Db.Sync.Stats do
     ]
   end
 
+  @spec increase_statistics(State.t(), Stats.statistic_tag(), time(), pos_integer()) :: State.t()
+  def increase_statistics(state, key, time, increment) do
+    time
+    |> time_intervals()
+    |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
+      index = {key, interval_by, interval_start}
+
+      State.update(
+        state,
+        Model.Statistic,
+        index,
+        fn Model.statistic(count: count) = statistics ->
+          Model.statistic(statistics, count: count + increment)
+        end,
+        Model.statistic(index: index, count: 0)
+      )
+    end)
+  end
+
   defp increment_collection_nfts(state, contract_pk, nil),
     do: update_stat_counter(state, Stats.nfts_count_key(contract_pk))
 

@@ -129,4 +129,14 @@ defmodule AeMdwWeb.StatsController do
       Util.render(conn, paginated_stats)
     end
   end
+
+  @spec contracts_count_stats(Conn.t(), map()) :: Conn.t()
+  def contracts_count_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_stats} <-
+           Stats.fetch_contracts_count_stats(state, pagination, query, scope, cursor) do
+      Util.render(conn, paginated_stats)
+    end
+  end
 end
