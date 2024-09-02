@@ -13,6 +13,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.ActiveEntities
   alias AeMdw.Db.Sync.Stats, as: SyncStats
+  alias AeMdw.Db.Util
   alias AeMdw.Dex
   alias AeMdw.Log
   alias AeMdw.Node
@@ -830,6 +831,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
+    |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
     |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
   end
@@ -875,6 +877,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
+    |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
     |> aex9_burn_update_holders(contract_pk, new_amount)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
@@ -909,6 +912,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9EventBalance, m_to)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
+    |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)
     |> aex9_update_contract_balance(contract_pk, mint_value)

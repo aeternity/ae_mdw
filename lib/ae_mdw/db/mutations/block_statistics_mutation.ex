@@ -27,26 +27,9 @@ defmodule AeMdw.Db.BlockStatisticsMutation do
         state
 
       count ->
-        time
-        |> Stats.time_intervals()
-        |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
-          index = {:names_activated, interval_by, interval_start}
-
-          increment_statistic(state, index, count)
-        end)
+        state
+        |> Stats.increment_statistics(:names_activated, time, count)
         |> State.clear_stat(:micro_block_names_activated)
     end
-  end
-
-  defp increment_statistic(state, index, increment) do
-    State.update(
-      state,
-      Model.Statistic,
-      index,
-      fn Model.statistic(count: count) = statistic ->
-        Model.statistic(statistic, count: count + increment)
-      end,
-      Model.statistic(index: index, count: 0)
-    )
   end
 end

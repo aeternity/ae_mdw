@@ -280,6 +280,14 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_aex9_token_transfers_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_aex9_token_transfers_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      fetch_statistics(state, pagination, filters, range, cursor, :aex9_transfers)
+    end
+  end
+
   @spec fetch_names_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_names_stats(state, pagination, query, range, cursor) do

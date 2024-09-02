@@ -2,6 +2,7 @@ defmodule AeMdw.Db.ContractTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Aex9
+  alias AeMdw.Collection
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -298,6 +299,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
@@ -345,6 +347,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk1, create_txi1)
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
         |> State.cache_put(:ct_create_sync_cache, contract_pk2, create_txi2)
         |> State.put(
           Model.AexnContract,
@@ -402,6 +405,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(Model.Tx, Model.tx(index: txi + 1, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
@@ -449,6 +453,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(Model.Tx, Model.tx(index: txi + 1, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
@@ -499,6 +504,7 @@ defmodule AeMdw.Db.ContractTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi - 2, -1})
         )
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, remote_pk1}, txi_idx: {txi - 1, -1})
@@ -547,6 +553,7 @@ defmodule AeMdw.Db.ContractTest do
       state =
         empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi - 1)
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi - 1, -1})
@@ -611,7 +618,9 @@ defmodule AeMdw.Db.ContractTest do
 
       {state, _txi} =
         Enum.reduce(call_rec_list, {state, txi}, fn call_rec, {state, txi} ->
-          {Contract.logs_write(state, create_txi, txi, call_rec, false), txi + 1}
+          {state
+           |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
+           |> Contract.logs_write(create_txi, txi, call_rec, false), txi + 1}
         end)
 
       assert {:ok, Model.aex9_event_balance(amount: 1_190_000_000_000_000_000)} =
@@ -780,9 +789,25 @@ defmodule AeMdw.Db.ContractTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
+      initial_state = empty_state()
+
+      aex9_transfers_statistics_key_boundary =
+        {{:aex9_transfers, :day, 0}, {:aex9_transfers, :week, nil}}
+
+      assert [] =
+               initial_state
+               |> Collection.stream(
+                 Model.Statistic,
+                 :forward,
+                 aex9_transfers_statistics_key_boundary,
+                 nil
+               )
+               |> Enum.to_list()
+
       state =
-        empty_state()
+        initial_state
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
@@ -810,6 +835,20 @@ defmodule AeMdw.Db.ContractTest do
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
 
       assert 2 == Aex9.fetch_holders_count(state, contract_pk)
+
+      assert [
+               {:aex9_transfers, :day, 19_723},
+               {:aex9_transfers, :month, 648},
+               {:aex9_transfers, :week, 2817}
+             ] =
+               initial_state
+               |> Collection.stream(
+                 Model.Statistic,
+                 :forward,
+                 aex9_transfers_statistics_key_boundary,
+                 nil
+               )
+               |> Enum.to_list()
     end
   end
 
