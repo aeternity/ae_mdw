@@ -107,6 +107,7 @@ defmodule AeMdw.Aex141 do
     {:ok, decoded_metadata} = decode_metadata(metadata_type, return_metadata)
 
     %{
+      contract_id: encode_contract(contract_pk),
       token_id: token_id,
       owner: encode_account(account_pk),
       metadata: decoded_metadata

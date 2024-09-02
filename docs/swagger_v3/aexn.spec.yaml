@@ -89,6 +89,38 @@ schemas:
       - token_id
     title: Aex141OwnedTokenResponse
     type: object
+  Aex141TokenDetailResponse:
+    description: Response schema for AEX-141 token detail
+    example:
+      contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+      owner_id: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+      token_id: 1
+      metadata:
+        map:
+          description: "CC"
+          media_type: "IMAGE"
+          media_url: "https://www.tierfreund.de/wp-content/uploads/2016/09/1.jpg"
+          minted: "1670241975288"
+          name: "test"
+    properties:
+      contract_id:
+        description: NFT contract id
+        $ref: '#/components/schemas/ContractAddress'
+      owner_id:
+        $ref: '#/components/schemas/AccountAddress'
+      token_id:
+        description: Non-fungible token id
+        type: integer
+      metadata:
+        description: The metadata associated to this NFT
+        type: object
+    required:
+      - contract_id
+      - owner_id
+      - token_id
+      - metadata
+    title: Aex141OwnedTokenResponse
+    type: object
   Aex141TemplatesResponse:
     description: Response Schema for templates of a AEX-141 contract
     example:
@@ -463,12 +495,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    $ref: '#/components/schemas/AccountAddress'
+                $ref: '#/components/schemas/Aex141TokenDetailResponse'
         '400':
           description: Bad request
           content:
