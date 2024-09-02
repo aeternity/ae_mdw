@@ -313,11 +313,7 @@ defmodule AeMdw.Contracts do
     }
 
     fn direction ->
-      state
-      |> Collection.stream(@contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {create_txi, call_txi, log_idx} ->
-        {create_txi, call_txi, log_idx}
-      end)
+      Collection.stream(state, @contract_log_table, direction, key_boundary, cursor)
     end
   end
 

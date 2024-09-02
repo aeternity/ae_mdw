@@ -43,7 +43,7 @@ defmodule AeMdw.Db.ContractCreateMutation do
       |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
 
     if call_rec != nil do
-      DBContract.logs_write(state, txi, txi, call_rec)
+      DBContract.logs_write(state, txi, txi, call_rec, true)
     else
       state
     end
