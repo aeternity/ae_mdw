@@ -9,6 +9,7 @@ defmodule AeMdw.AuctionBids do
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Names
   alias AeMdw.Txs
