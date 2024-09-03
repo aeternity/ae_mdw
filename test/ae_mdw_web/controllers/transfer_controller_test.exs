@@ -88,14 +88,14 @@ defmodule AeMdwWeb.TransferControllerTest do
 
       lima_height = AeMdw.Node.lima_height()
 
-      assert Enum.count(response["data"]) == 1
-
-      assert %{
-               "account_id" => ^account_id,
-               "kind" => "accounts_lima",
-               "amount" => 1_186_111_575_000_000_000_000,
-               "height" => ^lima_height
-             } = List.first(response["data"])
+      assert [
+               %{
+                 "account_id" => ^account_id,
+                 "kind" => "accounts_lima",
+                 "amount" => 1_186_111_575_000_000_000_000,
+                 "height" => ^lima_height
+               }
+             ] = response["data"]
     end
 
     test "renders error when the range is invalid", %{conn: conn} do
