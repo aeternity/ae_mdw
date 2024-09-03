@@ -64,7 +64,7 @@ defmodule AeMdwWeb.NameController do
     opts = [{:render_v3?, true} | opts]
 
     with {:ok, plain_name} <- Validate.plain_name(state, plain_name_or_hash),
-         {:ok, auction_bid} <- Names.fetch_auction(state, plain_name, opts) do
+         {:ok, auction_bid} <- AuctionBids.fetch_auction(state, plain_name, opts) do
       format_json(conn, auction_bid)
     end
   end
