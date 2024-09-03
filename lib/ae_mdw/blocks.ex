@@ -6,6 +6,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Collection
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -212,7 +213,14 @@ defmodule AeMdw.Blocks do
     Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
     header = :aec_db.get_header(hash)
 
-    Model.delta_stat(block_reward: block_reward) = State.fetch!(state, Model.DeltaStat, gen)
+    block_reward =
+      case State.get(state, Model.DeltaStat, gen) do
+        {:ok, Model.delta_stat(block_reward: block_reward)} ->
+          block_reward
+
+        :not_found ->
+          IntTransfer.read_block_reward(state, gen)
+      end
 
     header
     |> :aec_headers.serialize_for_client(Db.prev_block_type(header))

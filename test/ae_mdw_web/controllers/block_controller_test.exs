@@ -42,7 +42,6 @@ defmodule AeMdwWeb.BlockControllerTest do
           Model.Block,
           Model.block(index: {kbi, 2}, tx_index: 0, hash: TS.micro_block_hash(2))
         )
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi, block_reward: 5000))
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^hash -> :header end]},
@@ -85,8 +84,6 @@ defmodule AeMdwWeb.BlockControllerTest do
           Model.Block,
           Model.block(index: {kbi + 1, -1}, hash: TS.key_block_hash(2), tx_index: 10)
         )
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi, block_reward: 5000))
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi - 1, block_reward: 5000 - 1))
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^hash -> :header end]},
@@ -219,8 +216,6 @@ defmodule AeMdwWeb.BlockControllerTest do
           Model.Block,
           Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0), tx_index: 4)
         )
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi - 1, block_reward: 5000 - 1))
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi, block_reward: 5000))
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
@@ -260,8 +255,6 @@ defmodule AeMdwWeb.BlockControllerTest do
           Model.Block,
           Model.block(index: {kbi + 1, -1}, hash: TS.key_block_hash(2), tx_index: 10)
         )
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi - 1, block_reward: 5000 - 1))
-        |> Store.put(Model.DeltaStat, Model.delta_stat(index: kbi, block_reward: 5000))
 
       with_mocks [
         {:aec_chain, [], [get_block: fn ^decoded_hash -> {:ok, :block} end]},
