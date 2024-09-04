@@ -211,13 +211,13 @@ schemas:
       - type
       - payload
 paths:
-  /accounts/{id}/activities:
+  /accounts/{accountId}/activities:
     get:
       deprecated: false
       description: Get an account activities.
       operationId: GetAccountActivities
       parameters:
-        - name: id
+        - name: accountId
           in: path
           description: The account address
           required: true
