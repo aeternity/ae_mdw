@@ -141,12 +141,28 @@ defmodule AeMdw.Collection do
   defp get_min_key(:integer), do: Util.min_int()
   defp get_min_key(:integer_256bit), do: Util.min_256bit_int()
   defp get_min_key(:binary), do: Util.min_bin()
+
+  defp get_min_key(x) when is_tuple(x) do
+    x
+    |> Tuple.to_list()
+    |> Enum.map(&get_min_key/1)
+    |> List.to_tuple()
+  end
+
   defp get_min_key(x), do: x
 
   defp get_max_key(:pos_integer), do: Util.max_int()
   defp get_max_key(:integer), do: Util.max_int()
   defp get_max_key(:integer_256bit), do: Util.max_int()
   defp get_max_key(:binary), do: Util.max_256bit_bin()
+
+  defp get_max_key(x) when is_tuple(x) do
+    x
+    |> Tuple.to_list()
+    |> Enum.map(&get_max_key/1)
+    |> List.to_tuple()
+  end
+
   defp get_max_key(x), do: x
 
   defp remove_dups(stream) do
