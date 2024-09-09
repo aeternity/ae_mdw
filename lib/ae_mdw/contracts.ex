@@ -202,7 +202,7 @@ defmodule AeMdw.Contracts do
   #
   # Private functions
   #
-  defp get_contract_txi_idx(state, pubkey) do
+  def get_contract_txi_idx(state, pubkey) do
     with {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}),
          Model.tx(id: tx_hash) <- State.fetch!(state, Model.Tx, txi),
          {outer_tx_type, _tx} <- Db.get_tx(tx_hash) do
