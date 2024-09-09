@@ -246,7 +246,7 @@ paths:
                 description: The transactions count
                 example: 15479090
                 type: integer
-  /accounts/{id}/transactions/count:
+  /accounts/{accountId}/transactions/count:
     get:
       deprecated: false
       description: Get transactions count and its type for given aeternity ID.
@@ -254,7 +254,7 @@ paths:
       parameters:
         - description: The ID of the address/name/oracle/etc
           in: path
-          name: id
+          name: accountId
           required: true
           schema:
             $ref: '#/components/schemas/AccountAddress'

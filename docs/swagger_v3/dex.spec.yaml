@@ -149,7 +149,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /accounts/{account_id}/dex/swaps:
+  /accounts/{accountId}/dex/swaps:
     get:
       deprecated: false
       description: Get DEX swap tokens
@@ -157,7 +157,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/DirectionParam'
         - in: path
-          name: account_id
+          name: accountId
           required: true
           description: The account id
           schema:
