@@ -1,5 +1,23 @@
 # Changelog
 
+### [1.86.1](https://www.github.com/aeternity/ae_mdw/compare/v1.86.0...v1.86.1) (2024-09-09)
+
+
+### Bug Fixes
+
+* missing delta stat entry for last key block ([#1927](https://www.github.com/aeternity/ae_mdw/issues/1927)) ([1aba034](https://www.github.com/aeternity/ae_mdw/commit/1aba034eefdef789dbd58179fbfcf51e6193002e))
+* repopulate dex swaps ([#1935](https://www.github.com/aeternity/ae_mdw/issues/1935)) ([f76137e](https://www.github.com/aeternity/ae_mdw/commit/f76137e5a4c3ac900b4e8ac5b1cb427f8c4e95d2))
+
+
+### Miscellaneous
+
+* publish ARM images to dockerhub ([#1934](https://www.github.com/aeternity/ae_mdw/issues/1934)) ([42ba1b5](https://www.github.com/aeternity/ae_mdw/commit/42ba1b50b4b635c9c2dba6b7911f5042e380245e))
+
+
+### Testing
+
+* fix randomly failing transfers tests ([#1929](https://www.github.com/aeternity/ae_mdw/issues/1929)) ([fbc084c](https://www.github.com/aeternity/ae_mdw/commit/fbc084c2d4235884192a039523df7a59384dc64f))
+
 ## [1.86.0](https://www.github.com/aeternity/ae_mdw/compare/v1.85.0...v1.86.0) (2024-09-02)
 
 
