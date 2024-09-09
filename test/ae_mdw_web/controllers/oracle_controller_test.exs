@@ -556,7 +556,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "query_fee" => 11,
                  "sender_id" => ^encoded_account_id1,
                  "source_tx_type" => "OracleQueryTx",
-                 "query" => "cXVlcnktMQ",
+                 "query" => "cXVlcnktMQ==",
                  "fee" => 11_111,
                  "block_time" => 123
                } = oracle1
@@ -568,7 +568,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "query_fee" => 22,
                  "sender_id" => ^encoded_account_id2,
                  "source_tx_type" => "ContractCallTx",
-                 "query" => "cXVlcnktMg",
+                 "query" => "cXVlcnktMg==",
                  "fee" => 22_222,
                  "block_time" => 123
                } = oracle2
@@ -804,7 +804,7 @@ defmodule AeMdwWeb.OracleControllerTest do
 
         assert %{
                  "oracle_id" => ^encoded_oracle_pk,
-                 "response" => "cmVzcG9uc2UtMQ",
+                 "response" => "cmVzcG9uc2UtMQ==",
                  "block_time" => 123,
                  "height" => 2,
                  "query" => %{
@@ -815,14 +815,14 @@ defmodule AeMdwWeb.OracleControllerTest do
                    "query_fee" => 11,
                    "sender_id" => ^encoded_account_id1,
                    "source_tx_type" => "OracleQueryTx",
-                   "query" => "cXVlcnktMQ",
+                   "query" => "cXVlcnktMQ==",
                    "fee" => 11_111
                  }
                } = response1
 
         assert %{
                  "oracle_id" => ^encoded_oracle_pk,
-                 "response" => "cmVzcG9uc2UtMg",
+                 "response" => "cmVzcG9uc2UtMg==",
                  "block_time" => 123,
                  "height" => 2,
                  "query" => %{
@@ -833,7 +833,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                    "query_fee" => 22,
                    "sender_id" => ^encoded_account_id2,
                    "source_tx_type" => "ContractCallTx",
-                   "query" => "cXVlcnktMg",
+                   "query" => "cXVlcnktMg==",
                    "fee" => 22_222
                  }
                } = response2
