@@ -271,34 +271,6 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  @spec fetch_active_oracles(state(), pagination(), cursor() | nil, opts()) ::
-          {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_active_oracles(state, pagination, cursor, opts) do
-    cursor = deserialize_cursor(cursor)
-    last_gen_time = DbUtil.last_gen_and_time(state)
-
-    Collection.paginate(
-      &Collection.stream(state, @table_active_expiration, &1, nil, cursor),
-      pagination,
-      &render(state, &1, true, last_gen_time, opts),
-      &serialize_cursor/1
-    )
-  end
-
-  @spec fetch_inactive_oracles(state(), pagination(), cursor() | nil, opts()) ::
-          {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_inactive_oracles(state, pagination, cursor, opts) do
-    cursor = deserialize_cursor(cursor)
-    last_gen_time = DbUtil.last_gen_and_time(state)
-
-    Collection.paginate(
-      &Collection.stream(state, @table_inactive_expiration, &1, nil, cursor),
-      pagination,
-      &render(state, &1, false, last_gen_time, opts),
-      &serialize_cursor/1
-    )
-  end
-
   @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(state, oracle_pk, opts) do
     last_gen_time = DbUtil.last_gen_and_time(state)

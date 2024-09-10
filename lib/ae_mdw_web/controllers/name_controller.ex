@@ -115,23 +115,6 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
-  @spec inactive_names(Conn.t(), map()) :: Conn.t()
-  def inactive_names(%Conn{assigns: assigns} = conn, _params) do
-    %{
-      state: state,
-      pagination: pagination,
-      cursor: cursor,
-      opts: opts,
-      order_by: order_by,
-      scope: scope
-    } = assigns
-
-    with {:ok, names} <-
-           Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, opts) do
-      Util.render(conn, names)
-    end
-  end
-
   @spec active_names(Conn.t(), map()) :: Conn.t()
   def active_names(%Conn{assigns: assigns} = conn, _params) do
     %{

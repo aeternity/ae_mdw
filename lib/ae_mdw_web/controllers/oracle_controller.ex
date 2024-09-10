@@ -30,24 +30,6 @@ defmodule AeMdwWeb.OracleController do
     end
   end
 
-  @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
-  def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, opts: opts} = assigns
-
-    paginated_oracles = Oracles.fetch_inactive_oracles(state, pagination, cursor, opts)
-
-    Util.render(conn, paginated_oracles)
-  end
-
-  @spec active_oracles(Conn.t(), map()) :: Conn.t()
-  def active_oracles(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, opts: opts} = assigns
-
-    paginated_oracles = Oracles.fetch_active_oracles(state, pagination, cursor, opts)
-
-    Util.render(conn, paginated_oracles)
-  end
-
   @spec oracles(Conn.t(), map()) :: Conn.t()
   def oracles(%Conn{assigns: assigns} = conn, _params) do
     %{

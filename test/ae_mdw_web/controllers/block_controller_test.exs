@@ -533,31 +533,4 @@ defmodule AeMdwWeb.BlockControllerTest do
                |> json_response(404)
     end
   end
-
-  describe "block_v1" do
-    test "get key block by hash", %{conn: conn} do
-      with_blockchain %{alice: 10_000}, b1: [] do
-        %{hash: kb_hash} = blocks[:b1]
-
-        assert %{"hash" => ^kb_hash} = conn |> get("/block/#{kb_hash}") |> json_response(200)
-      end
-    end
-
-    test "get micro block by hash", %{conn: conn} do
-      with_blockchain %{alice: 10_000, bob: 20_000},
-        mb1: [
-          t1: spend_tx(:alice, :bob, 5_000)
-        ] do
-        %{hash: mb_hash} = blocks[:mb1]
-
-        assert %{"hash" => ^mb_hash} = conn |> get("/block/#{mb_hash}") |> json_response(200)
-      end
-    end
-
-    test "renders bad request when the hash is invalid", %{conn: conn} do
-      hash = "kh_InvalidHash"
-      error_msg = "invalid id: #{hash}"
-      assert %{"error" => ^error_msg} = conn |> get("/block/#{hash}") |> json_response(400)
-    end
-  end
 end

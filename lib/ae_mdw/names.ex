@@ -546,11 +546,6 @@ defmodule AeMdw.Names do
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
-  @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
-  def fetch_inactive_names(state, pagination, range, order_by, cursor, opts),
-    do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, opts)
-
   @spec search_names(state(), [lifecycle()], prefix(), pagination(), cursor(), opts()) ::
           {page_cursor(), [name()], page_cursor()}
 
