@@ -3,12 +3,14 @@ defmodule AeMdw.AuctionBids do
   Context module for dealing with AuctionBids.
   """
 
+  alias AeMdw.AuctionBids
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
-  alias AeMdw.Collection
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Names
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -48,6 +50,20 @@ defmodule AeMdw.AuctionBids do
 
       :not_found ->
         :not_found
+    end
+  end
+
+  @spec fetch_auction(state(), binary(), opts()) :: {:ok, Names.claim()} | {:error, Error.t()}
+  def fetch_auction(state, plain_name, opts) do
+    case Name.locate(state, plain_name) do
+      {Model.auction_bid(index: plain_name, start_height: _start_height), Model.AuctionBid} ->
+        AuctionBids.fetch(state, plain_name, opts)
+
+      {Model.name(), _active_or_inactive} ->
+        {:error, ErrInput.NotFound.exception(value: plain_name)}
+
+      nil ->
+        {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end
 

@@ -515,8 +515,9 @@ paths:
           description: The name
           required: true
           schema:
-            $ref: '#/components/schemas/NameString'
-            # TODO: also accept NameHash
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
@@ -550,8 +551,9 @@ paths:
           description: The name
           required: true
           schema:
-            $ref: '#/components/schemas/NameString'
-            # TODO: also accept NameHash
+            oneOf:
+              - $ref: '#/components/schemas/NameString'
+              - $ref: '#/components/schemas/NameHash'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
