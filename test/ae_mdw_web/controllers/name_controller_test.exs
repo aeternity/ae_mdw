@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.NameControllerTest do
+  alias AeMdw.Db.NullStore
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
@@ -3473,6 +3474,196 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "account_claims" do
+    test "gets all account claims", %{conn: conn} do
+      store = MemStore.new(NullStore.new())
+      account_id = TS.address(0)
+      specialized_account_id = :aeser_id.create(:account, account_id)
+      account_pk = :aeapi.format_account_pubkey(account_id)
+      plain_name = new_name()
+
+      active_from1 = 5
+      kbi1 = 5
+      active_from2 = 8
+      kbi2 = 8
+      expired_at = 7 + 10
+
+      {:ok, claim_aetx0} =
+        :aens_claim_tx.new(%{
+          account_id: specialized_account_id,
+          nonce: 1,
+          name: plain_name,
+          name_salt: 1_110,
+          name_fee: 11_110,
+          fee: 111_110,
+          ttl: 1_111_110
+        })
+
+      {:ok, claim_aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: specialized_account_id,
+          nonce: 11,
+          name: plain_name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      {:ok, claim_aetx2} =
+        :aens_claim_tx.new(%{
+          account_id: specialized_account_id,
+          nonce: 21,
+          name: plain_name,
+          name_salt: 2_222,
+          name_fee: 22_222,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:ok, call_aetx2} =
+        :aect_call_tx.new(%{
+          caller_id: specialized_account_id,
+          nonce: 21,
+          contract_id: :aeser_id.create(:contract, TS.address(1)),
+          abi_version: 1,
+          fee: 222_222,
+          amount: 12,
+          gas: 1_111,
+          gas_price: 1_111,
+          call_data: "",
+          ttl: 2_222_222
+        })
+
+      store =
+        name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name)
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:name_claim_tx, 1, account_id, 500})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:name_claim_tx, 1, account_id, 501})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:name_claim_tx, 1, account_id, 601})
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 500, block_index: {5, 4}, id: <<500::256>>)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 501, block_index: {5, 6}, id: <<501::256>>)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: 601, block_index: {8, 2}, id: <<601::256>>)
+        )
+        |> Store.put(
+          Model.IntContractCall,
+          Model.int_contract_call(index: {601, 0}, tx: claim_aetx2)
+        )
+
+      conn = with_store(conn, store)
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx: fn
+             <<500::256>> ->
+               :aetx.specialize_type(claim_aetx0)
+
+             <<501::256>> ->
+               :aetx.specialize_type(claim_aetx1)
+
+             <<601::256>> ->
+               :aetx.specialize_type(call_aetx2)
+           end,
+           get_tx_data: fn
+             <<500::256>> ->
+               tx = :aetx.specialize_type(claim_aetx0) |> elem(1)
+               {<<1::256>>, :name_claim_tx, %{}, tx}
+
+             <<501::256>> ->
+               tx = :aetx.specialize_type(claim_aetx1) |> elem(1)
+               {<<2::256>>, :name_claim_tx, %{}, tx}
+
+             <<601::256>> ->
+               tx = :aetx.specialize_type(claim_aetx2) |> elem(1)
+               {<<3::256>>, :name_claim_tx, %{}, tx}
+           end
+         ]}
+      ] do
+        assert %{"data" => data, "prev" => nil, "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account_pk}/names/claims", limit: 2)
+                 |> json_response(200)
+
+        assert length(data) == 2
+        tx_hash1 = :aeapi.format_tx_hash(<<501::256>>)
+        tx_hash2 = :aeapi.format_tx_hash(<<601::256>>)
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx_hash2,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 21}
+               } = Enum.at(data, 0)
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx_hash1,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 11}
+               } = Enum.at(data, 1)
+
+        assert %{"next" => nil, "prev" => prev_url, "data" => next_data} =
+                 conn
+                 |> get(next_url)
+                 |> json_response(200)
+
+        tx_hash0 = :aeapi.format_tx_hash(<<500::256>>)
+
+        assert [
+                 %{
+                   "active_from" => ^active_from1,
+                   "height" => ^kbi1,
+                   "source_tx_type" => "NameClaimTx",
+                   "source_tx_hash" => ^tx_hash0,
+                   "internal_source" => false,
+                   "tx" => %{"nonce" => 1}
+                 }
+               ] = next_data
+
+        assert %{"next" => ^next_url, "prev" => nil, "data" => ^data} =
+                 conn
+                 |> get(prev_url)
+                 |> json_response(200)
+
+        assert %{"next" => nil, "prev" => nil, "data" => [claim_at_height8]} =
+                 conn
+                 |> get("/v3/accounts/#{account_pk}/names/claims", scope: "gen:8-9")
+                 |> json_response(200)
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx_hash2,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 21}
+               } = claim_at_height8
+      end
+    end
+  end
+
   defp name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name) do
     claim0 = {500, -1}
     claim1 = {501, -1}
@@ -3533,8 +3724,17 @@ defmodule AeMdwWeb.NameControllerTest do
         )
       end)
     end)
-    |> Store.put(Model.Block, Model.block(index: {kbi1, 0}, hash: "mb#{kbi1}-hash"))
-    |> Store.put(Model.Block, Model.block(index: {kbi2, 0}, hash: "mb#{kbi2}-hash"))
+    |> Store.put(Model.Block, Model.block(index: {kbi1, -1}, hash: "kb#{kbi1}-hash", tx_index: 500))
+    |> Store.put(
+      Model.Block,
+      Model.block(index: {kbi1, 0}, hash: "mb#{kbi1}-hash" )
+    )
+    |> Store.put(Model.Block, Model.block(index: {kbi2, -1}, hash: "kb#{kbi2}-hash", tx_index: 601))
+    |> Store.put(
+      Model.Block,
+      Model.block(index: {kbi2, 0}, hash: "mb#{kbi2}-hash")
+    )
+
   end
 
   defp name_claims_store(store, plain_name) do
