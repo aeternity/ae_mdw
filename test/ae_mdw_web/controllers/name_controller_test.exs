@@ -3536,7 +3536,8 @@ defmodule AeMdwWeb.NameControllerTest do
         })
 
       store =
-        name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name)
+        store
+        |> name_history_store(active_from1, active_from2, kbi1, kbi2, expired_at, plain_name)
         |> Store.put(
           Model.Field,
           Model.field(index: {:name_claim_tx, 1, account_id, 500})
@@ -3583,15 +3584,15 @@ defmodule AeMdwWeb.NameControllerTest do
            end,
            get_tx_data: fn
              <<500::256>> ->
-               tx = :aetx.specialize_type(claim_aetx0) |> elem(1)
+               tx = claim_aetx0 |> :aetx.specialize_type() |> elem(1)
                {<<1::256>>, :name_claim_tx, %{}, tx}
 
              <<501::256>> ->
-               tx = :aetx.specialize_type(claim_aetx1) |> elem(1)
+               tx = claim_aetx1 |> :aetx.specialize_type() |> elem(1)
                {<<2::256>>, :name_claim_tx, %{}, tx}
 
              <<601::256>> ->
-               tx = :aetx.specialize_type(claim_aetx2) |> elem(1)
+               tx = claim_aetx2 |> :aetx.specialize_type() |> elem(1)
                {<<3::256>>, :name_claim_tx, %{}, tx}
            end
          ]}
@@ -3724,17 +3725,22 @@ defmodule AeMdwWeb.NameControllerTest do
         )
       end)
     end)
-    |> Store.put(Model.Block, Model.block(index: {kbi1, -1}, hash: "kb#{kbi1}-hash", tx_index: 500))
     |> Store.put(
       Model.Block,
-      Model.block(index: {kbi1, 0}, hash: "mb#{kbi1}-hash" )
+      Model.block(index: {kbi1, -1}, hash: "kb#{kbi1}-hash", tx_index: 500)
     )
-    |> Store.put(Model.Block, Model.block(index: {kbi2, -1}, hash: "kb#{kbi2}-hash", tx_index: 601))
+    |> Store.put(
+      Model.Block,
+      Model.block(index: {kbi1, 0}, hash: "mb#{kbi1}-hash")
+    )
+    |> Store.put(
+      Model.Block,
+      Model.block(index: {kbi2, -1}, hash: "kb#{kbi2}-hash", tx_index: 601)
+    )
     |> Store.put(
       Model.Block,
       Model.block(index: {kbi2, 0}, hash: "mb#{kbi2}-hash")
     )
-
   end
 
   defp name_claims_store(store, plain_name) do
