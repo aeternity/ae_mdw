@@ -20,7 +20,7 @@ defmodule AeMdwWeb.Router do
     {"/aex141", AeMdwWeb.AexnTokenController, :aex141_contracts_v2},
     {"/aex141/count", AeMdwWeb.AexnTokenController, :aex141_count},
     {"/aex141/:contract_id", AeMdwWeb.AexnTokenController, :aex141_contract_v2},
-    {"/aex141/:contract_id/owner/:token_id", AeMdwWeb.Aex141Controller, :nft_owner},
+    {"/aex141/:contract_id/owner/:token_id", AeMdwWeb.Aex141Controller, :nft_owner_v2},
     {"/aex141/:contract_id/metadata/:token_id", AeMdwWeb.Aex141Controller, :nft_metadata},
     {"/aex141/:contract_id/owners", AeMdwWeb.Aex141Controller, :collection_owners},
     {"/aex141/:contract_id/templates", AeMdwWeb.Aex141Controller, :collection_templates},
