@@ -649,7 +649,8 @@ defmodule AeMdw.Activities do
 
         {first_txi, last_txi} ->
           {
-            {aexn_type, account_pk, first_txi, @min_bin, @min_int, @min_int},
+            # The nil here accomodates for the fact that the second pk might be nil (in case of burn event)
+            {aexn_type, account_pk, first_txi, nil, @min_int, @min_int},
             {aexn_type, account_pk, last_txi, @max_bin, @max_int, @max_int}
           }
       end
@@ -660,7 +661,8 @@ defmodule AeMdw.Activities do
           nil
 
         txi when direction == :forward ->
-          {aexn_type, account_pk, txi, @min_bin, @min_int, @min_int}
+          # The nil here accomodates for the fact that the second pk might be nil (in case of burn event)
+          {aexn_type, account_pk, txi, nil, @min_int, @min_int}
 
         txi when direction == :backward ->
           {aexn_type, account_pk, txi, @max_bin, @max_int, @max_int}

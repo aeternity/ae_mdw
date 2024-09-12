@@ -1076,6 +1076,79 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when activities contain aexn tokens with nil for second pk", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      another_account_pk = TS.address(1)
+      height1 = 398
+      height2 = 399
+      txi1 = 123
+      txi2 = 456
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.key_block_hash(0)
+      mb_hash2 = TS.key_block_hash(1)
+      contract_pk = <<100::256>>
+      meta_info_aex9 = {"AE9Name", "AEXSymbol", 10}
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
+        |> Store.put(
+          Model.RevAexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, another_account_pk, txi1, account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi2, nil, 2, 2},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info_aex9)
+        )
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [_activity], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 1)
+                 |> json_response(200)
+
+        assert %{"data" => [_activity]} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url, direction: "forward", limit: 1)
+                 |> json_response(200)
+      end
+    end
+
     test "when there are two different activities with the same txi", %{conn: conn} do
       contract_pk = TS.address(0)
       account_pk = TS.address(1)
