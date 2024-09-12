@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.87.0](https://www.github.com/aeternity/ae_mdw/compare/v1.86.0...v1.87.0) (2024-09-12)
+
+
+### Features
+
+* include metadata and owner on aex141 token request ([#1920](https://www.github.com/aeternity/ae_mdw/issues/1920)) ([338ada9](https://www.github.com/aeternity/ae_mdw/commit/338ada921190ada77d1dea4f2eb190092cfe4ede))
+* make auctions endpoints use name and hash ([#1923](https://www.github.com/aeternity/ae_mdw/issues/1923)) ([d294fa9](https://www.github.com/aeternity/ae_mdw/commit/d294fa9d31c1b8f7ba0e3dc5bd6dd72c45b34c12))
+
+
+### Bug Fixes
+
+* aexn transfer activities ([#1940](https://www.github.com/aeternity/ae_mdw/issues/1940)) ([f4f73b3](https://www.github.com/aeternity/ae_mdw/commit/f4f73b355fc9c3d74165d0c3df9528402ec7a25d))
+* missing delta stat entry for last key block ([#1927](https://www.github.com/aeternity/ae_mdw/issues/1927)) ([1aba034](https://www.github.com/aeternity/ae_mdw/commit/1aba034eefdef789dbd58179fbfcf51e6193002e))
+* move console log config outside of json logs if ([#1922](https://www.github.com/aeternity/ae_mdw/issues/1922)) ([5694232](https://www.github.com/aeternity/ae_mdw/commit/5694232aefc821dc2262c42379bdc848bfa277ab))
+* repopulate dex swaps ([#1935](https://www.github.com/aeternity/ae_mdw/issues/1935)) ([f76137e](https://www.github.com/aeternity/ae_mdw/commit/f76137e5a4c3ac900b4e8ac5b1cb427f8c4e95d2))
+
+
+### Miscellaneous
+
+* publish ARM images to dockerhub ([#1934](https://www.github.com/aeternity/ae_mdw/issues/1934)) ([42ba1b5](https://www.github.com/aeternity/ae_mdw/commit/42ba1b50b4b635c9c2dba6b7911f5042e380245e))
+
+
+### Testing
+
+* fix randomly failing transfers tests ([#1929](https://www.github.com/aeternity/ae_mdw/issues/1929)) ([fbc084c](https://www.github.com/aeternity/ae_mdw/commit/fbc084c2d4235884192a039523df7a59384dc64f))
+
 ## [1.86.0](https://www.github.com/aeternity/ae_mdw/compare/v1.85.0...v1.86.0) (2024-09-02)
 
 
