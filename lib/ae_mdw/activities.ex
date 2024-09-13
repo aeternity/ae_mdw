@@ -141,7 +141,7 @@ defmodule AeMdw.Activities do
             |> filter_by_stream_types(stream_types)
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {gen, _data} -> gen end)
-            |> build_gens_stream(direction)
+            |> build_gens_stream(state)
 
           txi_stream =
             %{
@@ -207,15 +207,21 @@ defmodule AeMdw.Activities do
             |> filter_by_stream_types(stream_types)
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {txi, _data} -> txi end)
-            |> build_txi_stream(state, direction)
+            |> build_txi_stream(state)
 
-          stream = Collection.merge([gens_stream, txi_stream], direction)
+          stream =
+            [gens_stream, txi_stream]
+            |> Collection.merge(direction)
+            |> Stream.chunk_by(fn {{height, txi, _block_type}, _data} -> {height, txi} end)
+            |> build_combined_stream(direction)
 
           if local_idx_cursor do
             Stream.drop_while(stream, fn
-              {{^gen_cursor, _txi, _local_idx} = index, _data}
-              when direction == :forward and index < {gen_cursor, txi_cursor, local_idx_cursor}
-              when direction == :backward and index > {gen_cursor, txi_cursor, local_idx_cursor} ->
+              {{^gen_cursor, txi, local_idx, _block_type}, _data}
+              when direction == :forward and
+                     {gen_cursor, txi, local_idx} < {gen_cursor, txi_cursor, local_idx_cursor}
+              when direction == :backward and
+                     {gen_cursor, txi, local_idx} > {gen_cursor, txi_cursor, local_idx_cursor} ->
                 true
 
               {_index, _data} ->
@@ -243,29 +249,35 @@ defmodule AeMdw.Activities do
 
   defp render_activities(state, account_pk, activities_locators_data) do
     {activities_locators_data, _acc} =
-      Enum.map_reduce(activities_locators_data, nil, fn
-        {{_height, txi, _local_idx}, _data} = locator,
-        {:txi, txi, enc_mb_hash, block_time} = block_info ->
-          {{enc_mb_hash, block_time, locator}, block_info}
+      Enum.map_reduce(activities_locators_data, %{}, fn
+        {{height, txi, local_idx, block_type}, data}, calculated_info
+        when is_map_key(calculated_info, {block_type, txi}) ->
+          %{enc_hash: enc_hash, block_time: block_time} =
+            Map.fetch!(calculated_info, {block_type, txi})
 
-        {{height, -1, _local_idx}, _data} = locator,
-        {:gen, height, enc_kb_hash, block_time} = block_info ->
-          {{enc_kb_hash, block_time, locator}, block_info}
+          {{enc_hash, block_time, {{height, txi, local_idx}, data}}, calculated_info}
 
-        {{height, -1, _local_idx}, _data} = locator, _block_info ->
-          Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, {height, -1})
-          enc_kb_hash = Enc.encode(:key_block_hash, kb_hash)
-          block_time = Db.get_block_time(kb_hash)
+        {{height, txi, local_idx, block_type}, data}, calculated_info ->
+          {hash_type, block_hash} =
+            case block_type do
+              :key_block ->
+                Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
+                {:key_block_hash, block_hash}
 
-          {{enc_kb_hash, block_time, locator}, {:gen, height, enc_kb_hash, block_time}}
+              :micro_block ->
+                Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+                Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+                {:micro_block_hash, block_hash}
+            end
 
-        {{_height, txi, _local_idx}, _data} = locator, _block_info ->
-          Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
-          Model.block(hash: mb_hash) = State.fetch!(state, Model.Block, block_index)
-          enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
-          block_time = Db.get_block_time(mb_hash)
+          enc_hash = Enc.encode(hash_type, block_hash)
+          block_time = Db.get_block_time(block_hash)
 
-          {{enc_mb_hash, block_time, locator}, {:txi, txi, enc_mb_hash, block_time}}
+          {{enc_hash, block_time, {{height, txi, local_idx}, data}},
+           Map.put_new(calculated_info, {block_type, txi}, %{
+             enc_hash: enc_hash,
+             block_time: block_time
+           })}
       end)
 
     Enum.map(activities_locators_data, fn {block_hash, block_time,
@@ -358,18 +370,36 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  defp build_gens_stream(gen_activities, direction) do
-    Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
-      gen_events =
-        Enum.with_index(chunk, fn {^height, data}, local_idx ->
-          {{height, -1, local_idx}, data}
+  defp build_combined_stream(activities_stream, direction) do
+    Stream.flat_map(activities_stream, fn [{{height, txi, _block_type}, _data} | _rest] = chunk ->
+      events =
+        Enum.with_index(chunk, fn {{^height, ^txi, block_type}, data}, local_idx ->
+          {{height, txi, local_idx, block_type}, data}
         end)
 
       if direction == :forward do
-        gen_events
+        events
       else
-        Enum.reverse(gen_events)
+        Enum.reverse(events)
       end
+    end)
+  end
+
+  defp build_gens_stream(gen_activities, state) do
+    Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
+      Enum.map(chunk, fn {^height, data} ->
+        {{height, DbUtil.gen_to_txi(state, height), :key_block}, data}
+      end)
+    end)
+  end
+
+  defp build_txi_stream(txi_activities, state) do
+    Stream.flat_map(txi_activities, fn [{txi, _data} | _rest] = chunk ->
+      Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
+
+      chunk
+      |> Enum.sort()
+      |> Enum.map(fn {^txi, data} -> {{height, txi, :micro_block}, data} end)
     end)
   end
 
@@ -671,23 +701,6 @@ defmodule AeMdw.Activities do
     Collection.stream(state, table, direction, key_boundary, cursor)
   end
 
-  defp build_txi_stream(txi_activities, state, direction) do
-    Stream.flat_map(txi_activities, fn [{txi, _data} | _rest] = chunk ->
-      Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
-
-      txi_events =
-        chunk
-        |> Enum.sort()
-        |> Enum.with_index(fn {^txi, data}, local_idx -> {{height, txi, local_idx}, data} end)
-
-      if direction == :forward do
-        txi_events
-      else
-        Enum.reverse(txi_events)
-      end
-    end)
-  end
-
   @spec render_payload(state(), Db.pubkey(), height(), txi(), activity_value()) ::
           {activity_type(), map()}
   defp render_payload(state, _account_pk, _height, txi, {:field, tx_type, _tx_pos}) do
@@ -832,7 +845,7 @@ defmodule AeMdw.Activities do
     {"DexSwapEvent", %{tx: tx, token_name: name, amount: amount}}
   end
 
-  defp serialize_cursor({{height, txi, local_idx}, _data}),
+  defp serialize_cursor({{height, txi, local_idx, _block_type}, _data}),
     do: "#{height}-#{txi + 1}-#{local_idx}"
 
   defp deserialize_cursor(nil), do: {:ok, nil}
