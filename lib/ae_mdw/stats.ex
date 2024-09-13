@@ -155,7 +155,8 @@ defmodule AeMdw.Stats do
     with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
            State.get(state, Model.Stat, @tps_stat_key),
          {:ok, Model.stat(payload: miners_count)} <-
-           State.get(state, Model.Stat, @miners_count_stat_key) do
+           State.get(state, Model.Stat, @miners_count_stat_key),
+         {:ok, minutes_per_block} = minutes_per_block(state) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
@@ -167,11 +168,12 @@ defmodule AeMdw.Stats do
          last_24hs_transactions: last_24hs_txs_count,
          transactions_trend: trend,
          last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
-         fees_trend: fees_trend
+         fees_trend: fees_trend,
+         minutes_per_block: minutes_per_block
        }}
     else
       :not_found ->
-        {:error, ErrInput.NotFound.exception(value: "no stats")}
+        {:error, ErrInput.NotFound.exception(value: "no last_gen")}
     end
   end
 
@@ -672,6 +674,29 @@ defmodule AeMdw.Stats do
       |> then(&(&1 / txs_count))
     else
       0
+    end
+  end
+
+  defp minutes_per_block(state) do
+    with {:ok, first_block} <- :aec_chain.get_key_block_by_height(1),
+         last_gen <- DbUtil.last_gen(state),
+         {:ok, last_block} <- :aec_chain.get_key_block_by_height(last_gen) do
+      first_block_time = :aec_blocks.time_in_msecs(first_block)
+
+      last_block_time =
+        :aec_blocks.time_in_msecs(last_block)
+
+      diff_in_minutes = (last_block_time - first_block_time) / 60_000
+      minutes_per_block = diff_in_minutes / last_gen
+
+      minutes = floor(minutes_per_block)
+      float_seconds = (minutes_per_block - minutes) * 60
+      seconds = floor(float_seconds)
+      miliseconds = round((float_seconds - seconds) * 1_000)
+
+      {h, m, s} = 0 |> Time.new!(minutes, 0) |> Time.add(seconds, :second) |> Time.to_erl()
+
+      {:ok, "#{h}h #{m}m #{s}s #{miliseconds}ms"}
     end
   end
 end
