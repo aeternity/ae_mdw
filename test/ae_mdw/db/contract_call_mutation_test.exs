@@ -252,7 +252,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(
                  store,
                  Model.AexnTransfer,
-                 {:aex9, remote_pk, call_txi, account_pk, amount, 0}
+                 {:aex9, remote_pk, call_txi, 0, account_pk, amount}
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
@@ -367,7 +367,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(
                  store,
                  Model.AexnTransfer,
-                 {:aex9, account_pk, call_txi, nil, amount, 0}
+                 {:aex9, account_pk, call_txi, 0, nil, amount}
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
@@ -588,13 +588,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert State.exists?(
                state,
                Model.AexnTransfer,
-               {:aex9, from_pk, call_txi, to_pk, amount, 0}
+               {:aex9, from_pk, call_txi, 0, to_pk, amount}
              )
 
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex9, to_pk, call_txi, from_pk, amount, 0}
+               {:aex9, to_pk, call_txi, 0, from_pk, amount}
              )
     end
 
@@ -715,25 +715,25 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert State.exists?(
                state,
                Model.AexnTransfer,
-               {:aex9, from_pk1, call_txi, to_pk1, amount1, 0}
+               {:aex9, from_pk1, call_txi, 0, to_pk1, amount1}
              )
 
       assert State.exists?(
                state,
                Model.AexnTransfer,
-               {:aex9, from_pk2, call_txi, to_pk2, amount2, 1}
+               {:aex9, from_pk2, call_txi, 1, to_pk2, amount2}
              )
 
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex9, to_pk1, call_txi, from_pk1, amount1, 0}
+               {:aex9, to_pk1, call_txi, 0, from_pk1, amount1}
              )
 
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex9, to_pk2, call_txi, from_pk2, amount2, 1}
+               {:aex9, to_pk2, call_txi, 1, from_pk2, amount2}
              )
     end
   end
@@ -1356,7 +1356,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       refute State.exists?(state, Model.NftOwnership, {from_pk, contract_pk, token_id})
       refute State.exists?(state, Model.NftOwnerToken, {contract_pk, from_pk, token_id})
 
-      key = {:aex141, from_pk, call_txi, to_pk, token_id, 0}
+      key = {:aex141, from_pk, call_txi, 0, to_pk, token_id}
 
       assert Model.aexn_transfer(index: ^key, contract_pk: ^contract_pk) =
                State.fetch!(state, Model.AexnTransfer, key)
@@ -1364,13 +1364,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex141, to_pk, call_txi, from_pk, token_id, 0}
+               {:aex141, to_pk, call_txi, 0, from_pk, token_id}
              )
 
       assert State.exists?(
                state,
                Model.AexnPairTransfer,
-               {:aex141, from_pk, to_pk, call_txi, token_id, 0}
+               {:aex141, from_pk, to_pk, call_txi, 0, token_id}
              )
     end
 
@@ -1464,8 +1464,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       refute State.exists?(state, Model.NftOwnership, {from_pk2, remote_pk2, token_id2})
       refute State.exists?(state, Model.NftOwnerToken, {remote_pk2, from_pk2, token_id2})
 
-      key1 = {:aex141, from_pk1, call_txi, to_pk1, token_id1, 0}
-      key2 = {:aex141, from_pk2, call_txi, to_pk2, token_id2, 1}
+      key1 = {:aex141, from_pk1, call_txi, 0, to_pk1, token_id1}
+      key2 = {:aex141, from_pk2, call_txi, 1, to_pk2, token_id2}
 
       assert Model.aexn_transfer(index: ^key1, contract_pk: ^remote_pk1) =
                State.fetch!(state, Model.AexnTransfer, key1)
@@ -1476,25 +1476,25 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex141, to_pk1, call_txi, from_pk1, token_id1, 0}
+               {:aex141, to_pk1, call_txi, 0, from_pk1, token_id1}
              )
 
       assert State.exists?(
                state,
                Model.RevAexnTransfer,
-               {:aex141, to_pk2, call_txi, from_pk2, token_id2, 1}
+               {:aex141, to_pk2, call_txi, 1, from_pk2, token_id2}
              )
 
       assert State.exists?(
                state,
                Model.AexnPairTransfer,
-               {:aex141, from_pk1, to_pk1, call_txi, token_id1, 0}
+               {:aex141, from_pk1, to_pk1, call_txi, 0, token_id1}
              )
 
       assert State.exists?(
                state,
                Model.AexnPairTransfer,
-               {:aex141, from_pk2, to_pk2, call_txi, token_id2, 1}
+               {:aex141, from_pk2, to_pk2, call_txi, 1, token_id2}
              )
     end
   end

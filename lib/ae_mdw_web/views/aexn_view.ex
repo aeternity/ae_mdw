@@ -118,13 +118,13 @@ defmodule AeMdwWeb.AexnView do
   @spec recipient_transfer_to_map(State.t(), account_transfer_key()) :: map()
   def recipient_transfer_to_map(
         state,
-        {type, recipient_pk, call_txi, sender_pk, amount, log_idx}
+        {type, recipient_pk, call_txi, log_idx, sender_pk, amount}
       ),
-      do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
+      do: do_transfer_to_map(state, {type, sender_pk, call_txi, log_idx, recipient_pk, amount})
 
   @spec pair_transfer_to_map(State.t(), pair_transfer_key()) :: map()
-  def pair_transfer_to_map(state, {type, sender_pk, recipient_pk, call_txi, amount, log_idx}),
-    do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
+  def pair_transfer_to_map(state, {type, sender_pk, recipient_pk, call_txi, log_idx, amount}),
+    do: do_transfer_to_map(state, {type, sender_pk, call_txi, log_idx, recipient_pk, amount})
 
   @spec contract_transfer_to_map(
           State.t(),
@@ -138,12 +138,12 @@ defmodule AeMdwWeb.AexnView do
         state,
         aexn_type,
         :from,
-        {_create_txi, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+        {_create_txi, sender_pk, call_txi, log_idx, recipient_pk, token_id},
         v3?
       ) do
     do_transfer_to_map(
       state,
-      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
       v3?
     )
   end
@@ -152,12 +152,12 @@ defmodule AeMdwWeb.AexnView do
         state,
         aexn_type,
         :to,
-        {_create_txi, recipient_pk, call_txi, sender_pk, token_id, log_idx},
+        {_create_txi, recipient_pk, call_txi, log_idx, sender_pk, token_id},
         v3?
       ) do
     do_transfer_to_map(
       state,
-      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
       v3?
     )
   end
@@ -166,12 +166,12 @@ defmodule AeMdwWeb.AexnView do
         state,
         aexn_type,
         nil,
-        {_create_txi, call_txi, sender_pk, recipient_pk, token_id, log_idx},
+        {_create_txi, call_txi, log_idx, sender_pk, recipient_pk, token_id},
         v3?
       ) do
     do_transfer_to_map(
       state,
-      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
       v3?
     )
   end
@@ -198,7 +198,7 @@ defmodule AeMdwWeb.AexnView do
 
   defp do_transfer_to_map(
          state,
-         {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key,
+         {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, aexn_value} = transfer_key,
          v3? \\ false
        ) do
     Model.aexn_transfer(contract_pk: contract_pk) =

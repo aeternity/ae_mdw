@@ -600,8 +600,8 @@ defmodule AeMdw.Activities do
         txi_scope,
         txi_cursor
       )
-      |> Stream.map(fn {aexn_type, ^account_pk, txi, to_pk, value, index} ->
-        {txi, {:aexn, aexn_type, account_pk, to_pk, value, index}}
+      |> Stream.map(fn {aexn_type, ^account_pk, txi, index, to_pk, value} ->
+        {txi, {:aexn, aexn_type, account_pk, to_pk, index, value}}
       end)
 
     rev_transfers_stream =
@@ -614,8 +614,8 @@ defmodule AeMdw.Activities do
         txi_scope,
         txi_cursor
       )
-      |> Stream.map(fn {aexn_type, ^account_pk, txi, from_pk, value, index} ->
-        {txi, {:aexn, aexn_type, from_pk, account_pk, value, index}}
+      |> Stream.map(fn {aexn_type, ^account_pk, txi, index, from_pk, value} ->
+        {txi, {:aexn, aexn_type, from_pk, account_pk, index, value}}
       end)
 
     stream = Collection.merge([transfers_stream, rev_transfers_stream], direction)
@@ -643,15 +643,15 @@ defmodule AeMdw.Activities do
       case txi_scope do
         nil ->
           {
-            {aexn_type, account_pk, @min_int, @min_bin, @min_int, @min_int},
-            {aexn_type, account_pk, @max_int, @max_bin, @max_int, @max_int}
+            {aexn_type, account_pk, @min_int, @min_int, @min_bin, @min_int},
+            {aexn_type, account_pk, @max_int, @max_int, @max_bin, @max_int}
           }
 
         {first_txi, last_txi} ->
           {
             # The nil here accomodates for the fact that the second pk might be nil (in case of burn event)
-            {aexn_type, account_pk, first_txi, nil, @min_int, @min_int},
-            {aexn_type, account_pk, last_txi, @max_bin, @max_int, @max_int}
+            {aexn_type, account_pk, first_txi, @min_int, @min_bin, @min_int},
+            {aexn_type, account_pk, last_txi, @max_int, @max_bin, @max_int}
           }
       end
 
@@ -662,10 +662,10 @@ defmodule AeMdw.Activities do
 
         txi when direction == :forward ->
           # The nil here accomodates for the fact that the second pk might be nil (in case of burn event)
-          {aexn_type, account_pk, txi, nil, @min_int, @min_int}
+          {aexn_type, account_pk, txi, @min_int, @min_bin, @min_int}
 
         txi when direction == :backward ->
-          {aexn_type, account_pk, txi, @max_bin, @max_int, @max_int}
+          {aexn_type, account_pk, txi, @max_int, @max_bin, @max_int}
       end
 
     Collection.stream(state, table, direction, key_boundary, cursor)
@@ -756,12 +756,12 @@ defmodule AeMdw.Activities do
          _account_pk,
          _height,
          txi,
-         {:aexn, :aex9, from_pk, to_pk, value, index}
+         {:aexn, :aex9, from_pk, to_pk, index, value}
        ) do
     payload =
       %{contract_id: contract_id} =
       state
-      |> AexnView.sender_transfer_to_map({:aex9, from_pk, txi, to_pk, value, index})
+      |> AexnView.sender_transfer_to_map({:aex9, from_pk, txi, index, to_pk, value})
       |> Map.delete(:call_txi)
       |> Util.map_rename(:sender, :sender_id)
       |> Util.map_rename(:recipient, :recipient_id)
@@ -783,12 +783,12 @@ defmodule AeMdw.Activities do
          _account_pk,
          _height,
          txi,
-         {:aexn, :aex141, from_pk, to_pk, value, index}
+         {:aexn, :aex141, from_pk, to_pk, index, value}
        ) do
     payload =
       %{contract_id: contract_id} =
       state
-      |> AexnView.sender_transfer_to_map({:aex141, from_pk, txi, to_pk, value, index})
+      |> AexnView.sender_transfer_to_map({:aex141, from_pk, txi, index, to_pk, value})
       |> Map.delete(:call_txi)
       |> Util.map_rename(:sender, :sender_id)
       |> Util.map_rename(:recipient, :recipient_id)

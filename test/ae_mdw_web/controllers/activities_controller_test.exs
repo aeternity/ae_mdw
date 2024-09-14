@@ -981,7 +981,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            index: {:aex9, account_pk, txi1, 1, another_account_pk, 1},
             contract_pk: contract_pk
           )
         )
@@ -989,14 +989,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, account_pk, txi2, another_account_pk, 2, 2},
+            index: {:aex141, account_pk, txi2, 2, another_account_pk, 2},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            index: {:aex141, another_account_pk, txi2, 2, account_pk, 2},
             contract_pk: contract_pk
           )
         )
@@ -1004,14 +1004,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi3, another_account_pk, 3, 3},
+            index: {:aex9, account_pk, txi3, 3, another_account_pk, 3},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            index: {:aex9, another_account_pk, txi3, 3, account_pk, 3},
             contract_pk: contract_pk
           )
         )
@@ -1098,7 +1098,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            index: {:aex9, account_pk, txi1, 1, another_account_pk, 1},
             contract_pk: contract_pk
           )
         )
@@ -1106,14 +1106,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, another_account_pk, txi1, account_pk, 2, 2},
+            index: {:aex9, another_account_pk, txi1, 2, account_pk, 2},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi2, nil, 2, 2},
+            index: {:aex9, account_pk, txi2, 2, nil, 2},
             contract_pk: contract_pk
           )
         )
@@ -1297,7 +1297,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            index: {:aex9, account_pk, txi1, 1, another_account_pk, 1},
             contract_pk: contract_pk
           )
         )
@@ -1305,14 +1305,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, account_pk, txi2, another_account_pk, 2, 2},
+            index: {:aex141, account_pk, txi2, 2, another_account_pk, 2},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            index: {:aex141, another_account_pk, txi2, 2, account_pk, 2},
             contract_pk: contract_pk
           )
         )
@@ -1320,14 +1320,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi3, another_account_pk, 3, 3},
+            index: {:aex9, account_pk, txi3, 3, another_account_pk, 3},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            index: {:aex9, another_account_pk, txi3, 3, account_pk, 3},
             contract_pk: contract_pk
           )
         )
@@ -1719,7 +1719,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, 4, next_account_pk, 1, 1},
+            index: {:aex9, account_pk, 4, 1, next_account_pk, 1},
             contract_pk: contract_pk
           )
         )
@@ -1728,14 +1728,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           # Skipped
           Model.RevAexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, account_pk, 5, next_account_pk, 2, 2},
+            index: {:aex141, account_pk, 5, 2, next_account_pk, 2},
             contract_pk: contract_pk
           )
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, next_account_pk, 5, account_pk, 2, 2},
+            index: {:aex141, next_account_pk, 5, 2, account_pk, 2},
             contract_pk: contract_pk
           )
         )
@@ -1887,31 +1887,31 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            index: {:aex9, account_pk, txi1, 1, another_account_pk, 1},
             contract_pk: contract_pk
           )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
+          Model.aexn_transfer(index: {:aex141, account_pk, txi2, 2, another_account_pk, 2})
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            index: {:aex141, another_account_pk, txi2, 2, account_pk, 2},
             contract_pk: contract_pk
           )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
+          Model.aexn_transfer(index: {:aex9, account_pk, txi3, 3, another_account_pk, 3})
         )
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            index: {:aex9, another_account_pk, txi3, 3, account_pk, 3},
             contract_pk: contract_pk
           )
         )
