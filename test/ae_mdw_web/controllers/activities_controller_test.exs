@@ -742,10 +742,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
         |> Store.put(Model.Tx, Model.tx(index: txi4, block_index: {height2, 1}, id: "hash4"))
-        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
-        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1))
-        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
-        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash, tx_index: txi1))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1, tx_index: txi2))
+        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2, tx_index: txi3))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height2, -1}, hash: kb_hash2, tx_index: txi4)
+        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -802,6 +805,99 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{"data" => ^data} =
                  conn |> with_store(store) |> get(prev_url) |> json_response(200)
+      end
+    end
+
+    test "when it has both gen-based and tx-based events", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      height1 = 397
+      height2 = 398
+      height3 = 399
+      txi1 = 123
+      kb_hash = TS.key_block_hash(0)
+      txi2 = 456
+      txi3 = 789
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.key_block_hash(0)
+      mb_hash2 = TS.key_block_hash(1)
+      contract_pk = <<100::256>>
+      meta_info_aex9 = {"AE9Name", "AEXSymbol", 10}
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(index: {account_pk, "reward_dev", {height2, -1}, -1})
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height2, -1}, "reward_dev", account_pk, -1},
+            amount: 30
+          )
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height2, -1}, hash: kb_hash, tx_index: txi2)
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, nil, 1, 1},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi3, nil, 2, 2},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height3, 0}, id: tx2_hash))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height3, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height3, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info_aex9)
+        )
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{
+                 "prev" => nil,
+                 "data" => [activity1],
+                 "next" => next_url
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 1)
+                 |> json_response(200)
+
+        assert %{"height" => ^height1, "type" => "Aex9TransferEvent"} = activity1
+
+        assert %{
+                 "data" => [activity2]
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{"height" => ^height2, "type" => "InternalTransferEvent"} = activity2
       end
     end
 
@@ -878,12 +974,24 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height + 2, 0}, id: "hash3"))
-        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash1))
-        |> Store.put(Model.Block, Model.block(index: {height + 1, -1}, hash: kb_hash2))
-        |> Store.put(Model.Block, Model.block(index: {height + 2, -1}, hash: kb_hash3))
-        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1))
-        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
-        |> Store.put(Model.Block, Model.block(index: {height + 2, 0}, hash: mb_hash3))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height, -1}, hash: kb_hash1, tx_index: txi1)
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height + 1, -1}, hash: kb_hash2, tx_index: txi2)
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height + 2, -1}, hash: kb_hash3, tx_index: txi3)
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1, tx_index: txi1))
+        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2, tx_index: txi2))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height + 2, 0}, hash: mb_hash3, tx_index: txi3)
+        )
 
       with_mocks [
         {Db, [:passthrough],
