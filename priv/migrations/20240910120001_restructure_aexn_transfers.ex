@@ -16,7 +16,7 @@ defmodule AeMdw.Migrations.RestructureAexnTransfers do
       state
       |> Collection.stream(Model.AexnTransfer, nil)
       |> Stream.filter(fn {_aexn_type, _from_pk, _txi, to_pk, _value, _log_idx} ->
-        is_binary(to_pk)
+        is_binary(to_pk) or is_nil(to_pk)
       end)
       |> Stream.map(fn {aexn_type, from_pk, txi, to_pk, value, log_idx} = key ->
         aexn_transfer = State.fetch!(state, Model.AexnTransfer, key)
@@ -65,7 +65,7 @@ defmodule AeMdw.Migrations.RestructureAexnTransfers do
     {:ok, transfers_length + rev_transfers_length + pair_transfers_length}
   end
 
-  defp replace_keys(_state, table, zipped_mutations) do
+  defp replace_keys(state, table, zipped_mutations) do
     zipped_mutations
     |> Stream.chunk_every(1_000)
     |> Stream.map(fn chunk ->
@@ -75,7 +75,7 @@ defmodule AeMdw.Migrations.RestructureAexnTransfers do
         DeleteKeysMutation.new(%{table => deletion_keys}) | mutations
       ]
 
-      # _state = State.commit_db(state, mutations)
+      _state = State.commit_db(state, mutations)
       length(mutations)
     end)
     |> Enum.sum()
