@@ -71,7 +71,7 @@ defmodule AeMdw.Migrations.RestructureAexnTransfers do
     |> Stream.map(fn chunk ->
       {mutations, deletion_keys} = Enum.unzip(chunk)
 
-      _mutations = [
+      mutations = [
         DeleteKeysMutation.new(%{table => deletion_keys}) | mutations
       ]
 
