@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.87.1](https://www.github.com/aeternity/ae_mdw/compare/v1.87.0...v1.87.1) (2024-09-16)
+
+
+### Bug Fixes
+
+* activities cursor for gen streams ([#1944](https://www.github.com/aeternity/ae_mdw/issues/1944)) ([2d6909c](https://www.github.com/aeternity/ae_mdw/commit/2d6909cd6dc604f540cf0c8f851650efb2f319cb))
+
 ## [1.87.0](https://www.github.com/aeternity/ae_mdw/compare/v1.86.0...v1.87.0) (2024-09-12)
 
 
