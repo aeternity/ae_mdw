@@ -156,7 +156,7 @@ defmodule AeMdw.Stats do
            State.get(state, Model.Stat, @tps_stat_key),
          {:ok, Model.stat(payload: miners_count)} <-
            State.get(state, Model.Stat, @miners_count_stat_key),
-         {:ok, minutes_per_block} = minutes_per_block(state) do
+         {:ok, minutes_per_block} <- minutes_per_block(state) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
@@ -173,7 +173,7 @@ defmodule AeMdw.Stats do
        }}
     else
       :not_found ->
-        {:error, ErrInput.NotFound.exception(value: "no last_gen")}
+        {:error, ErrInput.NotFound.exception(value: "no stats")}
     end
   end
 
@@ -686,17 +686,7 @@ defmodule AeMdw.Stats do
       last_block_time =
         :aec_blocks.time_in_msecs(last_block)
 
-      diff_in_minutes = (last_block_time - first_block_time) / 60_000
-      minutes_per_block = diff_in_minutes / last_gen
-
-      minutes = floor(minutes_per_block)
-      float_seconds = (minutes_per_block - minutes) * 60
-      seconds = floor(float_seconds)
-      miliseconds = round((float_seconds - seconds) * 1_000)
-
-      {h, m, s} = 0 |> Time.new!(minutes, 0) |> Time.add(seconds, :second) |> Time.to_erl()
-
-      {:ok, "#{h}h #{m}m #{s}s #{miliseconds}ms"}
+      {:ok, div(last_block_time - first_block_time, last_gen)}
     end
   end
 end

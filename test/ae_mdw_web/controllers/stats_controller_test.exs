@@ -856,6 +856,7 @@ defmodule AeMdwWeb.StatsControllerTest do
          %{conn: conn, store: store} do
       now = :aeu_time.now_in_msecs()
       msecs_per_day = 3_600 * 24 * 1_000
+      three_minutes = 3 * 60 * 1_000
       delay = 500
 
       last_24hs_start_txi = 8
@@ -871,21 +872,36 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day * 2 + delay, 1}))
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
+        |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
       txis = last_24hs_start_txi..last_txi
 
       fee_avg = Enum.sum(txis) / Enum.count(txis)
 
-      with_mocks([{AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end}]) do
+      with_mocks([
+        {AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end},
+        {:aec_chain, [],
+         get_key_block_by_height: fn
+           1 -> {:ok, :first_block}
+           _n -> {:ok, :other_block}
+         end},
+        {:aec_blocks, [],
+         time_in_msecs: fn
+           :first_block -> now - 10 * three_minutes
+           :other_block -> now
+         end}
+      ]) do
         assert %{
                  "last_24hs_transactions" => 13,
                  "transactions_trend" => 0.46,
                  "fees_trend" => 0.69,
-                 "last_24hs_average_transaction_fees" => ^fee_avg
+                 "last_24hs_average_transaction_fees" => ^fee_avg,
+                 "minutes_per_block" => ^three_minutes
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/stats")
+                 |> get("/v3/stats")
                  |> json_response(200)
       end
     end
