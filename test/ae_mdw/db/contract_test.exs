@@ -308,7 +308,7 @@ defmodule AeMdw.Db.ContractTest do
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
 
       refute :not_found ==
-               State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
+               State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, 3, account_pk2, 30})
     end
 
     test "does not update aex9 event balance on contract created by event" do
@@ -363,7 +363,7 @@ defmodule AeMdw.Db.ContractTest do
                State.get(
                  state,
                  Model.AexnTransfer,
-                 {:aex9, account_pk1, txi, account_pk2, 1_000_000, 1}
+                 {:aex9, account_pk1, txi, 1, account_pk2, 1_000_000}
                )
     end
 
@@ -559,18 +559,18 @@ defmodule AeMdw.Db.ContractTest do
       assert {:ok, Model.aex9_event_balance(amount: 2_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
 
-      refute :not_found ==
+      assert {:ok, _transfer1} =
                State.get(
                  state,
                  Model.AexnTransfer,
-                 {:aex9, account_pk1, txi, account_pk2, 2_000_000, 0}
+                 {:aex9, account_pk1, txi, 0, account_pk2, 2_000_000}
                )
 
-      refute :not_found ==
+      assert {:ok, _transfer2} =
                State.get(
                  state,
                  Model.AexnTransfer,
-                 {:aex9, account_pk2, txi, account_pk2, 3_000_000, 1}
+                 {:aex9, account_pk2, txi, 1, account_pk2, 3_000_000}
                )
     end
 

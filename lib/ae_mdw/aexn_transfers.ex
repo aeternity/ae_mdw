@@ -4,11 +4,14 @@ defmodule AeMdw.AexnTransfers do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
+  alias AeMdw.Txs
   alias AeMdw.Util
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
@@ -20,14 +23,15 @@ defmodule AeMdw.AexnTransfers do
   @type amounts :: map()
   @type token_id :: non_neg_integer()
 
-  @typep txi :: AeMdw.Txs.txi()
+  @typep txi() :: Txs.txi()
+  @typep log_idx() :: Contract.local_idx()
 
   @type transfer_key ::
-          {:aex9 | :aex141, pubkey(), txi(), pubkey(), pos_integer(), non_neg_integer()}
+          {:aex9 | :aex141, pubkey(), txi(), log_idx(), pubkey(), pos_integer()}
   @type pair_transfer_key ::
-          {:aex9 | :aex141, pubkey(), pubkey(), txi(), pos_integer(), non_neg_integer()}
+          {:aex9 | :aex141, pubkey(), pubkey(), txi(), log_idx(), pos_integer()}
   @type contract_transfer_key ::
-          {txi(), txi(), pubkey(), pubkey(), pos_integer(), non_neg_integer()}
+          {txi(), txi(), log_idx(), pubkey(), pubkey(), pos_integer()}
 
   @type cursor :: binary()
   @typep page_cursor :: Collection.pagination_cursor()
@@ -37,8 +41,8 @@ defmodule AeMdw.AexnTransfers do
           {page_cursor(), [pair_transfer_key()], page_cursor()}
   @type contract_paginated_transfers ::
           {page_cursor(), [contract_transfer_key()], page_cursor()}
-  @typep pagination :: Collection.direction_limit()
-  @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep pagination() :: Collection.direction_limit()
+  @typep pubkey() :: Db.pubkey()
 
   @spec fetch_contract_transfers(
           State.t(),
@@ -54,12 +58,10 @@ defmodule AeMdw.AexnTransfers do
         with {:ok, cursors} <- deserialize_account_cursors(state, cursor, account_pk) do
           key_boundary = key_boundary(create_txi, account_pk)
 
-          paginated_transfers =
-            state
-            |> build_streamer(cursors, key_boundary)
-            |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
-
-          {:ok, paginated_transfers}
+          state
+          |> build_streamer(cursors, key_boundary)
+          |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
+          |> then(&{:ok, &1})
         end
 
       :not_found ->
@@ -156,12 +158,10 @@ defmodule AeMdw.AexnTransfers do
     with {:ok, cursor_key} <- deserialize_cursor(cursor) do
       key_boundary = key_boundary(aexn_type_or_txi, account_pk_or_pair_pks)
 
-      paginated_transfers =
-        state
-        |> build_streamer(table, cursor_key, key_boundary)
-        |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
-
-      {:ok, paginated_transfers}
+      state
+      |> build_streamer(table, cursor_key, key_boundary)
+      |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
+      |> then(&{:ok, &1})
     end
   end
 
@@ -176,8 +176,8 @@ defmodule AeMdw.AexnTransfers do
             key_boundary,
             from_cursor_key
           )
-          |> Stream.map(fn {create_txi, sender_pk, call_txi, recipient_pk, value, log_idx} ->
-            {create_txi, call_txi, sender_pk, recipient_pk, value, log_idx}
+          |> Stream.map(fn {create_txi, sender_pk, call_txi, log_idx, recipient_pk, value} ->
+            {create_txi, call_txi, log_idx, sender_pk, recipient_pk, value}
           end),
           state
           |> Collection.stream(
@@ -186,8 +186,8 @@ defmodule AeMdw.AexnTransfers do
             key_boundary,
             to_cursor_key
           )
-          |> Stream.map(fn {create_txi, recipient_pk, call_txi, sender_pk, value, log_idx} ->
-            {create_txi, call_txi, sender_pk, recipient_pk, value, log_idx}
+          |> Stream.map(fn {create_txi, recipient_pk, call_txi, log_idx, sender_pk, value} ->
+            {create_txi, call_txi, log_idx, sender_pk, recipient_pk, value}
           end)
         ],
         direction
@@ -211,15 +211,15 @@ defmodule AeMdw.AexnTransfers do
          true <-
            (elem(cursor_term, 0) in [:aex9, :aex141] or is_integer(elem(cursor_term, 0))) and
              (match?(
-                {_type_or_pk, <<_pk1::256>>, _txi, <<_pk2::256>>, _amount, _idx},
+                {_type_or_pk, <<_pk1::256>>, _txi, _idx, <<_pk2::256>>, _amount},
                 cursor_term
               ) or
                 match?(
-                  {_type_or_pk, <<_pk1::256>>, <<_pk2::256>>, _txi, _amount, _idx},
+                  {_type_or_pk, <<_pk1::256>>, <<_pk2::256>>, _txi, _idx, _amount},
                   cursor_term
                 ) or
                 match?(
-                  {_type_or_pk, _txi, <<_pk1::256>>, <<_pk2::256>>, _amount, _idx},
+                  {_type_or_pk, _txi, _idx, <<_pk1::256>>, <<_pk2::256>>, _amount},
                   cursor_term
                 )) do
       {:ok, cursor_term}
@@ -233,12 +233,12 @@ defmodule AeMdw.AexnTransfers do
 
   defp deserialize_account_cursors(_state, cursor_bin, account_pk) do
     with {:ok, cursor} <- deserialize_cursor(cursor_bin) do
-      {create_txi, call_txi, pk1, pk2, token_id, log_idx} = cursor
+      {create_txi, call_txi, log_idx, pk1, pk2, token_id} = cursor
 
       cursor =
         case account_pk do
-          ^pk1 -> {create_txi, pk1, call_txi, pk2, token_id, log_idx}
-          ^pk2 -> {create_txi, pk2, call_txi, pk1, token_id, log_idx}
+          ^pk1 -> {create_txi, pk1, call_txi, log_idx, pk2, token_id}
+          ^pk2 -> {create_txi, pk2, call_txi, log_idx, pk1, token_id}
         end
 
       {:ok, {cursor, cursor}}

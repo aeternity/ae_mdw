@@ -117,21 +117,21 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
         m_transfer =
           Model.aexn_transfer(
-            index: {aexn_type, from_pk, txi, to_pk, value, i},
+            index: {aexn_type, from_pk, txi, i, to_pk, value},
             contract_pk: contract_pk
           )
 
         m_rev_transfer =
-          Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, i})
+          Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, i, from_pk, value})
 
         m_pair_transfer =
-          Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, i})
+          Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, i, value})
 
         m_ct_from =
-          Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, value, i})
+          Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
 
         m_ct_to =
-          Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, value, i})
+          Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
 
         store
         |> Store.put(

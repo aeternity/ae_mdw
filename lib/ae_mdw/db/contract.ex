@@ -365,7 +365,7 @@ defmodule AeMdw.Db.Contract do
     aex9_search_transfers(
       state,
       Model.AexnTransfer,
-      {:aex9, sender_pk, -1, nil, -1, -1},
+      {:aex9, sender_pk, -1, -1, nil, -1},
       fn key ->
         elem(key, 0) == :aex9 and elem(key, 1) == sender_pk
       end
@@ -376,7 +376,7 @@ defmodule AeMdw.Db.Contract do
     aex9_search_transfers(
       state,
       Model.RevAexnTransfer,
-      {:aex9, recipient_pk, -1, nil, -1, -1},
+      {:aex9, recipient_pk, -1, -1, nil, -1},
       fn key ->
         elem(key, 0) == :aex9 and elem(key, 1) == recipient_pk
       end
@@ -816,15 +816,15 @@ defmodule AeMdw.Db.Contract do
        ) do
     m_transfer =
       Model.aexn_transfer(
-        index: {aexn_type, from_pk, txi, to_pk, value, log_idx},
+        index: {aexn_type, from_pk, txi, log_idx, to_pk, value},
         contract_pk: contract_pk
       )
 
     m_rev_transfer =
-      Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, log_idx})
+      Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, log_idx, from_pk, value})
 
     m_pair_transfer =
-      Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, log_idx})
+      Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, log_idx, value})
 
     state
     |> State.put(Model.AexnTransfer, m_transfer)
@@ -844,9 +844,9 @@ defmodule AeMdw.Db.Contract do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
-      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, value, i})
+      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
 
-    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, value, i})
+    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
 
     state
     |> State.put(Model.AexnContractFromTransfer, m_ct_from)
@@ -868,7 +868,7 @@ defmodule AeMdw.Db.Contract do
 
     m_transfer =
       Model.aexn_transfer(
-        index: {:aex9, from_pk, txi, nil, burn_value, log_idx},
+        index: {:aex9, from_pk, txi, log_idx, nil, burn_value},
         contract_pk: contract_pk
       )
 
@@ -898,12 +898,12 @@ defmodule AeMdw.Db.Contract do
 
     m_transfer =
       Model.aexn_transfer(
-        index: {:aex9, contract_pk, txi, to_pk, mint_value, log_idx},
+        index: {:aex9, contract_pk, txi, log_idx, to_pk, mint_value},
         contract_pk: contract_pk
       )
 
     m_rev_transfer =
-      Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, contract_pk, mint_value, log_idx})
+      Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, log_idx, contract_pk, mint_value})
 
     state
     |> State.put(Model.Aex9EventBalance, m_to)

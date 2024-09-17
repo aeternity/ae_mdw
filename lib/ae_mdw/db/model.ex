@@ -900,15 +900,15 @@ defmodule AeMdw.Db.Model do
   @type idx_contract_log() :: record(:idx_contract_log, index: idx_contract_log_index())
 
   # aexn transfer:
-  #    index: {:aex9 | :aex141, from pk, call txi, to pk, amount | token_id, log idx}
+  #    index: {:aex9 | :aex141, from pk, call txi_idx, to pk, amount | token_id}
   @aexn_transfer_defaults [
-    index: {nil, <<>>, -1, <<>>, -1, -1},
+    index: {nil, <<>>, {-1, -1}, <<>>, -1},
     contract_pk: <<>>
   ]
   defrecord :aexn_transfer, @aexn_transfer_defaults
 
   @type aexn_transfer_index() ::
-          {aexn_type(), pubkey(), txi(), pubkey() | nil, amount(), non_neg_integer()}
+          {aexn_type(), pubkey(), txi(), log_idx(), pubkey() | nil, amount()}
   @type aexn_transfer() ::
           record(:aexn_transfer, index: aexn_transfer_index(), contract_pk: pubkey())
 
@@ -921,11 +921,11 @@ defmodule AeMdw.Db.Model do
   defrecord :rev_aexn_transfer, @rev_aexn_transfer_defaults
 
   @type rev_aexn_transfer_index() ::
-          {aexn_type(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          {aexn_type(), pubkey(), txi(), log_idx(), pubkey(), amount()}
   @type rev_aexn_transfer() :: record(:rev_aexn_transfer, index: rev_aexn_transfer_index())
 
   # aexn pair transfer:
-  #    index: {:aex9 | :aex141, from pk, to pk, call txi, amount | token_id, log idx}
+  #    index: {:aex9 | :aex141, from pk, to pk, call txi, call_idx, amount | token_id}
   @aexn_pair_transfer_defaults [
     index: {nil, <<>>, <<>>, -1, -1, -1},
     unused: nil
@@ -933,7 +933,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_pair_transfer, @aexn_pair_transfer_defaults
 
   @type aexn_pair_transfer_index() ::
-          {aexn_type(), pubkey(), pubkey(), txi(), amount(), non_neg_integer()}
+          {aexn_type(), pubkey(), pubkey(), txi(), log_idx(), amount()}
   @type aexn_pair_transfer() :: record(:aexn_pair_transfer, index: aexn_pair_transfer_index())
 
   # aexn contract from transfer:
@@ -945,7 +945,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_contract_from_transfer, @aexn_contract_from_transfer_defaults
 
   @type aexn_contract_from_transfer_index() ::
-          {txi(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          {txi(), pubkey(), txi(), log_idx(), pubkey(), amount()}
   @type aexn_contract_from_transfer() ::
           record(:aexn_contract_from_transfer, index: aexn_contract_from_transfer_index())
 
@@ -958,7 +958,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_contract_to_transfer, @aexn_contract_to_transfer_defaults
 
   @type aexn_contract_to_transfer_index() ::
-          {txi(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          {txi(), pubkey(), txi(), log_idx(), pubkey(), amount()}
   @type aexn_contract_to_transfer() ::
           record(:aexn_contract_to_transfer, index: aexn_contract_to_transfer_index())
 
