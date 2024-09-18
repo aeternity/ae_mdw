@@ -155,7 +155,8 @@ defmodule AeMdw.Stats do
     with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
            State.get(state, Model.Stat, @tps_stat_key),
          {:ok, Model.stat(payload: miners_count)} <-
-           State.get(state, Model.Stat, @miners_count_stat_key) do
+           State.get(state, Model.Stat, @miners_count_stat_key),
+         {:ok, minutes_per_block} <- minutes_per_block(state) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
@@ -167,7 +168,8 @@ defmodule AeMdw.Stats do
          last_24hs_transactions: last_24hs_txs_count,
          transactions_trend: trend,
          last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
-         fees_trend: fees_trend
+         fees_trend: fees_trend,
+         minutes_per_block: minutes_per_block
        }}
     else
       :not_found ->
@@ -672,6 +674,19 @@ defmodule AeMdw.Stats do
       |> then(&(&1 / txs_count))
     else
       0
+    end
+  end
+
+  defp minutes_per_block(state) do
+    with {:ok, first_block} <- :aec_chain.get_key_block_by_height(1),
+         last_gen <- DbUtil.last_gen(state),
+         {:ok, last_block} <- :aec_chain.get_key_block_by_height(last_gen) do
+      first_block_time = :aec_blocks.time_in_msecs(first_block)
+
+      last_block_time =
+        :aec_blocks.time_in_msecs(last_block)
+
+      {:ok, div(last_block_time - first_block_time, last_gen)}
     end
   end
 end
