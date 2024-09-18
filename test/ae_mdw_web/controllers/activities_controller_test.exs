@@ -88,7 +88,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx3, tx2, tx1], "next" => _next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities")
+                 |> get("/v3/accounts/#{account}/activities")
                  |> json_response(200)
 
         assert %{
@@ -170,7 +170,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1, tx2], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -257,7 +257,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx2, tx1], "next" => _next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities")
+                 |> get("/v3/accounts/#{account}/activities")
                  |> json_response(200)
 
         assert %{
@@ -354,7 +354,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1, tx2], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{contract}/activities", direction: "forward", limit: 2)
+                 |> get("/v3/accounts/#{contract}/activities", direction: "forward", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -470,7 +470,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1] = data1, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{contract}/activities", direction: "forward", limit: 1)
+                 |> get("/v3/accounts/#{contract}/activities", direction: "forward", limit: 1)
                  |> json_response(200)
 
         assert %{
@@ -645,7 +645,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1, tx2], "next" => _next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
                  |> json_response(200)
 
         assert %{
@@ -761,7 +761,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -847,7 +847,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi1, nil, 1, 1},
+            index: {:aex9, account_pk, txi1, 1, nil, 1},
             contract_pk: contract_pk
           )
         )
@@ -855,7 +855,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.AexnTransfer,
           Model.aexn_transfer(
-            index: {:aex9, account_pk, txi3, nil, 2, 2},
+            index: {:aex9, account_pk, txi3, 2, nil, 2},
             contract_pk: contract_pk
           )
         )
@@ -884,7 +884,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 1)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 1)
                  |> json_response(200)
 
         assert %{"height" => ^height1, "type" => "Aex9TransferEvent"} = activity1
@@ -1008,7 +1008,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                } =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 3)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 3)
                  |> json_response(200)
 
         assert %{
@@ -1148,7 +1148,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -1246,7 +1246,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [_activity], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 1)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", limit: 1)
                  |> json_response(200)
 
         assert %{"data" => [_activity]} =
@@ -1350,7 +1350,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", limit: 1)
+                 |> get("/v3/accounts/#{account}/activities", limit: 1)
                  |> json_response(200)
 
         assert %{
@@ -1464,7 +1464,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", limit: 2)
+                 |> get("/v3/accounts/#{account}/activities", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -1625,7 +1625,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [activity3, activity2] = data1, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{encoded_name_hash}/activities", limit: 2)
+                 |> get("/v3/accounts/#{encoded_name_hash}/activities", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -1713,7 +1713,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/accounts/#{invalid_account}/activities")
+               |> get("/v3/accounts/#{invalid_account}/activities")
                |> json_response(400)
     end
 
@@ -1725,7 +1725,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/accounts/#{account}/activities", cursor: invalid_cursor)
+               |> get("/v3/accounts/#{account}/activities", cursor: invalid_cursor)
                |> json_response(400)
     end
 
@@ -1736,7 +1736,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/accounts/#{account}/activities", scope: "txi:1-2")
+               |> get("/v3/accounts/#{account}/activities", scope: "txi:1-2")
                |> json_response(400)
     end
 
@@ -1897,7 +1897,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
                  |> json_response(200)
 
         assert %{
@@ -1962,7 +1962,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{"prev" => nil, "data" => [], "next" => _next_url} =
                conn
                |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+               |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
                |> json_response(200)
     end
 
@@ -2044,7 +2044,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{"prev" => nil, "data" => [activity1, activity2]} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/accounts/#{account}/activities", direction: "forward", type: "aex9")
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward", type: "aex9")
                  |> json_response(200)
 
         assert %{
