@@ -1956,6 +1956,59 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "get active name info by name with different case", %{conn: conn, store: store} do
+      name = "bigname123456.chain"
+      {:ok, name_hash_id} = :aens.get_name_hash(name)
+      mixed_case_name = "bIGnAME123456.chain"
+
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx1: name_tx(:name_claim_tx, :alice, name),
+          tx2: name_tx(:name_update_tx, :alice, name)
+        ] do
+        %{block: block, txs: [tx1, tx2]} = blocks[:mb]
+        {:id, :account, alice_pk} = accounts[:alice]
+        active_from = blocks[:mb][:height]
+        expire = 10_000
+        {:ok, block_hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+        store =
+          store
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: name,
+              owner: alice_pk,
+              active: active_from,
+              expire: expire
+            )
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 1})
+          )
+          |> Store.put(Model.NameClaim, Model.name_claim(index: {name, active_from, {1, -1}}))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_from, {2, -1}}))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: name))
+          |> Store.put(Model.Block, Model.block(index: {active_from, -1}, hash: block_hash))
+          |> Store.put(Model.Block, Model.block(index: {123, -1}, hash: block_hash))
+
+        assert %{
+                 "name" => ^name,
+                 "active" => true,
+                 "auction" => nil
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names/#{mixed_case_name}")
+                 |> json_response(200)
+      end
+    end
+
     test "get name claimed with ga_meta_tx", %{conn: conn, store: store} do
       buyer_pk = TS.address(0)
       owner_pk = TS.address(1)

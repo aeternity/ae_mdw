@@ -959,7 +959,7 @@ defmodule AeMdw.Names do
 
   defp locate_name_or_auction_source(state, plain_name_or_hash) do
     plain_name =
-      with {:ok, hash_bin} <- Validate.id(plain_name_or_hash),
+      with {:ok, hash_bin} <- Validate.name_id(plain_name_or_hash),
            {:ok, Model.plain_name(value: plain_name)} <-
              State.get(state, Model.PlainName, hash_bin) do
         plain_name
