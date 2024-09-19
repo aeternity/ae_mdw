@@ -344,63 +344,16 @@ defmodule AeMdw.Names do
     with {:ok, account_id} <- Validate.id(owner_pk),
          {:ok, cursor} <- deserialize_claims_cursor(cursor) do
       fn direction ->
-        :name_claim_tx
-        |> Node.tx_ids_positions()
-        |> then(&[nil | &1])
-        |> Enum.map(fn tx_field_pos ->
-          key_boundary =
-            case scope do
-              nil ->
-                Collection.generate_key_boundary(
-                  {:name_claim_tx, tx_field_pos, account_id, Collection.integer()}
-                )
-
-              {:gen, first_gen..last_gen} ->
-                Collection.generate_key_boundary(
-                  {:name_claim_tx, tx_field_pos, account_id,
-                   Collection.gen_range(
-                     DbUtil.first_gen_to_txi(state, first_gen),
-                     DbUtil.last_gen_to_txi(state, last_gen)
-                   )}
-                )
-            end
-
-          cursor =
-            case cursor do
-              nil ->
-                nil
-
-              {{txi, _idx}, tx_field_pos} ->
-                {:name_claim_tx, tx_field_pos, account_id, txi}
-            end
-
-          Collection.stream(state, Model.Field, direction, key_boundary, cursor)
-        end)
+        [
+          contract_call_streams(state, account_id, direction, scope, cursor),
+          name_claim_tx_streams(state, account_id, direction, scope, cursor)
+        ]
         |> Collection.merge(direction)
-        |> Stream.flat_map(fn {_tx_type, tx_field_pos, _account_id, txi} ->
-          Model.tx(id: tx_hash, block_index: {_height, _mbi}) = State.fetch!(state, Model.Tx, txi)
-
-          name =
-            tx_hash
-            |> Db.get_tx()
-            |> case do
-              {:name_claim_tx, aetx} ->
-                :aens_claim_tx.name(aetx)
-
-              {:contract_call_tx, _aetx} ->
-                Model.int_contract_call(tx: name_aetx) =
-                  State.fetch!(state, Model.IntContractCall, {txi, 0})
-
-                name_aetx
-                |> :aetx.specialize_type()
-                |> elem(1)
-                |> :aens_claim_tx.name()
-            end
+        |> Stream.flat_map(fn {txi, idx, tx_field_pos, _tx_type} ->
+          name = get_name_from_txi(state, txi, idx)
 
           boundaries =
-            Collection.generate_key_boundary(
-              {name, Collection.integer(), {txi, Collection.integer()}}
-            )
+            Collection.generate_key_boundary({name, Collection.integer(), {txi, idx}})
 
           name_claim_stream =
             state
@@ -422,14 +375,11 @@ defmodule AeMdw.Names do
             )
             |> Stream.map(fn record -> {record, tx_field_pos, Model.AuctionBidClaim} end)
 
-          claims =
-            [name_claim_stream, auction_bid_claim_stream]
-            |> Collection.merge(direction)
-            |> Enum.filter(fn {{plain_name, _claim_height, {claim_txi, _}}, _tx_field_pos, _table} ->
-              name == plain_name && txi == claim_txi
-            end)
-
-          claims
+          [name_claim_stream, auction_bid_claim_stream]
+          |> Collection.merge(direction)
+          |> Enum.filter(fn {{plain_name, _claim_height, {claim_txi, _}}, _tx_field_pos, _table} ->
+            name == plain_name && txi == claim_txi
+          end)
         end)
       end
       |> Collection.paginate(
@@ -1198,5 +1148,112 @@ defmodule AeMdw.Names do
       {:ok, Model.account_names_count(count: count)} -> count
       :not_found -> 0
     end
+  end
+
+  defp contract_call_streams(state, account_id, direction, scope, cursor) do
+    :contract_call_tx
+    |> Node.tx_ids_positions()
+    |> then(&[nil | &1])
+    |> Enum.map(fn tx_field_pos ->
+      key_boundary =
+        case scope do
+          nil ->
+            Collection.generate_key_boundary(
+              {account_id, "AENS.claim", tx_field_pos, Collection.integer(), Collection.integer()}
+            )
+
+          {:gen, first_gen..last_gen} ->
+            Collection.generate_key_boundary(
+              {account_id, "AENS.claim", tx_field_pos,
+               Collection.gen_range(
+                 DbUtil.first_gen_to_txi(state, first_gen),
+                 DbUtil.last_gen_to_txi(state, last_gen)
+               ), Collection.integer()}
+            )
+        end
+
+      cursor =
+        case cursor do
+          nil ->
+            nil
+
+          {{txi, idx}, tx_field_pos} ->
+            {account_id, "AENS.claim", tx_field_pos, txi, idx}
+        end
+
+      state
+      |> Collection.stream(
+        Model.IdFnameIntContractCall,
+        direction,
+        key_boundary,
+        cursor
+      )
+      |> Stream.map(fn
+        {_account_id, fname, tx_field_pos, txi, idx} ->
+          {txi, idx, tx_field_pos, fname}
+      end)
+    end)
+    |> Collection.merge(direction)
+  end
+
+  def name_claim_tx_streams(state, account_id, direction, scope, cursor) do
+    :name_claim_tx
+    |> Node.tx_ids_positions()
+    |> then(&[nil | &1])
+    |> Enum.map(fn tx_field_pos ->
+      key_boundary =
+        case scope do
+          nil ->
+            Collection.generate_key_boundary(
+              {:name_claim_tx, tx_field_pos, account_id, Collection.integer()}
+            )
+
+          {:gen, first_gen..last_gen} ->
+            Collection.generate_key_boundary(
+              {:name_claim_tx, tx_field_pos, account_id,
+               Collection.gen_range(
+                 DbUtil.first_gen_to_txi(state, first_gen),
+                 DbUtil.last_gen_to_txi(state, last_gen)
+               )}
+            )
+        end
+
+      cursor =
+        case cursor do
+          nil ->
+            nil
+
+          {{txi, _idx}, tx_field_pos} ->
+            {:name_claim_tx, tx_field_pos, account_id, txi}
+        end
+
+      state
+      |> Collection.stream(Model.Field, direction, key_boundary, cursor)
+      |> Stream.map(fn {tx_type, tx_field_pos, _account_id, txi} ->
+        {txi, 0, tx_field_pos, tx_type}
+      end)
+    end)
+    |> Collection.merge(direction)
+  end
+
+  def get_name_from_txi(state, txi, idx) do
+    Model.tx(id: tx_hash, block_index: {_height, _mbi}) = State.fetch!(state, Model.Tx, txi)
+
+    tx_hash
+    |> Db.get_tx()
+    |> case do
+      {:name_claim_tx, aetx} ->
+        :aens_claim_tx.name(aetx)
+
+      {:contract_call_tx, _aetx} ->
+        Model.int_contract_call(tx: name_aetx) =
+          State.fetch!(state, Model.IntContractCall, {txi, idx})
+
+        name_aetx
+        |> :aetx.specialize_type()
+        |> elem(1)
+        |> :aens_claim_tx.name()
+    end
+    |> then(&Validate.plain_name!(state, &1))
   end
 end
