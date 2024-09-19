@@ -1196,7 +1196,7 @@ defmodule AeMdw.Names do
     |> Collection.merge(direction)
   end
 
-  def name_claim_tx_streams(state, account_id, direction, scope, cursor) do
+  defp name_claim_tx_streams(state, account_id, direction, scope, cursor) do
     :name_claim_tx
     |> Node.tx_ids_positions()
     |> then(&[nil | &1])
@@ -1236,7 +1236,7 @@ defmodule AeMdw.Names do
     |> Collection.merge(direction)
   end
 
-  def get_name_from_txi(state, txi, idx) do
+  defp get_name_from_txi(state, txi, idx) do
     Model.tx(id: tx_hash, block_index: {_height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
     tx_hash
