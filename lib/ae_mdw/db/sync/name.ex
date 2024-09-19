@@ -187,7 +187,8 @@ defmodule AeMdw.Db.Sync.Name do
     Model.auction_bid(
       start_height: start_height,
       block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, txi_idx},
-      owner: owner
+      owner: owner,
+      claims_count: claims_count
     ) = State.fetch!(state, Model.AuctionBid, plain_name)
 
     expire = Names.expire_after(height)
@@ -198,7 +199,8 @@ defmodule AeMdw.Db.Sync.Name do
         active: height,
         expire: expire,
         auction_timeout: height - last_bid_height,
-        owner: owner
+        owner: owner,
+        claims_count: claims_count
       )
 
     name_fee =

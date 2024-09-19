@@ -643,7 +643,13 @@ defmodule AeMdw.Names do
   end
 
   defp render_v3(state, plain_name, is_active?, {last_gen, last_micro_time}, opts) do
-    Model.name(active: active, expire: expire, revoke: revoke, auction_timeout: auction_timeout) =
+    Model.name(
+      active: active,
+      expire: expire,
+      revoke: revoke,
+      auction_timeout: auction_timeout,
+      claims_count: claims_count
+    ) =
       name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
@@ -657,14 +663,16 @@ defmodule AeMdw.Names do
         _error -> nil
       end
 
-    auction_bid =
+    {auction_bid, claims_count} =
       case AuctionBids.fetch(state, plain_name, opts) do
         {:ok, auction_bid} ->
-          {_version, auction_bid} = pop_in(auction_bid, [:last_bid, "tx", "version"])
-          auction_bid
+          {_version, %{claims_count: claims_count} = auction_bid} =
+            pop_in(auction_bid, [:last_bid, "tx", "version"])
+
+          {auction_bid, claims_count}
 
         :not_found ->
-          nil
+          {nil, claims_count}
       end
 
     %{
@@ -681,7 +689,8 @@ defmodule AeMdw.Names do
       revoke: revoke && expand_txi_idx(state, revoke, opts),
       auction_timeout: auction_timeout,
       pointers: Name.pointers_v3(state, name),
-      ownership: render_ownership(state, name)
+      ownership: render_ownership(state, name),
+      claims_count: claims_count
     }
   end
 

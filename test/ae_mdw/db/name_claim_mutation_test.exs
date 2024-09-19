@@ -37,7 +37,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         index: plain_name,
         active: old_claim_height,
         expire: 199,
-        owner: owner_pk
+        owner: owner_pk,
+        claims_count: 3
       )
 
     state =
@@ -65,7 +66,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                 index: ^plain_name,
                 active: ^claim_height,
                 expire: expire,
-                owner: ^new_owner_pk
+                owner: ^new_owner_pk,
+                claims_count: 1
               )} = State.get(state, Model.ActiveName, plain_name)
 
       assert State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
@@ -125,7 +127,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
             Model.auction_bid(
               index: ^plain_name,
               start_height: ^claim_height,
-              owner: ^owner_pk
+              owner: ^owner_pk,
+              claims_count: 1
             )} = State.get(state, Model.AuctionBid, plain_name)
 
     assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
@@ -172,7 +175,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
               index: ^plain_name,
               start_height: ^claim_height,
               owner: ^owner_pk,
-              expire_height: ^expire_height
+              expire_height: ^expire_height,
+              claims_count: 1
             )} = State.get(state, Model.AuctionBid, plain_name)
 
     next_txi = txi + 1
@@ -214,7 +218,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^expire_height
+                expire_height: ^expire_height,
+                claims_count: 2
               )} = State.get(state, Model.AuctionBid, plain_name)
 
       assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
@@ -254,7 +259,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^expire_height
+                expire_height: ^expire_height,
+                claims_count: 3
               )} = State.get(state, Model.AuctionBid, plain_name)
 
       bid_mutation_3 =
@@ -278,7 +284,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                 index: ^plain_name,
                 start_height: ^claim_height,
                 owner: ^owner_pk,
-                expire_height: ^expire_height
+                expire_height: ^expire_height,
+                claims_count: 4
               )} = State.get(state, Model.AuctionBid, plain_name)
     end
   end
