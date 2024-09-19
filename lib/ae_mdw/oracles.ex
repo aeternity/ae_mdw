@@ -187,7 +187,7 @@ defmodule AeMdw.Oracles do
         query_id: Enc.encode(:oracle_query_id, query_id)
       }
       |> Map.merge(:aeo_query_tx.for_client(query_tx))
-      |> update_in(["query"], &Base.encode64(&1, padding: false))
+      |> update_in(["query"], &Base.encode64/1)
 
     if include_response? do
       Map.put(
@@ -223,7 +223,7 @@ defmodule AeMdw.Oracles do
         query_id: Enc.encode(:oracle_query_id, query_id)
       }
       |> Map.merge(:aeo_response_tx.for_client(response_tx))
-      |> update_in(["response"], &Base.encode64(&1, padding: false))
+      |> update_in(["response"], &Base.encode64/1)
 
     if include_query? do
       Map.put(response, :query, render_query(state, {oracle_pk, query_id}, false))
