@@ -542,7 +542,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  "token_id" => ^token_id,
                  "metadata" => %{"map" => %{"foo" => "bar"}}
                } =
-                 conn |> get("/v3/aex141/#{contract_id}/tokens/#{token_id}") |> json_response(200)
+                 conn |> get("/v2/aex141/#{contract_id}/owner/#{token_id}") |> json_response(200)
 
         assert {:ok, ^account_pk} = Validate.id(account_id)
       end
@@ -567,7 +567,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
          ]}
       ] do
         assert %{"error" => ^error_msg} =
-                 conn |> get("/v3/aex141/#{contract_id}/tokens/#{234}") |> json_response(400)
+                 conn |> get("/v2/aex141/#{contract_id}/owner/#{234}") |> json_response(400)
       end
     end
 
