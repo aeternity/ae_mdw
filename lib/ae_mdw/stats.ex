@@ -226,7 +226,15 @@ defmodule AeMdw.Stats do
     with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
       tx_tag = Map.get(filters, :tx_type, :all)
 
-      fetch_statistics(state, pagination, filters, range, cursor, {:transactions, tx_tag})
+      tag =
+        filters
+        |> Map.fetch(:account_id)
+        |> case do
+          {:ok, account_id} -> {:transactions, tx_tag, account_id}
+          :error -> {:transactions, tx_tag}
+        end
+
+      fetch_statistics(state, pagination, filters, range, cursor, tag)
     end
   end
 
@@ -408,6 +416,13 @@ defmodule AeMdw.Stats do
   defp convert_transactions_param({"tx_type", val}) do
     case Validate.tx_type(val) do
       {:ok, tx_type} -> {:ok, {:tx_type, tx_type}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp convert_transactions_param({"account_id", val}) do
+    case Validate.id(val) do
+      {:ok, account_id} -> {:ok, {:account_id, account_id}}
       {:error, reason} -> {:error, reason}
     end
   end

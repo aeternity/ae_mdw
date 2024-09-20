@@ -163,6 +163,7 @@ defmodule AeMdw.Db.Sync.Block do
               mb_time,
               events
             )
+            |> IO.inspect(label: "transaction_mutations")
 
           {type, _tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
 
