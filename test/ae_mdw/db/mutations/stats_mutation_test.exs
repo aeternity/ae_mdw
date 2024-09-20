@@ -58,7 +58,8 @@ defmodule AeMdw.Db.StatsMutationTest do
         {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
-        state = StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, false), state)
+        state =
+          StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, false, 123), state)
 
         {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
         {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
@@ -119,7 +120,8 @@ defmodule AeMdw.Db.StatsMutationTest do
         {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
-        state = StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, true), state)
+        state =
+          StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, true, 123), state)
 
         {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
         {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
@@ -155,7 +157,7 @@ defmodule AeMdw.Db.StatsMutationTest do
     test "with all_cached? = false, computes stat counting state keys" do
       height = 100
       key_hash = <<height::256>>
-      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false)
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false, 123)
 
       state =
         NullStore.new()
@@ -337,7 +339,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:names_revoked)
         |> State.inc_stat(:contracts_created)
 
-      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, true)
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, true, 123)
 
       expected_delta =
         Model.delta_stat(

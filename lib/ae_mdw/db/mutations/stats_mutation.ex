@@ -22,7 +22,7 @@ defmodule AeMdw.Db.StatsMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:height, :key_hash, :from_txi, :next_txi, :tps, :all_cached?]
+  defstruct [:height, :key_hash, :from_txi, :next_txi, :tps, :all_cached?, :time]
 
   @typep txi() :: Txs.txi()
 
@@ -32,18 +32,28 @@ defmodule AeMdw.Db.StatsMutation do
           from_txi: txi(),
           next_txi: txi(),
           tps: Stats.tps(),
-          all_cached?: boolean()
+          all_cached?: boolean(),
+          time: Blocks.time()
         }
 
-  @spec new(Blocks.height(), Blocks.block_hash(), txi(), txi(), Stats.tps(), boolean()) :: t()
-  def new(height, key_hash, from_txi, next_txi, tps, all_cached?) do
+  @spec new(
+          Blocks.height(),
+          Blocks.block_hash(),
+          txi(),
+          txi(),
+          Stats.tps(),
+          boolean(),
+          Blocks.time()
+        ) :: t()
+  def new(height, key_hash, from_txi, next_txi, tps, all_cached?, time) do
     %__MODULE__{
       height: height,
       key_hash: key_hash,
       from_txi: from_txi,
       next_txi: next_txi,
       tps: tps,
-      all_cached?: all_cached?
+      all_cached?: all_cached?,
+      time: time
     }
   end
 
@@ -55,7 +65,8 @@ defmodule AeMdw.Db.StatsMutation do
           from_txi: from_txi,
           next_txi: next_txi,
           tps: tps,
-          all_cached?: all_cached?
+          all_cached?: all_cached?,
+          time: time
         },
         state
       ) do
@@ -79,14 +90,7 @@ defmodule AeMdw.Db.StatsMutation do
       nil ->
         Model.stat(index: Stats.max_tps_key(), payload: {tps, key_hash})
     end)
-    |> then(fn state ->
-      time =
-        key_hash
-        |> :aec_db.get_block()
-        |> :aec_blocks.time_in_msecs()
-
-      SyncStats.increase_statistics(state, :contracts, time, contracts_created)
-    end)
+    |> SyncStats.increase_statistics(:contracts, time, contracts_created)
   end
 
   #

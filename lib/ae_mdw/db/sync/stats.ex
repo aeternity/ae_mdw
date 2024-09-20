@@ -119,7 +119,7 @@ defmodule AeMdw.Db.Sync.Stats do
     tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
 
     [
-      StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
+      StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?, time),
       StatisticsMutation.new(statistics)
     ]
   end
