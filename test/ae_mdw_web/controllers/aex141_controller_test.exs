@@ -326,21 +326,6 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "metadata_type" => "url",
                "nfts_amount" => 6,
                "nft_owners" => 4,
-               "contract_txi" => ^txi,
-               "contract_id" => ^contract_id,
-               "extensions" => ^extensions,
-               "creation_time" => ^time,
-               "block_height" => ^height,
-               "limits" => nil
-             } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
-
-      assert %{
-               "name" => ^name,
-               "symbol" => ^symbol,
-               "base_url" => ^base_url,
-               "metadata_type" => "url",
-               "nfts_amount" => 6,
-               "nft_owners" => 4,
                "contract_tx_hash" => ^tx_hash,
                "contract_id" => ^contract_id,
                "extensions" => ^extensions,
@@ -557,7 +542,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  "token_id" => ^token_id,
                  "metadata" => %{"map" => %{"foo" => "bar"}}
                } =
-                 conn |> get("/v3/aex141/#{contract_id}/tokens/#{token_id}") |> json_response(200)
+                 conn |> get("/v2/aex141/#{contract_id}/owner/#{token_id}") |> json_response(200)
 
         assert {:ok, ^account_pk} = Validate.id(account_id)
       end
@@ -582,7 +567,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
          ]}
       ] do
         assert %{"error" => ^error_msg} =
-                 conn |> get("/v3/aex141/#{contract_id}/tokens/#{234}") |> json_response(400)
+                 conn |> get("/v2/aex141/#{contract_id}/owner/#{234}") |> json_response(400)
       end
     end
 
@@ -601,7 +586,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       account_id = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
-               conn |> get("/aex141/owned-nfts/#{account_id}") |> json_response(200)
+               conn |> get("/v2/aex141/owned-nfts/#{account_id}") |> json_response(200)
     end
 
     test "returns a backward list of nfts owned by an account", %{conn: conn} do
@@ -609,7 +594,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/owned-nfts/#{account_id}")
+               |> get("/v2/aex141/owned-nfts/#{account_id}")
                |> json_response(200)
 
       assert @default_limit = length(nfts)
@@ -633,7 +618,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/owned-nfts/#{account_id}", direction: :forward)
+               |> get("/v2/aex141/owned-nfts/#{account_id}", direction: :forward)
                |> json_response(200)
 
       assert @default_limit = length(nfts)
@@ -663,7 +648,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/owned-nfts/#{account_id}", contract: contract_id)
+               |> get("/v2/aex141/owned-nfts/#{account_id}", contract: contract_id)
                |> json_response(200)
 
       assert @default_limit = length(nfts)
@@ -693,7 +678,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/owned-nfts/#{account_id}",
+               |> get("/v2/aex141/owned-nfts/#{account_id}",
                  direction: :forward,
                  contract: contract_id
                )
@@ -727,7 +712,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> get("/aex141/#{contract_id}/owners")
+               |> get("/v2/aex141/#{contract_id}/owners")
                |> json_response(200)
     end
 
@@ -739,7 +724,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/#{contract_id}/owners", direction: :forward)
+               |> get("/v2/aex141/#{contract_id}/owners", direction: :forward)
                |> json_response(200)
 
       assert @default_limit = length(nfts)
@@ -782,7 +767,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/#{contract_id}/owners")
+               |> get("/v2/aex141/#{contract_id}/owners")
                |> json_response(200)
 
       assert @default_limit = length(nfts)
@@ -805,7 +790,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> get("/aex141/#{contract_id}/templates")
+               |> get("/v2/aex141/#{contract_id}/templates")
                |> json_response(200)
     end
 
@@ -816,7 +801,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => templates, "next" => next} =
                conn
-               |> get("/aex141/#{contract_id}/templates", direction: :forward)
+               |> get("/v2/aex141/#{contract_id}/templates", direction: :forward)
                |> json_response(200)
 
       assert @default_limit = length(templates)
@@ -876,7 +861,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => templates, "next" => next} =
                conn
-               |> get("/aex141/#{contract_id}/templates")
+               |> get("/v2/aex141/#{contract_id}/templates")
                |> json_response(200)
 
       assert @default_limit = length(templates)
@@ -900,7 +885,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> get("/aex141/#{contract_id}/templates/1/tokens")
+               |> get("/v2/aex141/#{contract_id}/templates/1/tokens")
                |> json_response(200)
     end
 

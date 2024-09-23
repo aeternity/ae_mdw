@@ -21,7 +21,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   alias Plug.Conn
 
-  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode_block: 2]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_block: 2]
   import AeMdwWeb.Helpers.AexnHelper, only: [normalize_balances: 1]
 
   import AeMdwWeb.Util,
@@ -39,17 +39,9 @@ defmodule AeMdwWeb.Aex9Controller do
 
   @max_range_length 10
 
-  @spec by_contract(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def by_contract(conn, %{"id" => contract_id}),
-    do: handle_input(conn, fn -> by_contract_reply(conn, contract_id) end)
-
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, params) end)
-
-  @spec by_symbols(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def by_symbols(conn, params),
-    do: handle_input(conn, fn -> by_symbols_reply(conn, params) end)
 
   @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance(%{assigns: %{state: state}} = conn, %{
@@ -59,30 +51,6 @@ defmodule AeMdwWeb.Aex9Controller do
     with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
       balance_reply(conn, contract_pk, account_pk)
-    end
-  end
-
-  @spec balance_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance_range(%Conn{assigns: %{state: state}} = conn, %{
-        "range" => range,
-        "contract_id" => contract_id,
-        "account_id" => account_id
-      }) do
-    with {:ok, first..last} <- validate_range(range),
-         {:ok, contract_pk} <-
-           ensure_aex9_contract_at_block(state, contract_id, {min(first, last), -1}),
-         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
-      handle_input(
-        conn,
-        fn ->
-          balance_range_reply(
-            conn,
-            contract_pk,
-            account_pk,
-            first..last
-          )
-        end
-      )
     end
   end
 
@@ -175,46 +143,15 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  @spec balances_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances_for_hash(%Conn{assigns: %{state: state}} = conn, %{
-        "blockhash" => block_hash_enc,
-        "contract_id" => contract_id
-      }) do
-    with {:ok, {type, height, hash}} <- ensure_block_hash(block_hash_enc),
-         {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash) do
-      handle_input(
-        conn,
-        fn ->
-          balances_for_hash_reply(conn, contract_pk, {type, height, hash})
-        end
-      )
-    end
-  end
-
   #
   # Private functions
   #
-  defp by_contract_reply(%Conn{assigns: %{state: state}} = conn, contract_id) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, contract} <- AexnTokens.fetch_contract(state, :aex9, contract_pk, false) do
-      format_json(conn, %{data: contract})
-    end
-  end
 
   defp by_names_reply(%Conn{assigns: %{state: state}} = conn, params) do
     pagination = {:forward, false, 32_000, false}
 
     with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil, false) do
-      format_json(conn, aex9_tokens)
-    end
-  end
-
-  defp by_symbols_reply(%Conn{assigns: %{state: state}} = conn, params) do
-    pagination = {:forward, false, 32_000, false}
-
-    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
-           AexnTokens.fetch_contracts(state, pagination, :aex9, params, :symbol, nil, false) do
       format_json(conn, aex9_tokens)
     end
   end
@@ -244,24 +181,6 @@ defmodule AeMdwWeb.Aex9Controller do
       end
 
     format_json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
-  end
-
-  defp balance_range_reply(conn, contract_pk, account_pk, range) do
-    format_json(
-      conn,
-      %{
-        contract_id: encode_contract(contract_pk),
-        account_id: encode_account(account_pk),
-        range:
-          map_balances_range(
-            range,
-            fn type_height_hash ->
-              {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, type_height_hash)
-              {:amount, amount}
-            end
-          )
-      }
-    )
   end
 
   defp balance_for_hash_reply(
@@ -340,11 +259,6 @@ defmodule AeMdwWeb.Aex9Controller do
           )
       }
     )
-  end
-
-  defp balances_for_hash_reply(conn, contract_pk, {_type, _height, _hash} = height_hash) do
-    {amounts, _height_hash} = DBN.aex9_balances!(contract_pk, height_hash)
-    format_json(conn, balances_to_map({amounts, height_hash}, contract_pk))
   end
 
   defp validate_range(range) do

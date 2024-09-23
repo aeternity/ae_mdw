@@ -251,7 +251,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{"data" => [oracle4, oracle3, oracle2, oracle1], "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", limit: 4)
+                 |> get("/v2/oracles", limit: 4)
                  |> json_response(200)
 
         assert %{
@@ -297,7 +297,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{"data" => [oracle4, oracle3], "next" => nil} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", state: "active")
+                 |> get("/v2/oracles", state: "active")
                  |> json_response(200)
 
         assert %{
@@ -311,12 +311,6 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "approximate_expire_time" => ^exp_time3,
                  "register_time" => ^reg_time3
                } = oracle3
-
-        assert %{"data" => [^oracle4, ^oracle3], "next" => nil} =
-                 conn
-                 |> with_store(store)
-                 |> get("/oracles/active")
-                 |> json_response(200)
       end
     end
 
@@ -337,7 +331,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{"data" => [oracle2, oracle1], "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", state: "inactive", limit: 2)
+                 |> get("/v2/oracles", state: "inactive", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -351,46 +345,6 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "approximate_expire_time" => ^exp_time1,
                  "register_time" => ^reg_time1
                } = oracle1
-
-        assert %{"data" => [^oracle2, ^oracle1], "next" => _next} =
-                 conn
-                 |> with_store(store)
-                 |> get("/oracles/inactive", limit: 2)
-                 |> json_response(200)
-      end
-    end
-
-    test "paginates forward when there are more than limit", %{
-      conn: conn,
-      store: store,
-      encoded_pks: [id1, id2 | _]
-    } do
-      with_mocks [
-        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {:aec_db, [],
-         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
-        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
-      ] do
-        assert %{"data" => data, "next" => next} =
-                 conn
-                 |> with_store(store)
-                 |> get("/oracles/inactive", direction: "forward")
-                 |> json_response(200)
-
-        assert %{"data" => next_data, "prev" => prev, "next" => nil} =
-                 conn
-                 |> with_store(store)
-                 |> get(next)
-                 |> json_response(200)
-
-        assert [id1, id2] == next_data |> Enum.drop(8) |> Enum.map(& &1["oracle"])
-
-        assert %{"data" => ^data} =
-                 conn
-                 |> with_store(store)
-                 |> get(prev)
-                 |> json_response(200)
       end
     end
 
@@ -405,7 +359,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{"data" => [oracle2, oracle1], "next" => next_uri} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", tx_hash: "true", state: "inactive", limit: 2)
+                 |> get("/v2/oracles", tx_hash: "true", state: "inactive", limit: 2)
                  |> json_response(200)
 
         assert %{
@@ -421,7 +375,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert ^register_tx_hash = Enc.encode(:tx_hash, <<1020::256>>)
 
         assert %URI{
-                 path: "/oracles",
+                 path: "/v2/oracles",
                  query: query
                } = URI.parse(next_uri)
 
@@ -432,7 +386,7 @@ defmodule AeMdwWeb.OracleControllerTest do
     test "when both tx_hash and expand is sent, it displays error", %{conn: conn} do
       assert %{"error" => "either `tx_hash` or `expand` parameters should be used, but not both."} =
                conn
-               |> get("/oracles", tx_hash: "true", expand: "true")
+               |> get("/v2/oracles", tx_hash: "true", expand: "true")
                |> json_response(400)
     end
   end
