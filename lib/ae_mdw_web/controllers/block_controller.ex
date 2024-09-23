@@ -24,11 +24,14 @@ defmodule AeMdwWeb.BlockController do
     case Validate.nonneg_int(hash_or_kbi) do
       {:ok, kbi} ->
         case Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
-          {_prev_cursor, [block], _next_cursor} ->
+          {:ok, {_prev_cursor, [block], _next_cursor}} ->
             format_json(conn, block)
 
-          {nil, [], nil} ->
+          {:ok, {_prev_cursor, [], _next_cursor}} ->
             {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+
+          {:error, reason} ->
+            {:error, reason}
         end
 
       {:error, _reason} ->
@@ -77,10 +80,10 @@ defmodule AeMdwWeb.BlockController do
       scope: scope
     } = assigns
 
-    {prev_cursor, blocks, next_cursor} =
-      Blocks.fetch_key_blocks(state, direction, scope, cursor, limit)
-
-    Util.render(conn, prev_cursor, blocks, next_cursor)
+    with {:ok, paginated_blocks} <-
+           Blocks.fetch_key_blocks(state, direction, scope, cursor, limit) do
+      Util.render(conn, paginated_blocks)
+    end
   end
 
   @spec key_block(Conn.t(), map()) :: Conn.t()
@@ -123,10 +126,10 @@ defmodule AeMdwWeb.BlockController do
       scope: scope
     } = assigns
 
-    {prev_cursor, blocks, next_cursor} =
-      Blocks.fetch_blocks(state, direction, scope, cursor, limit, false)
-
-    Util.render(conn, prev_cursor, blocks, next_cursor)
+    with {:ok, paginated_blocks} <-
+           Blocks.fetch_blocks(state, direction, scope, cursor, limit, false) do
+      Util.render(conn, paginated_blocks)
+    end
   end
 
   @doc """
@@ -141,9 +144,9 @@ defmodule AeMdwWeb.BlockController do
       scope: scope
     } = assigns
 
-    {prev_cursor, blocks, next_cursor} =
-      Blocks.fetch_blocks(state, direction, scope, cursor, limit, true)
-
-    Util.render(conn, prev_cursor, blocks, next_cursor)
+    with {:ok, paginated_blocks} <-
+           Blocks.fetch_blocks(state, direction, scope, cursor, limit, true) do
+      Util.render(conn, paginated_blocks)
+    end
   end
 end

@@ -40,24 +40,28 @@ defmodule AeMdw.Blocks do
   @table Model.Block
 
   @spec fetch_key_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
-          {cursor() | nil, [block()], cursor() | nil}
+          {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
   def fetch_key_blocks(state, direction, range, cursor, limit) do
-    last_gen = DbUtil.last_gen(state)
-    cursor = deserialize_cursor(cursor)
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, last_gen} <- DbUtil.last_gen(state) do
+      range =
+        case range do
+          nil -> {0, last_gen}
+          {:gen, first..last} -> {first, last}
+        end
 
-    range =
-      case range do
-        nil -> {0, last_gen}
-        {:gen, first..last} -> {first, last}
+      case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
+        {:ok, prev_cursor, range, next_cursor} ->
+          {:ok,
+           {serialize_cursor(prev_cursor), render_key_blocks(state, range),
+            serialize_cursor(next_cursor)}}
+
+        :error ->
+          {:ok, {nil, [], nil}}
       end
-
-    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
-      {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_key_blocks(state, range),
-         serialize_cursor(next_cursor)}
-
-      :error ->
-        {nil, [], nil}
+    else
+      {:error, reason} -> {:error, reason}
+      :none -> {:ok, {nil, [], nil}}
     end
   end
 
@@ -87,7 +91,7 @@ defmodule AeMdw.Blocks do
         ) ::
           {:ok, {page_cursor(), [block()], page_cursor()}} | {:error, Error.t()}
   def fetch_key_block_micro_blocks(state, hash_or_kbi, pagination, cursor) do
-    with {:ok, cursor} <- deserialize_cursor_err(cursor),
+    with {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi) do
       cursor = if cursor, do: {height, cursor}
 
@@ -113,24 +117,28 @@ defmodule AeMdw.Blocks do
   end
 
   @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit(), boolean()) ::
-          {cursor() | nil, [block()], cursor() | nil}
+          {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
   def fetch_blocks(state, direction, range, cursor, limit, sort_mbs?) do
-    last_gen = DbUtil.last_gen(state)
-    cursor = deserialize_cursor(cursor)
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, last_gen} <- DbUtil.last_gen(state) do
+      range =
+        case range do
+          nil -> {0, last_gen}
+          {:gen, first..last} -> {first, last}
+        end
 
-    range =
-      case range do
-        nil -> {0, last_gen}
-        {:gen, first..last} -> {first, last}
+      case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
+        {:ok, prev_cursor, range, next_cursor} ->
+          {:ok,
+           {serialize_cursor(prev_cursor), render_blocks(state, range, sort_mbs?),
+            serialize_cursor(next_cursor)}}
+
+        :error ->
+          {:ok, {nil, [], nil}}
       end
-
-    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
-      {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_blocks(state, range, sort_mbs?),
-         serialize_cursor(next_cursor)}
-
-      :error ->
-        {nil, [], nil}
+    else
+      {:error, reason} -> {:error, reason}
+      :none -> {nil, [], nil}
     end
   end
 
@@ -323,22 +331,12 @@ defmodule AeMdw.Blocks do
 
   defp serialize_cursor(gen), do: {Integer.to_string(gen), false}
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor_bin) do
     case Integer.parse(cursor_bin) do
-      {n, ""} when n >= 0 -> n
-      {_n, _rest} -> nil
-      :error -> nil
-    end
-  end
-
-  defp deserialize_cursor_err(nil), do: {:ok, nil}
-
-  defp deserialize_cursor_err(cursor_bin) do
-    case deserialize_cursor(cursor_bin) do
-      nil -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
-      cursor -> {:ok, cursor}
+      {n, ""} when n >= 0 -> {:ok, n}
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 

@@ -297,6 +297,17 @@ defmodule AeMdwWeb.BlockControllerTest do
                |> get("/v3/key-blocks/#{encoded_hash}")
                |> json_response(404)
     end
+
+    test "it returns 404 when key index too high", %{conn: conn, store: store} do
+      height = 11_111
+      error_msg = "not found: #{height}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v3/key-blocks/#{height}")
+               |> json_response(404)
+    end
   end
 
   describe "micro-block" do
