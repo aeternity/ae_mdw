@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.88.0](https://www.github.com/aeternity/ae_mdw/compare/v1.87.0...v1.88.0) (2024-09-23)
+
+
+### Features
+
+* add minutes per block in stats ([#1947](https://www.github.com/aeternity/ae_mdw/issues/1947)) ([19b2fc3](https://www.github.com/aeternity/ae_mdw/commit/19b2fc3225d7f7e5640873fa8416e384fc520ff5))
+* sort aexn transfers by txi_idx ([#1945](https://www.github.com/aeternity/ae_mdw/issues/1945)) ([b32a95c](https://www.github.com/aeternity/ae_mdw/commit/b32a95ca36f385e5277f04ef5edfe83e1c434d22))
+
+
+### Bug Fixes
+
+* activities cursor for gen streams ([#1944](https://www.github.com/aeternity/ae_mdw/issues/1944)) ([2d6909c](https://www.github.com/aeternity/ae_mdw/commit/2d6909cd6dc604f540cf0c8f851650efb2f319cb))
+* contemplate case sensitivity when looking for names ([#1952](https://www.github.com/aeternity/ae_mdw/issues/1952)) ([c713483](https://www.github.com/aeternity/ae_mdw/commit/c713483b3cd23a636e1b362c69c6a764ae57a572))
+
+
+### Testing
+
+* adjust new aexn transfers format on activities test ([#1949](https://www.github.com/aeternity/ae_mdw/issues/1949)) ([4452cac](https://www.github.com/aeternity/ae_mdw/commit/4452cacd4c9152b4a2aab8361c8f49ee3b804b99))
+
+
+### Miscellaneous
+
+* add default padding to base64 oracles response/queries ([#1937](https://www.github.com/aeternity/ae_mdw/issues/1937)) ([1783f0d](https://www.github.com/aeternity/ae_mdw/commit/1783f0d541364a620b57061d674de0845fa99fc1))
+* remove deprecated 2023 migrations ([#1951](https://www.github.com/aeternity/ae_mdw/issues/1951)) ([dd788b4](https://www.github.com/aeternity/ae_mdw/commit/dd788b43055cc42f5bb514384c608604464c9d17))
+* remove v1 unused routes ([#1939](https://www.github.com/aeternity/ae_mdw/issues/1939)) ([8602169](https://www.github.com/aeternity/ae_mdw/commit/8602169aab6a423e8f7c4955fe49fac263e54636))
+
 ## [1.87.0](https://www.github.com/aeternity/ae_mdw/compare/v1.86.0...v1.87.0) (2024-09-12)
 
 
