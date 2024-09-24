@@ -124,6 +124,9 @@ schemas:
         example: 134626900000000000000
       revoke:
         $ref: '#/components/schemas/NameTx'
+      claims_count:
+        type: integer
+        example: 3
   Auction:
     description: Auction
     type: object
@@ -134,6 +137,7 @@ schemas:
       - last_bid
       - name
       - name_fee
+      - claims_count
     properties:
       auction_end:
         type: integer
@@ -194,6 +198,9 @@ schemas:
       name_fee:
         type: integer
         example: 134626900000000000000
+      claims_count:
+        type: integer
+        example: 3
   NameClaim:
     description: Name Claim
     type: object

@@ -213,7 +213,8 @@ defmodule AeMdw.Db.Model do
     start_height: nil,
     block_index_txi_idx: nil,
     expire_height: nil,
-    owner: nil
+    owner: nil,
+    claims_count: nil
   ]
   defrecord :auction_bid, @auction_bid_defaults
 
@@ -224,7 +225,8 @@ defmodule AeMdw.Db.Model do
             start_height: Blocks.height(),
             block_index_txi_idx: bi_txi_idx(),
             expire_height: Blocks.height(),
-            owner: pubkey()
+            owner: pubkey(),
+            claims_count: pos_integer()
           )
 
   # activation:
@@ -263,7 +265,8 @@ defmodule AeMdw.Db.Model do
     expire: nil,
     revoke: nil,
     auction_timeout: 0,
-    owner: nil
+    owner: nil,
+    claims_count: nil
   ]
   defrecord :name, @name_defaults
 
@@ -275,7 +278,8 @@ defmodule AeMdw.Db.Model do
             expire: Blocks.height(),
             revoke: bi_txi_idx() | nil,
             auction_timeout: non_neg_integer(),
-            owner: pubkey()
+            owner: pubkey(),
+            claims_count: pos_integer()
           )
 
   # previous_name:

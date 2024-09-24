@@ -101,7 +101,8 @@ defmodule AeMdw.Db.NameClaimMutation do
           active: height,
           expire: expire,
           owner: owner_pk,
-          auction_timeout: 0
+          auction_timeout: 0,
+          claims_count: 1
         )
 
       lock_amount = (lima_or_higher? && name_fee) || :aec_governance.name_claim_locked_fee()
@@ -133,7 +134,8 @@ defmodule AeMdw.Db.NameClaimMutation do
                 start_height: height,
                 block_index_txi_idx: {block_index, txi_idx},
                 expire_height: auction_end,
-                owner: owner_pk
+                owner: owner_pk,
+                claims_count: 1
               )
 
             m_auction_exp = Model.expiration(index: {auction_end, plain_name})
@@ -149,7 +151,8 @@ defmodule AeMdw.Db.NameClaimMutation do
              start_height: start_height,
              block_index_txi_idx: {_bi, prev_txi_idx},
              expire_height: prev_auction_end,
-             owner: prev_owner
+             owner: prev_owner,
+             claims_count: claims_count
            ) = auction_bid} ->
             auction_end =
               max(
@@ -165,7 +168,8 @@ defmodule AeMdw.Db.NameClaimMutation do
               Model.auction_bid(auction_bid,
                 block_index_txi_idx: {block_index, txi_idx},
                 expire_height: auction_end,
-                owner: owner_pk
+                owner: owner_pk,
+                claims_count: claims_count + 1
               )
 
             state3

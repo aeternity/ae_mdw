@@ -19,7 +19,7 @@ defmodule AeMdw.AuctionBids do
 
   @type cursor :: binary() | nil
   # This needs to be an actual type like AeMdw.Db.Name.t()
-  @type auction_bid() :: term()
+  @type auction_bid() :: map()
 
   @typep opts() :: Util.opts()
   @typep state() :: State.t()
@@ -124,7 +124,8 @@ defmodule AeMdw.AuctionBids do
          Model.auction_bid(
            index: plain_name,
            block_index_txi_idx: {block_index, _txi_idx},
-           expire_height: expire_height
+           expire_height: expire_height,
+           claims_count: claims_count
          ),
          {last_gen, last_micro_time},
          _opts
@@ -146,7 +147,8 @@ defmodule AeMdw.AuctionBids do
       approximate_expire_time:
         DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
       name_fee: :aec_governance.name_claim_fee(plain_name, protocol),
-      last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl)
+      last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
+      claims_count: claims_count
     }
   end
 
