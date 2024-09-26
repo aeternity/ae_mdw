@@ -230,7 +230,7 @@ defmodule AeMdw.Stats do
         filters
         |> Map.fetch(:account_id)
         |> case do
-          {:ok, account_id} -> {:transactions, tx_tag, account_id}
+          {:ok, account_id} -> {:transactions, account_id, tx_tag}
           :error -> {:transactions, tx_tag}
         end
 

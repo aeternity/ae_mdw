@@ -306,6 +306,13 @@ defmodule AeMdw.Node do
     :aetx.type_to_swagger_name(tx_type)
   end
 
+  @spec tx_origin({tx_type(), tx()}) :: Db.pubkey()
+  def tx_origin({tx_type, tx}) do
+    tx_type
+    |> tx_mod()
+    |> then(& &1.origin(tx))
+  end
+
   @spec tx_prefixes :: MapSet.t()
   defmemo tx_prefixes() do
     tx_types()

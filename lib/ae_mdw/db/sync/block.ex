@@ -149,11 +149,12 @@ defmodule AeMdw.Db.Sync.Block do
     block_mutation = WriteMutation.new(Model.Block, mb_model)
     block_stats_mutation = BlockStatisticsMutation.new(mb_time)
 
-    {ts, {txs_mutations, type_counters}} =
+    {ts, {txs_mutations, {type_counters, account_type_counters}}} =
       :timer.tc(fn ->
         mb_txs
         |> Enum.with_index(first_txi)
-        |> Enum.map_reduce(%{}, fn {signed_tx, txi}, type_counters ->
+        |> Enum.map_reduce({%{}, %{}}, fn {signed_tx, txi},
+                                          {type_counters, account_type_counters} ->
           transaction_mutations =
             Transaction.transaction_mutations(
               signed_tx,
@@ -163,15 +164,32 @@ defmodule AeMdw.Db.Sync.Block do
               mb_time,
               events
             )
-            |> IO.inspect(label: "transaction_mutations")
 
-          {type, _tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+          tx = :aetx_sign.tx(signed_tx)
 
-          {transaction_mutations, Map.update(type_counters, type, 1, &(&1 + 1))}
+          {type, _tx} = :aetx.specialize_type(tx)
+
+          account_id = :aetx.origin(tx)
+
+          account_type_counters =
+            Map.update(
+              account_type_counters,
+              account_id,
+              %{type => 1},
+              fn
+                nil -> %{type => 1}
+                account_types -> Map.update(account_types, type, 1, &(&1 + 1))
+              end
+            )
+
+          {transaction_mutations,
+           {Map.update(type_counters, type, 1, &(&1 + 1)), account_type_counters}}
         end)
       end)
 
-    statistics_mutations = Stats.micro_block_mutations(mb_time, type_counters)
+    statistics_mutations =
+      Stats.micro_block_mutations(mb_time, type_counters, account_type_counters)
+
     type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
 

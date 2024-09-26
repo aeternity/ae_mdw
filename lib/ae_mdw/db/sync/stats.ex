@@ -23,6 +23,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep aexn_type :: :aex9 | :aex141
   @typep time() :: Blocks.time()
   @typep type_counts() :: %{Node.tx_type() => pos_integer()}
+  @typep account_type_counts() :: %{Node.account_id() => type_counts()}
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()
@@ -124,8 +125,9 @@ defmodule AeMdw.Db.Sync.Stats do
     ]
   end
 
-  @spec micro_block_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
-  def micro_block_mutations(time, type_counts) do
+  @spec micro_block_mutations(time(), type_counts(), account_type_counts()) ::
+          StatisticsMutation.t() | nil
+  def micro_block_mutations(time, type_counts, account_type_counts) do
     intervals = time_intervals(time)
 
     total_count =
@@ -149,7 +151,21 @@ defmodule AeMdw.Db.Sync.Stats do
 
           total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
 
-          [total_statistic | tx_type_statistics]
+          account_tx_type_statistics =
+            Enum.flat_map(account_type_counts, fn {account_id, tx_types} ->
+              {account_types_count, txs_count} =
+                Enum.map_reduce(tx_types, 0, fn {tx_type, count}, total_txs ->
+                  {{{{:transactions, account_id, tx_type}, interval, interval_start}, count},
+                   total_txs + count}
+                end)
+
+              [
+                {{{:transactions, account_id, :all}, interval, interval_start}, txs_count}
+                | account_types_count
+              ]
+            end)
+
+          [total_statistic | tx_type_statistics ++ account_tx_type_statistics]
         end)
       else
         []
