@@ -15,7 +15,7 @@ defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
     _state =
       state
       |> Collection.stream(Model.Tx, :backward, nil, nil)
-      |> Stream.chunk_every(1000)
+      |> Stream.chunk_every(10000)
       |> Task.async_stream(
         fn txis ->
           Task.async_stream(
@@ -44,19 +44,26 @@ defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
             timeout: :infinity,
             ordered: false
           )
-          |> Enum.map(fn {:ok, mutations} -> mutations end)
+          |> Stream.map(fn {:ok, mutations} -> mutations end)
         end,
         timeout: :infinity,
         ordered: false
       )
-      |> Enum.map(fn {:ok, mutations} ->
+      |> Stream.map(fn {:ok, mutations} ->
+        {mutations, len} =
+          Enum.reduce(mutations, {[], 0}, fn mutation, {acc, len} ->
+            {[mutation | acc], len + 1}
+          end)
+
         Agent.update(counter_agent, fn count ->
-          total_count = count + length(mutations)
+          total_count = count + len
           tap(total_count, &Logger.info("Processed transactions: #{&1}"))
         end)
 
         State.commit_db(state, mutations)
+        len
       end)
+      |> Enum.sum()
 
     count = Agent.get(counter_agent, & &1)
 
