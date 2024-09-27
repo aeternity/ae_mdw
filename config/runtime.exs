@@ -68,7 +68,9 @@ enable_console_log = System.get_env("ENABLE_CONSOLE_LOG", "false") in ["true", "
 base_logger_backends = Application.get_env(:logger, :backends, [])
 
 logger_backends =
-  if enable_console_log, do: [:console | base_logger_backends], else: base_logger_backends
+  if enable_console_log,
+    do: [Logger.Backends.Console | base_logger_backends],
+    else: base_logger_backends
 
 config :logger,
   level: log_level || :info,
