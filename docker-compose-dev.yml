@@ -24,8 +24,13 @@ services:
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}:/app
       - ${PWD}/docker/gitconfig:/root/.gitconfig
+      - ${PWD}/.bash_history:/root/.bash_history
+      - ${PWD}/.erlang_history:/root/.erlang_history
     environment:
       - AETERNITY_CONFIG=${AETERNITY_CONFIG:-/home/aeternity/aeternity.yaml}
+      - HIST_FILE=/root/.bash_history
+      - ELIXIR_ERL_OPTIONS=-kernel shell_history enabled -kernel shell_history_path '.erlang_history'
+      - ENABLE_CONSOLE_LOG=true
     networks:
       ae_mdw_net:
         aliases:
