@@ -167,12 +167,8 @@ defmodule AeMdw.Db.Util do
   @spec key_block_height(state(), binary()) :: {:ok, Blocks.height()} | {:error, Error.t()}
   def key_block_height(state, hash_or_kbi) do
     with {:ok, kbi} when kbi >= 0 <- Util.parse_int(hash_or_kbi),
-         {:ok, last_gen} <- last_gen(state) do
-      if kbi <= last_gen do
-        {:ok, kbi}
-      else
-        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
-      end
+         {:ok, last_gen} when kbi <= last_gen <- last_gen(state) do
+      {:ok, kbi}
     else
       :error ->
         with {:ok, height, _hash} <- extract_block_height(state, hash_or_kbi, :key_block_hash) do
