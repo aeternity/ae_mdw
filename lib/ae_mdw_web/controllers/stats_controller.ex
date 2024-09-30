@@ -10,11 +10,13 @@ defmodule AeMdwWeb.StatsController do
 
   @stats_limit 1_000
 
-  plug PaginatedPlug when action not in ~w(transactions_stats blocks_stats names_stats)a
+  plug(PaginatedPlug when action not in ~w(transactions_stats blocks_stats names_stats)a)
 
-  plug PaginatedPlug,
-       [max_limit: @stats_limit]
-       when action in ~w(transactions_stats blocks_stats names_stats)a
+  plug(
+    PaginatedPlug,
+    [max_limit: @stats_limit]
+    when action in ~w(transactions_stats blocks_stats names_stats)a
+  )
 
   action_fallback(FallbackController)
 
@@ -131,6 +133,16 @@ defmodule AeMdwWeb.StatsController do
 
     with {:ok, paginated_stats} <-
            Stats.fetch_contracts_stats(state, pagination, query, scope, cursor) do
+      Util.render(conn, paginated_stats)
+    end
+  end
+
+  @spec total_accounts_stats(Conn.t(), map()) :: Conn.t()
+  def total_accounts_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_stats} <-
+           Stats.fetch_total_accounts_stats(state, pagination, query, scope, cursor) do
       Util.render(conn, paginated_stats)
     end
   end
