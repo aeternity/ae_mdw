@@ -286,11 +286,11 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_contracts_count_stats(State.t(), pagination(), query(), range(), cursor()) ::
+  @spec fetch_contracts_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
-  def fetch_contracts_count_stats(state, pagination, query, range, cursor) do
+  def fetch_contracts_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      fetch_statistics(state, pagination, filters, range, cursor, :contracts_count)
+      fetch_statistics(state, pagination, filters, range, cursor, :contracts)
     end
   end
 
