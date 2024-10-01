@@ -41,7 +41,15 @@ defmodule AeMdw.Stats do
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
 
-  @type statistic_tag() :: {:transactions, Node.tx_type() | :all} | :names_activated
+  @type blocks_tag() :: {:blocks, :key | :micro | :all}
+  @type statistic_tag() ::
+          {:transactions, Node.tx_type() | :all}
+          | :names_activated
+          | :aex9_transfers
+          | blocks_tag()
+          | :difficulty
+          | :hashrate
+          | :contracts
   @type interval_by() :: :day | :week | :month
   @type interval_start() :: non_neg_integer()
 
@@ -277,6 +285,14 @@ defmodule AeMdw.Stats do
   def fetch_names_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       fetch_statistics(state, pagination, filters, range, cursor, :names_activated)
+    end
+  end
+
+  @spec fetch_contracts_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_contracts_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      fetch_statistics(state, pagination, filters, range, cursor, :contracts)
     end
   end
 

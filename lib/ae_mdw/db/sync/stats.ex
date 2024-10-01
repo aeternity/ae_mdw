@@ -119,7 +119,7 @@ defmodule AeMdw.Db.Sync.Stats do
     tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
 
     [
-      StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
+      StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?, time),
       StatisticsMutation.new(statistics)
     ]
   end
@@ -171,6 +171,25 @@ defmodule AeMdw.Db.Sync.Stats do
       {:week, week_start},
       {:month, month_start}
     ]
+  end
+
+  @spec increase_statistics(State.t(), Stats.statistic_tag(), time(), pos_integer()) :: State.t()
+  def increase_statistics(state, key, time, increment) do
+    time
+    |> time_intervals()
+    |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
+      index = {key, interval_by, interval_start}
+
+      State.update(
+        state,
+        Model.Statistic,
+        index,
+        fn Model.statistic(count: count) = statistics ->
+          Model.statistic(statistics, count: count + increment)
+        end,
+        Model.statistic(index: index, count: 0)
+      )
+    end)
   end
 
   defp increment_collection_nfts(state, contract_pk, nil),

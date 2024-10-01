@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.StatsMutationTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Collection
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
@@ -11,11 +12,14 @@ defmodule AeMdw.Db.StatsMutationTest do
 
   require Model
 
+  import Mock
+
   @initial_token_offer AeMdw.Node.token_supply_delta(0)
 
   describe "new_mutation/2 with all_cached? = false" do
     test "on 1st block reward" do
       height = 300
+      key_hash = <<123::256>>
 
       prev_delta_stat = Model.delta_stat(index: height - 1)
 
@@ -50,25 +54,47 @@ defmodule AeMdw.Db.StatsMutationTest do
           )
         )
 
-      state = StatsMutation.execute(StatsMutation.new(height, "", 0, 0, 0, false), state)
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state =
+          StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, false, 123), state)
 
-      {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
-      {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
+        {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
+        {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
 
-      assert Model.delta_stat(m_delta_stat, :dev_reward) == dev_reward
-      assert Model.delta_stat(m_delta_stat, :block_reward) == block_reward
+        state
+        |> Collection.stream(
+          Model.Statistic,
+          :backward,
+          nil,
+          nil
+        )
+        |> tap(fn statistics ->
+          assert Enum.count(statistics) == 3
+        end)
+        |> Enum.map(fn statistic ->
+          assert {:ok, Model.statistic(count: 0)} =
+                   State.get(state, Model.Statistic, statistic)
+        end)
 
-      assert Model.total_stat(m_total_stat, :dev_reward) == dev_reward
-      assert Model.total_stat(m_total_stat, :block_reward) == block_reward
+        assert Model.delta_stat(m_delta_stat, :dev_reward) == dev_reward
+        assert Model.delta_stat(m_delta_stat, :block_reward) == block_reward
 
-      assert Model.total_stat(m_total_stat, :total_supply) ==
-               @initial_token_offer + block_reward + dev_reward
+        assert Model.total_stat(m_total_stat, :dev_reward) == dev_reward
+        assert Model.total_stat(m_total_stat, :block_reward) == block_reward
+
+        assert Model.total_stat(m_total_stat, :total_supply) ==
+                 @initial_token_offer + block_reward + dev_reward
+      end
     end
   end
 
   describe "new_mutation/2 with all_cached? = true" do
     test "on 1st block reward" do
       height = 300
+      key_hash = <<height::256>>
 
       prev_delta_stat = Model.delta_stat(index: height - 1, block_reward: 0)
 
@@ -90,26 +116,48 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:dev_reward, dev_reward)
         |> State.inc_stat(:block_reward, block_reward)
 
-      state = StatsMutation.execute(StatsMutation.new(height, "", 0, 0, 0, true), state)
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state =
+          StatsMutation.execute(StatsMutation.new(height, key_hash, 0, 0, 0, true, 123), state)
 
-      {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
-      {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
+        {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
+        {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
 
-      assert Model.delta_stat(m_delta_stat, :dev_reward) == dev_reward
-      assert Model.delta_stat(m_delta_stat, :block_reward) == block_reward
+        state
+        |> Collection.stream(
+          Model.Statistic,
+          :backward,
+          nil,
+          nil
+        )
+        |> tap(fn statistics ->
+          assert Enum.count(statistics) == 3
+        end)
+        |> Enum.map(fn statistic ->
+          assert {:ok, Model.statistic(count: 0)} =
+                   State.get(state, Model.Statistic, statistic)
+        end)
 
-      assert Model.total_stat(m_total_stat, :dev_reward) == dev_reward
-      assert Model.total_stat(m_total_stat, :block_reward) == block_reward
+        assert Model.delta_stat(m_delta_stat, :dev_reward) == dev_reward
+        assert Model.delta_stat(m_delta_stat, :block_reward) == block_reward
 
-      assert Model.total_stat(m_total_stat, :total_supply) ==
-               @initial_token_offer + block_reward + dev_reward
+        assert Model.total_stat(m_total_stat, :dev_reward) == dev_reward
+        assert Model.total_stat(m_total_stat, :block_reward) == block_reward
+
+        assert Model.total_stat(m_total_stat, :total_supply) ==
+                 @initial_token_offer + block_reward + dev_reward
+      end
     end
   end
 
   describe "execute/2" do
     test "with all_cached? = false, computes stat counting state keys" do
       height = 100
-      mutation = StatsMutation.new(height, "", 0, 0, 0, false)
+      key_hash = <<height::256>>
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false, 123)
 
       state =
         NullStore.new()
@@ -248,14 +296,35 @@ defmodule AeMdw.Db.StatsMutationTest do
           contracts: 2
         )
 
-      state = StatsMutation.execute(mutation, state)
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state = StatsMutation.execute(mutation, state)
 
-      assert ^expected_delta = State.fetch!(state, Model.DeltaStat, height)
-      assert ^expected_total = State.fetch!(state, Model.TotalStat, height + 1)
+        state
+        |> Collection.stream(
+          Model.Statistic,
+          :backward,
+          nil,
+          nil
+        )
+        |> tap(fn statistics ->
+          assert Enum.count(statistics) == 3
+        end)
+        |> Enum.map(fn statistic ->
+          assert {:ok, Model.statistic(count: 1)} =
+                   State.get(state, Model.Statistic, statistic)
+        end)
+
+        assert ^expected_delta = State.fetch!(state, Model.DeltaStat, height)
+        assert ^expected_total = State.fetch!(state, Model.TotalStat, height + 1)
+      end
     end
 
     test "with all_cached? = true, it increments oracles and names total stats based on keys" do
       height = 200
+      key_hash = <<height::256>>
 
       state =
         NullStore.new()
@@ -270,7 +339,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:names_revoked)
         |> State.inc_stat(:contracts_created)
 
-      mutation = StatsMutation.new(height, "", 0, 0, 0, true)
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, true, 123)
 
       expected_delta =
         Model.delta_stat(
@@ -294,10 +363,30 @@ defmodule AeMdw.Db.StatsMutationTest do
           inactive_names: ObjectKeys.count_inactive_names(state)
         )
 
-      state = StatsMutation.execute(mutation, state)
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state = StatsMutation.execute(mutation, state)
 
-      assert expected_delta == State.fetch!(state, Model.DeltaStat, height)
-      assert expected_total == State.fetch!(state, Model.TotalStat, height + 1)
+        state
+        |> Collection.stream(
+          Model.Statistic,
+          :backward,
+          nil,
+          nil
+        )
+        |> tap(fn statistics ->
+          assert Enum.count(statistics) == 3
+        end)
+        |> Enum.map(fn statistic ->
+          assert {:ok, Model.statistic(count: 1)} =
+                   State.get(state, Model.Statistic, statistic)
+        end)
+
+        assert expected_delta == State.fetch!(state, Model.DeltaStat, height)
+        assert expected_total == State.fetch!(state, Model.TotalStat, height + 1)
+      end
     end
   end
 end
