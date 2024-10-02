@@ -9,6 +9,7 @@ defmodule AeMdw.Migrations.AddAccountCreationTable do
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.TempStore
   alias AeMdw.Db.Sync.Stats, as: SyncStats
+  alias AeMdw.Db.RocksDbCF
 
   require Model
 
@@ -27,20 +28,24 @@ defmodule AeMdw.Migrations.AddAccountCreationTable do
       end
 
     {_state, created} =
-      state
-      |> Collection.stream(Model.Tx, nil)
-      |> Enum.reduce(protocol_accounts, fn txi, acc_times ->
-        Model.tx(id: tx_hash, time: time) = State.fetch!(State.mem_state(), Model.Tx, txi)
+      Model.Tx
+      |> RocksDbCF.stream()
+      |> Task.async_stream(fn Model.tx(id: tx_hash, time: time) ->
         {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
 
         signed_tx
         |> AeMdw.Sync.Transaction.get_ids_from_tx()
-        |> Enum.reduce(acc_times, fn
+        |> Enum.reduce(%{}, fn
           {:id, :account, pubkey}, acc ->
             Map.put_new(acc, pubkey, time)
 
           _other, acc ->
             acc
+        end)
+      end)
+      |> Enum.reduce(protocol_accounts, fn {:ok, new_map}, acc_times ->
+        Map.merge(acc_times, new_map, fn _k, v1, v2 ->
+          if v1 < v2, do: v1, else: v2
         end)
       end)
       |> Enum.reduce({State.new(TempStore.new()), []}, fn {pubkey, time}, {state, mutations} ->
