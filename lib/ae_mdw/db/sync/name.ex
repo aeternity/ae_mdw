@@ -29,7 +29,7 @@ defmodule AeMdw.Db.Sync.Name do
   @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi_idx()) :: [
           Mutation.t()
         ]
-  def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, {txi, _idx} = txi_idx) do
+  def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, txi_idx) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
     owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
@@ -48,7 +48,7 @@ defmodule AeMdw.Db.Sync.Name do
         block_index,
         proto_vsn
       )
-      | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+      | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi_idx, tx_hash)
     ]
   end
 

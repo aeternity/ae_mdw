@@ -177,7 +177,7 @@ defmodule AeMdw.Db.Sync.Contract do
               :contract_call_tx,
               nil,
               contract_pk,
-              call_txi,
+              {call_txi, local_idx},
               tx_hash
             )
         ]

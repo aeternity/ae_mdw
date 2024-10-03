@@ -16,8 +16,6 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   require Model
 
-  @aex9_token_id encode_contract(<<100::256>>)
-
   setup_all do
     store =
       Enum.reduce(100..125, MemStore.new(NullStore.new()), fn i, store ->

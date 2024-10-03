@@ -26,13 +26,13 @@ defmodule AeMdw.Db.Sync.Oracle do
   @spec register_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi_idx()) :: [
           Mutation.t()
         ]
-  def register_mutations(tx, tx_hash, {height, _mbi} = block_index, {txi, _idx} = txi_idx) do
+  def register_mutations(tx, tx_hash, {height, _mbi} = block_index, txi_idx) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx)
     delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
     expire = height + delta_ttl
 
     [
-      Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
+      Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi_idx, tx_hash),
       OracleRegisterMutation.new(oracle_pk, block_index, expire, txi_idx)
     ]
   end

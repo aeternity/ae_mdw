@@ -17,12 +17,12 @@ defmodule AeMdw.Db.Sync.Origin do
           Node.tx_type(),
           WriteFieldMutation.pos(),
           NodeDb.pubkey(),
-          Txs.txi(),
+          Txs.txi_idx(),
           Txs.tx_hash()
         ) :: [Mutation.t()]
-  def origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
-    m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
-    m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
+  def origin_mutations(tx_type, pos, pubkey, {txi, _idx} = txi_idx, tx_hash) do
+    m_origin = Model.origin(index: {tx_type, pubkey, txi_idx}, tx_id: tx_hash)
+    m_rev_origin = Model.rev_origin(index: {txi_idx, tx_type, pubkey})
 
     [
       WriteMutation.new(Model.Origin, m_origin),

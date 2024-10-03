@@ -2457,7 +2457,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         )
         |> Store.put(
           Model.RevOrigin,
-          Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+          Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, contract_pk})
         )
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
@@ -2511,7 +2511,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       )
       |> Store.put(
         Model.RevOrigin,
-        Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+        Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, contract_pk})
       )
 
     first_log_txi = last_log_txi + 1
@@ -2567,7 +2567,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       )
       |> Store.put(
         Model.RevOrigin,
-        Model.rev_origin(index: {create_txi, :contract_create_tx, aex9_contract_pk})
+        Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, aex9_contract_pk})
       )
 
     first_log_txi = first_log_txi + length(@aex9_events)
@@ -2626,7 +2626,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     )
     |> Store.put(
       Model.RevOrigin,
-      Model.rev_origin(index: {create_txi, :contract_create_tx, aex141_contract_pk})
+      Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, aex141_contract_pk})
     )
   end
 
@@ -2672,7 +2672,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
           )
           |> Store.put(
             Model.RevOrigin,
-            Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+            Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, contract_pk})
           )
           |> Store.put(
             Model.Tx,
@@ -2738,7 +2738,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       )
       |> Store.put(
         Model.RevOrigin,
-        Model.rev_origin(index: {create_txi, :contract_create_tx, extra_ct_pk})
+        Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx, extra_ct_pk})
       )
       |> Store.put(
         Model.Tx,

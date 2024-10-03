@@ -119,7 +119,7 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
 
-    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
+    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, {txi, -1}, tx_hash)
 
     if Contract.exists?(contract_pk) do
       call_rec = Contract.get_init_call_rec(tx, block_hash)
@@ -216,7 +216,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     [
       Channels.open_mutations({block_index, {txi, -1}}, tx),
-      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, {txi, -1}, tx_hash)
     ]
   end
 
@@ -300,7 +300,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         do: ContractCreateCacheMutation.new(contract_pk, txi)
 
     [
-      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash),
+      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, {txi, -1}, tx_hash),
       stat_mutation
     ]
   end

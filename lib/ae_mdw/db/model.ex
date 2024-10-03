@@ -180,21 +180,21 @@ defmodule AeMdw.Db.Model do
   @type id_count() :: record(:id_count, index: id_count_index(), count: non_neg_integer())
 
   # object origin :
-  #     index = {tx_type, pubkey, tx_index}, tx_id = tx_hash
+  #     index = {tx_type, pubkey, txi_idx}, tx_id = tx_hash
   @origin_defaults [index: {nil, nil, nil}, tx_id: nil]
   defrecord :origin, @origin_defaults
 
-  @type origin_index() :: {tx_type(), pubkey(), txi()}
+  @type origin_index() :: {tx_type(), pubkey(), txi_idx()}
   @type origin() :: record(:origin, index: origin_index(), tx_id: tx_hash())
 
   # we need this one to quickly locate origin keys to delete for invalidating a fork
   #
   # rev object origin :
-  #     index = {tx_index, tx_type, pubkey}
+  #     index = {txi_idx, tx_type, pubkey}
   @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_origin, @rev_origin_defaults
 
-  @type rev_origin_index() :: {txi(), tx_type(), pubkey()}
+  @type rev_origin_index() :: {txi_idx(), tx_type(), pubkey()}
   @type rev_origin() :: record(:rev_origin, index: rev_origin_index())
 
   # plain name:

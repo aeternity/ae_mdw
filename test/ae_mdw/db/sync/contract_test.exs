@@ -167,7 +167,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
           :contract_call_tx,
           nil,
           contract_pk1,
-          call_txi,
+          {call_txi, 1},
           call_tx_hash
         )
 
@@ -364,11 +364,11 @@ defmodule AeMdw.Db.Sync.ContractTest do
                },
                %WriteMutation{
                  table: Model.Origin,
-                 record: Model.origin(index: {^tx_type, ^pubkey, ^call_txi})
+                 record: Model.origin(index: {^tx_type, ^pubkey, {^call_txi, 0}})
                },
                %WriteMutation{
                  table: Model.RevOrigin,
-                 record: Model.rev_origin(index: {^call_txi, ^tx_type, ^pubkey})
+                 record: Model.rev_origin(index: {{^call_txi, 0}, ^tx_type, ^pubkey})
                },
                %AeMdw.Db.WriteFieldMutation{
                  pos: nil,

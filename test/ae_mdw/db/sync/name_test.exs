@@ -70,7 +70,7 @@ defmodule AeMdw.Db.Sync.NameTest do
             block_index,
             protocol_version
           )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, {txi, -1}, tx_hash)
         ]
 
         assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi_idx)
@@ -115,7 +115,7 @@ defmodule AeMdw.Db.Sync.NameTest do
             block_index,
             4
           )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, {txi, -1}, tx_hash)
         ]
 
         assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, {txi, -1})

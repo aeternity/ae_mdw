@@ -35,7 +35,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       {_mod, tx_rec} = :aetx.specialize_callback(aetx)
 
       mutations = [
-        Origin.origin_mutations(:oracle_register_tx, nil, pubkey, txi, tx_hash),
+        Origin.origin_mutations(:oracle_register_tx, nil, pubkey, txi_idx, tx_hash),
         OracleRegisterMutation.new(pubkey, block_index, expire, txi_idx)
       ]
 
