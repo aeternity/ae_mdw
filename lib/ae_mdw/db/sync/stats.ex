@@ -23,7 +23,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep aexn_type :: :aex9 | :aex141
   @typep time() :: Blocks.time()
   @typep type_counts() :: %{Node.tx_type() => pos_integer()}
-  @typep account_type_counts() :: %{Node.account_id() => type_counts()}
+  @typep account_type_counts() :: %{Db.pubkey() => type_counts()}
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()

@@ -1,6 +1,7 @@
 defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
-  alias AeMdw.Db.StatisticsMutation
+  @moduledoc false
   alias AeMdw.Collection
+  alias AeMdw.Db.StatisticsMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Stats
@@ -14,12 +15,12 @@ defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
 
     _state =
       state
-      |> Collection.stream(Model.Tx, :backward, nil, nil)
-      |> Stream.chunk_every(10000)
+      |> Collection.stream(Model.Tx, :forward, nil, nil)
+      |> Stream.chunk_every(1000)
       |> Task.async_stream(
         fn txis ->
-          Task.async_stream(
-            txis,
+          txis
+          |> Task.async_stream(
             fn txi ->
               Model.tx(id: tx_id, time: time) = State.fetch!(state, Model.Tx, txi)
 
@@ -28,14 +29,14 @@ defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
                 |> :aec_db.get_signed_tx()
                 |> :aetx_sign.tx()
 
-              tx_type = :aetx.specialize_type(tx)
+              {tx_type, _tx} = :aetx.specialize_type(tx)
               account_id = :aetx.origin(tx)
 
               time
               |> Stats.time_intervals()
               |> Enum.flat_map(fn {interval_by, interval_start} ->
                 [
-                  {{{:transactions, tx_type, account_id}, interval_by, interval_start}, 1},
+                  {{{:transactions, account_id, tx_type}, interval_by, interval_start}, 1},
                   {{{:transactions, account_id, :all}, interval_by, interval_start}, 1}
                 ]
               end)
@@ -44,26 +45,26 @@ defmodule AeMdw.Migrations.CreateAccountTransactionsCountStats do
             timeout: :infinity,
             ordered: false
           )
-          |> Stream.map(fn {:ok, mutations} -> mutations end)
+          |> Enum.map(fn {:ok, mutation} -> mutation end)
         end,
         timeout: :infinity,
         ordered: false
       )
-      |> Stream.map(fn {:ok, mutations} ->
-        {mutations, len} =
-          Enum.reduce(mutations, {[], 0}, fn mutation, {acc, len} ->
-            {[mutation | acc], len + 1}
-          end)
+      |> Enum.map(fn {:ok, mutations} ->
+        len = length(mutations)
 
-        Agent.update(counter_agent, fn count ->
-          total_count = count + len
-          tap(total_count, &Logger.info("Processed transactions: #{&1}"))
-        end)
+        Agent.update(
+          counter_agent,
+          fn count ->
+            total_count = count + len
 
-        State.commit_db(state, mutations)
-        len
+            tap(total_count, &Logger.info("Processed transactions: #{&1}"))
+          end,
+          :infinity
+        )
+
+        _state = State.commit_db(state, mutations)
       end)
-      |> Enum.sum()
 
     count = Agent.get(counter_agent, & &1)
 
