@@ -107,8 +107,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               :contract_create_tx,
               nil,
               contract_pk,
-              {create_txi, -1},
-              :crypto.strong_rand_bytes(32)
+              {create_txi, -1}
             ),
             aexn_create_mutation,
             ContractCreateMutation.new(create_txi, call_rec)
@@ -198,8 +197,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               :contract_create_tx,
               nil,
               contract_pk,
-              {create_txi, -1},
-              :crypto.strong_rand_bytes(32)
+              {create_txi, -1}
             ),
             ContractCreateMutation.new(create_txi, call_rec)
           ])
@@ -283,8 +281,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             :contract_create_tx,
             nil,
             contract_pk,
-            {create_txi, -1},
-            :crypto.strong_rand_bytes(32)
+            {create_txi, -1}
           ),
           ContractCreateMutation.new(create_txi, call_rec)
         ]
@@ -359,8 +356,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             :contract_create_tx,
             nil,
             contract_pk,
-            {create_txi, -1},
-            :crypto.strong_rand_bytes(32)
+            {create_txi, -1}
           ),
           ContractCreateMutation.new(create_txi, call_rec)
         ]

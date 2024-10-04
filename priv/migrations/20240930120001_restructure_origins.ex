@@ -19,7 +19,6 @@ defmodule AeMdw.Migrations.RestructureOrigins do
     |> Collection.stream(Model.Origin, nil)
     |> Stream.filter(fn {_tx_type, _pubkey, txi} -> is_integer(txi) end)
     |> Stream.map(fn {tx_type, pubkey, txi} = index ->
-      origin = State.fetch!(state, Model.Origin, index)
       rev_origin_index = {txi, tx_type, pubkey}
       idx = search_pubkey_idx(state, txi, pubkey)
 
@@ -27,13 +26,14 @@ defmodule AeMdw.Migrations.RestructureOrigins do
         [
           WriteMutation.new(
             Model.Origin,
-            Model.origin(origin,
-              index: {tx_type, pubkey, {txi, idx}}
+            Model.origin(
+              index: {tx_type, pubkey},
+              txi_idx: {txi, idx}
             )
           ),
           WriteMutation.new(
             Model.RevOrigin,
-            Model.rev_origin(index: {{txi, idx}, tx_type, pubkey})
+            Model.rev_origin(index: {{txi, idx}, tx_type}, pubkey: pubkey)
           )
         ],
         {index, rev_origin_index}

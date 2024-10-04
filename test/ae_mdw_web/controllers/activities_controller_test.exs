@@ -587,11 +587,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(
           Model.RevOrigin,
-          Model.rev_origin(index: {{create_txi1, -1}, :contract_call_tx, contract_pk1})
+          Model.rev_origin(index: {{create_txi1, -1}, :contract_call_tx}, pubkey: contract_pk1)
         )
         |> Store.put(
           Model.RevOrigin,
-          Model.rev_origin(index: {{create_txi2, -1}, :contract_call_tx, contract_pk2})
+          Model.rev_origin(index: {{create_txi2, -1}, :contract_call_tx}, pubkey: contract_pk2)
         )
         |> Store.put(
           Model.AexnContract,

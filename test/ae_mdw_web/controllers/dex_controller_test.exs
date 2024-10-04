@@ -114,8 +114,8 @@ defmodule AeMdwWeb.DexControllerTest do
             |> Store.put(
               Model.RevOrigin,
               Model.rev_origin(
-                index:
-                  {{block_index_number, -1}, :contract_create_tx, <<block_index_number::256>>}
+                index: {{block_index_number, -1}, :contract_create_tx},
+                pubkey: <<block_index_number::256>>
               )
             )
             |> Store.put(
@@ -892,7 +892,10 @@ defmodule AeMdwWeb.DexControllerTest do
       )
       |> Store.put(
         Model.RevOrigin,
-        Model.rev_origin(index: {{txi, -1}, :contract_create_tx, <<block_index_number::256>>})
+        Model.rev_origin(
+          index: {{txi, -1}, :contract_create_tx},
+          pubkey: <<block_index_number::256>>
+        )
       )
       |> Store.put(
         Model.Field,

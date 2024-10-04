@@ -78,9 +78,13 @@ defmodule AeMdw.Db.Origin do
   end
 
   def pubkey(state, {:contract, txi}) do
-    case State.next(state, Model.RevOrigin, {{txi, -1}, -1, <<>>}) do
-      {:ok, {{^txi, _idx}, type, pubkey}} when type in @contract_creation_types -> pubkey
-      _key_mismatch -> nil
+    case State.next(state, Model.RevOrigin, {{txi, -1}, -1}) do
+      {:ok, {{^txi, _idx}, type} = index} when type in @contract_creation_types ->
+        Model.rev_origin(pubkey: pubkey) = State.fetch!(state, Model.RevOrigin, index)
+        pubkey
+
+      _key_mismatch ->
+        nil
     end
   end
 

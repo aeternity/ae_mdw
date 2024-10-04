@@ -21,10 +21,6 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       {:ns_claim_tx, {:id, :account, new_owner_pk}, 11_251, plain_name, 7, :prelima,
        1_000_000_000_000_000, 0}
 
-    tx_hash =
-      <<159, 240, 103, 205, 63, 165, 186, 153, 226, 186, 128, 241, 61, 192, 66, 89, 156, 217, 200,
-        247, 31, 137, 16, 129, 250, 190, 199, 100, 137, 179, 112, 165>>
-
     claim_height = 200
     old_claim_height = 100
     owner_pk = <<8435::256>>
@@ -55,7 +51,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     with_mocks [
       {AeMdw.Node.Db, [], [proto_vsn: fn _height -> 3 end]}
     ] do
-      mutations = Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi_idx)
+      mutations = Sync.Name.name_claim_mutations(tx, block_index, txi_idx)
 
       state =
         mutations

@@ -112,14 +112,13 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :contract_create_tx,
          tx: tx,
          txi: txi,
-         tx_hash: tx_hash,
          block_index: block_index,
          block_hash: block_hash,
          tx_events: tx_events
        }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
 
-    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, {txi, -1}, tx_hash)
+    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, {txi, -1})
 
     if Contract.exists?(contract_pk) do
       call_rec = Contract.get_init_call_rec(tx, block_hash)
@@ -130,7 +129,6 @@ defmodule AeMdw.Db.Sync.Transaction do
           block_hash,
           block_index,
           txi,
-          tx_hash,
           contract_pk
         )
 
@@ -164,8 +162,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index,
          block_hash: block_hash,
-         tx_events: tx_events,
-         tx_hash: tx_hash
+         tx_events: tx_events
        }) do
     contract_or_name_pk =
       tx
@@ -187,7 +184,6 @@ defmodule AeMdw.Db.Sync.Transaction do
         block_hash,
         block_index,
         txi,
-        tx_hash,
         contract_pk
       )
 
@@ -209,14 +205,13 @@ defmodule AeMdw.Db.Sync.Transaction do
          signed_tx: signed_tx,
          block_index: block_index,
          txi: txi,
-         tx: tx,
-         tx_hash: tx_hash
+         tx: tx
        }) do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
     [
       Channels.open_mutations({block_index, {txi, -1}}, tx),
-      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, {txi, -1}, tx_hash)
+      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, {txi, -1})
     ]
   end
 
@@ -289,8 +284,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_hash: block_hash,
          signed_tx: signed_tx,
          tx: tx,
-         txi: txi,
-         tx_hash: tx_hash
+         txi: txi
        }) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
     {:ok, call_rec} = Contract.call_rec(signed_tx, contract_pk, block_hash)
@@ -300,7 +294,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         do: ContractCreateCacheMutation.new(contract_pk, txi)
 
     [
-      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, {txi, -1}, tx_hash),
+      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, {txi, -1}),
       stat_mutation
     ]
   end
@@ -309,20 +303,18 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :oracle_register_tx,
          tx: tx,
          txi: txi,
-         tx_hash: tx_hash,
          block_index: block_index
        }) do
-    Oracle.register_mutations(tx, tx_hash, block_index, {txi, -1})
+    Oracle.register_mutations(tx, block_index, {txi, -1})
   end
 
   defp tx_mutations(%TxContext{
          type: :name_claim_tx,
          tx: tx,
          txi: txi,
-         tx_hash: tx_hash,
          block_index: block_index
        }) do
-    SyncName.name_claim_mutations(tx, tx_hash, block_index, {txi, -1})
+    SyncName.name_claim_mutations(tx, block_index, {txi, -1})
   end
 
   defp tx_mutations(%TxContext{
