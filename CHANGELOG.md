@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.89.0](https://www.github.com/aeternity/ae_mdw/compare/v1.88.0...v1.89.0) (2024-10-07)
+
+
+### Features
+
+* add claims count on names/auctions ([#1953](https://www.github.com/aeternity/ae_mdw/issues/1953)) ([1b6cbf2](https://www.github.com/aeternity/ae_mdw/commit/1b6cbf27d7e203b0e248bf7d5eecb42e25ae0439))
+* add contracts count stats endpoint ([#1936](https://www.github.com/aeternity/ae_mdw/issues/1936)) ([9458297](https://www.github.com/aeternity/ae_mdw/commit/9458297c2a100ca4e303e55d48b92bff240290c8))
+
+
+### Bug Fixes
+
+* add empty chain key-blocks validation ([#1956](https://www.github.com/aeternity/ae_mdw/issues/1956)) ([1c82965](https://www.github.com/aeternity/ae_mdw/commit/1c829651f8506510289b04943aeef7633e96fc3d))
+
+
+### Miscellaneous
+
+* make dev container retain bash and iex history, updated logger ([#1959](https://www.github.com/aeternity/ae_mdw/issues/1959)) ([7527ce9](https://www.github.com/aeternity/ae_mdw/commit/7527ce9be1c8e59be22145a2b79bea703d227998))
+
 ## [1.88.0](https://www.github.com/aeternity/ae_mdw/compare/v1.87.0...v1.88.0) (2024-09-23)
 
 
