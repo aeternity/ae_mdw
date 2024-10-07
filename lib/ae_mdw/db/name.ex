@@ -92,23 +92,6 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec owned_by(state(), owner_pk :: pubkey(), active? :: boolean()) :: %{
-          :names => list(),
-          :top_bids => list()
-        }
-  def owned_by(state, owner_pk, true) do
-    %{
-      names: collect_vals(state, Model.ActiveNameOwner, owner_pk),
-      top_bids: collect_vals(state, Model.AuctionOwner, owner_pk)
-    }
-  end
-
-  def owned_by(state, owner_pk, false) do
-    %{
-      names: collect_vals(state, Model.InactiveNameOwner, owner_pk)
-    }
-  end
-
   @doc """
   Returns a stream of Names.plain_name()
   """
@@ -324,13 +307,6 @@ defmodule AeMdw.Db.Name do
 
   defp pointer_kv_raw(ptr),
     do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
-
-  defp collect_vals(state, tab, key) do
-    state
-    |> Collection.stream(tab, {key, ""})
-    |> Stream.take_while(&match?({^key, _val}, &1))
-    |> Enum.map(fn {_key, val} -> val end)
-  end
 
   defp ns_tree!(state, block_index) do
     state

@@ -100,6 +100,7 @@ defmodule AeMdw.Stats do
   @spec nft_owners_count_key(pubkey()) :: {atom(), pubkey()}
   def nft_owners_count_key(contract_pk), do: {@nft_owners_count_stat, contract_pk}
 
+<<<<<<< HEAD
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
   @spec fetch_stats_v1(State.t(), direction(), range(), cursor(), limit()) ::
@@ -124,6 +125,8 @@ defmodule AeMdw.Stats do
     end
   end
 
+=======
+>>>>>>> chore: remove further unused v1 routes
   @spec fetch_delta_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
   def fetch_delta_stats(state, direction, range, cursor, limit) do
@@ -463,36 +466,6 @@ defmodule AeMdw.Stats do
       {interval_start, ""} -> {:ok, interval_start}
       _error_or_invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
-  end
-
-  defp render_stats(state, first..last//_step) do
-    Enum.map(first..last, fn height ->
-      %{
-        block_reward: block_reward,
-        dev_reward: dev_reward
-      } = fetch_delta_stat!(state, height - 1)
-
-      %{
-        active_auctions: active_auctions,
-        active_names: active_names,
-        inactive_names: inactive_names,
-        active_oracles: active_oracles,
-        inactive_oracles: inactive_oracles,
-        contracts: contracts
-      } = fetch_total_stat!(state, height)
-
-      %{
-        height: height,
-        block_reward: block_reward,
-        dev_reward: dev_reward,
-        active_auctions: active_auctions,
-        active_names: active_names,
-        inactive_names: inactive_names,
-        active_oracles: active_oracles,
-        inactive_oracles: inactive_oracles,
-        contracts: contracts
-      }
-    end)
   end
 
   defp render_delta_stats(state, gens), do: Enum.map(gens, &fetch_delta_stat!(state, &1))

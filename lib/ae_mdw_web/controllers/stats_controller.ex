@@ -18,21 +18,6 @@ defmodule AeMdwWeb.StatsController do
 
   action_fallback(FallbackController)
 
-  @spec stats_v1(Conn.t(), map()) :: Conn.t()
-  def stats_v1(%Conn{assigns: assigns} = conn, _params) do
-    %{
-      state: state,
-      pagination: {direction, _is_reversed?, limit, _has_cursor?},
-      cursor: cursor,
-      scope: scope
-    } = assigns
-
-    {prev_cursor, stats, next_cursor} =
-      Stats.fetch_stats_v1(state, direction, scope, cursor, limit)
-
-    Util.render(conn, prev_cursor, stats, next_cursor)
-  end
-
   @spec delta_stats(Conn.t(), map()) :: Conn.t()
   def delta_stats(%Conn{assigns: assigns} = conn, _params) do
     %{

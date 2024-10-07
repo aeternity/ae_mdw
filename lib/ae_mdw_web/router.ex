@@ -222,24 +222,11 @@ defmodule AeMdwWeb.Router do
     end
 
     # v1-only routes
-    get "/txs/count", TxController, :count
-
     get "/blocks/:range_or_dir", BlockController, :blocks_v1
 
     get "/tx/:hash_or_index", TxController, :tx_v2
-    get "/txi/:index", TxController, :txi
     get "/txs/:direction", TxController, :txs_v2
     get "/txs/:scope_type/:range", TxController, :txs_v2
-
-    get "/names/auctions", NameController, :auctions_v2
-    get "/name/auction/:id", NameController, :auction_v2
-    get "/name/pointers/:id", NameController, :pointers
-    get "/name/pointees/:id", NameController, :pointees
-    get "/name/:id", NameController, :name
-    get "/names/search/:prefix", NameController, :search_v1
-    get "/names/active", NameController, :active_names
-    get "/names/owned_by/:id", NameController, :owned_by
-    get "/names", NameController, :names_v2
 
     get "/aex9/transfers/from/:sender", AexnTransferController, :transfers_from_v1
     get "/aex9/transfers/to/:recipient", AexnTransferController, :transfers_to_v1
@@ -254,12 +241,8 @@ defmodule AeMdwWeb.Router do
         Aex9Controller,
         :balance_for_hash
 
-    get "/aex9/balance/:contract_id/:account_id", Aex9Controller, :balance
     get "/aex9/balances/account/:account_id", Aex9Controller, :balances
     get "/aex9/balances/:contract_id", Aex9Controller, :balances
-
-    get "/stats", StatsController, :stats_v1
-    get "/stats/:direction", StatsController, :stats
 
     get "/status", UtilController, :status
 

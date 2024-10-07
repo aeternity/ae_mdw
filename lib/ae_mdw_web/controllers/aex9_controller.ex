@@ -43,17 +43,6 @@ defmodule AeMdwWeb.Aex9Controller do
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, params) end)
 
-  @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance(%{assigns: %{state: state}} = conn, %{
-        "contract_id" => contract_id,
-        "account_id" => account_id
-      }) do
-    with {:ok, contract_pk} <- AexnContracts.validate_aex9(contract_id, state),
-         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
-      balance_reply(conn, contract_pk, account_pk)
-    end
-  end
-
   @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_for_hash(%Conn{assigns: %{state: state}} = conn, %{
         "blockhash" => block_hash_enc,
@@ -154,33 +143,6 @@ defmodule AeMdwWeb.Aex9Controller do
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil, false) do
       format_json(conn, aex9_tokens)
     end
-  end
-
-  defp balance_reply(
-         %Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn,
-         contract_pk,
-         account_pk
-       ) do
-    {amount, {type, height, hash}} =
-      if top?(opts) do
-        case DBN.aex9_balance(contract_pk, account_pk, top?(opts)) do
-          {:ok, account_balance} ->
-            account_balance
-
-          {:error, reason} ->
-            {:error, ErrInput.Aex9BalanceNotAvailable.exception(value: reason)}
-        end
-      else
-        case Aex9.fetch_amount_and_keyblock(state, async_state, contract_pk, account_pk) do
-          {:ok, {amount, kb_height_hash}} ->
-            {amount, kb_height_hash}
-
-          {:error, unavailable_error} ->
-            raise unavailable_error
-        end
-      end
-
-    format_json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
   end
 
   defp balance_for_hash_reply(

@@ -112,7 +112,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
       assert %{"error" => <<"not AEX9 contract: ", ^contract_id::binary>>} =
                conn
-               |> get("/aex9/balance/#{contract_id}/#{account_id}")
+               |> get("/v3/aex9/#{contract_id}/balances/#{account_id}")
                |> json_response(400)
     end
   end
