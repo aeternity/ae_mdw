@@ -46,11 +46,18 @@ defmodule AeMdw.Db.Util do
     txi
   end
 
-  @spec last_gen(state()) :: Blocks.height()
-  def last_gen(state) do
-    case State.prev(state, Model.Block, nil) do
-      {:ok, {height, _mbi}} -> height
+  @spec last_gen!(state()) :: Blocks.height()
+  def last_gen!(state) do
+    case last_gen(state) do
+      {:ok, height} -> height
       :none -> raise RuntimeError, message: "can't get last key for table Model.Block"
+    end
+  end
+
+  @spec last_gen(state()) :: {:ok, Blocks.height()} | :none
+  def last_gen(state) do
+    with {:ok, {height, _mbi}} <- State.prev(state, Model.Block, nil) do
+      {:ok, height}
     end
   end
 
@@ -78,7 +85,7 @@ defmodule AeMdw.Db.Util do
   @spec block_hash_to_bi(state(), Blocks.block_hash()) :: Blocks.block_index() | nil
   def block_hash_to_bi(state, block_hash) do
     with {:ok, node_block} <- :aec_chain.get_block(block_hash),
-         last_gen <- last_gen(state),
+         {:ok, last_gen} <- last_gen(state),
          {:micro, height} when height < last_gen <- block_type_height(node_block) do
       state
       |> Collection.stream(Model.Block, :forward, {{height, 0}, {height, nil}}, nil)
@@ -89,6 +96,7 @@ defmodule AeMdw.Db.Util do
         end
       end)
     else
+      :none -> nil
       :error -> nil
       {:key, height} -> {height, -1}
       {:micro, _non_synced_height} -> nil
@@ -158,23 +166,17 @@ defmodule AeMdw.Db.Util do
 
   @spec key_block_height(state(), binary()) :: {:ok, Blocks.height()} | {:error, Error.t()}
   def key_block_height(state, hash_or_kbi) do
-    case Util.parse_int(hash_or_kbi) do
-      {:ok, kbi} when kbi >= 0 ->
-        last_gen = last_gen(state)
-
-        if kbi <= last_gen do
-          {:ok, kbi}
-        else
-          {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
-        end
-
-      {:ok, _kbi} ->
-        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
-
+    with {:ok, kbi} when kbi >= 0 <- Util.parse_int(hash_or_kbi),
+         {:ok, last_gen} when kbi <= last_gen <- last_gen(state) do
+      {:ok, kbi}
+    else
       :error ->
         with {:ok, height, _hash} <- extract_block_height(state, hash_or_kbi, :key_block_hash) do
           {:ok, height}
         end
+
+      _invalid_kbi ->
+        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
     end
   end
 
@@ -287,7 +289,7 @@ defmodule AeMdw.Db.Util do
 
   defp extract_block_height(state, encoded_hash, type) do
     with {:ok, hash} <- Validate.hash(encoded_hash, type),
-         last_gen <- last_gen(state),
+         {:ok, last_gen} <- last_gen(state),
          {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
       {:ok, height, hash}
     else

@@ -180,7 +180,7 @@ defmodule AeMdw.Stats do
          minutes_per_block: minutes_per_block
        }}
     else
-      :not_found ->
+      _no_stats ->
         {:error, ErrInput.NotFound.exception(value: "no stats")}
     end
   end
@@ -695,7 +695,7 @@ defmodule AeMdw.Stats do
 
   defp minutes_per_block(state) do
     with {:ok, first_block} <- :aec_chain.get_key_block_by_height(1),
-         last_gen <- DbUtil.last_gen(state),
+         {:ok, last_gen} <- DbUtil.last_gen(state),
          {:ok, last_block} <- :aec_chain.get_key_block_by_height(last_gen) do
       first_block_time = :aec_blocks.time_in_msecs(first_block)
 
