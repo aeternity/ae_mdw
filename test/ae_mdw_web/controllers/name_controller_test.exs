@@ -1293,6 +1293,408 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "names" do
+    test "get active and inactive names, except those in auction, with default limit", %{
+      conn: conn,
+      store: store
+    } do
+      key_hash = <<0::256>>
+
+      store =
+        1..11
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(
+              index: plain_name,
+              active: 1,
+              expire: 1,
+              revoke: {{0, 0}, {0, -1}},
+              auction_timeout: 1
+            )
+
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<123::256>>))
+
+      with_mocks [
+        {Txs, [:passthrough],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers_v3: fn _state, _mnme -> [] end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+         ]},
+        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => names, "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names")
+                 |> json_response(200)
+
+        assert @default_limit = length(names)
+      end
+    end
+
+    test "on v3, it gets active and inactive names, except those in auction, with default limit",
+         %{
+           conn: conn,
+           store: store
+         } do
+      key_hash = <<0::256>>
+
+      store =
+        1..11
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(
+              index: plain_name,
+              active: 1,
+              expire: 1,
+              revoke: {{0, 0}, {0, -1}},
+              auction_timeout: 1
+            )
+
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<123::256>>))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+
+      with_mocks [
+        {Txs, [:passthrough],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [:passthrough],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+         ]},
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => names, "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names")
+                 |> json_response(200)
+
+        assert @default_limit = length(names)
+      end
+    end
+
+    test "get active and inactive names, except those in auction, with limit=2", %{
+      conn: conn,
+      store: store
+    } do
+      limit = 2
+      key_hash = <<0::256>>
+
+      store =
+        1..11
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(
+              index: plain_name,
+              active: 1,
+              expire: 1,
+              revoke: {{0, 0}, {0, -1}},
+              auction_timeout: 1
+            )
+
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.Tx, Model.tx(index: i - 1, id: <<i::256>>))
+          |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+        end)
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [:passthrough],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers_v3: fn _state, _mname -> [] end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
+         ]},
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", limit: limit)
+                 |> json_response(200)
+
+        assert ^limit = length(names)
+      end
+    end
+
+    test "gets names filtered by owner id and state ordered by deactivation", %{
+      conn: conn,
+      store: store
+    } do
+      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_pk = Validate.id!(owner_id)
+      other_pk = :crypto.strong_rand_bytes(32)
+      first_name = TS.plain_name(4)
+      not_owned_name = "o2#{first_name}"
+      second_name = "o1#{first_name}"
+      third_name = "o3#{first_name}"
+      exp_height = 123
+      key_hash = <<0::256>>
+
+      inactive_name =
+        Model.name(
+          index: first_name,
+          active: 1,
+          expire: 3,
+          revoke: nil,
+          owner: owner_pk,
+          auction_timeout: 1
+        )
+
+      active_name = Model.name(inactive_name, index: third_name)
+
+      store =
+        store
+        |> Store.put(Model.InactiveName, inactive_name)
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height, first_name})
+        )
+        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 1, second_name})
+        )
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(inactive_name, index: not_owned_name, owner: other_pk)
+        )
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {other_pk, exp_height + 2, not_owned_name})
+        )
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, third_name}))
+        |> Store.put(
+          Model.ActiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 3, third_name})
+        )
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash, _opts -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers_v3: fn _state, _mnme -> [] end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
+         ]},
+        {:aec_db, [:passthrough], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => [name1, name2, name3], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", direction: "forward", owned_by: owner_id)
+                 |> json_response(200)
+
+        assert %{"name" => ^first_name} = name1
+        assert %{"name" => ^second_name} = name2
+        assert %{"name" => ^third_name} = name3
+
+        assert %{"data" => [name1, name2], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names",
+                   direction: "forward",
+                   limit: 3,
+                   owned_by: owner_id,
+                   state: "inactive"
+                 )
+                 |> json_response(200)
+
+        assert %{"name" => ^first_name} = name1
+        assert %{"name" => ^second_name} = name2
+      end
+    end
+
+    test "get inactive names for given account/owner", %{conn: conn, store: store} do
+      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_pk = Validate.id!(owner_id)
+      other_pk = :crypto.strong_rand_bytes(32)
+      limit = 2
+      first_name = TS.plain_name(4)
+      not_owned_name = "o2#{first_name}"
+      second_name = "o1#{first_name}"
+      key_hash = <<0::256>>
+
+      m_name =
+        Model.name(
+          index: first_name,
+          active: 1,
+          expire: 3,
+          revoke: nil,
+          owner: owner_pk,
+          auction_timeout: 1
+        )
+
+      store =
+        [
+          {first_name, owner_pk},
+          {second_name, owner_pk},
+          {not_owned_name, other_pk}
+        ]
+        |> Enum.reduce(store, fn {plain_name, owner_pk}, store ->
+          m_name = Model.name(m_name, index: plain_name, owner: owner_pk)
+
+          store
+          |> Store.put(Model.InactiveName, m_name)
+          |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+        end)
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [:passthrough],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname ->
+             orig = {:id, :account, owner_pk}
+             %{current: orig, original: orig}
+           end
+         ]},
+        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => owned_names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names",
+                   owned_by: owner_id,
+                   by: "name",
+                   state: "inactive",
+                   limit: limit
+                 )
+                 |> json_response(200)
+
+        assert length(owned_names) == limit
+
+        assert Enum.all?(owned_names, fn %{"name" => plain_name} ->
+                 plain_name in [first_name, second_name]
+               end)
+      end
+    end
+
+    test "it gets names filtered by prefix when by=name", %{conn: conn, store: store} do
+      first_name = "x.chain"
+      second_name = "o1#{first_name}"
+      third_name = "o3#{first_name}"
+      fourth_name = "x.chain"
+      key_hash = <<0::256>>
+
+      inactive_name =
+        Model.name(
+          index: first_name,
+          active: 1,
+          expire: 3,
+          revoke: nil,
+          owner: <<0::256>>,
+          auction_timeout: 1
+        )
+
+      active_name = Model.name(inactive_name, index: third_name)
+
+      store =
+        store
+        |> Store.put(Model.InactiveName, inactive_name)
+        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
+        |> Store.put(Model.ActiveName, Model.name(inactive_name, index: fourth_name))
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [:passthrough], [pointers: fn _state, _mnme -> %{} end]},
+        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]},
+        {:aec_hard_forks, [], [protocol_effective_at_height: fn _height -> :lima end]},
+        {:aec_governance, [:passthrough], [name_claim_fee: fn _name, :lima -> 1 end]}
+      ] do
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", by: "name", prefix: "o")
+                 |> json_response(200)
+
+        assert [^third_name, ^second_name] =
+                 Enum.map(names, fn %{"name" => name} -> name end)
+
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", by: "name", prefix: "O")
+                 |> json_response(200)
+
+        assert [^third_name, ^second_name] =
+                 Enum.map(names, fn %{"name" => name} -> name end)
+      end
+    end
+
+    test "renders error when parameter by is invalid", %{conn: conn} do
+      by = "invalid_by"
+      error = "invalid query: by=#{by}"
+
+      assert %{"error" => ^error} = conn |> get("/v3/names?by=#{by}") |> json_response(400)
+    end
+
+    test "renders error when parameter direction is invalid", %{conn: conn} do
+      by = "name"
+      direction = "invalid_direction"
+      error = "invalid direction: #{direction}"
+
+      assert %{"error" => ^error} =
+               conn |> get("/v3/names?by=#{by}&direction=#{direction}") |> json_response(400)
+    end
+
+    test "renders error when parameter owned_by is not an address", %{conn: conn} do
+      owned_by = "invalid_address"
+      error = "invalid id: #{owned_by}"
+
+      assert %{"error" => ^error} =
+               conn |> get("/v3/names?owned_by=#{owned_by}") |> json_response(400)
+    end
+  end
+
   describe "names_count" do
     test "get names count", %{conn: conn, store: store} do
       first_owner_pk = <<123::256>>
