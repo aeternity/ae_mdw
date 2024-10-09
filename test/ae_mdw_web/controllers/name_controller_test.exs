@@ -3704,7 +3704,7 @@ defmodule AeMdwWeb.NameControllerTest do
         )
         |> Store.put(
           Model.IdFnameIntContractCall,
-          Model.id_fname_int_contract_call(index: {account_id, "AENS.claim", nil, 602, 1})
+          Model.id_fname_int_contract_call(index: {account_id, "AENS.claim", 1, 602, 1})
         )
         |> Store.put(
           Model.IdFnameIntContractCall,
@@ -3712,7 +3712,43 @@ defmodule AeMdwWeb.NameControllerTest do
         )
         |> Store.put(
           Model.IdFnameIntContractCall,
-          Model.id_fname_int_contract_call(index: {account_id, "AENS.claim", 3, 604, 1})
+          Model.id_fname_int_contract_call(index: {account_id, "AENS.claim", 1, 604, 1})
+        )
+        |> Store.put(
+          Model.ActiveName,
+          Model.name(
+            index: plain_name1,
+            owner: account_id,
+            active: active_from1,
+            expire: 1_111_111
+          )
+        )
+        |> Store.put(
+          Model.ActiveName,
+          Model.name(
+            index: plain_name2,
+            owner: account_id,
+            active: active_from2,
+            expire: 2_222_222
+          )
+        )
+        |> Store.put(
+          Model.ActiveName,
+          Model.name(
+            index: plain_name3,
+            owner: account_id,
+            active: active_from2,
+            expire: 3_333_333
+          )
+        )
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(
+            index: plain_name3,
+            owner: account_id,
+            active: active_from2,
+            expire: 3_333_333
+          )
         )
 
       conn = with_store(conn, store)
