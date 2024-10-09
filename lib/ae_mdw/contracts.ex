@@ -601,13 +601,13 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_scope(_state, nil), do: {@min_txi, @max_txi}
 
-  defp deserialize_scope(state, {:gen, first_gen..last_gen}) do
+  defp deserialize_scope(state, {:gen, first_gen..last_gen//_}) do
     first = DBUtil.gen_to_txi(state, first_gen)
     last = DBUtil.gen_to_txi(state, last_gen + 1) - 1
     deserialize_scope(state, {:txi, first..last})
   end
 
-  defp deserialize_scope(_state, {:txi, first_txi..last_txi}), do: {first_txi, last_txi}
+  defp deserialize_scope(_state, {:txi, first_txi..last_txi//_}), do: {first_txi, last_txi}
 
   defp create_txi(state, contract_pk) do
     with :not_found <- Origin.tx_index(state, {:contract, contract_pk}) do

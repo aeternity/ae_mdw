@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
       args:
-        RUNNER_IMAGE: "hexpm/elixir:1.16.2-erlang-26.2.4-debian-bullseye-20240408-slim"
+        RUNNER_IMAGE: "hexpm/elixir:1.17.3-erlang-26.2.5.3-debian-bullseye-20240926-slim"
         USER: root
         MIX_ENV: dev
         PATH_PREFIX: "/v3"

@@ -118,10 +118,10 @@ defmodule AeMdw.Txs do
     end
   end
 
-  def count(_state, {:txi, first_txi..last_txi}, params) when map_size(params) == 0,
+  def count(_state, {:txi, first_txi..last_txi//_}, params) when map_size(params) == 0,
     do: {:ok, last_txi - first_txi + 1}
 
-  def count(state, {:gen, first_gen..last_gen}, params) when map_size(params) == 0,
+  def count(state, {:gen, first_gen..last_gen//_}, params) when map_size(params) == 0,
     do: {:ok, DbUtil.gen_to_txi(state, last_gen + 1) - DbUtil.gen_to_txi(state, first_gen)}
 
   def count(_state, _range, _params),
@@ -239,7 +239,7 @@ defmodule AeMdw.Txs do
   #
   # Streams txs on a range satisfying the criteria from the query filters
   #
-  defp txs_streamer(_state, {:txi, first..last}, _query, _cursor) when first > last,
+  defp txs_streamer(_state, {:txi, first..last//_}, _query, _cursor) when first > last,
     do: {:ok, fn _direction -> [] end}
 
   defp txs_streamer(state, range, query, cursor) do
@@ -250,10 +250,10 @@ defmodule AeMdw.Txs do
 
       scope =
         case range do
-          {:gen, first_gen..last_gen} ->
+          {:gen, first_gen..last_gen//_} ->
             {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
 
-          {:txi, first_txi..last_txi} ->
+          {:txi, first_txi..last_txi//_} ->
             {first_txi, last_txi}
 
           nil ->

@@ -119,7 +119,7 @@ defmodule AeMdw.Dex do
   defp build_account_swaps_streamer(state, account_pk, %{create_txi: create_txi}, scope, cursor) do
     key_boundary =
       if scope do
-        first_txi..last_txi = gen_range_to_txi(state, scope)
+        first_txi..last_txi//_ = gen_range_to_txi(state, scope)
 
         {
           {account_pk, create_txi, first_txi, nil},
@@ -140,7 +140,7 @@ defmodule AeMdw.Dex do
   defp build_account_swaps_streamer(state, account_pk, _query, scope, cursor) do
     key_boundary =
       if scope do
-        first_txi..last_txi = gen_range_to_txi(state, scope)
+        first_txi..last_txi//_ = gen_range_to_txi(state, scope)
 
         {
           {account_pk, first_txi, nil, nil},
@@ -167,7 +167,7 @@ defmodule AeMdw.Dex do
   defp build_swaps_streamer(state, scope, cursor) do
     key_boundary =
       if scope do
-        first_txi..last_txi = gen_range_to_txi(state, scope)
+        first_txi..last_txi//_ = gen_range_to_txi(state, scope)
 
         {
           {first_txi, Util.min_int(), nil},
@@ -336,7 +336,7 @@ defmodule AeMdw.Dex do
     "invalid amounts"
   end
 
-  defp gen_range_to_txi(state, {:gen, first_gen..last_gen}) do
+  defp gen_range_to_txi(state, {:gen, first_gen..last_gen//_}) do
     first_txi = DbUtil.first_gen_to_txi(state, first_gen)
     last_txi = DbUtil.last_gen_to_txi(state, last_gen)
 

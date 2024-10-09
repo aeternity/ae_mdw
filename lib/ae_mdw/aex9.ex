@@ -280,7 +280,7 @@ defmodule AeMdw.Aex9 do
     with {:ok, cursor} <- deserialize_history_cursor(cursor) do
       {first_gen, last_gen} =
         case range do
-          {:gen, first..last} -> {first, last}
+          {:gen, first..last//_} -> {first, last}
           nil -> {0, DbUtil.last_gen(state)}
         end
 
