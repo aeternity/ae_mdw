@@ -27,7 +27,7 @@ defmodule AeMdw.Migrations.LogsHelper do
 
         state
         |> txi_ranges(evt_hash, first_txi, last_txi, max_range_len)
-        |> Enum.map(fn first..last//_ ->
+        |> Enum.map(fn first..last//_step ->
           {{evt_hash, first, 0, 0}, {evt_hash, last, nil, 0}}
         end)
 

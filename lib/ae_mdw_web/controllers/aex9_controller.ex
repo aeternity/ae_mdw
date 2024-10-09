@@ -131,7 +131,7 @@ defmodule AeMdwWeb.Aex9Controller do
         "range" => range,
         "contract_id" => contract_id
       }) do
-    with {:ok, first..last//_} <- validate_range(range),
+    with {:ok, first..last//_step} <- validate_range(range),
          {:ok, contract_pk} <-
            ensure_aex9_contract_at_block(state, contract_id, {min(first, last), -1}) do
       handle_input(
@@ -263,7 +263,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp validate_range(range) do
     case parse_range(range) do
-      {:ok, first..last//_} ->
+      {:ok, first..last//_step} ->
         {:ok, top_kb} = :aec_chain.top_key_block()
         first = max(0, first)
         last = min(last, :aec_blocks.height(top_kb))

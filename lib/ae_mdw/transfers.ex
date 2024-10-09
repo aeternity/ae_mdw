@@ -137,12 +137,12 @@ defmodule AeMdw.Transfers do
       Util.max_int()}}
   end
 
-  defp deserialize_scope(_state, {:gen, first_gen..last_gen//_}) do
+  defp deserialize_scope(_state, {:gen, first_gen..last_gen//_step}) do
     {{{first_gen, Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
      {{last_gen, Util.max_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(), Util.max_int()}}
   end
 
-  defp deserialize_scope(state, {:txi, first_txi..last_txi//_}) do
+  defp deserialize_scope(state, {:txi, first_txi..last_txi//_step}) do
     first_gen = DbUtil.txi_to_gen(state, first_txi)
     last_gen = DbUtil.txi_to_gen(state, last_txi)
     deserialize_scope(state, {:gen, first_gen..last_gen})

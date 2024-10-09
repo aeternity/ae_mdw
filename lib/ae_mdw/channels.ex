@@ -155,7 +155,7 @@ defmodule AeMdw.Channels do
         nil ->
           updates
 
-        {:gen, first_gen..last_gen//_} ->
+        {:gen, first_gen..last_gen//_step} ->
           first_txi = DbUtil.first_gen_to_txi(state, first_gen)
           last_txi = DbUtil.last_gen_to_txi(state, last_gen)
 
@@ -277,7 +277,7 @@ defmodule AeMdw.Channels do
   defp serialize_cursor({{height, channel_pk}, _source}),
     do: "#{height}-#{Enc.encode(:channel, channel_pk)}"
 
-  defp deserialize_scope({:gen, first_gen..last_gen//_}) do
+  defp deserialize_scope({:gen, first_gen..last_gen//_step}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
   end
 

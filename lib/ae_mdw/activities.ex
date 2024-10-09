@@ -104,7 +104,7 @@ defmodule AeMdw.Activities do
         fn direction ->
           {gen_scope, txi_scope} =
             case range do
-              {:gen, first_gen..last_gen//_} ->
+              {:gen, first_gen..last_gen//_step} ->
                 {
                   {first_gen, last_gen},
                   {DbUtil.first_gen_to_txi(state, first_gen),

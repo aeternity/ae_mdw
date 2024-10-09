@@ -110,7 +110,7 @@ defmodule AeMdw.Stats do
     range =
       case range do
         nil -> {1, last_gen}
-        {:gen, first..last//_} -> {max(first, 1), last}
+        {:gen, first..last//_step} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
@@ -465,7 +465,7 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp render_stats(state, first..last//_) do
+  defp render_stats(state, first..last//_step) do
     Enum.map(first..last, fn height ->
       %{
         block_reward: block_reward,
@@ -592,7 +592,7 @@ defmodule AeMdw.Stats do
   end
 
   defp deserialize_scope(nil, last_gen), do: {1, last_gen}
-  defp deserialize_scope({:gen, first..last//_}, _last_gen), do: {max(first, 1), last}
+  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {max(first, 1), last}
 
   defp fetch_last_tx_hash!(state, height) do
     case State.get(state, Model.Block, {height + 1, -1}) do

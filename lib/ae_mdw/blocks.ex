@@ -47,7 +47,7 @@ defmodule AeMdw.Blocks do
       range =
         case range do
           nil -> {0, last_gen}
-          {:gen, first..last//_} -> {first, last}
+          {:gen, first..last//_step} -> {first, last}
         end
 
       case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
@@ -124,7 +124,7 @@ defmodule AeMdw.Blocks do
       range =
         case range do
           nil -> {0, last_gen}
-          {:gen, first..last//_} -> {first, last}
+          {:gen, first..last//_step} -> {first, last}
         end
 
       case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do

@@ -108,7 +108,7 @@ defmodule AeMdw.Oracles do
               {oracle_pk, "reward_oracle", {Util.max_int(), -1}, -1}
             }
 
-          first_gen..last_gen//_ ->
+          first_gen..last_gen//_step ->
             {
               {oracle_pk, "reward_oracle", {first_gen, Util.min_int()}, -1},
               {oracle_pk, "reward_oracle", {last_gen, Util.max_int()}, -1}
@@ -433,7 +433,7 @@ defmodule AeMdw.Oracles do
 
   defp deserialize_scope(nil), do: nil
 
-  defp deserialize_scope({:gen, first_gen..last_gen//_}),
+  defp deserialize_scope({:gen, first_gen..last_gen//_step}),
     do: {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
 
   defp serialize_nested_cursor({{height, mbi}, {txi, idx}}),
