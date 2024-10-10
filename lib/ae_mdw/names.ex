@@ -281,7 +281,7 @@ defmodule AeMdw.Names do
               {account_pk, {{@max_int, -1}, {-1, -1}}, <<>>}
             }
 
-          {:gen, gen_start..gen_end} ->
+          {:gen, gen_start..gen_end//_step} ->
             {
               {account_pk, {{gen_start, @min_int}, {-1, -1}}, <<>>},
               {account_pk, {{gen_end, @max_int}, {-1, -1}}, <<>>}
@@ -851,7 +851,7 @@ defmodule AeMdw.Names do
             {plain_name, nested_height, {@max_int, @max_int}}
           }
 
-        {:gen, first_gen..last_gen} ->
+        {:gen, first_gen..last_gen//_step} ->
           {
             {plain_name, nested_height, {DbUtil.first_gen_to_txi(state, first_gen), @min_int}},
             {plain_name, nested_height, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}}
@@ -932,7 +932,7 @@ defmodule AeMdw.Names do
 
   defp serialize_owner_deactivation_cursor(owner_pk, {gen, name}), do: {owner_pk, gen, name}
 
-  defp deserialize_scope({:gen, first_gen..last_gen}) do
+  defp deserialize_scope({:gen, first_gen..last_gen//_step}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
   end
 

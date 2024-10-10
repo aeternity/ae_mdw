@@ -127,13 +127,13 @@ defmodule AeMdw.ActiveEntities do
 
   defp deserialize_scope(_state, nil), do: {@min_txi, @max_txi}
 
-  defp deserialize_scope(state, {:gen, first_gen..last_gen}) do
+  defp deserialize_scope(state, {:gen, first_gen..last_gen//_step}) do
     first = DbUtil.gen_to_txi(state, first_gen)
     last = DbUtil.gen_to_txi(state, last_gen + 1) - 1
     deserialize_scope(state, {:txi, first..last})
   end
 
-  defp deserialize_scope(_state, {:txi, first_txi..last_txi}), do: {first_txi, last_txi}
+  defp deserialize_scope(_state, {:txi, first_txi..last_txi//_step}), do: {first_txi, last_txi}
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 

@@ -5,7 +5,7 @@ services:
       dockerfile: ./Dockerfile
       args:
         MIX_ENV: test
-        RUNNER_IMAGE: "hexpm/elixir:1.16.2-erlang-26.2.4-debian-bullseye-20240408-slim"
+        RUNNER_IMAGE: "hexpm/elixir:1.17.3-erlang-26.2.5.3-debian-bullseye-20240926-slim"
         USER: root
     image: ae_mdw_test:latest
     command: ./scripts/test.sh
