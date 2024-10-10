@@ -21,33 +21,6 @@ ip =
     {0, 0, 0, 0, 0, 0, 0, 0}
   end
 
-# Endpoint
-if env != :test do
-  port = String.to_integer(System.get_env("PORT") || "4000")
-  protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
-
-  config :ae_mdw, AeMdwWeb.Endpoint,
-    http: [
-      ip: ip,
-      port: port,
-      protocol_options: protocol_opts
-    ],
-    debug_errors: env == :dev,
-    cache_static_manifest: "priv/static/cache_manifest.json"
-
-  ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
-  timeout_opts = [inactivity_timeout: 30 * 60_000, idle_timeout: 30 * 60_000]
-
-  config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
-    http: [
-      ip: ip,
-      port: ws_port,
-      protocol_options: protocol_opts ++ timeout_opts
-    ]
-end
-
-# Logging
-
 log_level =
   case System.get_env("LOG_LEVEL") do
     "none" -> :none
@@ -72,9 +45,34 @@ logger_backends =
     do: [Logger.Backends.Console | base_logger_backends],
     else: base_logger_backends
 
-config :logger,
-  level: log_level || :info,
-  backends: logger_backends
+# Endpoint
+if env != :test do
+  port = String.to_integer(System.get_env("PORT") || "4000")
+  protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+
+  config :ae_mdw, AeMdwWeb.Endpoint,
+    http: [
+      ip: ip,
+      port: port,
+      protocol_options: protocol_opts
+    ],
+    debug_errors: env == :dev,
+    cache_static_manifest: "priv/static/cache_manifest.json"
+
+  ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
+  timeout_opts = [inactivity_timeout: 30 * 60_000, idle_timeout: 30 * 60_000]
+
+  config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+    http: [
+      ip: ip,
+      port: ws_port,
+      protocol_options: protocol_opts ++ timeout_opts
+    ]
+
+  config :logger,
+    level: log_level || :info,
+    backends: logger_backends
+end
 
 formatters = %{
   "datadog" => :datadog,
