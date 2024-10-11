@@ -21,37 +21,6 @@ defmodule AeMdwWeb.AexnTransferController do
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
-  @spec transfers_from_v1(Conn.t(), map()) :: Conn.t()
-  def transfers_from_v1(conn, %{"sender" => sender_id}),
-    do:
-      Util.handle_input(
-        conn,
-        fn ->
-          transfers_reply(conn, {:from, Validate.id!(sender_id)}, &sender_transfer_to_map/2)
-        end
-      )
-
-  @spec transfers_to_v1(Conn.t(), map()) :: Conn.t()
-  def transfers_to_v1(conn, %{"recipient" => recipient_id}) do
-    Util.handle_input(
-      conn,
-      fn ->
-        transfers_reply(conn, {:to, Validate.id!(recipient_id)}, &recipient_transfer_to_map/2)
-      end
-    )
-  end
-
-  @spec transfers_from_to_v1(Conn.t(), map()) :: Conn.t()
-  def transfers_from_to_v1(conn, %{"sender" => sender_id, "recipient" => recipient_id}) do
-    Util.handle_input(
-      conn,
-      fn ->
-        query = {:from_to, Validate.id!(sender_id), Validate.id!(recipient_id)}
-        transfers_reply(conn, query, &pair_transfer_to_map/2)
-      end
-    )
-  end
-
   @spec aex9_contract_transfers(Conn.t(), map()) :: Conn.t()
   def aex9_contract_transfers(
         conn,
@@ -155,15 +124,6 @@ defmodule AeMdwWeb.AexnTransferController do
   #
   # Private functions
   #
-  defp transfers_reply(%Conn{assigns: %{state: state}} = conn, query, transfer_to_map_fn) do
-    transfers =
-      state
-      |> Contract.aex9_search_transfers(query)
-      |> Enum.map(&transfer_to_map_fn.(state, &1))
-
-    format_json(conn, transfers)
-  end
-
   defp contract_transfers_reply(
          %Conn{assigns: assigns} = conn,
          contract_id,
