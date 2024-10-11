@@ -897,7 +897,7 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => 0.46,
                  "fees_trend" => 0.69,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
-                 "minutes_per_block" => ^three_minutes
+                 "ms_per_block" => ^three_minutes
                } =
                  conn
                  |> with_store(store)

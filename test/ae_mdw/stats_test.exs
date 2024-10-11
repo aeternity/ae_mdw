@@ -45,7 +45,7 @@ defmodule AeMdw.StatsTest do
                   max_transactions_per_second: 16.05,
                   max_transactions_per_second_block_hash: ^enc_hash,
                   miners_count: 20,
-                  minutes_per_block: ^three_minutes
+                  ms_per_block: ^three_minutes
                 }} = Stats.fetch_stats(state)
       end
     end
