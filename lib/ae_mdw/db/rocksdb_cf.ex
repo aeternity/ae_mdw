@@ -220,6 +220,58 @@ defmodule AeMdw.Db.RocksDbCF do
     record
   end
 
+  @spec stream(table(), Keyword.t()) :: Enumerable.t()
+  def stream(table, opts \\ []) do
+    potential_cursor =
+      case Keyword.get(opts, :cursor, nil) do
+        nil -> []
+        cursor -> [cursor]
+      end
+
+    key_boundary = Keyword.get(opts, :key_boundary, nil)
+    record_type = Model.record(table)
+
+    {cursor, check_end} =
+      case key_boundary do
+        nil ->
+          {Enum.max(potential_cursor, fn -> nil end), fn _key -> true end}
+
+        {min_key, max_key} ->
+          max_key = :sext.encode(max_key)
+          {Enum.max([min_key | potential_cursor]), fn key -> key <= max_key end}
+      end
+
+    Stream.resource(
+      fn ->
+        {:ok, it} = RocksDb.iterator(table)
+
+        case cursor do
+          nil -> {it, :first}
+          key -> {it, {:seek, :sext.encode(key)}}
+        end
+      end,
+      fn {it, action} ->
+        with {:ok, key, value} <- :rocksdb.iterator_move(it, action),
+             true <- check_end.(key) do
+          record =
+            record_type
+            |> decode_value(value)
+            |> Tuple.insert_at(0, :sext.decode(key))
+            |> Tuple.insert_at(0, record_type)
+
+          {[record], {it, :next}}
+        else
+          {:error, :invalid_iterator} ->
+            {:halt, {it, :next}}
+
+          false ->
+            {:halt, {it, :next}}
+        end
+      end,
+      fn {it, _action} -> RocksDb.iterator_close(it) end
+    )
+  end
+
   #
   # Private functions
   #
