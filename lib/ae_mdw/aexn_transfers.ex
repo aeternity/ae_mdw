@@ -215,6 +215,10 @@ defmodule AeMdw.AexnTransfers do
                 cursor_term
               ) or
                 match?(
+                  {_type_or_pk, <<_pk1::256>>, _txi, <<_pk2::256>>, _idx, _amount},
+                  cursor_term
+                ) or
+                match?(
                   {_type_or_pk, <<_pk1::256>>, <<_pk2::256>>, _txi, _idx, _amount},
                   cursor_term
                 ) or
