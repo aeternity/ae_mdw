@@ -844,9 +844,9 @@ defmodule AeMdw.Db.Contract do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
-      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
+      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, i, value})
 
-    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
+    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, i, value})
 
     state
     |> State.put(Model.AexnContractFromTransfer, m_ct_from)

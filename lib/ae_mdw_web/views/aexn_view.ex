@@ -49,7 +49,6 @@ defmodule AeMdwWeb.AexnView do
 
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
   @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
-  @typep contract_transfer_key :: AeMdw.AexnTransfers.contract_transfer_key()
 
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -130,7 +129,7 @@ defmodule AeMdwWeb.AexnView do
           State.t(),
           Model.aexn_type(),
           :from | :to | nil,
-          contract_transfer_key(),
+          account_transfer_key(),
           boolean()
         ) ::
           map()

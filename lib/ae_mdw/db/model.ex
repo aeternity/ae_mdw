@@ -904,9 +904,9 @@ defmodule AeMdw.Db.Model do
   @type idx_contract_log() :: record(:idx_contract_log, index: idx_contract_log_index())
 
   # aexn transfer:
-  #    index: {:aex9 | :aex141, from pk, call txi_idx, to pk, amount | token_id}
+  #    index: {:aex9 | :aex141, from pk, call_txi, log_idx, to pk, amount | token_id}
   @aexn_transfer_defaults [
-    index: {nil, <<>>, {-1, -1}, <<>>, -1},
+    index: {nil, <<>>, -1, -1, <<>>, -1},
     contract_pk: <<>>
   ]
   defrecord :aexn_transfer, @aexn_transfer_defaults
@@ -919,7 +919,7 @@ defmodule AeMdw.Db.Model do
   # rev aexn transfer:
   #    index: {:aex9 | :aex141, to pk, call txi, from pk, amount | token_id, log idx}
   @rev_aexn_transfer_defaults [
-    index: {nil, <<>>, -1, <<>>, -1, -1},
+    index: {nil, <<>>, -1, -1, <<>>, -1},
     unused: nil
   ]
   defrecord :rev_aexn_transfer, @rev_aexn_transfer_defaults
