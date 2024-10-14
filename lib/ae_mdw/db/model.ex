@@ -572,11 +572,13 @@ defmodule AeMdw.Db.Model do
   @type aexn_invalid_contract ::
           record(:aexn_invalid_contract,
             index: aexn_invalid_contract_index(),
-            reason: binary()
+            reason: binary(),
+            description: binary()
           )
   @aexn_invalid_contract_defaults [
     index: {},
-    reason: nil
+    reason: nil,
+    description: nil
   ]
   defrecord :aexn_invalid_contract, @aexn_invalid_contract_defaults
 
