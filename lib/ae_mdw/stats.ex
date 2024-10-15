@@ -100,33 +100,6 @@ defmodule AeMdw.Stats do
   @spec nft_owners_count_key(pubkey()) :: {atom(), pubkey()}
   def nft_owners_count_key(contract_pk), do: {@nft_owners_count_stat, contract_pk}
 
-<<<<<<< HEAD
-  # Legacy v1 is a blending between /totalstats and /deltastats.
-  # The active and inactive object counters are totals while the rewards are delta.
-  @spec fetch_stats_v1(State.t(), direction(), range(), cursor(), limit()) ::
-          {cursor(), [stat()], cursor()}
-  def fetch_stats_v1(state, direction, range, cursor, limit) do
-    {:ok, last_gen} = State.prev(state, Model.TotalStat, nil)
-
-    range =
-      case range do
-        nil -> {1, last_gen}
-        {:gen, first..last//_step} -> {max(first, 1), last}
-      end
-
-    cursor = deserialize_cursor(cursor)
-
-    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
-      {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_stats(state, range), serialize_cursor(next_cursor)}
-
-      :error ->
-        {nil, [], nil}
-    end
-  end
-
-=======
->>>>>>> chore: remove further unused v1 routes
   @spec fetch_delta_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
   def fetch_delta_stats(state, direction, range, cursor, limit) do
