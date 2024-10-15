@@ -38,7 +38,6 @@ defmodule AeMdw.Db.Model do
   @typep txi() :: Txs.txi()
   @typep txi_idx() :: Txs.txi_idx()
   @typep log_idx() :: Contracts.log_idx()
-  @typep tx_hash() :: Txs.tx_hash()
   @typep bi_txi() :: Blocks.bi_txi()
   @typep bi_txi_idx() :: Blocks.bi_txi_idx()
   @typep query_id() :: Oracles.query_id()
@@ -180,22 +179,20 @@ defmodule AeMdw.Db.Model do
   @type id_count() :: record(:id_count, index: id_count_index(), count: non_neg_integer())
 
   # object origin :
-  #     index = {tx_type, pubkey, tx_index}, tx_id = tx_hash
-  @origin_defaults [index: {nil, nil, nil}, tx_id: nil]
+  #     index = {tx_type, pubkey}, txi_idx
+  @origin_defaults [index: {nil, nil}, txi_idx: nil]
   defrecord :origin, @origin_defaults
 
-  @type origin_index() :: {tx_type(), pubkey(), txi()}
-  @type origin() :: record(:origin, index: origin_index(), tx_id: tx_hash())
+  @type origin_index() :: {tx_type(), pubkey()}
+  @type origin() :: record(:origin, index: origin_index(), txi_idx: txi_idx())
 
-  # we need this one to quickly locate origin keys to delete for invalidating a fork
-  #
   # rev object origin :
-  #     index = {tx_index, tx_type, pubkey}
-  @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
+  #     index = {txi_idx, tx_type}, pubkey
+  @rev_origin_defaults [index: {nil, nil}, pubkey: nil]
   defrecord :rev_origin, @rev_origin_defaults
 
-  @type rev_origin_index() :: {txi(), tx_type(), pubkey()}
-  @type rev_origin() :: record(:rev_origin, index: rev_origin_index())
+  @type rev_origin_index() :: {txi_idx(), tx_type()}
+  @type rev_origin() :: record(:rev_origin, index: rev_origin_index(), pubkey: pubkey())
 
   # plain name:
   #     index = name_hash, plain = plain name

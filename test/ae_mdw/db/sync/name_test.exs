@@ -40,7 +40,6 @@ defmodule AeMdw.Db.Sync.NameTest do
       block_index = {height, 1}
       txi = height * 1_000
       txi_idx = {txi, -1}
-      tx_hash = <<txi::256>>
 
       {:ok, aetx} =
         :aens_claim_tx.new(%{
@@ -70,10 +69,10 @@ defmodule AeMdw.Db.Sync.NameTest do
             block_index,
             protocol_version
           )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, {txi, -1})
         ]
 
-        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi_idx)
+        assert ^mutations = Name.name_claim_mutations(tx_rec, block_index, txi_idx)
       end
     end
 
@@ -85,7 +84,6 @@ defmodule AeMdw.Db.Sync.NameTest do
       height = AeMdw.Node.lima_height() + Enum.random(100..999)
       block_index = {height, 1}
       txi = height * 1000
-      tx_hash = <<txi::256>>
 
       {:ok, aetx} =
         :aens_claim_tx.new(%{
@@ -115,10 +113,10 @@ defmodule AeMdw.Db.Sync.NameTest do
             block_index,
             4
           )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, {txi, -1})
         ]
 
-        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, {txi, -1})
+        assert ^mutations = Name.name_claim_mutations(tx_rec, block_index, {txi, -1})
       end
     end
   end

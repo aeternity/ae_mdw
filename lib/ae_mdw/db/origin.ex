@@ -1,7 +1,6 @@
 defmodule AeMdw.Db.Origin do
   @moduledoc false
 
-  alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -9,10 +8,7 @@ defmodule AeMdw.Db.Origin do
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
-  alias AeMdw.Util
   alias AeMdw.Validate
-
-  import AeMdw.Util
 
   require Model
   require Logger
@@ -23,16 +19,7 @@ defmodule AeMdw.Db.Origin do
 
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
-
-  ##########
-
-  @spec block_index(State.t(), {:contract, binary()}) :: map()
-  def block_index(state, {:contract, id}),
-    do:
-      map_some(
-        tx_index(state, {:contract, id}),
-        &Model.tx(DbUtil.read_tx!(state, &1), :block_index)
-      )
+  @typep txi() :: Txs.txi()
 
   @doc """
   Tries to find the transaction that created a contract by finding it from 3
@@ -50,7 +37,7 @@ defmodule AeMdw.Db.Origin do
     and created through core hard-forks. These contracts will have a negative
     txi where the number is the index of the preloaded contracts.
   """
-  @spec tx_index(State.t(), creation_txi_locator()) :: {:ok, integer()} | :not_found
+  @spec tx_index(State.t(), creation_txi_locator()) :: {:ok, txi()} | :not_found
   def tx_index(state, {:contract, pk}) do
     with :error <- field_txi(state, :contract_create_tx, nil, pk),
          :error <- field_txi(state, :contract_call_tx, nil, pk),
@@ -91,9 +78,13 @@ defmodule AeMdw.Db.Origin do
   end
 
   def pubkey(state, {:contract, txi}) do
-    case State.next(state, Model.RevOrigin, {txi, -1, <<>>}) do
-      {:ok, {^txi, type, pubkey}} when type in @contract_creation_types -> pubkey
-      _key_mismatch -> nil
+    case State.next(state, Model.RevOrigin, {{txi, -1}, -1}) do
+      {:ok, {{^txi, _idx}, type} = index} when type in @contract_creation_types ->
+        Model.rev_origin(pubkey: pubkey) = State.fetch!(state, Model.RevOrigin, index)
+        pubkey
+
+      _key_mismatch ->
+        nil
     end
   end
 
@@ -110,12 +101,6 @@ defmodule AeMdw.Db.Origin do
     contract_id
   end
 
-  @spec count_contracts(State.t()) :: non_neg_integer()
-  def count_contracts(state) do
-    count_by_tx_type(state, :contract_create_tx) + count_by_tx_type(state, :contract_call_tx) +
-      count_by_tx_type(state, :ga_attach_tx)
-  end
-
   #
   # Private functions
   #
@@ -124,13 +109,6 @@ defmodule AeMdw.Db.Origin do
       {:ok, {^tx_type, ^pos, ^pk, txi}} -> {:ok, txi}
       _key_mismatch -> :error
     end
-  end
-
-  defp count_by_tx_type(state, tx_type) do
-    state
-    |> Collection.stream(Model.Origin, {tx_type, Util.min_bin(), nil})
-    |> Stream.take_while(&match?({^tx_type, _pubkey, _txi}, &1))
-    |> Enum.count()
   end
 
   defp hardforks_contracts do

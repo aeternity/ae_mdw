@@ -31,12 +31,11 @@ defmodule AeMdw.Db.Sync.Contract do
           Blocks.block_hash(),
           Blocks.block_index(),
           Txs.txi(),
-          Txs.tx_hash(),
           Db.pubkey()
         ) :: [
           Mutation.t()
         ]
-  def events_mutations(events, block_hash, block_index, call_txi, call_tx_hash, contract_pk) do
+  def events_mutations(events, block_hash, block_index, call_txi, contract_pk) do
     events =
       Enum.filter(
         events,
@@ -76,7 +75,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     [
       IntCallsMutation.new(contract_pk, call_txi, int_calls)
-      | events_tx_mutations(int_calls, block_index, block_hash, call_txi, call_tx_hash)
+      | events_tx_mutations(int_calls, block_index, block_hash, call_txi)
     ]
   end
 
@@ -127,13 +126,13 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp events_tx_mutations(int_calls, {height, _mbi} = block_index, block_hash, call_txi, tx_hash) do
+  defp events_tx_mutations(int_calls, {height, _mbi} = block_index, block_hash, call_txi) do
     Enum.map(int_calls, fn
       {local_idx, "Oracle.extend", :oracle_extend_tx, _aetx, tx} ->
         Oracle.extend_mutation(tx, block_index, {call_txi, local_idx})
 
       {local_idx, "Oracle.register", :oracle_register_tx, _aetx, tx} ->
-        Oracle.register_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
+        Oracle.register_mutations(tx, block_index, {call_txi, local_idx})
 
       {local_idx, "Oracle.respond", :oracle_response_tx, _aetx, tx} ->
         Oracle.response_mutation(tx, block_index, {call_txi, local_idx})
@@ -142,7 +141,7 @@ defmodule AeMdw.Db.Sync.Contract do
         Oracle.query_mutation(tx, height, {call_txi, local_idx})
 
       {local_idx, "AENS.claim", :name_claim_tx, _aetx, tx} ->
-        Name.name_claim_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
+        Name.name_claim_mutations(tx, block_index, {call_txi, local_idx})
 
       {local_idx, "AENS.update", :name_update_tx, _aetx, tx} ->
         Name.update_mutations(tx, {call_txi, local_idx}, block_index, true)
@@ -177,8 +176,7 @@ defmodule AeMdw.Db.Sync.Contract do
               :contract_call_tx,
               nil,
               contract_pk,
-              call_txi,
-              tx_hash
+              {call_txi, local_idx}
             )
         ]
 

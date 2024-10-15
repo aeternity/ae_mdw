@@ -17,7 +17,6 @@ defmodule AeMdw.Db.Sync.OracleTest do
       ttl = 10_000
       expire = height + ttl
       txi = height * 1000
-      tx_hash = <<123_456::256>>
       txi_idx = {txi, -1}
 
       {:ok, aetx} =
@@ -35,11 +34,11 @@ defmodule AeMdw.Db.Sync.OracleTest do
       {_mod, tx_rec} = :aetx.specialize_callback(aetx)
 
       mutations = [
-        Origin.origin_mutations(:oracle_register_tx, nil, pubkey, txi, tx_hash),
+        Origin.origin_mutations(:oracle_register_tx, nil, pubkey, txi_idx),
         OracleRegisterMutation.new(pubkey, block_index, expire, txi_idx)
       ]
 
-      assert ^mutations = Oracle.register_mutations(tx_rec, tx_hash, block_index, txi_idx)
+      assert ^mutations = Oracle.register_mutations(tx_rec, block_index, txi_idx)
     end
   end
 

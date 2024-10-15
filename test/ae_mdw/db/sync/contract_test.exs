@@ -69,14 +69,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
       mutations =
-        SyncContract.events_mutations(events, <<0::256>>, {0, 0}, call_txi, <<>>, contract_pk)
+        SyncContract.events_mutations(events, <<0::256>>, {0, 0}, call_txi, contract_pk)
 
       assert mutation in List.flatten(mutations)
     end
 
     test "it creates an Field record for each Chain.create/clone event, using the next Call.amount event" do
       call_txi = Enum.random(100_000..999_999)
-      call_tx_hash = :crypto.strong_rand_bytes(32)
       block_hash = :crypto.strong_rand_bytes(32)
       owner_pk = <<1::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
@@ -167,8 +166,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
           :contract_call_tx,
           nil,
           contract_pk1,
-          call_txi,
-          call_tx_hash
+          {call_txi, 1}
         )
 
       contract1 = :aect_contracts.new(owner_pk, nonce, %{vm: 7, abi: 3}, "code-2", 222)
@@ -197,7 +195,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
             block_hash,
             {0, 0},
             call_txi,
-            call_tx_hash,
             contract_pk
           )
           |> List.flatten()
@@ -260,7 +257,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
             block_hash,
             {554_178, 13},
             25_866_736,
-            <<2::256>>,
             25_866_736
           )
 
@@ -280,7 +276,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.transfer"
         |> contract_events()
-        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -301,7 +297,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.update"
         |> contract_events()
-        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -338,8 +334,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
       sync_height = 50_000
       expire = sync_height + delta_ttl
       call_txi = sync_height * 1_000
-
-      call_tx_hash = <<1::256>>
       contract_pk = <<2::256>>
 
       mutations =
@@ -348,7 +342,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
           <<0::256>>,
           {sync_height, 0},
           call_txi,
-          call_tx_hash,
           contract_pk
         )
         |> List.flatten()
@@ -364,11 +357,11 @@ defmodule AeMdw.Db.Sync.ContractTest do
                },
                %WriteMutation{
                  table: Model.Origin,
-                 record: Model.origin(index: {^tx_type, ^pubkey, ^call_txi})
+                 record: Model.origin(index: {^tx_type, ^pubkey}, txi_idx: {^call_txi, 0})
                },
                %WriteMutation{
                  table: Model.RevOrigin,
-                 record: Model.rev_origin(index: {^call_txi, ^tx_type, ^pubkey})
+                 record: Model.rev_origin(index: {{^call_txi, 0}, ^tx_type}, pubkey: ^pubkey)
                },
                %AeMdw.Db.WriteFieldMutation{
                  pos: nil,
@@ -398,7 +391,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
       sync_height = 50_000
       block_index = {sync_height, 0}
       call_txi = sync_height * 1_000
-      call_tx_hash = <<2::256>>
       contract_pk = <<3::256>>
 
       mutations =
@@ -407,7 +399,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
           <<0::256>>,
           block_index,
           call_txi,
-          call_tx_hash,
           contract_pk
         )
         |> List.flatten()
