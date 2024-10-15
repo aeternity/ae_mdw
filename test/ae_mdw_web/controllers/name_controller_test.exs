@@ -3,7 +3,6 @@ defmodule AeMdwWeb.NameControllerTest do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Format
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Store
@@ -1543,108 +1542,6 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "get active and inactive names, except those in auction, with parameters by=name, direction=forward and limit=4",
-         %{conn: conn, store: store} do
-      limit = 4
-      by = "name"
-      direction = "forward"
-      key_hash = <<0::256>>
-
-      store =
-        1..5
-        |> Enum.reduce(store, fn i, store ->
-          plain_name = "#{i}.chain"
-
-          name =
-            Model.name(
-              index: plain_name,
-              active: Enum.random(1000..9999),
-              expire: 1,
-              revoke: {{0, 0}, {0, -1}},
-              auction_timeout: 1
-            )
-
-          Store.put(store, Model.ActiveName, name)
-        end)
-        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
-        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<123::256>>))
-
-      with_mocks [
-        {Txs, [:passthrough],
-         [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {Name, [:passthrough],
-         [
-           pointers: fn _state, _mnme -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
-         ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
-      ] do
-        assert %{"data" => names, "next" => _next} =
-                 conn
-                 |> with_store(store)
-                 |> get("/names?by=#{by}&direction=#{direction}&limit=#{limit}")
-                 |> json_response(200)
-
-        plain_names = Enum.map(names, & &1["name"])
-        assert ^plain_names = Enum.sort(plain_names)
-        assert ^limit = length(names)
-      end
-    end
-
-    test "get active names with parameters by=activation, direction=forward and limit=9",
-         %{conn: conn, store: store} do
-      limit = 9
-      by = "activation"
-      direction = "forward"
-      key_hash = <<0::256>>
-
-      store =
-        1..11
-        |> Enum.reduce(store, fn i, store ->
-          plain_name = "#{i}.chain"
-
-          name =
-            Model.name(
-              index: plain_name,
-              active: i,
-              expire: i + 10
-            )
-
-          store
-          |> Store.put(Model.ActiveName, name)
-          |> Store.put(Model.ActiveNameActivation, Model.activation(index: {i, plain_name}))
-        end)
-        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
-
-      with_mocks [
-        {Txs, [],
-         [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {Name, [:passthrough],
-         [
-           pointers: fn _state, _mnme -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
-         ]},
-        {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
-      ] do
-        assert %{"data" => names, "next" => _next} =
-                 conn
-                 |> with_store(store)
-                 |> get("/names", state: "active", by: by, direction: direction, limit: limit)
-                 |> json_response(200)
-
-        heights = Enum.map(names, & &1["info"]["active_from"])
-
-        assert ^heights = Enum.sort(heights)
-        assert ^limit = length(names)
-      end
-    end
-
     test "get inactive names for given account/owner", %{conn: conn, store: store} do
       owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
       owner_pk = Validate.id!(owner_id)
@@ -1694,12 +1591,12 @@ defmodule AeMdwWeb.NameControllerTest do
            end
          ]},
         {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => owned_names} =
                  conn
                  |> with_store(store)
-                 |> get("/names",
+                 |> get("/v3/names",
                    owned_by: owner_id,
                    by: "name",
                    state: "inactive",
@@ -1712,74 +1609,6 @@ defmodule AeMdwWeb.NameControllerTest do
         assert Enum.all?(owned_names, fn %{"name" => plain_name} ->
                  plain_name in [first_name, second_name]
                end)
-      end
-    end
-
-    test "get both active and inactive names for given account/owner", %{conn: conn, store: store} do
-      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
-      owner_pk = Validate.id!(owner_id)
-      other_pk = :crypto.strong_rand_bytes(32)
-      first_name = TS.plain_name(4)
-      not_owned_name = "o2#{first_name}"
-      second_name = "o1#{first_name}"
-      third_name = "o3#{first_name}"
-      key_hash = <<0::256>>
-
-      inactive_name =
-        Model.name(
-          index: first_name,
-          active: 1,
-          expire: 3,
-          revoke: nil,
-          owner: owner_pk,
-          auction_timeout: 1
-        )
-
-      active_name = Model.name(inactive_name, index: third_name)
-
-      store =
-        store
-        |> Store.put(Model.InactiveName, inactive_name)
-        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
-        |> Store.put(
-          Model.InactiveName,
-          Model.name(inactive_name, index: not_owned_name, owner: other_pk)
-        )
-        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, first_name}))
-        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, second_name}))
-        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {other_pk, not_owned_name}))
-        |> Store.put(Model.ActiveName, active_name)
-        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, third_name}))
-        |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
-
-      with_mocks [
-        {Txs, [],
-         [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {Name, [:passthrough],
-         [
-           pointers: fn _state, _mnme -> %{} end,
-           ownership: fn _state, _mname ->
-             orig = {:id, :account, owner_pk}
-             %{current: orig, original: orig}
-           end
-         ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
-      ] do
-        assert %{"data" => owned_names} =
-                 conn
-                 |> with_store(store)
-                 |> get("/names",
-                   owned_by: owner_id,
-                   by: "name",
-                   limit: 3
-                 )
-                 |> json_response(200)
-
-        assert [^third_name, ^second_name, ^first_name] =
-                 Enum.map(owned_names, fn %{"name" => name} -> name end)
       end
     end
 
@@ -1845,7 +1674,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      assert %{"error" => ^error} = conn |> get("/names?by=#{by}") |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/v3/names?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -1854,7 +1683,7 @@ defmodule AeMdwWeb.NameControllerTest do
       error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
-               conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)
+               conn |> get("/v3/names?by=#{by}&direction=#{direction}") |> json_response(400)
     end
 
     test "renders error when parameter owned_by is not an address", %{conn: conn} do
@@ -1862,7 +1691,7 @@ defmodule AeMdwWeb.NameControllerTest do
       error = "invalid id: #{owned_by}"
 
       assert %{"error" => ^error} =
-               conn |> get("/names?owned_by=#{owned_by}") |> json_response(400)
+               conn |> get("/v3/names?owned_by=#{owned_by}") |> json_response(400)
     end
   end
 
@@ -2389,71 +2218,6 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn |> with_store(store) |> get("/v2/names/#{id}/pointees") |> json_response(400)
-    end
-  end
-
-  describe "owned_by" do
-    test "get active names for given account/owner", %{conn: conn, store: store} do
-      id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
-      owner_pk = Validate.id!(id)
-      plain_name = "ownername"
-
-      with_blockchain %{}, mb: [] do
-        %{block: block} = blocks[:mb]
-        {:ok, block_hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
-
-        store =
-          store
-          |> MemStore.new()
-          |> Store.put(Model.Block, Model.block(index: {123, -1}, hash: block_hash))
-          |> Store.put(
-            Model.ActiveNameOwner,
-            Model.owner(index: {owner_pk, plain_name})
-          )
-          |> Store.put(
-            Model.ActiveName,
-            Model.name(
-              index: plain_name,
-              active: 100,
-              expire: 200,
-              owner: owner_pk,
-              auction_timeout: 0
-            )
-          )
-
-        assert %{"active" => active_names, "top_bid" => []} =
-                 conn |> with_store(store) |> get("/names/owned_by/#{id}") |> json_response(200)
-
-        assert %{
-                 "active" => true,
-                 "info" => %{
-                   "active_from" => 100,
-                   "expire_height" => 200,
-                   "ownership" => %{"current" => ^id}
-                 },
-                 "name" => ^plain_name,
-                 "status" => "name"
-               } = hd(active_names)
-      end
-    end
-
-    test "get inactive names for given account/owner", %{conn: conn} do
-      id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
-      owner_id = Validate.id!(id)
-
-      with_mocks [
-        {Name, [], [owned_by: fn _state, ^owner_id, false -> %{names: []} end]}
-      ] do
-        assert %{"inactive" => []} =
-                 conn |> get("/names/owned_by/#{id}?active=false") |> json_response(200)
-      end
-    end
-
-    test "renders error when the key is invalid", %{conn: conn} do
-      id = "ak_invalid_key"
-      error = "invalid id: #{id}"
-
-      assert %{"error" => ^error} = conn |> get("/names/owned_by/#{id}") |> json_response(400)
     end
   end
 
@@ -3628,26 +3392,6 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
         assert %{"data" => ^claims} = conn |> get(hash_prev_url) |> json_response(200)
       end
-    end
-  end
-
-  describe "search_v1" do
-    test "it returns error when invalid lifecycle", %{conn: conn} do
-      error_msg = "invalid query: name lifecycle foo"
-
-      %{"error" => ^error_msg} =
-        conn
-        |> get("/names/search/foo", only: "foo")
-        |> json_response(400)
-    end
-
-    test "it returns error when invalid filter", %{conn: conn} do
-      error_msg = "invalid query: foo=bar"
-
-      %{"error" => ^error_msg} =
-        conn
-        |> get("/names/search/foo", foo: "bar")
-        |> json_response(400)
     end
   end
 

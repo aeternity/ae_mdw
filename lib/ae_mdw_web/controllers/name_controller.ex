@@ -76,14 +76,6 @@ defmodule AeMdwWeb.NameController do
         name_reply(conn, Validate.plain_name!(state, ident), opts)
       end)
 
-  @spec owned_by(Conn.t(), map()) :: Conn.t()
-  def owned_by(%Conn{assigns: %{opts: opts}} = conn, %{"id" => owner} = params),
-    do:
-      handle_input(conn, fn ->
-        active? = Map.get(params, "active", "true") == "true"
-        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), opts, active?)
-      end)
-
   @spec auctions(Conn.t(), map()) :: Conn.t()
   def auctions(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
@@ -112,23 +104,6 @@ defmodule AeMdwWeb.NameController do
          {:ok, paginated_bids} <-
            Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor) do
       Util.render(conn, paginated_bids)
-    end
-  end
-
-  @spec active_names(Conn.t(), map()) :: Conn.t()
-  def active_names(%Conn{assigns: assigns} = conn, _params) do
-    %{
-      state: state,
-      pagination: pagination,
-      cursor: cursor,
-      opts: opts,
-      order_by: order_by,
-      scope: scope
-    } = assigns
-
-    with {:ok, names} <-
-           Names.fetch_active_names(state, pagination, scope, order_by, cursor, opts) do
-      Util.render(conn, names)
     end
   end
 
@@ -293,42 +268,6 @@ defmodule AeMdwWeb.NameController do
 
       auction_bid ->
         format_json(conn, Format.to_map(state, auction_bid, Model.AuctionBid, expand?(opts)))
-    end
-  end
-
-  defp owned_by_reply(%Conn{assigns: %{state: state}} = conn, owner_pk, opts, active?) do
-    query_res = Name.owned_by(state, owner_pk, active?)
-
-    jsons = fn plains, source, locator ->
-      for plain <- plains, reduce: [] do
-        acc ->
-          case locator.(plain) do
-            {info, ^source} ->
-              [Format.to_map(state, info, source, Keyword.get(opts, :expand?, false)) | acc]
-
-            _not_found? ->
-              acc
-          end
-      end
-    end
-
-    if active? do
-      names = jsons.(query_res.names, Model.ActiveName, &Name.locate(state, &1))
-
-      locator = fn plain_name ->
-        case Name.locate_bid(state, plain_name) do
-          nil -> :not_found
-          auction_bid -> {auction_bid, Model.AuctionBid}
-        end
-      end
-
-      top_bids = jsons.(query_res.top_bids, Model.AuctionBid, locator)
-
-      format_json(conn, %{"active" => names, "top_bid" => top_bids})
-    else
-      names = jsons.(query_res.names, Model.InactiveName, &Name.locate(state, &1))
-
-      format_json(conn, %{"inactive" => names})
     end
   end
 
