@@ -90,7 +90,7 @@ defmodule AeMdw.Db.StatsMutation do
       nil ->
         Model.stat(index: Stats.max_tps_key(), payload: {tps, key_hash})
     end)
-    |> SyncStats.increase_statistics(:contracts, time, contracts_created)
+    |> SyncStats.increment_statistics(:contracts, time, contracts_created)
   end
 
   #

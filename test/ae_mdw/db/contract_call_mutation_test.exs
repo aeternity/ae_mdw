@@ -83,6 +83,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> change_store([mutation])
 
       assert {:ok,
@@ -107,6 +108,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> change_store([mutation])
 
       assert {:ok,
@@ -131,6 +133,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> change_store([mutation])
 
       assert {:ok,
@@ -209,6 +212,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
@@ -326,6 +330,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
@@ -430,6 +435,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
@@ -514,6 +520,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.Aex9EventBalance, m_balance)
+        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.commit_mem([mutation])
 
@@ -582,6 +589,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         NullStore.new()
         |> MemStore.new()
         |> State.new()
+        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.commit_mem([mutation])
 
@@ -677,6 +685,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Aex9EventBalance,
           Model.aex9_event_balance(index: {remote_pk2, from_pk2}, amount: amount2)
         )
+        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
@@ -1336,6 +1345,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> put_existing_nft(contract_pk, from_pk, token_id)
         |> put_stats(contract_pk, 1, 1)
@@ -1426,6 +1436,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk1}))
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk2}))
+        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)

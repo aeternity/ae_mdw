@@ -148,6 +148,13 @@ defmodule AeMdw.Db.Util do
     end
   end
 
+  @spec txi_to_time(state(), Txs.txi()) :: time()
+  def txi_to_time(state, txi) do
+    Model.tx(time: time) = State.fetch!(state, Model.Tx, txi)
+
+    time
+  end
+
   @spec height_hash(Blocks.height()) :: Blocks.block_hash()
   def height_hash(height) do
     {:ok, block} = :aec_chain.get_key_block_by_height(height)

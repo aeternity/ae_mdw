@@ -173,8 +173,8 @@ defmodule AeMdw.Db.Sync.Stats do
     ]
   end
 
-  @spec increase_statistics(State.t(), Stats.statistic_tag(), time(), pos_integer()) :: State.t()
-  def increase_statistics(state, key, time, increment) do
+  @spec increment_statistics(State.t(), Stats.statistic_tag(), time(), pos_integer()) :: State.t()
+  def increment_statistics(state, key, time, increment) do
     time
     |> time_intervals()
     |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
