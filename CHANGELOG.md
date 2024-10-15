@@ -1,5 +1,22 @@
 # Changelog
 
+### [1.89.1](https://www.github.com/aeternity/ae_mdw/compare/v1.89.0...v1.89.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* call the right function on contract calls/logs endpoints ([#1969](https://www.github.com/aeternity/ae_mdw/issues/1969)) ([2e33b92](https://www.github.com/aeternity/ae_mdw/commit/2e33b92c2064bc582c5ceb90aac9b0314e5ca084))
+* recalculate aex9 holders to fix some invalid aexn contracts false positives ([#1972](https://www.github.com/aeternity/ae_mdw/issues/1972)) ([817ce6e](https://www.github.com/aeternity/ae_mdw/commit/817ce6e89d32b926de8b6488ade77bf20e26169f))
+
+
+### Miscellaneous
+
+* add contract call index to origin ([#1961](https://www.github.com/aeternity/ae_mdw/issues/1961)) ([4e6147c](https://www.github.com/aeternity/ae_mdw/commit/4e6147c835c82e4183023f50c51631815deee540))
+* bump elixir version to 1.17 ([#1964](https://www.github.com/aeternity/ae_mdw/issues/1964)) ([13ea64f](https://www.github.com/aeternity/ae_mdw/commit/13ea64f158242d35d2e0152f95738e90a9d9ffc4))
+* disable looger bloat in the tests ([#1965](https://www.github.com/aeternity/ae_mdw/issues/1965)) ([7e5bb2a](https://www.github.com/aeternity/ae_mdw/commit/7e5bb2abdb7f8e96ec5891a2cab690873391c0b1))
+* remove further unused v1 routes ([#1962](https://www.github.com/aeternity/ae_mdw/issues/1962)) ([114537c](https://www.github.com/aeternity/ae_mdw/commit/114537ceb23408a90b140d0bdc5361dbcd043c80))
+* rename minutes_per_block ot milliseconds_per_block ([#1967](https://www.github.com/aeternity/ae_mdw/issues/1967)) ([36c536f](https://www.github.com/aeternity/ae_mdw/commit/36c536ff8dd91a5b06d556ddca6d26d9c232e691))
+
 ## [1.89.0](https://www.github.com/aeternity/ae_mdw/compare/v1.88.0...v1.89.0) (2024-10-07)
 
 
