@@ -4,6 +4,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.IntCallsMutation
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
@@ -2403,6 +2404,107 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> with_store(store)
         |> get("/v2/contracts/#{contract_id}")
         |> json_response(404)
+    end
+  end
+
+  describe "contract_calls" do
+    test "it returns a contract calls", %{conn: conn, store: store} do
+      create_txi = 1
+      contract_pk = <<55::256>>
+      contract_encoded_id = Enc.encode(:contract_pubkey, contract_pk)
+      call_txi1 = 2
+      local_idx1 = 1
+      call_txi2 = 3
+      local_idx2 = 4
+
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, call_txi1, local_idx1})
+        )
+        |> Store.put(
+          Model.GrpIntContractCall,
+          Model.grp_int_contract_call(index: {create_txi, call_txi2, local_idx2})
+        )
+
+      with_mocks [
+        {Format, [],
+         [
+           to_map: fn
+             _state, {^call_txi1, ^local_idx1}, Model.IntContractCall -> %{a: 1}
+             _state, {^call_txi2, ^local_idx2}, Model.IntContractCall -> %{b: 2}
+           end
+         ]}
+      ] do
+        %{"data" => [call2, call1]} =
+          conn
+          |> with_store(store)
+          |> get("/v3/contracts/#{contract_encoded_id}/calls")
+          |> json_response(200)
+
+        assert %{"a" => 1} = call1
+        assert %{"b" => 2} = call2
+      end
+    end
+  end
+
+  describe "contract_logs" do
+    test "it returns a contract logs", %{conn: conn, store: store} do
+      create_txi = 1
+      contract_pk = <<55::256>>
+      contract_encoded_id = Enc.encode(:contract_pubkey, contract_pk)
+      call_txi1 = 2
+      local_idx1 = 1
+      call_txi2 = 3
+      local_idx2 = 4
+      call_tx_hash1 = <<1::256>>
+      encoded_call_tx_hash1 = Enc.encode(:tx_hash, call_tx_hash1)
+      call_tx_hash2 = <<2::256>>
+      encoded_call_tx_hash2 = Enc.encode(:tx_hash, call_tx_hash2)
+
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> Store.put(
+          Model.ContractLog,
+          Model.contract_log(index: {create_txi, call_txi1, local_idx1})
+        )
+        |> Store.put(
+          Model.ContractLog,
+          Model.contract_log(index: {create_txi, call_txi2, local_idx2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: create_txi, id: <<0::256>>, block_index: {0, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: call_txi1, id: call_tx_hash1, block_index: {0, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: call_txi2, id: call_tx_hash2, block_index: {0, 0}))
+        |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: <<3::256>>))
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+        )
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           block_time: fn _block_hash -> 123 end
+         ]}
+      ] do
+        %{"data" => [log2, log1]} =
+          conn
+          |> with_store(store)
+          |> get("/v3/contracts/#{contract_encoded_id}/logs")
+          |> json_response(200)
+
+        assert %{"call_tx_hash" => ^encoded_call_tx_hash1} = log1
+        assert %{"call_tx_hash" => ^encoded_call_tx_hash2} = log2
+      end
     end
   end
 

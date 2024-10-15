@@ -68,7 +68,7 @@ defmodule AeMdwWeb.ContractController do
   end
 
   @spec contract_logs(Conn.t(), map()) :: Conn.t()
-  def contract_logs(%Conn{assigns: assigns} = conn, %{"id" => contract_id}) do
+  def contract_logs(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
     with {:ok, paginated_logs} <-
@@ -78,7 +78,7 @@ defmodule AeMdwWeb.ContractController do
   end
 
   @spec contract_calls(Conn.t(), map()) :: Conn.t()
-  def contract_calls(%Conn{assigns: assigns} = conn, %{"id" => contract_id}) do
+  def contract_calls(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
     with {:ok, paginated_calls} <-
