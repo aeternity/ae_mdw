@@ -281,7 +281,7 @@ defmodule AeMdw.Aex9 do
       {first_gen, last_gen} =
         case range do
           {:gen, first..last//_step} -> {first, last}
-          nil -> {0, DbUtil.last_gen(state)}
+          nil -> {0, DbUtil.last_gen!(state)}
         end
 
       streamer = fn
