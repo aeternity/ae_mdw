@@ -46,8 +46,8 @@ defmodule AeMdw.Db.Sync.Stats do
   def increment_aex9_holders(state, contract_pk),
     do: update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk))
 
-  @spec decrement_aex9_holders(State.t(), pubkey()) :: State.t()
-  def decrement_aex9_holders(state, contract_pk) do
+  @spec decrement_aex9_holders(State.t(), pubkey(), txi()) :: State.t()
+  def decrement_aex9_holders(state, contract_pk, txi) do
     update_fn = fn x ->
       new_count = x - 1
 
@@ -58,7 +58,8 @@ defmodule AeMdw.Db.Sync.Stats do
             Model.AexnInvalidContract,
             Model.aexn_invalid_contract(
               index: {:aex9, contract_pk},
-              reason: Aex9.invalid_number_of_holders_reason()
+              reason: Aex9.invalid_number_of_holders_reason(),
+              description: "Invalid amount of holders on txi #{txi}"
             )
           )
         end
