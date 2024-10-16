@@ -1,4 +1,6 @@
 defmodule AeMdw.Migrations.ReindexAexnFromAndToTransfers do
+  @moduledoc false
+
   alias AeMdw.Collection
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.State
@@ -10,8 +12,8 @@ defmodule AeMdw.Migrations.ReindexAexnFromAndToTransfers do
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
     changes =
-      Task.async_stream(
-        [Model.AexnContractFromTransfer, Model.AexnContractToTransfer],
+      [Model.AexnContractFromTransfer, Model.AexnContractToTransfer]
+      |> Task.async_stream(
         fn table ->
           state
           |> Collection.stream(table, nil)
