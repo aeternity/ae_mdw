@@ -1237,11 +1237,6 @@ defmodule AeMdw.Db.Model do
   @type miner_index() :: pubkey()
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
-  @mempool_defaults [index: {0, 0}, txs: []]
-  defrecord :mempool, @mempool_defaults
-  @type mempool_index() :: {integer(), integer()}
-  @type mempool() :: record(:mempool, index: mempool_index(), txs: list())
-
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1388,8 +1383,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.BalanceAccount,
       AeMdw.Db.Model.AccountBalance,
       AeMdw.Db.Model.AsyncTask,
-      AeMdw.Db.Model.Migrations,
-      AeMdw.Db.Model.Mempool
+      AeMdw.Db.Model.Migrations
     ]
   end
 
@@ -1493,5 +1487,4 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
-  def record(AeMdw.Db.Model.Mempool), do: :mempool
 end
