@@ -175,6 +175,23 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
+  # @spec pending_txs(Conn.t(), map()) :: Conn.t()
+  # def pending_txs(%Conn{assigns: assigns} = conn, _params) do
+  #   %{state: state, pagination: pagination, cursor: cursor, scope: scope} =
+  #     assigns
+
+  #   with {:ok, paginated_txs} <- Txs.fetch_pending(state, pagination, cursor, scope) do
+  #     WebUtil.render(conn, paginated_txs)
+  #   end
+  # end
+
+  # @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
+  # def pending_txs_count(%Conn{assigns: %{state: state}} = conn, _params) do
+  #   with {:ok, count} <- Txs.count_pending(state) do
+  #     format_json(conn, %{data: count})
+  #   end
+  # end
+
   defp extract_query(query_params) do
     query_params
     |> Enum.reject(fn {key, _val} -> key in @pagination_param_keys end)

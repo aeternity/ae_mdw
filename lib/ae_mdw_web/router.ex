@@ -40,6 +40,8 @@ defmodule AeMdwWeb.Router do
       get "/transactions/count", TxController, :count
       get "/transactions", TxController, :txs
       get "/transactions/:hash", TxController, :tx
+      get "/transactions/pending", TxController, :pending_txs
+      get "/transactions/pending/count", TxController, :pending_txs_count
 
       get "/oracles", OracleController, :oracles
       get "/oracles/:id", OracleController, :oracle

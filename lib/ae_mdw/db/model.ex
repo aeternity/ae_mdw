@@ -1234,6 +1234,13 @@ defmodule AeMdw.Db.Model do
   @type miner_index() :: pubkey()
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
+  # index: {neg_fee, neg_gas_price, origin, nonce, TxHash}
+  @mempool_defaults [index: {0, 0, <<>>, 0, <<>>}, signed_tx: nil]
+  defrecord :mempool, @mempool_defaults
+
+  @type mempool_index() :: {integer(), integer(), binary(), integer(), binary()}
+  @type mempool() :: record(:mempool, index: mempool_index(), signed_tx: Node.signed_tx())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1246,7 +1253,8 @@ defmodule AeMdw.Db.Model do
       name_tables(),
       oracle_tables(),
       stat_tables(),
-      tasks_tables()
+      tasks_tables(),
+      node_tables()
     ])
   end
 
@@ -1384,6 +1392,12 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
+  defp node_tables() do
+    [
+      AeMdw.Db.Model.Mempool
+    ]
+  end
+
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
   def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
@@ -1484,4 +1498,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
+  def record(AeMdw.Db.Model.Mempool), do: :mempool
 end
