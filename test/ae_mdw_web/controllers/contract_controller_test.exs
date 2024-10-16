@@ -2487,7 +2487,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: <<3::256>>))
         |> Store.put(
           Model.RevOrigin,
-          Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+          Model.rev_origin(index: {{create_txi, -1}, :contract_create_tx}, pubkey: contract_pk)
         )
 
       with_mocks [
