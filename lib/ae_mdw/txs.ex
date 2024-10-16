@@ -209,6 +209,13 @@ defmodule AeMdw.Txs do
     tx_hash
   end
 
+  # @spec fetch_pending(state(), pagination(), cursor() | nil, scope() | nil) ::
+  #         {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
+  # def fetch_pending(state, pagination, cursor, scope) do
+  #   {_direction, _is_reversed?, limit, _has_cursor?} = pagination
+  #   :aec_tx_pool.peek(limit)
+  # end
+
   #
   # Streams txs of a microblock
   #
