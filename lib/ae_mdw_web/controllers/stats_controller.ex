@@ -105,8 +105,8 @@ defmodule AeMdwWeb.StatsController do
     end
   end
 
-  @spec aex9_token_transfers_stats(Conn.t(), map()) :: Conn.t()
-  def aex9_token_transfers_stats(%Conn{assigns: assigns} = conn, _params) do
+  @spec aex9_transfers_stats(Conn.t(), map()) :: Conn.t()
+  def aex9_transfers_stats(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
 
     with {:ok, paginated_stats} <-
