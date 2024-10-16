@@ -482,7 +482,7 @@ defmodule AeMdw.Activities do
           {first_gen, last_gen} ->
             {
               {account_pk, kind, {first_gen, 0}, @min_int},
-              {account_pk, kind, {last_gen, @max_int}, {@max_int, @max_int}}
+              {account_pk, kind, {last_gen, {@max_int, @max_int}}, {@max_int, @max_int}}
             }
 
           nil ->
