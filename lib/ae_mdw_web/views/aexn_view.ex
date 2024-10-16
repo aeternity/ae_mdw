@@ -178,40 +178,6 @@ defmodule AeMdwWeb.AexnView do
     )
   end
 
-  def contract_transfer_to_map(
-        state,
-        aexn_type,
-        from_to,
-        {create_txi, sender_pk, call_txi, recipient_pk, token_id, log_idx},
-        v3?
-      )
-      when is_binary(sender_pk) and is_binary(recipient_pk) do
-    contract_transfer_to_map(
-      state,
-      aexn_type,
-      from_to,
-      {create_txi, sender_pk, call_txi, log_idx, recipient_pk, token_id},
-      v3?
-    )
-  end
-
-  def contract_transfer_to_map(
-        state,
-        aexn_type,
-        from_to,
-        {create_txi, call_txi, log_idx, sender_pk, recipient_pk, token_id},
-        v3?
-      )
-      when is_binary(sender_pk) and is_binary(recipient_pk) do
-    contract_transfer_to_map(
-      state,
-      aexn_type,
-      from_to,
-      {create_txi, sender_pk, call_txi, log_idx, recipient_pk, token_id},
-      v3?
-    )
-  end
-
   #
   # Private functions
   #

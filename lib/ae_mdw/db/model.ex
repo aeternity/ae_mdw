@@ -941,28 +941,28 @@ defmodule AeMdw.Db.Model do
   @type aexn_pair_transfer() :: record(:aexn_pair_transfer, index: aexn_pair_transfer_index())
 
   # aexn contract from transfer:
-  #    index: {create_txi, from_pk, call_txi, to_pki, amount | token_id, log idx}
+  #    index: {create_txi, from_pk, call_txi, log_idx, to_pki, amount | token_id}
   @aexn_contract_from_transfer_defaults [
-    index: {-1, <<>>, -1, <<>>, -1, -1},
+    index: {-1, <<>>, -1, -1, <<>>, -1},
     unused: nil
   ]
   defrecord :aexn_contract_from_transfer, @aexn_contract_from_transfer_defaults
 
   @type aexn_contract_from_transfer_index() ::
-          {txi(), pubkey(), txi(), pubkey(), amount(), log_idx()}
+          {txi(), pubkey(), txi(), log_idx(), pubkey(), amount()}
   @type aexn_contract_from_transfer() ::
           record(:aexn_contract_from_transfer, index: aexn_contract_from_transfer_index())
 
   # aexn contract to transfer:
-  #    index: {create_txi, to pk, call txi, from pk, amount | token_id, log idx}
+  #    index: {create_txi, to pk, call txi, log_idx, from pk, amount | token_id}
   @aexn_contract_to_transfer_defaults [
-    index: {-1, <<>>, -1, <<>>, -1, -1},
+    index: {-1, <<>>, -1, -1, <<>>, -1},
     unused: nil
   ]
   defrecord :aexn_contract_to_transfer, @aexn_contract_to_transfer_defaults
 
   @type aexn_contract_to_transfer_index() ::
-          {txi(), pubkey(), txi(), pubkey(), amount(), log_idx()}
+          {txi(), pubkey(), txi(), log_idx(), pubkey(), amount()}
   @type aexn_contract_to_transfer() ::
           record(:aexn_contract_to_transfer, index: aexn_contract_to_transfer_index())
 
@@ -1237,6 +1237,11 @@ defmodule AeMdw.Db.Model do
   @type miner_index() :: pubkey()
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
+  @mempool_defaults [index: {0, 0}, txs: []]
+  defrecord :mempool, @mempool_defaults
+  @type mempool_index() :: {integer(), integer()}
+  @type mempool() :: record(:mempool, index: mempool_index(), txs: list())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1383,7 +1388,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.BalanceAccount,
       AeMdw.Db.Model.AccountBalance,
       AeMdw.Db.Model.AsyncTask,
-      AeMdw.Db.Model.Migrations
+      AeMdw.Db.Model.Migrations,
+      AeMdw.Db.Model.Mempool
     ]
   end
 
@@ -1487,4 +1493,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
+  def record(AeMdw.Db.Model.Mempool), do: :mempool
 end
