@@ -17,7 +17,7 @@ defmodule AeMdw.Migrations.RestructureOrigins do
   def run(state, _from_start?) do
     state
     |> Collection.stream(Model.Origin, nil)
-    |> Stream.filter(fn {_tx_type, _pubkey, txi} -> is_integer(txi) end)
+    |> Stream.filter(&match?({_tx_type, _pubkey, txi} when is_integer(txi), &1))
     |> Stream.map(fn {tx_type, pubkey, txi} = index ->
       rev_origin_index = {txi, tx_type, pubkey}
       idx = search_pubkey_idx(state, txi, pubkey)
@@ -74,7 +74,7 @@ defmodule AeMdw.Migrations.RestructureOrigins do
             |> :aec_db.get_block()
             |> Contract.get_grouped_events()
 
-          %WriteMutation{record: Model.origin(index: {_tx_type, ^pubkey, {^txi, idx}})} =
+          %WriteMutation{record: Model.origin(index: {_tx_type, ^pubkey}, txi_idx: {^txi, idx})} =
             signed_tx
             |> Transaction.transaction_mutations(txi, block_index, block_hash, 0, mb_events)
             |> List.flatten()
@@ -82,7 +82,7 @@ defmodule AeMdw.Migrations.RestructureOrigins do
               &match?(
                 %WriteMutation{
                   table: Model.Origin,
-                  record: Model.origin(index: {_tx_type, ^pubkey, _txi_idx})
+                  record: Model.origin(index: {_tx_type, ^pubkey})
                 },
                 &1
               )
@@ -97,7 +97,7 @@ defmodule AeMdw.Migrations.RestructureOrigins do
           |> :aec_db.get_block()
           |> Contract.get_grouped_events()
 
-        %WriteMutation{record: Model.origin(index: {_tx_type, ^pubkey, {^txi, idx}})} =
+        %WriteMutation{record: Model.origin(index: {_tx_type, ^pubkey}, txi_idx: {^txi, idx})} =
           signed_tx
           |> Transaction.transaction_mutations(txi, block_index, block_hash, 0, mb_events)
           |> List.flatten()
@@ -105,7 +105,7 @@ defmodule AeMdw.Migrations.RestructureOrigins do
             &match?(
               %WriteMutation{
                 table: Model.Origin,
-                record: Model.origin(index: {_tx_type, ^pubkey, _txi_idx})
+                record: Model.origin(index: {_tx_type, ^pubkey})
               },
               &1
             )
