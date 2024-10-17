@@ -119,11 +119,11 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
-  @spec aex9_burn_update_holders(state(), pubkey(), integer()) :: state()
-  def aex9_burn_update_holders(state, contract_pk, balance) do
+  @spec aex9_burn_update_holders(state(), pubkey(), integer(), txi()) :: state()
+  def aex9_burn_update_holders(state, contract_pk, balance, txi) do
     case balance do
       0 ->
-        SyncStats.decrement_aex9_holders(state, contract_pk)
+        SyncStats.decrement_aex9_holders(state, contract_pk, txi)
 
       balance when balance < 0 ->
         State.put(
@@ -131,7 +131,8 @@ defmodule AeMdw.Db.Contract do
           Model.AexnInvalidContract,
           Model.aexn_invalid_contract(
             index: {:aex9, contract_pk},
-            reason: Aex9.invalid_holder_balance_reason()
+            reason: Aex9.invalid_holder_balance_reason(),
+            description: "Invalid balance of #{balance} at tx #{txi}"
           )
         )
 
@@ -140,8 +141,7 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_mint_update_holders(state(), pubkey(), pubkey()) :: state()
-  def aex9_mint_update_holders(state, contract_pk, account_pk) do
+  defp aex9_mint_update_holders(state, contract_pk, account_pk) do
     if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
       state
     else
@@ -149,11 +149,10 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_transfer_update_holders(state(), pubkey(), integer(), integer()) :: state()
-  def aex9_transfer_update_holders(state, contract_pk, from_balance, to_prev_amount) do
+  defp aex9_transfer_update_holders(state, contract_pk, from_balance, to_prev_amount, txi) do
     cond do
       from_balance <= 0 and to_prev_amount > 0 ->
-        SyncStats.decrement_aex9_holders(state, contract_pk)
+        SyncStats.decrement_aex9_holders(state, contract_pk, txi)
 
       from_balance <= 0 ->
         # decrement and increment
@@ -879,7 +878,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
-    |> aex9_burn_update_holders(contract_pk, new_amount)
+    |> aex9_burn_update_holders(contract_pk, new_amount, txi)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
   end
@@ -955,7 +954,7 @@ defmodule AeMdw.Db.Contract do
       )
 
     state
-    |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount)
+    |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount, txi)
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.Aex9EventBalance, m_to)
     |> aex9_update_balance_account(
