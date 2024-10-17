@@ -74,7 +74,7 @@ defmodule AeMdwWeb.Router do
       get "/stats/delta", StatsController, :delta_stats
       get "/stats/miners", StatsController, :miners_stats
       get "/stats/contracts", StatsController, :contracts_stats
-      get "/stats/aex9-token-transfers", StatsController, :aex9_token_transfers_stats
+      get "/stats/aex9-transfers", StatsController, :aex9_transfers_stats
       get "/stats", StatsController, :stats
 
       get "/names", NameController, :names
