@@ -32,12 +32,9 @@ defmodule Mix.Tasks.MigrateDb do
     end
 
     Log.info("================================================================================")
-    current_version = read_migration_version()
-    Log.info("current migration version: #{current_version}")
 
     applied_count =
-      current_version
-      |> list_new_migrations()
+      list_new_migrations()
       |> Enum.map(&apply_migration!(&1, from_startup?))
       |> length()
 
@@ -48,16 +45,10 @@ defmodule Mix.Tasks.MigrateDb do
     {:ok, applied_count}
   end
 
-  @spec read_migration_version() :: integer()
-  defp read_migration_version() do
-    case Database.last_key(@table) do
-      {:ok, version} -> version
-      :none -> -1
-    end
-  end
+  @spec list_new_migrations() :: [{integer(), String.t()}]
+  def list_new_migrations() do
+    all_migrations = Database.all_keys(Model.Migrations)
 
-  @spec list_new_migrations(integer()) :: [{integer(), String.t()}]
-  def list_new_migrations(current_version) do
     "#{:code.priv_dir(:ae_mdw)}/#{@migrations_code_path}"
     |> Path.wildcard()
     |> Enum.map(fn path ->
@@ -68,7 +59,7 @@ defmodule Mix.Tasks.MigrateDb do
 
       {String.to_integer(version), path}
     end)
-    |> Enum.filter(fn {version, _path} -> version > current_version end)
+    |> Enum.filter(fn {version, _path} -> version not in all_migrations end)
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
 
