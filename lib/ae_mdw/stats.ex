@@ -50,6 +50,7 @@ defmodule AeMdw.Stats do
           | :difficulty
           | :hashrate
           | :contracts
+          | :total_accounts
   @type interval_by() :: :day | :week | :month
   @type interval_start() :: non_neg_integer()
 
@@ -277,6 +278,14 @@ defmodule AeMdw.Stats do
   def fetch_contracts_stats(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       fetch_statistics(state, pagination, filters, range, cursor, :contracts)
+    end
+  end
+
+  @spec fetch_total_accounts_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_total_accounts_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      fetch_statistics(state, pagination, filters, range, cursor, :total_accounts)
     end
   end
 

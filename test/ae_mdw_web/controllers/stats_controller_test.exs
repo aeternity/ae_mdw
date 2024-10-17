@@ -73,6 +73,29 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
   end
 
+  describe "total_accounts_stats" do
+    test "it returns total_accounts stats", %{conn: conn, store: store} do
+      store =
+        store
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: {:total_accounts, :week, 15_552}, count: 1)
+        )
+
+      assert %{"prev" => nil, "data" => [stat1], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/stats/total-accounts")
+               |> json_response(200)
+
+      assert %{
+               "count" => 0,
+               "start_date" => "2018-12-11",
+               "end_date" => "2018-12-12"
+             } = stat1
+    end
+  end
+
   describe "transactions_stats" do
     test "it returns the count of transactions for the latest daily periods", %{
       conn: conn,
