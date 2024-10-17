@@ -49,7 +49,6 @@ defmodule AeMdwWeb.AexnView do
 
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
   @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
-  @typep contract_transfer_key :: AeMdw.AexnTransfers.contract_transfer_key()
 
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -130,7 +129,7 @@ defmodule AeMdwWeb.AexnView do
           State.t(),
           Model.aexn_type(),
           :from | :to | nil,
-          contract_transfer_key(),
+          account_transfer_key(),
           boolean()
         ) ::
           map()
@@ -140,7 +139,8 @@ defmodule AeMdwWeb.AexnView do
         :from,
         {_create_txi, sender_pk, call_txi, log_idx, recipient_pk, token_id},
         v3?
-      ) do
+      )
+      when is_binary(sender_pk) and is_binary(recipient_pk) do
     do_transfer_to_map(
       state,
       {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
@@ -154,7 +154,8 @@ defmodule AeMdwWeb.AexnView do
         :to,
         {_create_txi, recipient_pk, call_txi, log_idx, sender_pk, token_id},
         v3?
-      ) do
+      )
+      when is_binary(sender_pk) and is_binary(recipient_pk) do
     do_transfer_to_map(
       state,
       {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
@@ -168,7 +169,8 @@ defmodule AeMdwWeb.AexnView do
         nil,
         {_create_txi, call_txi, log_idx, sender_pk, recipient_pk, token_id},
         v3?
-      ) do
+      )
+      when is_binary(sender_pk) and is_binary(recipient_pk) do
     do_transfer_to_map(
       state,
       {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
