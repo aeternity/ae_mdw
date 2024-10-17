@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.90.0](https://www.github.com/aeternity/ae_mdw/compare/v1.89.0...v1.90.0) (2024-10-17)
+
+
+### Features
+
+* aex9 transfer statistics ([#1921](https://www.github.com/aeternity/ae_mdw/issues/1921)) ([edc13a6](https://www.github.com/aeternity/ae_mdw/commit/edc13a6e93c2c71e1dca7b85e508ec90715b3e99))
+
+
+### Bug Fixes
+
+* adjust internal transfer activities structure when scoping ([#1977](https://www.github.com/aeternity/ae_mdw/issues/1977)) ([acc31eb](https://www.github.com/aeternity/ae_mdw/commit/acc31ebf840dcdb5b9978e2f964928a3ac053642))
+* call the right function on contract calls/logs endpoints ([#1969](https://www.github.com/aeternity/ae_mdw/issues/1969)) ([2e33b92](https://www.github.com/aeternity/ae_mdw/commit/2e33b92c2064bc582c5ceb90aac9b0314e5ca084))
+* fetch aex9 balance history using proper range structure ([#1974](https://www.github.com/aeternity/ae_mdw/issues/1974)) ([8f8fcd7](https://www.github.com/aeternity/ae_mdw/commit/8f8fcd74cb73767d5ad5c8fbb4bae5f297369853))
+* make transfers endpoint work with new table fields order ([#1971](https://www.github.com/aeternity/ae_mdw/issues/1971)) ([94fb010](https://www.github.com/aeternity/ae_mdw/commit/94fb0108a0744131b4a68dbfd7a2440931cd1a76))
+* recalculate aex9 holders to fix some invalid aexn contracts false positives ([#1972](https://www.github.com/aeternity/ae_mdw/issues/1972)) ([817ce6e](https://www.github.com/aeternity/ae_mdw/commit/817ce6e89d32b926de8b6488ade77bf20e26169f))
+* reindex previous names with new names structure ([#1975](https://www.github.com/aeternity/ae_mdw/issues/1975)) ([afdb424](https://www.github.com/aeternity/ae_mdw/commit/afdb4241975dd4b7e15c5494bfc8e7dde5dbdfb1))
+* update aexn transfer statistics migration version ([#1980](https://www.github.com/aeternity/ae_mdw/issues/1980)) ([9430cca](https://www.github.com/aeternity/ae_mdw/commit/9430cca2f2359b474680c081453c48cadc3a80bb))
+* update origins restructure migration ([#1978](https://www.github.com/aeternity/ae_mdw/issues/1978)) ([b75390e](https://www.github.com/aeternity/ae_mdw/commit/b75390e2aac892d015950b2ec4c2a966144bf2e8))
+
+
+### Testing
+
+* fix failing contract test ([#1976](https://www.github.com/aeternity/ae_mdw/issues/1976)) ([5a9fbde](https://www.github.com/aeternity/ae_mdw/commit/5a9fbdeb524e5782d08d5b5b63e4a74b34482036))
+
+
+### Miscellaneous
+
+* add contract call index to origin ([#1961](https://www.github.com/aeternity/ae_mdw/issues/1961)) ([4e6147c](https://www.github.com/aeternity/ae_mdw/commit/4e6147c835c82e4183023f50c51631815deee540))
+* add error description to invalid aexn contracts ([#1970](https://www.github.com/aeternity/ae_mdw/issues/1970)) ([8ab1df1](https://www.github.com/aeternity/ae_mdw/commit/8ab1df134363b61c2cd8b63250ef3c40241a0cff))
+* bump elixir version to 1.17 ([#1964](https://www.github.com/aeternity/ae_mdw/issues/1964)) ([13ea64f](https://www.github.com/aeternity/ae_mdw/commit/13ea64f158242d35d2e0152f95738e90a9d9ffc4))
+* disable looger bloat in the tests ([#1965](https://www.github.com/aeternity/ae_mdw/issues/1965)) ([7e5bb2a](https://www.github.com/aeternity/ae_mdw/commit/7e5bb2abdb7f8e96ec5891a2cab690873391c0b1))
+* remove further unused v1 routes ([#1962](https://www.github.com/aeternity/ae_mdw/issues/1962)) ([114537c](https://www.github.com/aeternity/ae_mdw/commit/114537ceb23408a90b140d0bdc5361dbcd043c80))
+* rename aex9-transfers route and add docs ([#1979](https://www.github.com/aeternity/ae_mdw/issues/1979)) ([b6e16ea](https://www.github.com/aeternity/ae_mdw/commit/b6e16ea4c07d31b0c5a8908b0c0f19147c10811c))
+* rename minutes_per_block ot milliseconds_per_block ([#1967](https://www.github.com/aeternity/ae_mdw/issues/1967)) ([36c536f](https://www.github.com/aeternity/ae_mdw/commit/36c536ff8dd91a5b06d556ddca6d26d9c232e691))
+
 ## [1.89.0](https://www.github.com/aeternity/ae_mdw/compare/v1.88.0...v1.89.0) (2024-10-07)
 
 
