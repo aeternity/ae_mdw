@@ -48,16 +48,6 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  @spec handle_input(Conn.t(), (-> Conn.t())) :: Conn.t()
-  def handle_input(conn, f) do
-    try do
-      f.()
-    rescue
-      err in [ErrInput] ->
-        conn |> send_error(err.reason, err.message)
-    end
-  end
-
   @spec send_error(Plug.Conn.t(), ErrInput.reason(), String.t()) :: Plug.Conn.t()
   def send_error(conn, reason, message) do
     status = error_reason_to_status(reason)

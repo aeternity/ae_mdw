@@ -1,6 +1,7 @@
 defmodule AeMdw.Util do
-  # credo:disable-for-this-file
-  @moduledoc false
+  @moduledoc """
+  Non-domain specific utilities.
+  """
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -14,74 +15,16 @@ defmodule AeMdw.Util do
   @spec expand?(opts()) :: boolean()
   def expand?(opts), do: Keyword.get(opts, :expand?, false)
 
+  @spec id(term()) :: term()
   def id(x), do: x
 
+  @spec ok!(term()) :: term()
   def ok!({:ok, x}), do: x
   def ok!(err), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
 
-  def map_ok!({:ok, x}, f), do: f.(x)
-  def map_ok!(err, _), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
-
-  def ok_nil({:ok, x}), do: x
-  def ok_nil(_error), do: nil
-
+  @spec map_some(term(), (term() -> term())) :: term()
   def map_some(nil, _f), do: nil
   def map_some(x, f), do: f.(x)
-
-  def inverse(%{} = map),
-    do: Enum.reduce(map, %{}, fn {k, v}, map -> put_in(map[v], k) end)
-
-  def compose(f1, f2), do: fn x -> f1.(f2.(x)) end
-  def compose(f1, f2, f3), do: fn x -> f1.(f2.(f3.(x))) end
-
-  def chase(nil, _succ), do: []
-  def chase(root, succ), do: [root | chase(succ.(root), succ)]
-
-  @spec merged_stream(any, (any -> any), :backward | :forward) ::
-          ({:cont, any} | {:halt, any} | {:suspend, any}, any ->
-             {:halted, any} | {:suspended, any, (any -> any)})
-  def merged_stream(streams, key, dir) when is_function(key, 1) do
-    taker =
-      case dir do
-        :forward -> &:gb_sets.take_smallest/1
-        :backward -> &:gb_sets.take_largest/1
-      end
-
-    pop1 = fn stream ->
-      case StreamSplit.take_and_drop(stream, 1) do
-        {[x], rem_stream} ->
-          {key.(x), x, rem_stream}
-
-        {[], _} ->
-          nil
-      end
-    end
-
-    Stream.resource(
-      fn ->
-        streams
-        |> Stream.map(pop1)
-        |> Stream.reject(&is_nil/1)
-        |> Enum.to_list()
-        |> :gb_sets.from_list()
-      end,
-      fn streams ->
-        case :gb_sets.size(streams) do
-          0 ->
-            {:halt, nil}
-
-          _bigger ->
-            {{_key, x, rem_stream}, rem_streams} = taker.(streams)
-
-            case pop1.(rem_stream) do
-              nil -> {[x], rem_streams}
-              next_elt -> {[x], :gb_sets.add(next_elt, rem_streams)}
-            end
-        end
-      end,
-      fn _any -> :ok end
-    )
-  end
 
   @spec max_int() :: nil
   def max_int(), do: nil

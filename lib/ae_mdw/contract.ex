@@ -9,10 +9,10 @@ defmodule AeMdw.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
+  alias AeMdw.Util
 
   import :erlang, only: [tuple_to_list: 1]
 
-  import AeMdw.Util
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode: 2]
 
   @tab __MODULE__
@@ -172,7 +172,7 @@ defmodule AeMdw.Contract do
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
 
   defp decode_call_data(contract, call_data),
-    do: decode_call_data(contract, call_data, &id/1)
+    do: decode_call_data(contract, call_data, &Util.id/1)
 
   defp decode_call_data({:fcode, _funs, _syms, _annotations} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
