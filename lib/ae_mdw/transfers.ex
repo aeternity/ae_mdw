@@ -152,14 +152,13 @@ defmodule AeMdw.Transfers do
 
   defp deserialize_cursor(cursor) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor, padding: false),
-         [gen_txi_idx_bin, kind_bin, account_pk_bin, ref_txi_bin, ref_idx_bin] <-
+         [gen_txi_idx_bin, kind_bin, account_pk_bin, ref_txi_idx_bin] <-
            String.split(decoded_cursor, "$"),
          {:ok, gen_txi} <- deserialize_cursor_gen_txi_idx(gen_txi_idx_bin),
          {:ok, kind} <- deserialize_cursor_kind(kind_bin),
          {:ok, account_pk} <- deserialize_cursor_account_pk(account_pk_bin),
-         {:ok, ref_txi} <- deserialize_cursor_integer(ref_txi_bin),
-         {:ok, ref_idx} <- deserialize_cursor_integer(ref_idx_bin) do
-      {gen_txi, kind, account_pk, {ref_txi - 1, ref_idx - 1}}
+         {:ok, ref_txi_idx} <- deserialize_opt_txi_idx(ref_txi_idx_bin) do
+      {gen_txi, kind, account_pk, ref_txi_idx}
     else
       _invalid_cursor -> nil
     end
@@ -179,13 +178,6 @@ defmodule AeMdw.Transfers do
 
   defp deserialize_cursor_account_pk(account_pk_bin),
     do: Base.decode32(account_pk_bin, padding: false)
-
-  defp deserialize_cursor_integer(bin) do
-    case Integer.parse(bin) do
-      {number, ""} -> {:ok, number}
-      _error -> :error
-    end
-  end
 
   defp convert_param({"account", account_id}) when is_binary(account_id) do
     with {:ok, pubkey} <- Validate.id(account_id, [:account_pubkey]) do
@@ -244,7 +236,7 @@ defmodule AeMdw.Transfers do
 
   defp serialize_opt_txi_idx({txi, idx}), do: "#{txi + 1}x#{idx + 1}"
 
-  defp deserialize_opt_txi_idx(""), do: -1
+  defp deserialize_opt_txi_idx(""), do: {:ok, -1}
 
   defp deserialize_opt_txi_idx(opt_txi_idx_bin) do
     with [txi_bin, idx_bin] <- String.split(opt_txi_idx_bin, "x"),
