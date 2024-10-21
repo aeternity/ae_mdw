@@ -2423,6 +2423,76 @@ defmodule AeMdwWeb.TxControllerTest do
     end
   end
 
+  describe "pending_txs" do
+    setup do
+      # create a mnesia table
+      table = :ets.new(:mempool, [:set, :named_table, :ordered_set])
+
+      pending_txs = TS.pending_txs()
+
+      Enum.map(pending_txs, fn Model.mempool(index: index, tx: tx) ->
+        true = :ets.insert(table, {index, tx})
+      end)
+
+      %{table: table, pending_txs: pending_txs}
+    end
+
+    test "returns the list of pending txs", %{conn: conn, pending_txs: pending_txs} do
+      assert %{
+               "data" => [_client_tx1, _client_tx2, _client_tx3, _client_tx4] = page1,
+               "prev" => nil,
+               "next" => next_url
+             } =
+               conn
+               |> get("/v3/transactions/pending", limit: 4)
+               |> json_response(200)
+
+      pending_txs
+      |> Enum.take(4)
+      |> Enum.zip(page1)
+      |> Enum.map(&assert_same_tx(&1))
+
+      assert %{
+               "data" => [_client_tx5, _client_tx6, _client_tx7, _client_tx8] = page2,
+               "prev" => prev_url,
+               "next" => next_next_url
+             } =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      pending_txs
+      |> Enum.drop(4)
+      |> Enum.take(4)
+      |> Enum.zip(page2)
+      |> Enum.map(&assert_same_tx(&1))
+
+      assert %{"data" => ^page1} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+
+      assert %{
+               "data" => [_client_tx9, _client_tx10] = page3,
+               "prev" => prev_prev_url,
+               "next" => nil
+             } =
+               conn
+               |> get(next_next_url)
+               |> json_response(200)
+
+      pending_txs
+      |> Enum.drop(8)
+      |> Enum.zip(page3)
+      |> Enum.map(&assert_same_tx(&1))
+
+      assert %{"data" => ^page2} =
+               conn
+               |> get(prev_prev_url)
+               |> json_response(200)
+    end
+  end
+
   defp channel_payload(round) do
     channel_id = :aeser_id.create(:channel, <<1::256>>)
 
@@ -2467,5 +2537,15 @@ defmodule AeMdwWeb.TxControllerTest do
     accounts_trees = Enum.reduce(accounts, accounts_trees, &:aec_accounts_trees.enter/2)
 
     :aec_trees.set_accounts(state_trees, accounts_trees)
+  end
+
+  defp assert_same_tx({expected, actual}) do
+    Model.mempool(tx: mempool_tx) = expected
+    Model.mempool_tx(signed_tx: tx, failures: failures) = mempool_tx
+
+    expected_map =
+      tx |> :aetx_sign.serialize_for_client_pending() |> Map.put("failures", failures)
+
+    assert expected_map == actual
   end
 end

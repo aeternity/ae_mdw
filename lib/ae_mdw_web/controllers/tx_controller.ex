@@ -5,6 +5,8 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NodeStore
+  alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
@@ -175,22 +177,23 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  # @spec pending_txs(Conn.t(), map()) :: Conn.t()
-  # def pending_txs(%Conn{assigns: assigns} = conn, _params) do
-  #   %{state: state, pagination: pagination, cursor: cursor, scope: scope} =
-  #     assigns
+  @spec pending_txs(Conn.t(), map()) :: Conn.t()
+  def pending_txs(%Conn{assigns: assigns} = conn, _params) do
+    %{state: _state, pagination: pagination, cursor: cursor, scope: scope} =
+      assigns
 
-  #   with {:ok, paginated_txs} <- Txs.fetch_pending(state, pagination, cursor, scope) do
-  #     WebUtil.render(conn, paginated_txs)
-  #   end
-  # end
+    node_state = State.new(NodeStore.new())
 
-  # @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
-  # def pending_txs_count(%Conn{assigns: %{state: state}} = conn, _params) do
-  #   with {:ok, count} <- Txs.count_pending(state) do
-  #     format_json(conn, %{data: count})
-  #   end
-  # end
+    with {:ok, paginated_txs} <-
+           Txs.fetch_pending_txs(node_state, pagination, scope, cursor, render_v3?: true) do
+      WebUtil.render(conn, paginated_txs)
+    end
+  end
+
+  @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
+  def pending_txs_count(%Conn{} = conn, _params) do
+    format_json(conn, :aec_tx_pool.size())
+  end
 
   defp extract_query(query_params) do
     query_params

@@ -43,8 +43,8 @@ defmodule AeMdw.Db.NodeStore do
     ets_table = Model.record(table)
 
     case :ets.first(ets_table) do
-      {key, _} -> {:ok, key}
       :"$end_of_table" -> :none
+      key -> {:ok, key}
     end
   end
 
@@ -52,8 +52,8 @@ defmodule AeMdw.Db.NodeStore do
     ets_table = Model.record(table)
 
     case :ets.next(ets_table, key_boundary) do
-      {key, _} -> {:ok, key}
       :"$end_of_table" -> :none
+      key -> {:ok, key}
     end
   end
 

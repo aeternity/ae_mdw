@@ -13,6 +13,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
   alias AeMdw.Db.Name
+  alias AeMdw.Db.NodeStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Util, as: DbUtil
@@ -53,6 +54,7 @@ defmodule AeMdw.Txs do
   @type_table Type
   @field_table Field
   @id_count_table IdCount
+  @pending_txs_table Model.Mempool
 
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
 
@@ -209,12 +211,21 @@ defmodule AeMdw.Txs do
     tx_hash
   end
 
-  # @spec fetch_pending(state(), pagination(), cursor() | nil, scope() | nil) ::
-  #         {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
-  # def fetch_pending(state, pagination, cursor, scope) do
-  #   {_direction, _is_reversed?, limit, _has_cursor?} = pagination
-  #   :aec_tx_pool.peek(limit)
-  # end
+  @spec fetch_pending_txs(state(), pagination(), range(), cursor(), opts()) ::
+          {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
+  def fetch_pending_txs(node_state, pagination, scope, cursor, opts) do
+    cursor = deserialize_pending_tx_cursor(cursor)
+
+    fn direction ->
+      Collection.stream(node_state, @pending_txs_table, direction, scope, cursor)
+    end
+    |> Collection.paginate(
+      pagination,
+      &render_pending_tx(node_state, &1, opts),
+      &serialize_pending_tx_cursor/1
+    )
+    |> then(&{:ok, &1})
+  end
 
   #
   # Streams txs of a microblock
@@ -678,5 +689,36 @@ defmodule AeMdw.Txs do
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
+  end
+
+  defp serialize_pending_tx_cursor(tx) do
+    tx
+    |> :erlang.term_to_binary()
+    |> Base.encode64()
+  end
+
+  defp deserialize_pending_tx_cursor(nil), do: nil
+
+  defp deserialize_pending_tx_cursor(bin) do
+    cursor =
+      bin
+      |> Base.decode64!()
+      |> :erlang.binary_to_term()
+
+    case match?({_neg_fee, _neg_gas_price, <<_::256>>, _nonce, <<_::256>>}, cursor) do
+      true -> cursor
+      false -> nil
+    end
+  end
+
+  defp render_pending_tx(%State{store: node_store}, mempool_key, _opts) do
+    node_store
+    |> NodeStore.get(@pending_txs_table, mempool_key)
+    |> case do
+      {:ok, Model.mempool_tx(signed_tx: signed_tx, failures: failures)} ->
+        signed_tx
+        |> :aetx_sign.serialize_for_client_pending()
+        |> Map.put("failures", failures)
+    end
   end
 end
