@@ -79,9 +79,6 @@ jobs:
     name: Dialyzer
     runs-on: ubuntu-20.04
 
-    env:
-      NODEROOT: ./node/local
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -105,9 +102,6 @@ jobs:
 
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
-
-      - name: Node Setup
-        uses: ./.github/actions/node-setup
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
