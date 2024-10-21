@@ -17,7 +17,7 @@ defmodule AeMdw.Db.Model do
   require Record
   require Ex2ms
 
-  import Record, only: [defrecord: 2]
+  import Record, only: [defrecord: 2, defrecord: 3]
 
   @type table :: atom()
   @type m_record :: tuple()
@@ -1237,17 +1237,21 @@ defmodule AeMdw.Db.Model do
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
   ### Node tables
-  defrecord(:mempool_tx, signed_tx: nil, hash: nil, failures: nil)
+  defrecord(:mempool_tx, :tx, hash: nil, signed_tx: nil, failures: nil)
 
   @type mempool_tx() ::
-          record(:mempool_tx, signed_tx: Node.signed_tx(), hash: pubkey(), failures: integer())
+          record(:mempool_tx, hash: pubkey(), signed_tx: Node.signed_tx(), failures: integer())
 
   # index: {neg_fee, neg_gas_price, origin, nonce, TxHash}
   @mempool_defaults [index: {0, 0, <<>>, 0, <<>>}, tx: nil]
-  defrecord :mempool, @mempool_defaults
+  defrecord :mempool, :tx, @mempool_defaults
 
   @type mempool_index() :: {integer(), integer(), binary(), integer(), binary()}
-  @type mempool() :: record(:mempool, index: mempool_index(), tx: mempool_tx())
+  @type mempool() ::
+          record(:mempool,
+            index: mempool_index(),
+            tx: mempool_tx()
+          )
 
   ################################################################################
 

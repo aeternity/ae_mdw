@@ -715,7 +715,7 @@ defmodule AeMdw.Txs do
     node_store
     |> NodeStore.get(@pending_txs_table, mempool_key)
     |> case do
-      Model.mempool_tx(signed_tx: signed_tx, failures: failures) ->
+      {:ok, Model.mempool_tx(signed_tx: signed_tx, failures: failures)} ->
         signed_tx
         |> :aetx_sign.serialize_for_client_pending()
         |> Map.put("failures", failures)
