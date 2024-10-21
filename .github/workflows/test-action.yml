@@ -103,6 +103,9 @@ jobs:
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
 
+      - name: Node Setup
+        uses: ./.github/actions/node-setup
+
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
         run: |
