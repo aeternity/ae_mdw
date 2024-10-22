@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.90.1](https://www.github.com/aeternity/ae_mdw/compare/v1.90.0...v1.90.1) (2024-10-22)
+
+
+### Bug Fixes
+
+* add mistaken aexn transfer routes back to controller ([#1987](https://www.github.com/aeternity/ae_mdw/issues/1987)) ([4e707e3](https://www.github.com/aeternity/ae_mdw/commit/4e707e3a999353e70f5d45ff95cb7d45f17a2ccd))
+* transfers cursor deserialization ([#1982](https://www.github.com/aeternity/ae_mdw/issues/1982)) ([ab9b286](https://www.github.com/aeternity/ae_mdw/commit/ab9b286f8f19335a7a29d8463debbc1a4adce2e6))
+* txs count route priority ([#1988](https://www.github.com/aeternity/ae_mdw/issues/1988)) ([65c5d6f](https://www.github.com/aeternity/ae_mdw/commit/65c5d6ff02a4ab92fff468982e326e13fb35e6c2))
+
 ## [1.90.0](https://www.github.com/aeternity/ae_mdw/compare/v1.89.0...v1.90.0) (2024-10-17)
 
 
