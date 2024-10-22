@@ -1672,7 +1672,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/names/nm_MwcgT7ybkVYnKFV6bPqhwYq2
 If the name is currently in auction, the reply has different shape:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/help" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/names/help" | jq '.'
 {
   "active": false,
   "name": "yedianzhiwang.chain",
