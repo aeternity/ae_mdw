@@ -3,6 +3,7 @@ defmodule AeMdwWeb.TxController do
 
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Validate
   alias AeMdw.Db.Model
   alias AeMdw.Db.NodeStore
@@ -185,14 +186,14 @@ defmodule AeMdwWeb.TxController do
     node_state = State.new(NodeStore.new())
 
     with {:ok, paginated_txs} <-
-           Txs.fetch_pending_txs(node_state, pagination, scope, cursor, render_v3?: true) do
+           Txs.fetch_pending_txs(node_state, pagination, scope, cursor) do
       WebUtil.render(conn, paginated_txs)
     end
   end
 
   @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
   def pending_txs_count(%Conn{} = conn, _params) do
-    format_json(conn, :aec_tx_pool.size())
+    format_json(conn, Db.pending_txs_count())
   end
 
   defp extract_query(query_params) do

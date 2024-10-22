@@ -211,9 +211,9 @@ defmodule AeMdw.Txs do
     tx_hash
   end
 
-  @spec fetch_pending_txs(state(), pagination(), range(), cursor(), opts()) ::
+  @spec fetch_pending_txs(state(), pagination(), range(), cursor()) ::
           {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
-  def fetch_pending_txs(node_state, pagination, scope, cursor, opts) do
+  def fetch_pending_txs(node_state, pagination, scope, cursor) do
     cursor = deserialize_pending_tx_cursor(cursor)
 
     fn direction ->
@@ -221,7 +221,7 @@ defmodule AeMdw.Txs do
     end
     |> Collection.paginate(
       pagination,
-      &render_pending_tx(node_state, &1, opts),
+      &render_pending_tx(node_state, &1),
       &serialize_pending_tx_cursor/1
     )
     |> then(&{:ok, &1})
@@ -711,7 +711,7 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp render_pending_tx(%State{store: node_store}, mempool_key, _opts) do
+  defp render_pending_tx(%State{store: node_store}, mempool_key) do
     node_store
     |> NodeStore.get(@pending_txs_table, mempool_key)
     |> case do
