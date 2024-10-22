@@ -136,8 +136,8 @@ defmodule AeMdwWeb.Router do
       get "/micro-blocks/:hash/txs", TxController, :micro_block_txs_v2
 
       get "/txs", TxController, :txs_v2
-      get "/txs/:hash_or_index", TxController, :tx_v2
       get "/txs/count", TxController, :count
+      get "/txs/:hash_or_index", TxController, :tx_v2
       get "/txs/count/:id", TxController, :count_id
 
       get "/entities/:id", ActiveEntityController, :active_entities
