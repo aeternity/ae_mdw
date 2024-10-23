@@ -22,34 +22,27 @@ defmodule AeMdwWeb.AexnTransferController do
   action_fallback(FallbackController)
 
   @spec transfers_from_v1(Conn.t(), map()) :: Conn.t()
-  def transfers_from_v1(conn, %{"sender" => sender_id}),
-    do:
-      Util.handle_input(
-        conn,
-        fn ->
-          transfers_reply(conn, {:from, Validate.id!(sender_id)}, &sender_transfer_to_map/2)
-        end
-      )
+  def transfers_from_v1(conn, %{"sender" => sender_id}) do
+    with {:ok, sender_pk} <- Validate.id(sender_id) do
+      transfers_reply(conn, {:from, sender_pk}, &sender_transfer_to_map/2)
+    end
+  end
 
   @spec transfers_to_v1(Conn.t(), map()) :: Conn.t()
   def transfers_to_v1(conn, %{"recipient" => recipient_id}) do
-    Util.handle_input(
-      conn,
-      fn ->
-        transfers_reply(conn, {:to, Validate.id!(recipient_id)}, &recipient_transfer_to_map/2)
-      end
-    )
+    with {:ok, recipient_pk} <- Validate.id(recipient_id) do
+      transfers_reply(conn, {:to, recipient_pk}, &recipient_transfer_to_map/2)
+    end
   end
 
   @spec transfers_from_to_v1(Conn.t(), map()) :: Conn.t()
   def transfers_from_to_v1(conn, %{"sender" => sender_id, "recipient" => recipient_id}) do
-    Util.handle_input(
-      conn,
-      fn ->
-        query = {:from_to, Validate.id!(sender_id), Validate.id!(recipient_id)}
-        transfers_reply(conn, query, &pair_transfer_to_map/2)
-      end
-    )
+    with {:ok, sender_pk} <- Validate.id(sender_id),
+         {:ok, recipient_pk} <- Validate.id(recipient_id) do
+      query = {:from_to, sender_pk, recipient_pk}
+
+      transfers_reply(conn, query, &pair_transfer_to_map/2)
+    end
   end
 
   @spec aex9_contract_transfers(Conn.t(), map()) :: Conn.t()
