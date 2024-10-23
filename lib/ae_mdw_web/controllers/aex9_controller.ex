@@ -15,20 +15,9 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Validate
-
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
-
   alias Plug.Conn
-
-  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_block: 2]
-  import AeMdwWeb.Helpers.AexnHelper, only: [normalize_balances: 1]
-
-  import AeMdwWeb.Util,
-    only: [
-      handle_input: 2,
-      parse_range: 1
-    ]
 
   import AeMdwWeb.AexnView
 
@@ -37,11 +26,15 @@ defmodule AeMdwWeb.Aex9Controller do
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
-  @max_range_length 10
-
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def by_names(conn, params),
-    do: handle_input(conn, fn -> by_names_reply(conn, params) end)
+  def by_names(%Conn{assigns: %{state: state}} = conn, params) do
+    pagination = {:forward, false, 32_000, false}
+
+    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
+           AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil, false) do
+      format_json(conn, aex9_tokens)
+    end
+  end
 
   @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_for_hash(%Conn{assigns: %{state: state}} = conn, %{
@@ -49,20 +42,11 @@ defmodule AeMdwWeb.Aex9Controller do
         "contract_id" => contract_id,
         "account_id" => account_id
       }) do
-    with {:ok, {type, height, hash}} <- ensure_block_hash(block_hash_enc),
+    with {:ok, {_type, _height, hash} = height_hash} <- ensure_block_hash(block_hash_enc),
          {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
-      handle_input(
-        conn,
-        fn ->
-          balance_for_hash_reply(
-            conn,
-            contract_pk,
-            account_pk,
-            {type, height, hash}
-          )
-        end
-      )
+      {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+      format_json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
     end
   end
 
@@ -95,15 +79,11 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  def balances(conn, %{"account_id" => account_id}),
-    do:
-      handle_input(
-        conn,
-        fn ->
-          account_pk = Validate.id!(account_id, [:account_pubkey])
-          account_balances_reply(conn, account_pk)
-        end
-      )
+  def balances(conn, %{"account_id" => account_id}) do
+    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      account_balances_reply(conn, account_pk)
+    end
+  end
 
   def balances(%Conn{assigns: %{state: state, async_state: async_state, opts: opts}} = conn, %{
         "contract_id" => contract_id
@@ -115,45 +95,9 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  @spec balances_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances_range(%Conn{assigns: %{state: state}} = conn, %{
-        "range" => range,
-        "contract_id" => contract_id
-      }) do
-    with {:ok, first..last//_step} <- validate_range(range),
-         {:ok, contract_pk} <-
-           ensure_aex9_contract_at_block(state, contract_id, {min(first, last), -1}) do
-      handle_input(
-        conn,
-        fn ->
-          balances_range_reply(conn, contract_pk, first..last)
-        end
-      )
-    end
-  end
-
   #
   # Private functions
   #
-
-  defp by_names_reply(%Conn{assigns: %{state: state}} = conn, params) do
-    pagination = {:forward, false, 32_000, false}
-
-    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
-           AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil, false) do
-      format_json(conn, aex9_tokens)
-    end
-  end
-
-  defp balance_for_hash_reply(
-         conn,
-         contract_pk,
-         account_pk,
-         {_type, _height, _hash} = height_hash
-       ) do
-    {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-    format_json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
-  end
 
   defp account_balances_reply(
          %Conn{assigns: %{state: state, async_state: async_state}} = conn,
@@ -204,42 +148,6 @@ defmodule AeMdwWeb.Aex9Controller do
       |> Enum.map(&balance_to_map(state, &1))
 
     format_json(conn, balances)
-  end
-
-  defp balances_range_reply(conn, contract_pk, range) do
-    format_json(
-      conn,
-      %{
-        contract_id: encode_contract(contract_pk),
-        range:
-          map_balances_range(
-            range,
-            fn type_height_hash ->
-              {amounts, _height_hash} = DBN.aex9_balances!(contract_pk, type_height_hash)
-              {:amounts, normalize_balances(amounts)}
-            end
-          )
-      }
-    )
-  end
-
-  defp validate_range(range) do
-    case parse_range(range) do
-      {:ok, first..last//_step} ->
-        {:ok, top_kb} = :aec_chain.top_key_block()
-        first = max(0, first)
-        last = min(last, :aec_blocks.height(top_kb))
-
-        if last - first + 1 > @max_range_length do
-          {:error,
-           ErrInput.RangeTooBig.exception(value: "max range length is #{@max_range_length}")}
-        else
-          {:ok, first..last}
-        end
-
-      {:error, _detail} ->
-        {:error, ErrInput.NotAex9.exception(value: range)}
-    end
   end
 
   defp ensure_aex9_contract_at_block(state, ct_id, block_hash) when is_binary(block_hash) do
@@ -296,23 +204,4 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp top?(opts), do: Keyword.get(opts, :top?, false)
-
-  defp map_balances_range(range, get_balance_func) do
-    range
-    |> Stream.map(&height_hash/1)
-    |> Stream.map(fn {height, hash} ->
-      {k, v} = get_balance_func.({:key, height, hash})
-      Map.put(%{height: height, block_hash: encode_block(:key, hash)}, k, v)
-    end)
-    |> Enum.to_list()
-  end
-
-  defp height_hash(height) do
-    with {:ok, block} <- :aec_chain.get_key_block_by_height(height),
-         {:ok, hash} <- :aec_headers.hash_header(:aec_blocks.to_header(block)) do
-      {height, hash}
-    else
-      _error -> {height, <<>>}
-    end
-  end
 end

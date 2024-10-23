@@ -30,9 +30,9 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
+  defp bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
 
-  def txi_idx_txi({txi, _idx}), do: txi
+  defp txi_idx_txi({txi, _idx}), do: txi
 
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
@@ -217,7 +217,7 @@ defmodule AeMdw.Db.Format do
     {raw_auction, raw_map} = Map.pop(to_raw_map(state, m_name, source), :auction)
 
     auction =
-      map_some(
+      Util.map_some(
         raw_auction,
         fn %{info: info} ->
           info
@@ -493,7 +493,7 @@ defmodule AeMdw.Db.Format do
   def map_raw_values(x, f),
     do: f.(x)
 
-  def encode_raw_values(x) do
+  defp encode_raw_values(x) do
     map_raw_values(x, &encode_raw_value/1)
   end
 
