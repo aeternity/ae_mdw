@@ -1141,7 +1141,7 @@ defmodule AeMdw.Names do
             {account_id, "AENS.claim", tx_field_pos, Collection.integer(), Collection.integer()}
           )
 
-        {:gen, first_gen..last_gen} ->
+        {:gen, first_gen..last_gen//_step} ->
           Collection.generate_key_boundary(
             {account_id, "AENS.claim", tx_field_pos,
              Collection.gen_range(
