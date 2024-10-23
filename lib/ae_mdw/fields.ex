@@ -64,9 +64,12 @@ defmodule AeMdw.Fields do
   end
 
   @spec field_pos_mask(Node.tx_type(), pos()) :: pos()
-  def field_pos_mask(:ga_meta_tx, pos), do: pos - 1 + @base_wraptx_field_pos
-  def field_pos_mask(:paying_for_tx, pos), do: pos - 1 + @base_wraptx_field_pos
-  def field_pos_mask(_tx_type, pos), do: pos
+  def field_pos_mask(type, pos) do
+    case type in Txs.wrap_tx_types() do
+      true -> pos - 1 + @base_wraptx_field_pos
+      false -> pos
+    end
+  end
 
   @spec mdw_field_pos(String.t()) :: pos()
   def mdw_field_pos("entrypoint"), do: @base_mdw_field_pos

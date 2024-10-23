@@ -11,9 +11,11 @@ defmodule AeMdw.Node do
   alias AeMdw.Contract
   alias AeMdw.Contracts
   alias AeMdw.Db.HardforkPresets
+  alias AeMdw.Fields
   alias AeMdw.Extract
   alias AeMdw.Extract.AbsCode
   alias AeMdw.Node.Db
+  alias AeMdw.Txs
 
   import AeMdw.Util.Memoize
 
@@ -258,6 +260,25 @@ defmodule AeMdw.Node do
     {tx_field_types, _tx_fields, _tx_ids} = types_fields_ids()
 
     Map.fetch!(tx_field_types, tx_field)
+  end
+
+  @spec tx_ids_positions() :: %{Txs.wrap_tx_type() => [tx_field_pos()]}
+  defmemo wrapper_tx_positions() do
+    {wrapper_tx_types, non_wrapper_tx_types} = Map.split(tx_ids_positions(), Txs.wrap_tx_types())
+
+    internal_positions =
+      non_wrapper_tx_types
+      |> Enum.reduce(MapSet.new(), fn {_type, positions}, acc ->
+        MapSet.union(acc, MapSet.new(positions))
+      end)
+      |> MapSet.to_list()
+
+    Enum.into(wrapper_tx_types, %{}, fn {tx_type, wrapper_positions} ->
+      {tx_type,
+       Enum.reduce(internal_positions, wrapper_positions, fn p, acc ->
+         [Fields.field_pos_mask(tx_type, p) | acc]
+       end)}
+    end)
   end
 
   @spec tx_fields(tx_type()) :: [atom()]

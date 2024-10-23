@@ -41,6 +41,7 @@ defmodule AeMdw.Txs do
           | %{}
   @type opt() :: {:add_spendtx_details?, boolean()} | {:render_v3?, boolean()}
   @type opts() :: [opt()]
+  @type wrap_tx_type :: :ga_meta_tx | :paying_for_tx
 
   @typep state() :: State.t()
   @typep pagination :: Collection.direction_limit()
@@ -57,6 +58,9 @@ defmodule AeMdw.Txs do
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
 
   @type_spend_tx "SpendTx"
+
+  @spec wrap_tx_types() :: [wrap_tx_type()]
+  def wrap_tx_types(), do: [:ga_meta_tx, :paying_for_tx]
 
   @spec count(state(), range(), map()) :: {:ok, non_neg_integer()} | {:error, Error.t()}
   def count(state, nil, %{"tx_type" => tx_type} = params) do
@@ -458,11 +462,17 @@ defmodule AeMdw.Txs do
 
     {:ok,
      Enum.flat_map(tx_types, fn tx_type ->
-       poss = tx_type |> Node.tx_ids_positions() |> Enum.map(&{tx_type, &1})
-       # nil - for link
-       poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
+       if tx_type in wrap_tx_types() do
+         Node.wrapper_tx_positions()
+         |> Map.fetch!(tx_type)
+         |> Enum.map(fn pos -> {tx_type, pos} end)
+       else
+         poss = tx_type |> Node.tx_ids_positions() |> Enum.map(&{tx_type, &1})
+         # nil - for link
+         poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
 
-       if tx_type == :contract_create_tx, do: [{:contract_call_tx, nil} | poss], else: poss
+         if tx_type == :contract_create_tx, do: [{:contract_call_tx, nil} | poss], else: poss
+       end
      end)}
   end
 
