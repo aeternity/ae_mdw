@@ -7,6 +7,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Store
+  alias AeMdw.Db.MemStore
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
