@@ -45,7 +45,6 @@ WORKDIR /home/aeternity/node
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
 ENV NODEROOT=/home/aeternity/node/local
-ARG NODE_VERSION
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 
@@ -53,7 +52,7 @@ RUN mkdir -p ./local/rel/aeternity/data/mnesia
 COPY --from=aeternity /home/aeternity/node ./local/rel/aeternity
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
-RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/${NODE_VERSION}/sys.config
+RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/*/sys.config
 
 # Check if the config file is OK
 RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
@@ -97,7 +96,7 @@ RUN mix compile
 COPY config/runtime.exs config/
 
 # Generate swagger V3 file
-RUN cp /home/aeternity/node/local/lib/aehttp-$NODE_VERSION/priv/oas3.yaml docs/swagger_v3/node_oas3.yaml
+RUN cp /home/aeternity/node/local/lib/aehttp-*/priv/oas3.yaml docs/swagger_v3/node_oas3.yaml
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
 ARG PATH_PREFIX
 RUN scripts/swagger-docs.py
