@@ -212,7 +212,7 @@ defmodule AeMdw.Txs do
   end
 
   @spec fetch_pending_txs(state(), pagination(), range(), cursor()) ::
-          {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
+          {page_cursor(), [tx()], page_cursor()}
   def fetch_pending_txs(node_state, pagination, scope, cursor) do
     cursor = deserialize_pending_tx_cursor(cursor)
 
@@ -224,7 +224,6 @@ defmodule AeMdw.Txs do
       &render_pending_tx(node_state, &1),
       &serialize_pending_tx_cursor/1
     )
-    |> then(&{:ok, &1})
   end
 
   #

@@ -1265,8 +1265,7 @@ defmodule AeMdw.Db.Model do
       name_tables(),
       oracle_tables(),
       stat_tables(),
-      tasks_tables(),
-      node_tables()
+      tasks_tables()
     ])
   end
 
@@ -1401,12 +1400,6 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AccountBalance,
       AeMdw.Db.Model.AsyncTask,
       AeMdw.Db.Model.Migrations
-    ]
-  end
-
-  defp node_tables() do
-    [
-      AeMdw.Db.Model.Mempool
     ]
   end
 

@@ -183,12 +183,10 @@ defmodule AeMdwWeb.TxController do
     %{state: _state, pagination: pagination, cursor: cursor, scope: scope} =
       assigns
 
-    node_state = State.new(NodeStore.new())
-
-    with {:ok, paginated_txs} <-
-           Txs.fetch_pending_txs(node_state, pagination, scope, cursor) do
-      WebUtil.render(conn, paginated_txs)
-    end
+    NodeStore.new()
+    |> State.new()
+    |> Txs.fetch_pending_txs(pagination, scope, cursor)
+    |> then(&WebUtil.render(conn, &1))
   end
 
   @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
