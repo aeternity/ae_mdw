@@ -244,4 +244,14 @@ defmodule AeMdwWeb.NameController do
       WebUtil.render(conn, updates)
     end
   end
+
+  @spec account_claims(Conn.t(), map()) :: Conn.t()
+  def account_claims(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with {:ok, paginated_claims} <-
+           Names.fetch_account_claims(state, account_id, pagination, scope, cursor) do
+      WebUtil.render(conn, paginated_claims)
+    end
+  end
 end

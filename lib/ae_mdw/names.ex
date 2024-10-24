@@ -338,6 +338,27 @@ defmodule AeMdw.Names do
     )
   end
 
+  @spec fetch_account_claims(state(), Db.pubkey(), pagination(), range(), cursor()) ::
+          {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, reason()}
+  def fetch_account_claims(state, owner_pk, pagination, scope, cursor) do
+    with {:ok, account_id} <- Validate.id(owner_pk),
+         {:ok, cursor} <- deserialize_claims_cursor(cursor) do
+      fn direction ->
+        [
+          contract_call_streams(state, account_id, direction, scope, cursor),
+          name_claim_tx_streams(state, account_id, direction, scope, cursor)
+        ]
+        |> Collection.merge(direction)
+      end
+      |> Collection.paginate(
+        pagination,
+        &render_nested_resource(state, &1),
+        &serialize_claims_cursor(&1)
+      )
+      |> then(&{:ok, &1})
+    end
+  end
+
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor) do
     cursor = if cursor, do: {owner_pk, cursor}
     scope = {{owner_pk, Util.min_bin()}, {owner_pk, Util.max_256bit_bin()}}
@@ -878,6 +899,10 @@ defmodule AeMdw.Names do
     end)
   end
 
+  defp render_nested_resource(state, {txi, idx}) do
+    render_nested_resource(state, {nil, {txi, idx}, Model.NameClaim})
+  end
+
   defp render_nested_resource(_state, {active_from, {nil, height}, Model.NameExpired}) do
     %{
       active_from: active_from,
@@ -885,7 +910,7 @@ defmodule AeMdw.Names do
     }
   end
 
-  defp render_nested_resource(state, {active_from, {txi, _idx} = txi_idx, table}) do
+  defp render_nested_resource(state, {maybe_active_from, {txi, _idx} = txi_idx, table}) do
     tx_type =
       case table do
         Model.AuctionBidClaim -> :name_claim_tx
@@ -898,7 +923,20 @@ defmodule AeMdw.Names do
     {tx_rec, ^tx_type, tx_hash, chain_tx_type, block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
+    tx_mod = Node.tx_mod(tx_type)
+
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
+
+    active_from =
+      case maybe_active_from do
+        nil ->
+          plain_name = tx_mod.name(tx_rec)
+          {:ok, Model.name(active: active_from)} = locate_name_or_auction(state, plain_name)
+          active_from
+
+        active_from ->
+          active_from
+      end
 
     %{
       active_from: active_from,
@@ -907,7 +945,7 @@ defmodule AeMdw.Names do
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Node.tx_name(chain_tx_type),
       internal_source: chain_tx_type != tx_type,
-      tx: Node.tx_mod(tx_type).for_client(tx_rec)
+      tx: tx_mod.for_client(tx_rec)
     }
   end
 
@@ -980,6 +1018,23 @@ defmodule AeMdw.Names do
     case Regex.run(~r/\A(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
       [txi, idx] -> {String.to_integer(txi), String.to_integer(idx) - 1}
       _error_or_invalid -> nil
+    end
+  end
+
+  defp serialize_claims_cursor({txi, idx}) do
+    {txi, idx}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
+  end
+
+  defp deserialize_claims_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_claims_cursor(cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
+         {_txi, _idx} = cursor <- :erlang.binary_to_term(cursor_bin) do
+      {:ok, cursor}
+    else
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
   end
 
@@ -1074,5 +1129,75 @@ defmodule AeMdw.Names do
       {:ok, Model.account_names_count(count: count)} -> count
       :not_found -> 0
     end
+  end
+
+  defp contract_call_streams(state, account_id, direction, scope, cursor) do
+    tx_field_pos = 1
+
+    key_boundary =
+      case scope do
+        nil ->
+          Collection.generate_key_boundary(
+            {account_id, "AENS.claim", tx_field_pos, Collection.integer(), Collection.integer()}
+          )
+
+        {:gen, first_gen..last_gen//_step} ->
+          Collection.generate_key_boundary(
+            {account_id, "AENS.claim", tx_field_pos,
+             Collection.gen_range(
+               DbUtil.first_gen_to_txi(state, first_gen),
+               DbUtil.last_gen_to_txi(state, last_gen)
+             ), Collection.integer()}
+          )
+      end
+
+    cursor =
+      case cursor do
+        nil ->
+          nil
+
+        {txi, idx} ->
+          {account_id, "AENS.claim", tx_field_pos, txi, idx}
+      end
+
+    state
+    |> Collection.stream(Model.IdFnameIntContractCall, direction, key_boundary, cursor)
+    |> Stream.map(fn {_account_id, _fname, _tx_field_pos, txi, idx} -> {txi, idx} end)
+  end
+
+  defp name_claim_tx_streams(state, account_id, direction, scope, cursor) do
+    tx_field_pos = 1
+
+    key_boundary =
+      case scope do
+        nil ->
+          Collection.generate_key_boundary(
+            {:name_claim_tx, tx_field_pos, account_id, Collection.integer()}
+          )
+
+        {:gen, first_gen..last_gen//_step} ->
+          Collection.generate_key_boundary(
+            {:name_claim_tx, tx_field_pos, account_id,
+             Collection.gen_range(
+               DbUtil.first_gen_to_txi(state, first_gen),
+               DbUtil.last_gen_to_txi(state, last_gen)
+             )}
+          )
+      end
+
+    cursor =
+      case cursor do
+        nil ->
+          nil
+
+        {txi, _idx} ->
+          {:name_claim_tx, tx_field_pos, account_id, txi}
+      end
+
+    state
+    |> Collection.stream(Model.Field, direction, key_boundary, cursor)
+    |> Stream.map(fn {_tx_type, _tx_field_pos, _account_id, txi} ->
+      {txi, -1}
+    end)
   end
 end
