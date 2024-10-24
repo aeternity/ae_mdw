@@ -1,4 +1,7 @@
 defmodule AeMdwWeb.Supervisor do
+  @moduledoc """
+  Web supervisor.
+  """
   use Supervisor
 
   @spec start_link([]) :: {:ok, pid()}

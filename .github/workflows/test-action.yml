@@ -56,12 +56,7 @@ jobs:
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
 
-      - name: Reset master
-        if: ${{ github.ref != 'refs/heads/master' }}
-        run: |
-          git branch -f master origin/master
-
-      - run: mix format --check-formatted && mix credo diff master
+      - run: mix format --check-formatted && mix credo
 
   lint-docs:
     name: Swagger v2 auto-generation + linting

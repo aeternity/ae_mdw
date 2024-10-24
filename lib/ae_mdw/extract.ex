@@ -1,10 +1,22 @@
-# credo:disable-for-this-file Credo.Check.Consistency.UnusedVariableNames
 defmodule AeMdw.Extract do
-  @moduledoc "currently we require that AE node is compiled with debug_info"
+  @moduledoc """
+  Extract functions and record info from node code.
+
+  Currently we require that AE node is compiled with debug_info.
+  """
 
   import AeMdw.Util
 
   defmodule AbsCode do
+    @moduledoc """
+    Helper for dealing with Erlang code structures.
+    """
+
+    @type code() :: term()
+    @typep fname() :: atom()
+
+    @spec reduce(module(), {fname(), non_neg_integer()}, term(), (term(), term() -> term())) ::
+            term()
     def reduce(mod_name, {fun_name, arity}, init_acc, f) when is_atom(mod_name),
       do: reduce(ok!(AbsCode.module(mod_name)), {fun_name, arity}, init_acc, f)
 
@@ -13,90 +25,58 @@ defmodule AeMdw.Extract do
       Enum.reduce(fn_code, init_acc, f)
     end
 
+    @spec module(module()) :: {:ok, code()} | {:error, term()}
     def module(module) do
-      with [_ | _] = path <- :code.which(module),
+      with [_path | _rest] = path <- :code.which(module),
            {:ok, chunk} = :beam_lib.chunks(path, [:abstract_code]),
-           {_, [abstract_code: {_, code}]} <- chunk,
+           {_module, [abstract_code: {_version, code}]} <- chunk,
            do: {:ok, code}
     end
 
+    @spec function(code(), fname(), non_neg_integer()) :: code() | nil
     def function(mod_code, name, arity) do
       finder = fn
-        {:function, _, ^name, ^arity, code} -> code
-        _ -> nil
+        {:function, _anno, ^name, ^arity, code} -> code
+        _code -> nil
       end
 
-      with [_ | _] = fn_code <- Enum.find_value(mod_code, finder),
+      with [_form | _rest] = fn_code <- Enum.find_value(mod_code, finder),
            do: {:ok, fn_code}
     end
 
-    def function_body_bin1(mod_code, fun_name, bin_arg) do
-      charlist_arg = String.to_charlist(bin_arg)
-      {:ok, fn_code} = AbsCode.function(mod_code, fun_name, 1)
-
-      Enum.reduce_while(fn_code, nil, fn
-        {:clause, _, [{:bin, _, [{:bin_element, _, {:string, _, ^charlist_arg}, _, _}]}], [],
-         body},
-        _ ->
-          {:halt, body}
-
-        _, _ ->
-          {:cont, nil}
-      end)
-    end
-
-    def literal_map_assocs({:map, _, assocs}),
-      do: for({:map_field_assoc, _, {_, _, k}, {_, _, v}} <- assocs, do: {k, v})
-
+    @spec record_fields(code(), fname()) :: {:ok, [{atom(), non_neg_integer()}]}
     def record_fields(mod_code, name) do
       finder = fn
-        {:attribute, _, :record, {^name, fields}} -> fields
-        _ -> nil
+        {:attribute, _anno, :record, {^name, fields}} -> fields
+        _code -> nil
       end
 
-      with [_ | _] = rec_fields <- Enum.find_value(mod_code, finder),
+      with [_field | _rest] = rec_fields <- Enum.find_value(mod_code, finder),
            do: {:ok, rec_fields}
     end
 
-    def field_name_type({:typed_record_field, {:record_field, _, {:atom, _, name}}, type}),
-      do: {name, type}
+    @spec field_name_type(code()) :: {atom(), atom()}
+    def field_name_type(
+          {:typed_record_field, {:record_field, _anno1, {:atom, _anno2, name}}, type}
+        ),
+        do: {name, type}
 
-    def field_name_type({:typed_record_field, {:record_field, _, {:atom, _, name}, _}, type}),
-      do: {name, type}
+    def field_name_type(
+          {:typed_record_field, {:record_field, _anno1, {:atom, _anno2, name}, _anno3}, type}
+        ),
+        do: {name, type}
 
-    def field_name_type({:record_field, _, {:atom, _, name}}),
+    def field_name_type({:record_field, _anno1, {:atom, _anno2, name}}),
       do: {name, :undefined}
 
+    @spec aeser_id_type?(code()) :: boolean()
     def aeser_id_type?(abs_code) do
       case abs_code do
-        {:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]} -> true
-        _ -> false
-      end
-    end
-
-    def list_of_aeser_id_type?(abs_code) do
-      case abs_code do
-        {:type, _, :list, [{:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]}]} ->
-          true
-
-        _ ->
-          false
+        {:remote_type, _anno1, [{:atom, _anno2, :aeser_id}, {:atom, _anno3, :id}, []]} -> true
+        _code -> false
       end
     end
   end
-
-  def tx_types() do
-    {:ok,
-     :aetx
-     |> Code.Typespec.fetch_types()
-     |> ok!
-     |> Enum.find_value(nil, &tx_type_variants/1)}
-  end
-
-  defp tx_type_variants({:type, {:tx_type, {:type, _, :union, variants}, []}}),
-    do: for({:atom, _, v} <- variants, do: v)
-
-  defp tx_type_variants(_), do: nil
 
   defp tx_record(:name_preclaim_tx), do: :ns_preclaim_tx
   defp tx_record(:name_claim_tx), do: :ns_claim_tx
@@ -105,10 +85,8 @@ defmodule AeMdw.Extract do
   defp tx_record(:name_revoke_tx), do: :ns_revoke_tx
   defp tx_record(tx_type), do: tx_type
 
-  def tx_record_info(tx_type),
-    do: tx_record_info(tx_type, &AeMdw.Node.tx_mod/1)
-
-  def tx_record_info(:channel_client_reconnect_tx, _),
+  @spec tx_record_info(atom(), (atom() -> atom())) :: {[atom()], map()}
+  def tx_record_info(:channel_client_reconnect_tx, _mod_mapper),
     do: {[], %{}}
 
   def tx_record_info(tx_type, mod_mapper) do

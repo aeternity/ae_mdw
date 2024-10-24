@@ -120,7 +120,7 @@ defmodule AeMdw.Db.Sync.Contract do
   #
   defp get_aexn_type(height, type_info) do
     cond do
-      AexnContracts.is_aex9?(type_info) -> :aex9
+      AexnContracts.aex9?(type_info) -> :aex9
       AexnContracts.has_aex141_signatures?(height, type_info) -> :aex141
       true -> nil
     end

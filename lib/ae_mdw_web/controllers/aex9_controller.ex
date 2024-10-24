@@ -178,7 +178,7 @@ defmodule AeMdwWeb.Aex9Controller do
       :not_found ->
         # if not yet synced by Mdw but present on Node
         with {:ok, ct_pk} <- Validate.id(ct_id) do
-          if AexnContracts.is_aex9?(ct_pk) do
+          if AexnContracts.aex9?(ct_pk) do
             {:ok, ct_pk}
           else
             {:error, ErrInput.NotAex9.exception(value: ct_id)}

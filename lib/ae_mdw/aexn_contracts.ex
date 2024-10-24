@@ -26,25 +26,25 @@ defmodule AeMdw.AexnContracts do
   @aex9_extensions_hash <<49, 192, 141, 115>>
   @aex141_extensions_hash <<222, 10, 63, 194>>
 
-  @spec is_aex9?(pubkey() | type_info()) :: boolean()
-  def is_aex9?(pubkey) when is_binary(pubkey) do
+  @spec aex9?(pubkey() | type_info()) :: boolean()
+  def aex9?(pubkey) when is_binary(pubkey) do
     case Contract.get_info(pubkey) do
-      {:ok, {type_info, _compiler_vsn, _source_hash}} -> is_aex9?(type_info)
+      {:ok, {type_info, _compiler_vsn, _source_hash}} -> aex9?(type_info)
       {:error, _reason} -> false
     end
   end
 
-  def is_aex9?({:fcode, functions, _hash_names, _code}) do
+  def aex9?({:fcode, functions, _hash_names, _code}) do
     AeMdw.Node.aex9_signatures()
     |> has_all_signatures?(functions)
   end
 
-  def is_aex9?(_no_fcode), do: false
+  def aex9?(_no_fcode), do: false
 
   @spec validate_aex9(String.t(), State.t()) :: {:ok, pubkey()} | {:error, Error.t()}
   def validate_aex9(contract_id, state) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:not_aex9, true} <- {:not_aex9, is_aex9?(contract_pk)},
+         {:not_aex9, true} <- {:not_aex9, aex9?(contract_pk)},
          {:invalid, false} <-
            {:invalid, State.exists?(state, Model.AexnInvalidContract, {:aex9, contract_pk})} do
       {:ok, contract_pk}
