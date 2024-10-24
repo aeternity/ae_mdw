@@ -3,8 +3,11 @@ defmodule AeMdwWeb.TxController do
 
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NodeStore
+  alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
@@ -173,6 +176,22 @@ defmodule AeMdwWeb.TxController do
          {:ok, paginated_txs} <- Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor) do
       WebUtil.render(conn, paginated_txs)
     end
+  end
+
+  @spec pending_txs(Conn.t(), map()) :: Conn.t()
+  def pending_txs(%Conn{assigns: assigns} = conn, _params) do
+    %{state: _state, pagination: pagination, cursor: cursor, scope: scope} =
+      assigns
+
+    NodeStore.new()
+    |> State.new()
+    |> Txs.fetch_pending_txs(pagination, scope, cursor)
+    |> then(&WebUtil.render(conn, &1))
+  end
+
+  @spec pending_txs_count(Conn.t(), map()) :: Conn.t()
+  def pending_txs_count(%Conn{} = conn, _params) do
+    format_json(conn, Db.pending_txs_count())
   end
 
   defp extract_query(query_params) do

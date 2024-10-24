@@ -320,4 +320,9 @@ defmodule AeMdw.Node.Db do
 
     pubkey
   end
+
+  @spec pending_txs_count() :: non_neg_integer()
+  def pending_txs_count() do
+    :aec_tx_pool.size()
+  end
 end
