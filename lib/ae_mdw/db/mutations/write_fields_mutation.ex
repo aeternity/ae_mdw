@@ -15,7 +15,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   require Model
 
-  @typep wrap_tx :: :ga_meta_tx | :paying_for_tx | nil
+  @typep wrap_tx :: Txs.wrap_tx_type() | nil
 
   @derive AeMdw.Db.Mutation
   defstruct [:type, :tx, :block_index, :txi, :wrap_tx]
