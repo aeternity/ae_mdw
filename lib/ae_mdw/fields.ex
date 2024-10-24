@@ -65,9 +65,10 @@ defmodule AeMdw.Fields do
 
   @spec field_pos_mask(Node.tx_type(), pos()) :: pos()
   def field_pos_mask(type, pos) do
-    case type in Txs.wrap_tx_types() do
-      true -> pos - 1 + @base_wraptx_field_pos
-      false -> pos
+    if type in Txs.wrap_tx_types() do
+      pos - 1 + @base_wraptx_field_pos
+    else
+      pos
     end
   end
 
