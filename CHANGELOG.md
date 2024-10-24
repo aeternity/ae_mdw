@@ -1,5 +1,20 @@
 # Changelog
 
+### [1.90.2](https://www.github.com/aeternity/ae_mdw/compare/v1.90.1...v1.90.2) (2024-10-24)
+
+
+### Bug Fixes
+
+* remove handle_input usage from different PR ([#1991](https://www.github.com/aeternity/ae_mdw/issues/1991)) ([4a3ebc1](https://www.github.com/aeternity/ae_mdw/commit/4a3ebc1747c01b05a21d87265d2135f7e65f1d26))
+* rerun aex9 tokens contrat mint events fix ([#1994](https://www.github.com/aeternity/ae_mdw/issues/1994)) ([532ca0b](https://www.github.com/aeternity/ae_mdw/commit/532ca0bcbd10be896912dd3313ee171a045db4f7))
+
+
+### Miscellaneous
+
+* remove NODE_VERSION dependancy in Dockerfile ([#1989](https://www.github.com/aeternity/ae_mdw/issues/1989)) ([200a116](https://www.github.com/aeternity/ae_mdw/commit/200a1162a5ee82c436dcbaf28449b6ccd52589c7))
+* remove unused functions ([#1984](https://www.github.com/aeternity/ae_mdw/issues/1984)) ([6e5edc8](https://www.github.com/aeternity/ae_mdw/commit/6e5edc82603b30ef3c095d20e640779bb8fdbd0a))
+* run all unrun migrations ([#1981](https://www.github.com/aeternity/ae_mdw/issues/1981)) ([0619c4b](https://www.github.com/aeternity/ae_mdw/commit/0619c4bf04b18115d0b4be18bf5db8f722e5bea3))
+
 ### [1.90.1](https://www.github.com/aeternity/ae_mdw/compare/v1.90.0...v1.90.1) (2024-10-22)
 
 
