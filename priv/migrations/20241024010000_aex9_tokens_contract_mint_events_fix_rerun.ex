@@ -1,4 +1,4 @@
-defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
+defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFixRerun do
   @moduledoc """
   Fixes the Deposit(address, value) that should have been names Mint(address, value)
   for one of the AE tokens contract (WAE DEX contract).
@@ -110,13 +110,13 @@ defmodule AeMdw.Migrations.Aex9TokensContractMintEventsFix do
           WriteMutation.new(
             Model.AexnTransfer,
             Model.aexn_transfer(
-              index: {:aex9, from_pk, txi, to_pk, value, log_idx},
+              index: {:aex9, from_pk, txi, log_idx, to_pk, value},
               contract_pk: contract_pk
             )
           ),
           WriteMutation.new(
             Model.RevAexnTransfer,
-            Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, from_pk, value, log_idx})
+            Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, log_idx, from_pk, value})
           )
         ]
       end)
