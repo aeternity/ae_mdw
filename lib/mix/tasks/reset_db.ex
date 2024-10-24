@@ -1,4 +1,8 @@
 defmodule Mix.Tasks.ResetDb do
+  @moduledoc """
+  Removes MDW database directory.
+  """
+
   use Mix.Task
 
   alias AeMdw.Db.RocksDb

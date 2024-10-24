@@ -1,4 +1,8 @@
 defmodule AeMdw.Exception do
+  @moduledoc """
+  Base module for defining custom exceptions.
+  """
+
   defmacro defexception!(name) do
     quote do
       defmodule unquote(name) do

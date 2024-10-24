@@ -17,6 +17,7 @@ defmodule AeMdwWeb do
   and import those modules here.
   """
 
+  @spec controller() :: Macro.t()
   def controller do
     quote do
       use Phoenix.Controller, namespace: AeMdwWeb
@@ -28,6 +29,7 @@ defmodule AeMdwWeb do
     end
   end
 
+  @spec view() :: Macro.t()
   def view do
     quote do
       use Phoenix.View,
@@ -37,12 +39,12 @@ defmodule AeMdwWeb do
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
 
-      import AeMdwWeb.ErrorHelpers
       import AeMdwWeb.Gettext
       alias AeMdwWeb.Router.Helpers, as: Routes
     end
   end
 
+  @spec router() :: Macro.t()
   def router do
     quote do
       use Phoenix.Router

@@ -334,11 +334,11 @@ defmodule AeMdw.Db.Contract do
 
   @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
   def which_aex9_contract_pubkey(contract_pk, addr) do
-    if AexnContracts.is_aex9?(contract_pk) do
+    if AexnContracts.aex9?(contract_pk) do
       contract_pk
     else
       # remotely called contract is aex9?
-      if addr != contract_pk and AexnContracts.is_aex9?(addr), do: addr
+      if addr != contract_pk and AexnContracts.aex9?(addr), do: addr
     end
   end
 

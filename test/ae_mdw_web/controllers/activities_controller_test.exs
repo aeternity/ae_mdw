@@ -1543,8 +1543,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 111,
           name: plain_name,
-          name_salt: 1111,
-          name_fee: 11111,
+          name_salt: 1_111,
+          name_fee: 11_111,
           fee: 111_111,
           ttl: 11_111_111
         })
@@ -1556,8 +1556,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 222,
           name: plain_name,
-          name_salt: 2222,
-          name_fee: 22222,
+          name_salt: 2_222,
+          name_fee: 22_222,
           fee: 222_222,
           ttl: 2_222_222
         })
@@ -1569,8 +1569,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 333,
           name: plain_name,
-          name_salt: 3333,
-          name_fee: 33333,
+          name_salt: 3_333,
+          name_fee: 33_333,
           fee: 333_333,
           ttl: 3_333_333
         })

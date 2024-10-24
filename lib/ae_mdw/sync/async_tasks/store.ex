@@ -42,9 +42,9 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
     insert? =
       if only_new do
-        not is_enqueued?(key1) and not is_added?(key2)
+        not enqueued?(key1) and not added?(key2)
       else
-        not is_enqueued?(key1)
+        not enqueued?(key1)
       end
 
     if insert? do
@@ -166,11 +166,11 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   defp added_key(Model.async_task(index: {_ts, task_type}, args: args, extra_args: extra_args)),
     do: {task_type, args, extra_args}
 
-  defp is_enqueued?({_task_type, _args} = key) do
+  defp enqueued?({_task_type, _args} = key) do
     :ets.member(@pending_tab, key)
   end
 
-  defp is_added?({_task_type, _args, _extra_args} = key) do
+  defp added?({_task_type, _args, _extra_args} = key) do
     EtsCache.member(@added_tab, key)
   end
 end

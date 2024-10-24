@@ -18,7 +18,7 @@ defmodule AeMdw.Util do
   @spec id(term()) :: term()
   def id(x), do: x
 
-  @spec ok!(term()) :: term()
+  @spec ok!({:ok, term()}) :: term()
   def ok!({:ok, x}), do: x
   def ok!(err), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
 
