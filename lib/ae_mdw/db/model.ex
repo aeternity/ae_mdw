@@ -17,7 +17,7 @@ defmodule AeMdw.Db.Model do
   require Record
   require Ex2ms
 
-  import Record, only: [defrecord: 2]
+  import Record, only: [defrecord: 2, defrecord: 3]
 
   @type table :: atom()
   @type m_record :: tuple()
@@ -1236,6 +1236,23 @@ defmodule AeMdw.Db.Model do
   @type miner_index() :: pubkey()
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
+  ### Node tables
+  defrecord(:mempool_tx, :tx, hash: nil, signed_tx: nil, failures: nil)
+
+  @type mempool_tx() ::
+          record(:mempool_tx, hash: pubkey(), signed_tx: Node.signed_tx(), failures: integer())
+
+  # index: {neg_fee, neg_gas_price, origin, nonce, TxHash}
+  @mempool_defaults [index: {0, 0, <<>>, 0, <<>>}, tx: nil]
+  defrecord :mempool, :tx, @mempool_defaults
+
+  @type mempool_index() :: {integer(), integer(), binary(), integer(), binary()}
+  @type mempool() ::
+          record(:mempool,
+            index: mempool_index(),
+            tx: mempool_tx()
+          )
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1486,4 +1503,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
+  def record(AeMdw.Db.Model.Mempool), do: :mempool
 end
