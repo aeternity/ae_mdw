@@ -1296,6 +1296,13 @@ defmodule AeMdw.Db.Model do
             index: mempool_index(),
             tx: mempool_tx()
           )
+  @type top_miner_stats_index() ::
+          {Stats.interval_by(), Stats.interval_start(), pos_integer(), pubkey()}
+  @type top_miner_stats() ::
+          record(:top_miner_stats, index: top_miner_stats_index())
+
+  @top_miner_stats_defaults [:index]
+  defrecord :top_miner_stats, @top_miner_stats_defaults
 
   ################################################################################
 
@@ -1436,7 +1443,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.DeltaStat,
       AeMdw.Db.Model.TotalStat,
       AeMdw.Db.Model.Stat,
-      AeMdw.Db.Model.Statistic
+      AeMdw.Db.Model.Statistic,
+      AeMdw.Db.Model.TopMinerStats
     ]
   end
 
@@ -1556,4 +1564,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair
   def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol
+  def record(AeMdw.Db.Model.TopMinerStats), do: :top_miner_stats
 end
