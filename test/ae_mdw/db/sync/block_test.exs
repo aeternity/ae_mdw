@@ -1,7 +1,9 @@
 defmodule AeMdw.Db.Sync.BlockTest do
   use ExUnit.Case
 
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Block
 
   import AeMdwWeb.BlockchainSim,
