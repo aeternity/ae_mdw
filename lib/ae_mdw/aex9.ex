@@ -284,19 +284,33 @@ defmodule AeMdw.Aex9 do
           nil -> {0, DbUtil.last_gen!(state)}
         end
 
-      streamer = fn
-        :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
-        :backward when cursor == nil -> last_gen..first_gen
-        :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
-        _dir -> first_gen..last_gen
-      end
+      streamer =
+        fn direction ->
+          case direction do
+            :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
+            :backward when cursor == nil -> last_gen..first_gen
+            :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
+            _dir -> first_gen..last_gen
+          end
+          |> Stream.flat_map(fn gen ->
+            type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
+
+            case Db.aex9_balance(contract_pk, account_pk, type_height_hash) do
+              {:ok, {amount_or_nil, _height_hash}} ->
+                [{contract_pk, account_pk, gen, amount_or_nil}]
+
+              _invalid ->
+                []
+            end
+          end)
+        end
 
       paginated_history =
         Collection.paginate(
           streamer,
           pagination,
-          &render_balance_history_item(contract_pk, account_pk, &1),
-          & &1
+          &render_balance_history_item/1,
+          &serialize_history_cursor/1
         )
 
       {:ok, paginated_history}
@@ -335,15 +349,10 @@ defmodule AeMdw.Aex9 do
     }
   end
 
-  defp render_balance_history_item(contract_pk, account_pk, gen) do
-    type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
-
-    {:ok, {amount_or_nil, _height_hash}} =
-      Db.aex9_balance(contract_pk, account_pk, type_height_hash)
-
-    balance = render_balance(contract_pk, {:address, account_pk}, amount_or_nil)
-
-    Map.put(balance, :height, gen)
+  defp render_balance_history_item({contract_pk, account_pk, gen, amount_or_nil}) do
+    contract_pk
+    |> render_balance({:address, account_pk}, amount_or_nil)
+    |> Map.put(:height, gen)
   end
 
   defp render_account_balance(state, type_height_hash, {account_pk, contract_pk}) do
@@ -383,6 +392,10 @@ defmodule AeMdw.Aex9 do
       {:ok, height} -> {:ok, height}
       :error -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
+  end
+
+  defp serialize_history_cursor({_contract_pk, _account_pk, gen, _amount_or_nil}) do
+    gen
   end
 
   defp serialize_event_balances_cursor({_contract_pk, account_pk}), do: encode_account(account_pk)
