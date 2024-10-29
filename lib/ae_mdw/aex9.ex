@@ -285,25 +285,12 @@ defmodule AeMdw.Aex9 do
         end
 
       streamer =
-        fn direction ->
-          case direction do
-            :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
-            :backward when cursor == nil -> last_gen..first_gen
-            :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
-            _dir -> first_gen..last_gen
-          end
-          |> Stream.flat_map(fn gen ->
-            type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
-
-            case Db.aex9_balance(contract_pk, account_pk, type_height_hash) do
-              {:ok, {amount_or_nil, _height_hash}} ->
-                [{contract_pk, account_pk, gen, amount_or_nil}]
-
-              _invalid ->
-                []
-            end
-          end)
-        end
+        balance_history_streamer(%{
+          account_pk: account_pk,
+          contract_pk: contract_pk,
+          range: {first_gen, last_gen},
+          cursor: cursor
+        })
 
       paginated_history =
         Collection.paginate(
@@ -314,6 +301,34 @@ defmodule AeMdw.Aex9 do
         )
 
       {:ok, paginated_history}
+    end
+  end
+
+  defp balance_history_streamer(%{
+         account_pk: account_pk,
+         contract_pk: contract_pk,
+         range: {first_gen, last_gen},
+         cursor: cursor
+       }) do
+    fn direction ->
+      direction
+      |> case do
+        :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
+        :backward when cursor == nil -> last_gen..first_gen
+        :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
+        _dir -> first_gen..last_gen
+      end
+      |> Stream.flat_map(fn gen ->
+        type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
+
+        case Db.aex9_balance(contract_pk, account_pk, type_height_hash) do
+          {:ok, {amount_or_nil, _height_hash}} ->
+            [{contract_pk, account_pk, gen, amount_or_nil}]
+
+          _invalid ->
+            []
+        end
+      end)
     end
   end
 
