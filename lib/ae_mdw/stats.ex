@@ -295,18 +295,44 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp build_statistics_streamer(state, tag, filters, _scope, cursor) do
+  defp build_statistics_streamer(state, tag, filters, range, cursor) do
     interval_by = Map.get(filters, :interval_by, :day)
     {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
     min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
     max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
-    key_boundary = {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
 
     cursor =
       case cursor do
         nil -> nil
         interval_start -> {tag, interval_by, interval_start}
       end
+
+    {min_date, max_date} =
+      if range do
+        {:gen, first_gen..last_gen//_step} = range
+        first_txi = DbUtil.first_gen_to_txi(state, first_gen)
+        last_txi = DbUtil.last_gen_to_txi(state, last_gen)
+
+        min_date =
+          state
+          |> DbUtil.txi_to_time(first_txi)
+          |> time_to_date()
+          |> to_interval(interval_by)
+          |> max(min_date)
+
+        max_date =
+          state
+          |> DbUtil.txi_to_time(last_txi)
+          |> time_to_date()
+          |> to_interval(interval_by)
+          |> min(max_date)
+
+        {min_date, max_date}
+      else
+        {min_date, max_date}
+      end
+
+    key_boundary = {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
 
     fn direction ->
       state
@@ -611,6 +637,12 @@ defmodule AeMdw.Stats do
     |> DateTime.from_unix!()
     |> DateTime.to_date()
     |> Date.to_iso8601()
+  end
+
+  defp time_to_date(time) do
+    time
+    |> DateTime.from_unix!(:millisecond)
+    |> DateTime.to_date()
   end
 
   defp to_interval(date, interval_by) do

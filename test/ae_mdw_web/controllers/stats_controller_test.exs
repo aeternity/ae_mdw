@@ -920,8 +920,8 @@ defmodule AeMdwWeb.StatsControllerTest do
     end_time = DateTime.new!(Date.new!(1970, 2, 1), Time.new!(0, 0, 0))
 
     {
-      DateTime.to_unix(start_time) * 1_000,
-      DateTime.to_unix(end_time) * 1_000
+      DateTime.to_unix(start_time, :millisecond),
+      DateTime.to_unix(end_time, :millisecond)
     }
   end
 end
