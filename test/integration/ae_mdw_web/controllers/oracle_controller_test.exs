@@ -44,7 +44,11 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
     } do
       assert %{"data" => [contract_call]} =
                conn
-               |> get("/contracts/calls/backward", function: "Oracle.register", limit: 1)
+               |> get("/v3/contracts/calls",
+                 direction: "backward",
+                 function: "Oracle.register",
+                 limit: 1
+               )
                |> json_response(200)
 
       assert %{
@@ -58,7 +62,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       expire = height + ttl
 
       assert %{"expire_height" => ^expire} =
-               conn |> get("/oracle/#{oracle_id}") |> json_response(200)
+               conn |> get("/v3/oracles/#{oracle_id}") |> json_response(200)
     end
   end
 
@@ -190,7 +194,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   describe "inactive_oracles" do
     test "get inactive oracles with default direction=backward and default limit", %{conn: conn} do
       assert %{"data" => oracles, "next" => next} =
-               conn |> get("/oracles/inactive") |> json_response(200)
+               conn |> get("/v3/oracles", state: "inactive") |> json_response(200)
 
       expirations =
         oracles
@@ -218,7 +222,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles/inactive", direction: direction, limit: limit)
+               |> get("/v3/oracles", state: "inactive", direction: direction, limit: limit)
                |> json_response(200)
 
       expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
@@ -241,22 +245,18 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles/inactive", limit: limit, expand: "true")
+               |> get("/v3/oracles", state: "inactive", limit: limit, expand: "true")
                |> json_response(200)
 
       assert ^limit = length(oracles)
 
-      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(oracles, fn %{"register" => register} -> is_map(register) end)
 
       assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_oracles)
 
-      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(next_oracles, fn %{"register" => register} -> is_map(register) end)
     end
 
     test "renders error when direction is invalid", %{conn: conn} do
@@ -264,7 +264,9 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       error_msg = "invalid direction: #{direction}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/oracles/inactive", direction: direction) |> json_response(400)
+               conn
+               |> get("/v3/oracles", state: "inactive", direction: direction)
+               |> json_response(400)
     end
 
     test "renders error when limit is invalid", %{conn: conn} do
@@ -272,7 +274,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       error_msg = "invalid limit: #{limit}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/oracles/inactive", limit: limit) |> json_response(400)
+               conn |> get("/v3/oracles", state: "inactive", limit: limit) |> json_response(400)
     end
 
     test "renders error when limit is to large", %{conn: conn} do
@@ -280,14 +282,14 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       error_msg = "limit too large: #{limit}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/oracles/inactive?limit=#{limit}") |> json_response(400)
+               conn |> get("/v3/oracles", state: "inactive", limit: limit) |> json_response(400)
     end
 
     test "it gets active oracles with default direction=backward and limit=1", %{conn: conn} do
       limit = 1
 
       assert %{"data" => oracles, "next" => next} =
-               conn |> get("/oracles", state: "active", limit: limit) |> json_response(200)
+               conn |> get("/v3/oracles", state: "active", limit: limit) |> json_response(200)
 
       expirations =
         oracles
@@ -315,7 +317,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles", state: "inactive", limit: limit, direction: direction)
+               |> get("/v3/oracles", state: "inactive", limit: limit, direction: direction)
                |> json_response(200)
 
       expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
@@ -338,22 +340,18 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles", state: "inactive", limit: limit, expand: true)
+               |> get("/v3/oracles", state: "inactive", limit: limit)
                |> json_response(200)
 
       assert ^limit = length(oracles)
 
-      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(oracles, fn %{"register" => register} -> is_map(register) end)
 
       assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_oracles)
 
-      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(next_oracles, fn %{"register" => register} -> is_map(register) end)
     end
 
     test "it renders error when direction is invalid", %{conn: conn} do
@@ -372,7 +370,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
     test "it renders error when limit is to large", %{conn: conn} do
       limit = 10_000
-      conn = get(conn, "/oracles", state: "active", limit: limit)
+      conn = get(conn, "/v3/oracles", state: "active", limit: limit)
 
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
@@ -381,7 +379,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       conn: conn
     } do
       assert %{"data" => oracles, "next" => next} =
-               conn |> get("/oracles", state: "inactive") |> json_response(200)
+               conn |> get("/v3/oracles", state: "inactive") |> json_response(200)
 
       expirations =
         oracles
@@ -409,7 +407,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles", state: "inactive", direction: direction, limit: limit)
+               |> get("/v3/oracles", state: "inactive", direction: direction, limit: limit)
                |> json_response(200)
 
       expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
@@ -432,22 +430,18 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles", state: "inactive", limit: limit, expand: "true")
+               |> get("/v3/oracles", state: "inactive", limit: limit, expand: "true")
                |> json_response(200)
 
       assert ^limit = length(oracles)
 
-      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(oracles, fn %{"register" => register} -> is_map(register) end)
 
       assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_oracles)
 
-      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(next_oracles, fn %{"register" => register} -> is_map(register) end)
     end
 
     test "it renders error when limit is too large", %{conn: conn} do
@@ -455,7 +449,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       error_msg = "limit too large: #{limit}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/oracles", state: "inactive", limit: limit) |> json_response(400)
+               conn |> get("/v3/oracles", state: "inactive", limit: limit) |> json_response(400)
     end
   end
 
@@ -464,7 +458,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       limit = 1
 
       assert %{"data" => oracles, "next" => next} =
-               conn |> get("/oracles/inactive", limit: limit) |> json_response(200)
+               conn |> get("/v3/oracles", state: "inactive", limit: limit) |> json_response(200)
 
       expirations =
         oracles
@@ -492,7 +486,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert %{"data" => oracles, "next" => next} =
                conn
-               |> get("/oracles/inactive", limit: limit, direction: direction)
+               |> get("/v3/oracles", state: "inactive", limit: limit, direction: direction)
                |> json_response(200)
 
       expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
@@ -514,40 +508,38 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       limit = 1
 
       assert %{"data" => oracles, "next" => next} =
-               conn |> get("/oracles/inactive", limit: limit, expand: true) |> json_response(200)
+               conn
+               |> get("/v3/oracles", state: "inactive", limit: limit, expand: true)
+               |> json_response(200)
 
       assert ^limit = length(oracles)
 
-      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(oracles, fn %{"register" => register} -> is_map(register) end)
 
       assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_oracles)
 
-      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
-               is_map(register) and Enum.all?(extends, &is_map/1)
-             end)
+      assert Enum.all?(next_oracles, fn %{"register" => register} -> is_map(register) end)
     end
 
     test "it renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
-      conn = get(conn, "/oracles/active?direction=#{direction}")
+      conn = get(conn, "/v3/oracles", state: "active", direction: direction)
 
       assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
 
     test "it renders error when limit is invalid", %{conn: conn} do
       limit = "invalid"
-      conn = get(conn, "/oracles/active?limit=#{limit}")
+      conn = get(conn, "/v3/oracles", state: "active", limit: limit)
 
       assert json_response(conn, 400) == %{"error" => "invalid limit: #{limit}"}
     end
 
     test "it renders error when limit is too large", %{conn: conn} do
       limit = 10_000
-      conn = get(conn, "/oracles/active?limit=#{limit}")
+      conn = get(conn, "/v3/oracles", state: "active", limit: limit)
 
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
