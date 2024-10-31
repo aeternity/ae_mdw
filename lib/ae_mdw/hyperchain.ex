@@ -2,6 +2,19 @@ defmodule AeMdw.Hyperchain do
   @moduledoc """
     Module for hyperchain related functions.
   """
+  alias AeMdw.Collection
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+
+  require Model
+
+  @typep state() :: State.t()
+  @typep pagination :: Collection.direction_limit()
+  @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
+  @typep page_cursor() :: Collection.pagination_cursor()
+  @typep cursor :: binary()
+
+  @leaders_table Model.HyperchainLeaderAtHeight
 
   def leaders_for_epoch_at_height(height) do
     {:ok, kb_hash} = :aec_chain_state.get_key_block_hash_at_height(height)
@@ -25,5 +38,46 @@ defmodule AeMdw.Hyperchain do
     first
     |> Stream.iterate(fn x -> x + 1 end)
     |> Enum.zip(schedule)
+  end
+
+  @spec fetch_leaders(state(), pagination(), range(), cursor()) ::
+          {page_cursor(), [term()], page_cursor()}
+  def fetch_leaders(state, pagination, scope, cursor) do
+    cursor = deserialize_leaders_cursor(cursor)
+
+    fn direction ->
+      Collection.stream(state, @leaders_table, direction, scope, cursor)
+    end
+    |> Collection.paginate(
+      pagination,
+      &render_leader(state, &1),
+      &serialize_leaders_cursor/1
+    )
+  end
+
+  defp serialize_leaders_cursor(nil) do
+    nil
+  end
+
+  defp serialize_leaders_cursor(height) do
+    height
+    |> :erlang.term_to_binary()
+    |> Base.encode64()
+  end
+
+  defp deserialize_leaders_cursor(nil) do
+    nil
+  end
+
+  defp deserialize_leaders_cursor(bin) do
+    bin
+    |> Base.decode64!()
+    |> :erlang.binary_to_term()
+  end
+
+  defp render_leader(state, leader) do
+    state
+    |> State.fetch!(@leaders_table, leader)
+    |> inspect()
   end
 end
