@@ -123,6 +123,8 @@ defmodule AeMdwWeb.Router do
       get "/dex/:contract_id/swaps", DexController, :contract_swaps
       get "/wealth", WealthController, :wealth
 
+      get "/hyperchain/leaders", HyperchainController, :leaders
+
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v3.json"}
     end
