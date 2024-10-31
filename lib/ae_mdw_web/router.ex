@@ -126,6 +126,8 @@ defmodule AeMdwWeb.Router do
       get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
+      get "/hyperchain/leaders", HyperchainController, :leaders
+
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v3.json"}
     end
