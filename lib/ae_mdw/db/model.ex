@@ -1311,6 +1311,16 @@ defmodule AeMdw.Db.Model do
             tx: mempool_tx()
           )
 
+  @hyperchain_leader_at_height_defaults [index: 0, leader: <<>>]
+  defrecord :hyperchain_leader_at_height, :tx, @hyperchain_leader_at_height_defaults
+
+  @type hyperchain_leader_at_height_index() :: height()
+  @type hyperchain_leader_at_height() ::
+          record(:hyperchain_leader_at_height,
+            index: hyperchain_leader_at_height_index(),
+            leader: Blocks.block_hash()
+          )
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1323,7 +1333,8 @@ defmodule AeMdw.Db.Model do
       name_tables(),
       oracle_tables(),
       stat_tables(),
-      tasks_tables()
+      tasks_tables(),
+      hyperchain_tables()
     ])
   end
 
@@ -1466,6 +1477,12 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
+  defp hyperchain_tables() do
+    [
+      AeMdw.Db.Model.HyperchainLeaderAtHeight
+    ]
+  end
+
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
   def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
@@ -1572,4 +1589,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair
   def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol
+  def record(AeMdw.Db.Model.HyperchainLeaderAtHeight), do: :hyperchain_leader_at_height
 end
