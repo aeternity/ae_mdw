@@ -27,10 +27,8 @@ defmodule AeMdw.Db.LeaderMutation do
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{height: height}, state) do
     if new_epoch?(state, height) do
-      IO.inspect("new_epoch")
       put_new_leaders(state, height)
     else
-      IO.inspect("old_epoch")
       state
     end
   end
@@ -42,7 +40,6 @@ defmodule AeMdw.Db.LeaderMutation do
   defp put_new_leaders(state, height) do
     height
     |> Hyperchain.leaders_for_epoch_at_height()
-    |> IO.inspect()
     |> Enum.reduce(state, fn {height, leader}, state ->
       State.put(
         state,

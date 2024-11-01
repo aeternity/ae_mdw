@@ -128,6 +128,7 @@ defmodule AeMdwWeb.Router do
       get "/hyperchain/leaders", HyperchainController, :leaders
       get "/hyperchain/leaders/epoch/:epoch", HyperchainController, :leaders_by_epoch
       get "/hyperchain/leaders/height/:height", HyperchainController, :leader_by_height
+      get "/hyperchain/epochs", HyperchainController, :epochs
 
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v3.json"}
