@@ -2,19 +2,16 @@ defmodule AeMdw.Hyperchain do
   @moduledoc """
     Module for hyperchain related functions.
   """
+  alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error.Input, as: ErrInput
 
   require Model
 
-  @typep state() :: State.t()
-  @typep pagination :: Collection.direction_limit()
-  @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
-  @typep page_cursor() :: Collection.pagination_cursor()
-  @typep cursor :: binary()
-
-  @leaders_table Model.HyperchainLeaderAtHeight
+  @type epoch() :: non_neg_integer()
+  @typep leader :: term()
 
   def leaders_for_epoch_at_height(height) do
     {:ok, kb_hash} = :aec_chain_state.get_key_block_hash_at_height(height)
@@ -40,19 +37,35 @@ defmodule AeMdw.Hyperchain do
     |> Enum.zip(schedule)
   end
 
-  @spec fetch_leaders(state(), pagination(), range(), cursor()) ::
-          {page_cursor(), [term()], page_cursor()}
+  @spec fetch_leaders(
+          State.t(),
+          Collection.pagination(),
+          Collection.range(),
+          Collection.cursor()
+        ) ::
+          {Collection.cursor(), [leader()], Collection.cursor()}
   def fetch_leaders(state, pagination, scope, cursor) do
     cursor = deserialize_leaders_cursor(cursor)
 
     fn direction ->
-      Collection.stream(state, @leaders_table, direction, scope, cursor)
+      Collection.stream(state, Model.HyperchainLeaderAtHeight, direction, scope, cursor)
     end
     |> Collection.paginate(
       pagination,
       &render_leader(state, &1),
       &serialize_leaders_cursor/1
     )
+  end
+
+  @spec fetch_leader_by_height(State.t(), Blocks.height()) :: leader()
+  def fetch_leader_by_height(state, height) do
+    case State.get(state, Model.HyperchainLeaderAtHeight, height) do
+      {:ok, Model.hyperchain_leader_at_height(index: ^height) = leader} ->
+        {:ok, render_leader(state, leader)}
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: "height #{height}")}
+    end
   end
 
   defp serialize_leaders_cursor(nil) do
@@ -75,9 +88,14 @@ defmodule AeMdw.Hyperchain do
     |> :erlang.binary_to_term()
   end
 
-  defp render_leader(state, leader) do
+  defp render_leader(state, leader_height) when is_integer(leader_height) do
     state
-    |> State.fetch!(@leaders_table, leader)
+    |> State.fetch!(Model.HyperchainLeaderAtHeight, leader_height)
+    |> then(&render_leader(state, &1))
+  end
+
+  defp render_leader(_state, leader) do
+    leader
     |> inspect()
   end
 end

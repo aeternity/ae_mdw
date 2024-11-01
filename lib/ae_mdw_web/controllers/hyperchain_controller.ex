@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.HyperchainController do
+  alias AeMdw.Validate
   use AeMdwWeb, :controller
 
   alias AeMdw.Hyperchain
@@ -18,5 +19,13 @@ defmodule AeMdwWeb.HyperchainController do
     state
     |> Hyperchain.fetch_leaders(pagination, scope, cursor)
     |> then(&WebUtil.render(conn, &1))
+  end
+
+  @spec leader_by_height(Conn.t(), map()) :: Conn.t()
+  def leader_by_height(%Conn{assigns: %{state: state}} = conn, %{"height" => height}) do
+    with {:ok, height} <- Validate.nonneg_int(height),
+         {:ok, leader} <- Hyperchain.fetch_leader_by_height(state, height) do
+      format_json(conn, leader)
+    end
   end
 end
