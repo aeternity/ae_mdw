@@ -1254,13 +1254,13 @@ defmodule AeMdw.Db.Model do
           )
 
   @hyperchain_leader_at_height_defaults [index: 0, leader: <<>>]
-  defrecord :hyperchain_leader_at_height, :tx, @hyperchain_leader_at_height_defaults
+  defrecord :hyperchain_leader_at_height, @hyperchain_leader_at_height_defaults
 
   @type hyperchain_leader_at_height_index() :: height()
   @type hyperchain_leader_at_height() ::
           record(:hyperchain_leader_at_height,
             index: hyperchain_leader_at_height_index(),
-            leader: Blocks.block_hash()
+            leader: pubkey()
           )
 
   ################################################################################
