@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Contracts
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.IntTransfer
+  alias AeMdw.Hyperchain
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -1263,6 +1264,20 @@ defmodule AeMdw.Db.Model do
             leader: pubkey()
           )
 
+  @epoch_info_defaults [index: 0, first: 0, last: 0, length: 0, seed: <<>>, validators: []]
+  defrecord :epoch_info, @epoch_info_defaults
+
+  @type epoch_info_index() :: Hyperchain.epoch()
+  @type epoch_info() ::
+          record(:epoch_info,
+            index: epoch_info_index(),
+            first: Blocks.height(),
+            last: Blocks.height(),
+            length: non_neg_integer(),
+            seed: binary() | :undefined,
+            validators: list({pubkey(), non_neg_integer()})
+          )
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1416,7 +1431,8 @@ defmodule AeMdw.Db.Model do
 
   defp hyperchain_tables() do
     [
-      AeMdw.Db.Model.HyperchainLeaderAtHeight
+      AeMdw.Db.Model.HyperchainLeaderAtHeight,
+      AeMdw.Db.Model.EpochInfo
     ]
   end
 
@@ -1522,4 +1538,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.HyperchainLeaderAtHeight), do: :hyperchain_leader_at_height
+  def record(AeMdw.Db.Model.EpochInfo), do: :epoch_info
 end

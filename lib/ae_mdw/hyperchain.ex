@@ -6,13 +6,42 @@ defmodule AeMdw.Hyperchain do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Util.Encoding
 
   require Model
 
   @type epoch() :: non_neg_integer()
-  @typep leader :: term()
+  @type epoch_info() :: %{
+          first: Blocks.height(),
+          last: Blocks.height(),
+          length: non_neg_integer(),
+          seed: binary() | :undefined,
+          epoch: epoch(),
+          validators: list({NodeDb.pubkey(), non_neg_integer()})
+        }
+  @typep leader() :: Blocks.key_header()
 
+  @spec hyperchain?() :: boolean()
+  def hyperchain?() do
+    case :aeu_env.user_config(["chain", "consensus", "0", "type"]) do
+      {:ok, "hyperchain"} -> true
+      _ -> false
+    end
+  end
+
+  @spec epoch_info_at_height(Blocks.height()) :: {:ok, epoch_info()} | :error
+  def epoch_info_at_height(height) do
+    with {:ok, kb_hash} <- :aec_chain_state.get_key_block_hash_at_height(height),
+         {_tx_env, _trees} = run_env <-
+           :aetx_env.tx_env_and_trees_from_hash(:aetx_transaction, kb_hash),
+         {:ok, epoch} <- :aec_chain_hc.epoch(run_env) do
+      :aec_chain_hc.epoch_info_for_epoch(run_env, epoch)
+    end
+  end
+
+  @spec leaders_for_epoch_at_height(Blocks.height()) :: [{Blocks.height(), leader()}]
   def leaders_for_epoch_at_height(height) do
     {:ok, kb_hash} = :aec_chain_state.get_key_block_hash_at_height(height)
     {_tx_env, _trees} = run_env = :aetx_env.tx_env_and_trees_from_hash(:aetx_transaction, kb_hash)
@@ -45,7 +74,7 @@ defmodule AeMdw.Hyperchain do
         ) ::
           {Collection.cursor(), [leader()], Collection.cursor()}
   def fetch_leaders(state, pagination, scope, cursor) do
-    cursor = deserialize_leaders_cursor(cursor)
+    cursor = deserialize_numeric_cursor(cursor)
 
     fn direction ->
       Collection.stream(state, Model.HyperchainLeaderAtHeight, direction, scope, cursor)
@@ -53,7 +82,7 @@ defmodule AeMdw.Hyperchain do
     |> Collection.paginate(
       pagination,
       &render_leader(state, &1),
-      &serialize_leaders_cursor/1
+      &serialize_numeric_cursor/1
     )
   end
 
@@ -68,21 +97,41 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
-  defp serialize_leaders_cursor(nil) do
+  @spec fetch_epochs(
+          State.t(),
+          Collection.pagination(),
+          Collection.range(),
+          Collection.cursor()
+        ) ::
+          {Collection.cursor(), [leader()], Collection.cursor()}
+  def fetch_epochs(state, pagination, scope, cursor) do
+    cursor = deserialize_numeric_cursor(cursor)
+
+    fn direction ->
+      Collection.stream(state, Model.EpochInfo, direction, scope, cursor)
+    end
+    |> Collection.paginate(
+      pagination,
+      &render_epoch_info(state, &1),
+      &serialize_numeric_cursor/1
+    )
+  end
+
+  defp serialize_numeric_cursor(nil) do
     nil
   end
 
-  defp serialize_leaders_cursor(height) do
+  defp serialize_numeric_cursor(height) do
     height
     |> :erlang.term_to_binary()
     |> Base.encode64()
   end
 
-  defp deserialize_leaders_cursor(nil) do
+  defp deserialize_numeric_cursor(nil) do
     nil
   end
 
-  defp deserialize_leaders_cursor(bin) do
+  defp deserialize_numeric_cursor(bin) do
     bin
     |> Base.decode64!()
     |> :erlang.binary_to_term()
@@ -97,5 +146,26 @@ defmodule AeMdw.Hyperchain do
   defp render_leader(_state, leader) do
     leader
     |> inspect()
+  end
+
+  defp render_epoch_info(state, epoch) when is_integer(epoch) do
+    Model.epoch_info(
+      index: ^epoch,
+      first: first,
+      last: last,
+      length: length,
+      seed: seed,
+      validators: validators
+    ) = State.fetch!(state, Model.EpochInfo, epoch)
+
+    %{
+      epoch: epoch,
+      first: first,
+      last: last,
+      length: length,
+      seed: seed,
+      validators:
+        Enum.map(validators, fn {pubkey, number} -> {Encoding.encode_account(pubkey), number} end)
+    }
   end
 end

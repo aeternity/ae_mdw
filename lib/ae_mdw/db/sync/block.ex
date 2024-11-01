@@ -17,6 +17,7 @@ defmodule AeMdw.Db.Sync.Block do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.BlockStatisticsMutation
+  alias AeMdw.Db.EpochMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlockMutation
@@ -29,6 +30,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.TypeCountersMutation
+  alias AeMdw.Hyperchain
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
@@ -106,7 +108,6 @@ defmodule AeMdw.Db.Sync.Block do
           block_rewards_mutation,
           NamesExpirationMutation.new(height),
           OraclesExpirationMutation.new(height),
-          LeaderMutation.new(height),
           Stats.key_block_mutations(
             height,
             key_block,
@@ -116,6 +117,10 @@ defmodule AeMdw.Db.Sync.Block do
             starting_from_mb0?
           ),
           next_kb_mutation
+          | hyperchain_mutations([
+              EpochMutation.new(height),
+              LeaderMutation.new(height)
+            ])
         ]
         |> Enum.reject(&is_nil/1)
 
@@ -123,6 +128,14 @@ defmodule AeMdw.Db.Sync.Block do
 
       {[{height, blocks_mutations}], txi}
     end)
+  end
+
+  defp hyperchain_mutations(mutations) do
+    if Hyperchain.hyperchain?() do
+      mutations
+    else
+      []
+    end
   end
 
   defp micro_block_mutations(mblock, mbi, first_txi, false = _use_cache?) do
