@@ -8,7 +8,7 @@ defmodule AeMdwWeb.HyperchainController do
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
 
-  plug PaginatedPlug, order_by: ~w(expiration activation deactivation name)a
+  plug(PaginatedPlug, order_by: ~w(expiration activation deactivation name)a)
   action_fallback(FallbackController)
 
   @spec leaders(Conn.t(), map()) :: Conn.t()
@@ -27,5 +27,14 @@ defmodule AeMdwWeb.HyperchainController do
          {:ok, leader} <- Hyperchain.fetch_leader_by_height(state, height) do
       format_json(conn, leader)
     end
+  end
+
+  def epochs(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} =
+      assigns
+
+    state
+    |> Hyperchain.fetch_epochs(pagination, scope, cursor)
+    |> then(&WebUtil.render(conn, &1))
   end
 end
