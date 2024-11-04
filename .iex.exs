@@ -10,6 +10,8 @@ alias AeMdw.Contract
 alias AeMdw.Database
 alias AeMdw.Validate
 alias AeMdw.Sync.AsyncTasks
+alias AeMdw.Hyperchain
+alias AeMdw.Db.RocksDbCF
 
 require Model
 require Ex2ms
