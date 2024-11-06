@@ -57,6 +57,7 @@ defmodule AeMdw.MixProject do
           :aect_create_tx,
           :aect_dispatch,
           :aect_state_tree,
+          :aefa_fate_code,
           :aega_attach_tx,
           :aega_call,
           :aega_meta_tx,
