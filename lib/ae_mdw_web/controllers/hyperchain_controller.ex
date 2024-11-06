@@ -5,9 +5,11 @@ defmodule AeMdwWeb.HyperchainController do
   alias AeMdw.Hyperchain
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Plugs.HyperchainPlug
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
 
+  plug(HyperchainPlug)
   plug(PaginatedPlug, order_by: ~w(expiration activation deactivation name)a)
   action_fallback(FallbackController)
 
@@ -36,5 +38,11 @@ defmodule AeMdwWeb.HyperchainController do
     state
     |> Hyperchain.fetch_epochs(pagination, scope, cursor)
     |> then(&WebUtil.render(conn, &1))
+  end
+
+  def validator(%Conn{assigns: %{state: state}} = conn, %{"validator_id" => validator_id}) do
+    with {:ok, validator} <- Hyperchain.fetch_validator(state, validator_id) |> IO.inspect() do
+      format_json(conn, validator)
+    end
   end
 end
