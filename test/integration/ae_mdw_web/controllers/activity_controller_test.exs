@@ -187,7 +187,6 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
       account = "ak_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc"
       height = 248_897
       limit = 100
-      IO.inspect("/v3/accounts/#{account}/activities")
 
       assert %{"data" => events} =
                conn

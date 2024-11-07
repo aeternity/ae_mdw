@@ -411,8 +411,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       mb_hashes =
         [
           {700_001, 1},
-          {1000_002, 2},
-          {1000_003, 3}
+          {1_000_002, 2},
+          {1_000_003, 3}
         ]
         |> Enum.map(&Database.fetch!(Model.Block, &1))
         |> Enum.map(fn Model.block(tx_index: txi, hash: mb_hash) ->

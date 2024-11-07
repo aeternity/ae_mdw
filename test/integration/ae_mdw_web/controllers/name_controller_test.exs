@@ -1023,7 +1023,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           "active" => true,
           "info" => %{
             "active_from" => 628_354,
-            "auction_timeout" => 29760,
+            "auction_timeout" => 29_760,
             "claims" => [
               %{
                 "block_hash" => "mh_aTXPPMkfqYGcbVHdw8CvzzzCMUi1S6QBXJAfpNPCSzM9ZQCMT",
@@ -1129,7 +1129,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                 ],
                 "tx" => %{
                   "account_id" => "ak_2WaRNJe5ohzCPXrJrU6U3U5LZfXYgoTTSjjGPonTeQSGRP8321",
-                  "client_ttl" => 84600,
+                  "client_ttl" => 84_600,
                   "fee" => 17_840_000_000_000,
                   "name" => "test.chain",
                   "name_id" => "nm_cVjoMBVH5UAthDx8hEijr5dF21yex6itrxbZZUMaftL941g9G",
@@ -1159,7 +1159,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                 ],
                 "tx" => %{
                   "account_id" => "ak_2WaRNJe5ohzCPXrJrU6U3U5LZfXYgoTTSjjGPonTeQSGRP8321",
-                  "client_ttl" => 84600,
+                  "client_ttl" => 84_600,
                   "fee" => 17_840_000_000_000,
                   "name" => "test.chain",
                   "name_id" => "nm_cVjoMBVH5UAthDx8hEijr5dF21yex6itrxbZZUMaftL941g9G",
@@ -1189,7 +1189,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                 ],
                 "tx" => %{
                   "account_id" => "ak_2WaRNJe5ohzCPXrJrU6U3U5LZfXYgoTTSjjGPonTeQSGRP8321",
-                  "client_ttl" => 84600,
+                  "client_ttl" => 84_600,
                   "fee" => 17_840_000_000_000,
                   "name" => "test.chain",
                   "name_id" => "nm_cVjoMBVH5UAthDx8hEijr5dF21yex6itrxbZZUMaftL941g9G",
@@ -1258,10 +1258,10 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
               "source_tx_type" => "NameUpdateTx",
               "tx" => %{
                 "account_id" => ^id,
-                "client_ttl" => 84600,
+                "client_ttl" => 84_600,
                 "fee" => 17_780_000_000_000,
                 "name_id" => "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
-                "name_ttl" => 50000,
+                "name_ttl" => 50_000,
                 "nonce" => 3,
                 "pointers" => [
                   %{
