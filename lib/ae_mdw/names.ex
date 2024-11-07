@@ -931,7 +931,13 @@ defmodule AeMdw.Names do
       case maybe_active_from do
         nil ->
           plain_name = tx_mod.name(tx_rec)
-          {:ok, Model.name(active: active_from)} = locate_name_or_auction(state, plain_name)
+
+          active_from =
+            case locate_name_or_auction(state, plain_name) do
+              {:ok, Model.name(active: active_from)} -> active_from
+              {:ok, Model.auction_bid(start_height: active_from)} -> active_from
+            end
+
           active_from
 
         active_from ->
