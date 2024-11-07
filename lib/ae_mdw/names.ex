@@ -927,19 +927,8 @@ defmodule AeMdw.Names do
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
-    active_from =
-      case maybe_active_from do
-        nil ->
-          plain_name = tx_mod.name(tx_rec)
-          {:ok, Model.name(active: active_from)} = locate_name_or_auction(state, plain_name)
-          active_from
-
-        active_from ->
-          active_from
-      end
-
     %{
-      active_from: active_from,
+      active_from: render_active_from(maybe_active_from, state, tx_mod, tx_rec),
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
@@ -947,6 +936,19 @@ defmodule AeMdw.Names do
       internal_source: chain_tx_type != tx_type,
       tx: tx_mod.for_client(tx_rec)
     }
+  end
+
+  defp render_active_from(active_from, _state, _tx_mod, _tx_rec) when not is_nil(active_from) do
+    active_from
+  end
+
+  defp render_active_from(nil, state, tx_mod, tx_rec) do
+    plain_name = tx_mod.name(tx_rec)
+
+    case locate_name_or_auction(state, plain_name) do
+      {:ok, Model.name(active: active_from)} -> active_from
+      {:ok, Model.auction_bid(start_height: active_from)} -> active_from
+    end
   end
 
   defp serialize_owner_deactivation_key_boundary(owner_pk, nil),
