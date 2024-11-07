@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.91.1](https://www.github.com/aeternity/ae_mdw/compare/v1.91.0...v1.91.1) (2024-11-07)
+
+
+### Bug Fixes
+
+* auction bid rendering issue ([#2002](https://www.github.com/aeternity/ae_mdw/issues/2002)) ([e942adf](https://www.github.com/aeternity/ae_mdw/commit/e942adf939343e3c34b751dcda059010ed5e4661))
+
 ## [1.91.0](https://www.github.com/aeternity/ae_mdw/compare/v1.90.1...v1.91.0) (2024-11-04)
 
 
