@@ -210,12 +210,57 @@ defmodule AeMdw.Hyperchain do
       validators: validators
     ) = State.fetch!(state, Model.EpochInfo, epoch)
 
+    last_pin_height = first - 1
+
+    {:ok, parent_block_hash} =
+      :aec_chain_state.get_key_block_hash_at_height(last_pin_height)
+
+    {:ok, last_block} =
+      :aec_chain.get_key_block_by_height(last_pin_height)
+
+    epoch_start_time = :aec_blocks.time_in_msecs(last_block)
+
+    last_leader_height =
+      state
+      |> State.height()
+      |> case do
+        top when top > last ->
+          last
+
+        top when top < first ->
+          last
+
+        top ->
+          asd =
+            State.fetch!(state, Model.HyperchainLeaderAtHeight, top)
+            |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
+              :aeapi.format_account_pubkey(leader)
+            end)
+
+          wasd =
+            State.fetch!(state, Model.HyperchainLeaderAtHeight, last)
+            |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
+              :aeapi.format_account_pubkey(leader)
+            end)
+
+          IO.inspect({asd, wasd}, label: "top, last")
+          top
+      end
+      |> tap(&IO.inspect({first, last, &1}, label: "first, last, top"))
+
+    Model.hyperchain_leader_at_height(leader: last_leader) =
+      State.fetch!(state, Model.HyperchainLeaderAtHeight, last_leader_height)
+
     %{
       epoch: epoch,
       first: first,
       last: last,
       length: length,
       seed: seed,
+      last_pin_height: last_pin_height,
+      parent_block_hash: :aeapi.format_key_block_hash(parent_block_hash),
+      last_leader: :aeapi.format_account_pubkey(last_leader),
+      epoch_start_time: epoch_start_time,
       validators:
         Enum.map(validators, fn {pubkey, number} ->
           %{validator: Encoding.encode_account(pubkey), stake: number}
