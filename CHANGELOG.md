@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.91.0](https://www.github.com/aeternity/ae_mdw/compare/v1.90.1...v1.91.0) (2024-11-04)
+
+
+### Features
+
+* add endpoint for account claims ([#1941](https://www.github.com/aeternity/ae_mdw/issues/1941)) ([f5e114c](https://www.github.com/aeternity/ae_mdw/commit/f5e114cfc70863777ca4dc9a8bff9b6d17092e8f))
+* add mempool endpoint for listing pending transactions ([#1983](https://www.github.com/aeternity/ae_mdw/issues/1983)) ([067f021](https://www.github.com/aeternity/ae_mdw/commit/067f0210324fde9260b59ab3ccbe3a6a3162dff8))
+
+
+### Bug Fixes
+
+* adjust aex9 balance history endpoint ([#1997](https://www.github.com/aeternity/ae_mdw/issues/1997)) ([5cad6c0](https://www.github.com/aeternity/ae_mdw/commit/5cad6c012d56cb6cfe3df7e3691036a9b7e31f2e))
+* remove handle_input usage from different PR ([#1991](https://www.github.com/aeternity/ae_mdw/issues/1991)) ([4a3ebc1](https://www.github.com/aeternity/ae_mdw/commit/4a3ebc1747c01b05a21d87265d2135f7e65f1d26))
+* rerun aex9 tokens contrat mint events fix ([#1994](https://www.github.com/aeternity/ae_mdw/issues/1994)) ([532ca0b](https://www.github.com/aeternity/ae_mdw/commit/532ca0bcbd10be896912dd3313ee171a045db4f7))
+* transactions for account listing ([#1993](https://www.github.com/aeternity/ae_mdw/issues/1993)) ([c55a8aa](https://www.github.com/aeternity/ae_mdw/commit/c55a8aa75fbe49c098a8df5d75cbc175f923610b))
+
+
+### Miscellaneous
+
+* fix all credo errors and avoid diffing ([#1996](https://www.github.com/aeternity/ae_mdw/issues/1996)) ([e916bf8](https://www.github.com/aeternity/ae_mdw/commit/e916bf8bbffacabb2075f8d67e36a1cdeb778d8b))
+* remove NODE_VERSION dependancy in Dockerfile ([#1989](https://www.github.com/aeternity/ae_mdw/issues/1989)) ([200a116](https://www.github.com/aeternity/ae_mdw/commit/200a1162a5ee82c436dcbaf28449b6ccd52589c7))
+* remove unused functions ([#1984](https://www.github.com/aeternity/ae_mdw/issues/1984)) ([6e5edc8](https://www.github.com/aeternity/ae_mdw/commit/6e5edc82603b30ef3c095d20e640779bb8fdbd0a))
+* run all unrun migrations ([#1981](https://www.github.com/aeternity/ae_mdw/issues/1981)) ([0619c4b](https://www.github.com/aeternity/ae_mdw/commit/0619c4bf04b18115d0b4be18bf5db8f722e5bea3))
+
 ### [1.90.1](https://www.github.com/aeternity/ae_mdw/compare/v1.90.0...v1.90.1) (2024-10-22)
 
 
