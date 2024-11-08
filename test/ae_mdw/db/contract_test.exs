@@ -7,7 +7,6 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Stats
-  alias AeMdw.Sync.DexCache
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
@@ -222,10 +221,26 @@ defmodule AeMdw.Db.ContractTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, dex_pair_pk, create_pair_txi})
         )
+        |> State.put(
+          Model.DexPair,
+          Model.dex_pair(index: dex_pair_pk, token1_pk: dex_token1_pk, token2_pk: dex_token2_pk)
+        )
+        |> State.put(
+          Model.DexTokenSymbol,
+          Model.dex_token_symbol(index: "TOKEN1", pair_create_txi_idx: {create_pair_txi, -1})
+        )
+        |> State.put(
+          Model.DexTokenSymbol,
+          Model.dex_token_symbol(index: "TOKEN2", pair_create_txi_idx: {create_pair_txi, -1})
+        )
+        |> State.put(
+          Model.Origin,
+          Model.origin(
+            index: {:contract_create_tx, dex_pair_pk},
+            txi_idx: {create_pair_txi, -1}
+          )
+        )
         |> Contract.logs_write(create_pair_txi, call_txi, call_rec, false)
-
-      assert %{token1: dex_token1_pk, token2: dex_token2_pk} ==
-               DexCache.get_pair(dex_pair_pk)
 
       account1_pk = :crypto.strong_rand_bytes(32)
       account2_pk = :crypto.strong_rand_bytes(32)

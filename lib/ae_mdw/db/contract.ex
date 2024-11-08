@@ -18,7 +18,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Sync.DexCache
 
   require Ex2ms
   require Log
@@ -436,10 +435,30 @@ defmodule AeMdw.Db.Contract do
   #
   defp write_pair_created(state, contract_pk, [token1, token2, pair_pk]) do
     if contract_pk == dex_factory_pubkey() do
-      DexCache.add_pair(state, pair_pk, token1, token2)
-    end
+      Model.aexn_contract(meta_info: {_name, token1_symbol, _dec}) =
+        State.fetch!(state, Model.AexnContract, {:aex9, token1})
 
-    state
+      Model.aexn_contract(meta_info: {_name, token2_symbol, _dec}) =
+        State.fetch!(state, Model.AexnContract, {:aex9, token2})
+
+      {:ok, pair_create_txi_idx} = Origin.creation_txi_idx(state, pair_pk)
+
+      state
+      |> State.put(
+        Model.DexPair,
+        Model.dex_pair(index: pair_pk, token1_pk: token1, token2_pk: token2)
+      )
+      |> State.put(
+        Model.DexTokenSymbol,
+        Model.dex_token_symbol(index: token1_symbol, pair_create_txi_idx: pair_create_txi_idx)
+      )
+      |> State.put(
+        Model.DexTokenSymbol,
+        Model.dex_token_symbol(index: token2_symbol, pair_create_txi_idx: pair_create_txi_idx)
+      )
+    else
+      state
+    end
   end
 
   defp write_pair_created(state, _contract_pk, _args), do: state
