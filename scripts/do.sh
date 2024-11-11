@@ -38,7 +38,7 @@ case $1 in
     ;;
 
   "test-integration")
-    elixir --sname $NAME -S mix test.integration $2
+    MIX_ENV=test INTEGRATION_TEST=1 elixir --sname aeternity@localhost -S mix test.integration $2
     ;;
 
   "test")

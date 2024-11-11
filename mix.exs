@@ -111,7 +111,8 @@ defmodule AeMdw.MixProject do
       preferred_cli_env: [
         coveralls: :test,
         "test.integration": :test,
-        "test.iteration": :test
+        "test.iteration": :test,
+        "mneme.watch": :test
       ]
     ]
   end
@@ -168,7 +169,8 @@ defmodule AeMdw.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev, :test]},
       {:excoveralls, "~> 0.14", only: :test},
-      {:gen_state_machine, "~> 2.0"}
+      {:gen_state_machine, "~> 2.0"},
+      {:mneme, "~> 0.9", only: [:dev, :test]}
     ]
   end
 

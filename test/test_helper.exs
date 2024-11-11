@@ -18,3 +18,4 @@ if Enum.all?(~w(integration iteration devmode)a, &(&1 not in included_tests)) do
 end
 
 ExUnit.start()
+Mneme.start()

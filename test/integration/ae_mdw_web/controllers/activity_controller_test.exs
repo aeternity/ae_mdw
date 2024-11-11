@@ -9,7 +9,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => events, "next" => next_url} =
                conn
-               |> get("/v2/accounts/#{account}/activities")
+               |> get("/v3/accounts/#{account}/activities")
                |> json_response(200)
 
       heights = events |> Enum.map(&Map.fetch!(&1, "height")) |> Enum.reverse()
@@ -33,7 +33,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [first_event | _rest] = events, "next" => next_url} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  direction: "forward",
                  scope: "gen:#{from_height}-#{to_height}"
                )
@@ -72,7 +72,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/accounts/#{invalid_account}/activities")
+               |> get("/v3/accounts/#{invalid_account}/activities")
                |> json_response(400)
     end
 
@@ -82,7 +82,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [first_event]} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  limit: 1,
                  direction: "forward",
                  scope: "gen:#{height}-#{height}"
@@ -104,7 +104,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => events, "next" => next_url} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  limit: 10,
                  scope: "gen:#{height}-#{height}"
                )
@@ -167,7 +167,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => events} =
                conn
-               |> get("/v2/accounts/#{account}/activities", direction: "forward")
+               |> get("/v3/accounts/#{account}/activities", direction: "forward")
                |> json_response(200)
 
       heights = Enum.map(events, &Map.fetch!(&1, "height"))
@@ -190,7 +190,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => events} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  direction: "forward",
                  scope: "gen:#{height}-#{height}",
                  limit: limit
@@ -211,7 +211,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [_activity1, activity2]} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  direction: "forward",
                  scope: "gen:#{height}"
                )
@@ -241,7 +241,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [_activity1, _activity2, activity3]} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  direction: "forward",
                  scope: "gen:#{height}"
                )
@@ -271,7 +271,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [activity3]} =
                conn
-               |> get("/v2/accounts/#{account}/activities",
+               |> get("/v3/accounts/#{account}/activities",
                  direction: "forward",
                  scope: "gen:#{height}",
                  type: "aexn"
@@ -301,7 +301,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
 
       assert %{"data" => [_activity1, _activity2, activity3 | _rest]} =
                conn
-               |> get("/v2/accounts/#{name_hash}/activities", direction: "forward")
+               |> get("/v3/accounts/#{name_hash}/activities", direction: "forward")
                |> json_response(200)
 
       assert %{

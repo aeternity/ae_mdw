@@ -1,5 +1,6 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
+  use Mneme
 
   alias AeMdw.Collection
   alias AeMdw.Database
@@ -22,63 +23,94 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets an aex9 token by contract id", %{conn: conn} do
       contract_id = "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt"
 
-      response =
-        conn
-        |> get("/aex9/by_contract/#{contract_id}")
-        |> json_response(200)
-
-      assert response["data"] ==
-               %{
-                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
-                 "contract_txi" => 22_313_168,
-                 "decimals" => 18,
-                 "name" => "9GAG",
-                 "symbol" => "9GAG",
-                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
-               }
+      auto_assert(
+        %{
+          "contract_id" => ^contract_id,
+          "contract_tx_hash" => "th_2r5gAptR7prYmXUgiRZXVDUvxuJ5PYe94vqviWh77bCzQRcCko",
+          "decimals" => 18,
+          "event_supply" => 10_000_000_000_000_000_000_000_000_000_000_000_000,
+          "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+          "holders" => 1,
+          "initial_supply" => 10_000_000_000_000_000_000_000_000_000_000_000_000,
+          "invalid" => false,
+          "logs_count" => 0,
+          "name" => "9GAG",
+          "symbol" => "9GAG"
+        } <-
+          conn
+          |> get("/v3/aex9/#{contract_id}")
+          |> json_response(200)
+      )
 
       contract_id = "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer"
 
-      response =
-        conn
-        |> get("/aex9/by_contract/#{contract_id}")
-        |> json_response(200)
+      auto_assert(
+        %{
+          "contract_id" => ^contract_id,
+          "contract_tx_hash" => "th_2EdQvcFbKXj4ee1ph3i4QnK2U4FBeYdVRMi47vtDWc1KvET7Bh",
+          "decimals" => 18,
+          "event_supply" => 1_000_000_000_000_000_000,
+          "extensions" => [],
+          "holders" => 1,
+          "initial_supply" => 1_000_000_000_000_000_000,
+          "invalid" => false,
+          "logs_count" => 0,
+          "name" => "AAA",
+          "symbol" => "AAA"
+        } <-
+          conn
+          |> get("/v3/aex9/#{contract_id}")
+          |> json_response(200)
+      )
 
-      assert response["data"] ==
-               %{
-                 "contract_id" => "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer",
-                 "contract_txi" => 9_393_007,
-                 "decimals" => 18,
-                 "name" => "AAA",
-                 "symbol" => "AAA",
-                 "extensions" => []
-               }
+      # WAE contract
+      contract_id = "ct_J3zBY8xxjsRr3QojETNw48Eb38fjvEuJKkQ6KzECvubvEcvCa"
+
+      auto_assert(
+        %{
+          "contract_id" => ^contract_id,
+          "contract_tx_hash" => "th_2w36BEYthD48fmveWrHLvzYpyKeTHtWLXCSqLEQjiSFARGfdaM",
+          "decimals" => 18,
+          "event_supply" => 32_067_122_530_333_274_155_599,
+          "extensions" => ["allowances"],
+          "holders" => _holders,
+          "initial_supply" => 0,
+          "invalid" => false,
+          "logs_count" => _logs_count,
+          "name" => "aeWrapped Aeternity",
+          "symbol" => "aeWAE"
+        } <-
+          conn
+          |> get("/v3/aex9/#{contract_id}")
+          |> json_response(200)
+      )
     end
 
     @tag :iteration
     test "gets each of the aex9 tokens by contract id", %{conn: conn} do
-      state = State.new()
-
       Model.AexnContract
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
+      |> Enum.reject(fn index -> Database.exists?(Model.AexnInvalidContract, index) end)
       |> Enum.each(fn {:aex9, aex9_pubkey} ->
         contract_id = encode_contract(aex9_pubkey)
 
-        response =
+        %{
+          "contract_id" => ^contract_id,
+          "contract_tx_hash" => _contract_tx_hash,
+          "decimals" => decimals,
+          "event_supply" => _event_supply,
+          "extensions" => _extensions,
+          "holders" => _holders,
+          "initial_supply" => _initial_supply,
+          "logs_count" => _logs_count,
+          "name" => name,
+          "symbol" => symbol
+        } =
           conn
-          |> get("/aex9/by_contract/#{contract_id}")
+          |> get("/v3/aex9/#{contract_id}")
           |> json_response(200)
 
-        assert %{
-                 "contract_id" => ^contract_id,
-                 "contract_txi" => contract_txi,
-                 "decimals" => decimals,
-                 "name" => name,
-                 "symbol" => symbol
-               } = response["data"]
-
-        assert contract_txi == Origin.tx_index!(state, {:contract, aex9_pubkey})
         assert is_binary(name)
         assert is_binary(symbol)
 
@@ -93,65 +125,113 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   describe "by_name" do
     test "gets aex9 tokens sorted by name", %{conn: conn} do
-      response =
-        conn
-        |> get("/aex9/by_name")
-        |> json_response(200)
-
-      assert Enum.any?(response, fn aex9 ->
-               aex9 == %{
-                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
-                 "contract_txi" => 22_313_168,
-                 "decimals" => 18,
-                 "name" => "9GAG",
-                 "symbol" => "9GAG",
-                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
-               }
-             end)
-
-      assert Enum.any?(response, fn aex9 ->
-               aex9 ==
-                 %{
-                   "contract_id" => "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer",
-                   "contract_txi" => 9_393_007,
-                   "decimals" => 18,
-                   "name" => "AAA",
-                   "symbol" => "AAA",
-                   "extensions" => []
-                 }
-             end)
+      auto_assert(
+        %{
+          "data" => [
+            %{
+              "contract_id" => "ct_x8NeGisMer3sQUWJUa4J2QnfMKRPCLcpUja84noQfWcEd8qma",
+              "contract_tx_hash" => "th_fknbs1yWTJJbX8RZgpfQdiRE8JoU13dgBE2HHcz4WaJkmwYdp",
+              "decimals" => 18,
+              "event_supply" => 100_000_000_000_000_000_000,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 3,
+              "initial_supply" => 100_000_000_000_000_000_000,
+              "invalid" => false,
+              "logs_count" => 16,
+              "name" => "100",
+              "symbol" => "100"
+            },
+            %{
+              "contract_id" => "ct_EoS1dkrxjDWEL9h6GSJ6HXTL5UMckfey7wdwPQPFKHm2TYr8d",
+              "contract_tx_hash" => "th_Hsx7pXeu24BoKYqcpnENS7TfD8vhiTiZWRwvXgLXXHTpk9cyH",
+              "decimals" => 18,
+              "event_supply" => 1_000_000_000_000_000_000_000,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 3,
+              "initial_supply" => 1_000_000_000_000_000_000_000,
+              "invalid" => false,
+              "logs_count" => 6,
+              "name" => "1000",
+              "symbol" => "1000"
+            },
+            %{
+              "contract_id" => "ct_jLDTvTpNXNrUz6GxTyNaH2A7NmtGejACLszyLtT6BkZpjcVCp",
+              "contract_tx_hash" => "th_pmswZYbCPi5xJ3iuamRwDB2Jjj85n5K7HQRWZ7W3g1BNUPdV7",
+              "decimals" => 18,
+              "event_supply" => 10_890_000_000_000_000_000,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 4,
+              "initial_supply" => 10_000_000_000_000_000_000,
+              "invalid" => false,
+              "logs_count" => 21,
+              "name" => "100DAYS",
+              "symbol" => "100DAYS"
+            }
+          ],
+          "next" =>
+            "/v3/aex9?by=name&cursor=g2gDdwRhZXg5bQAAAAsxaW5jaCB0b2tlbm0AAAAg0V2fL1aX22vZGizsDW%2FMVgmD4Lz9NJdWhhXljlcMjOs&direction=forward&limit=3",
+          "prev" => nil
+        } <-
+          conn
+          |> get("/v3/aex9", by: "name", direction: "forward", limit: 3)
+          |> json_response(200)
+      )
     end
   end
 
   describe "by_symbol" do
     test "gets aex9 tokens sorted by symbol", %{conn: conn} do
-      response =
-        conn
-        |> get("/aex9/by_symbol")
-        |> json_response(200)
-
-      assert Enum.any?(response, fn aex9 ->
-               aex9 ==
-                 %{
-                   "contract_id" => "ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav",
-                   "contract_txi" => 12_361_891,
-                   "decimals" => 18,
-                   "name" => "911058",
-                   "symbol" => "SPH",
-                   "extensions" => ["allowances", "mintable", "burnable", "swappable"]
-                 }
-             end)
-
-      assert Enum.any?(response, fn aex9 ->
-               aex9 == %{
-                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
-                 "contract_txi" => 22_313_168,
-                 "decimals" => 18,
-                 "name" => "9GAG",
-                 "symbol" => "9GAG",
-                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
-               }
-             end)
+      auto_assert(
+        %{
+          "data" => [
+            %{
+              "contract_id" => "ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGPcxAZhNJcq62M8Gwp6zM9",
+              "contract_tx_hash" => "th_rbFNrRDpn6finytCEmHAExtBnRxt14yckvuCWRmXxsRpypHxt",
+              "decimals" => 18,
+              "event_supply" => 99_000_000_000_000_000_000,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 2,
+              "initial_supply" => 99_000_000_000_000_000_000,
+              "invalid" => false,
+              "logs_count" => 2,
+              "name" => "🚀",
+              "symbol" => "🚀"
+            },
+            %{
+              "contract_id" => "ct_2c9FiRkUw82UQNNsZX2rZpyuMbXq2n8mbcHUmJhw4coAxTMSKL",
+              "contract_tx_hash" => "th_Bn7FJsvErm4NDg5EzQLaxNPXFnwZAcDH7f1ESWfXJzcRh3HQo",
+              "decimals" => 18,
+              "event_supply" => 123_456_789,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 1,
+              "initial_supply" => 123_456_789,
+              "invalid" => false,
+              "logs_count" => 0,
+              "name" => "🔥",
+              "symbol" => "🔥"
+            },
+            %{
+              "contract_id" => "ct_2gcT1A6Rta95vVkw9x5vgDE2VxPB8PV8pyUE9SRKutHJCzZYeH",
+              "contract_tx_hash" => "th_KmYmiKdDZ6pFqvzKMrJMMfqHpDbDMGdkAgVxsSSTCXUm2jdzF",
+              "decimals" => 18,
+              "event_supply" => 123_000_000_000_000_000_000,
+              "extensions" => ["allowances", "mintable", "burnable", "swappable"],
+              "holders" => 2,
+              "initial_supply" => 123_000_000_000_000_000_000,
+              "invalid" => false,
+              "logs_count" => 1,
+              "name" => "👀",
+              "symbol" => "👀"
+            }
+          ],
+          "next" =>
+            "/v3/aex9?by=symbol&cursor=g2gDdwRhZXg5bQAAAAbinaTvuI9tAAAAII2HYRV%2FASqPiNMi9ZVlJxxcifVMw%2FmuN%2BmO875INDpD&limit=3",
+          "prev" => nil
+        } <-
+          conn
+          |> get("/v3/aex9", by: "symbol", limit: 3)
+          |> json_response(200)
+      )
     end
   end
 
@@ -162,153 +242,79 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       first = 489_501
       last = 489_510
 
-      path =
-        Routes.aex9_path(
-          conn,
-          :balance_range,
-          "#{first}-#{last}",
-          contract_id,
-          account_id
-        )
-
-      response = conn |> get(path) |> json_response(200)
-      assert response["contract_id"] == contract_id
-      assert response["account_id"] == account_id
-      assert is_list(response["range"])
-
-      response["range"]
-      |> Enum.zip(first..last)
-      |> Enum.each(fn {height_map, height} ->
-        assert %{
-                 "amount" => amount,
-                 "block_hash" => hash,
-                 "height" => ^height
-               } = height_map
-
-        assert (height < 489_509 && amount == 9_975_045) || amount == 9_975_135
-        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
-      end)
-    end
-
-    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
-      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
-      account_id = "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
-      first = 487_100
-      last = 487_101
-
-      path =
-        Routes.aex9_path(
-          conn,
-          :balance_range,
-          "#{first}-#{last}",
-          contract_id,
-          account_id
-        )
-
-      assert %{"error" => error} = conn |> get(path) |> json_response(404)
-      assert error == "not found: #{contract_id}"
-    end
-  end
-
-  describe "balances_range" do
-    test "gets balances on a contract for range of generations", %{conn: conn} do
-      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
-      first = 489_501
-      last = 489_510
-
-      path =
-        Routes.aex9_path(
-          conn,
-          :balances_range,
-          "#{first}-#{last}",
-          "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
-        )
-
-      response = conn |> get(path) |> json_response(200)
-      assert response["contract_id"] == contract_id
-      assert is_list(response["range"])
-
-      response["range"]
-      |> Enum.zip(first..last)
-      |> Enum.each(fn {height_map, height} ->
-        assert %{
-                 "amounts" => amounts,
-                 "block_hash" => hash,
-                 "height" => ^height
-               } = height_map
-
-        assert (height < 489_509 &&
-                  amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_045) ||
-                 amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_135
-
-        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
-      end)
-    end
-
-    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
-      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
-      first = 487_100
-      last = 487_101
-
-      path =
-        Routes.aex9_path(
-          conn,
-          :balances_range,
-          "#{first}-#{last}",
-          contract_id
-        )
-
-      assert %{"error" => error} = conn |> get(path) |> json_response(404)
-      assert error == "not found: #{contract_id}"
-    end
-
-    @tag :iteration
-    test "gets balances on each contract for a range of generations", %{conn: conn} do
-      first = 500_001
-      last = 500_003
-      state = State.new()
-
-      Model.block(tx_index: range_txi) = Database.fetch!(Model.Block, {first, -1})
-
-      Model.AexnContract
-      |> Database.all_keys()
-      |> Enum.filter(fn {type, contract_pk} ->
-        type == :aex9 &&
-          Origin.tx_index!(state, {:contract, contract_pk}) < range_txi and
-          encode_contract(contract_pk) not in [
-            @big_balance_contract_id1,
-            @big_balance_contract_id2,
-            @big_balance_contract_id3
-          ]
-      end)
-      |> Enum.each(fn {:aex9, aex9_pubkey} ->
-        contract_id = encode_contract(aex9_pubkey)
-
-        path =
-          Routes.aex9_path(
-            conn,
-            :balances_range,
-            "#{first}-#{last}",
-            contract_id
+      auto_assert(
+        %{
+          "data" => [
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => ^first
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_502
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_503
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_504
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_505
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_506
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_507
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_045,
+              "contract" => ^contract_id,
+              "height" => 489_508
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_135,
+              "contract" => ^contract_id,
+              "height" => 489_509
+            },
+            %{
+              "account" => ^account_id,
+              "amount" => 9_975_135,
+              "contract" => ^contract_id,
+              "height" => ^last
+            }
+          ],
+          "next" => nil,
+          "prev" => nil
+        } <-
+          conn
+          |> get("/v3/aex9/#{contract_id}/balances/#{account_id}/history",
+            scope: "gen:#{first}-#{last}"
           )
-
-        response = conn |> get(path) |> json_response(200)
-        assert response["contract_id"] == contract_id
-        assert is_list(response["range"])
-
-        response["range"]
-        |> Enum.zip(first..last)
-        |> Enum.each(fn {height_map, height} ->
-          assert %{
-                   "amounts" => amounts,
-                   "block_hash" => hash,
-                   "height" => ^height
-                 } = height_map
-
-          assert is_map(amounts)
-          assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
-        end)
-      end)
+          |> json_response(200)
+      )
     end
   end
 
@@ -343,26 +349,58 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets balances for hash and contract", %{conn: conn} do
       mb_hash = "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
-      conn = get(conn, "/aex9/balances/hash/#{mb_hash}/#{contract_id}")
+      conn = get(conn, "/v3/aex9/#{contract_id}/balances", block_hash: mb_hash)
 
-      assert %{
-               "amounts" => %{
-                 "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6" => 4_050_000_000_000,
-                 "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK" => 8_100_000_000_000,
-                 "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" => 81_000_000_000_000,
-                 "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" =>
-                   49_999_999_999_906_850_000_000_000
-               },
-               "block_hash" => ^mb_hash,
-               "contract_id" => ^contract_id,
-               "height" => 350_622
-             } = json_response(conn, 200)
+      auto_assert(
+        %{
+          "data" => [
+            %{
+              "account_id" => "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK",
+              "amount" => 8_100_000_000_000,
+              "block_hash" => "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+              "contract_id" => ^contract_id,
+              "height" => 335_293,
+              "last_log_idx" => 1,
+              "last_tx_hash" => "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+            },
+            %{
+              "account_id" => "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6",
+              "amount" => 4_050_000_000_000,
+              "block_hash" => "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+              "contract_id" => ^contract_id,
+              "height" => 335_293,
+              "last_log_idx" => 2,
+              "last_tx_hash" => "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+            },
+            %{
+              "account_id" => "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+              "amount" => 49_999_999_999_906_850_000_000_000,
+              "block_hash" => "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+              "contract_id" => ^contract_id,
+              "height" => 335_293,
+              "last_log_idx" => 2,
+              "last_tx_hash" => "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+            },
+            %{
+              "account_id" => "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4",
+              "amount" => 81_000_000_000_000,
+              "block_hash" => "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+              "contract_id" => ^contract_id,
+              "height" => 335_293,
+              "last_log_idx" => 0,
+              "last_tx_hash" => "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+            }
+          ],
+          "next" => nil,
+          "prev" => nil
+        } <- json_response(conn, 200)
+      )
     end
 
     test "returns 404 if contract had not been created up to the block", %{conn: conn} do
       hash = "kh_NM2cxdzg6mf4KMFMXw1kAzBJGwFoqiGHQtaKx3DvaAGM5CAkn"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
-      conn = get(conn, "/aex9/balances/hash/#{hash}/#{contract_id}")
+      conn = get(conn, "/v3/aex9/#{contract_id}/balances", block_hash: hash)
 
       assert %{"error" => error} = json_response(conn, 404)
       assert error == "not found: #{contract_id}"
@@ -372,9 +410,9 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets balances for some hashes and each contract", %{conn: conn} do
       mb_hashes =
         [
-          {300_001, 1},
-          {400_002, 2},
-          {500_003, 3}
+          {700_001, 1},
+          {1_000_002, 2},
+          {1_000_003, 3}
         ]
         |> Enum.map(&Database.fetch!(Model.Block, &1))
         |> Enum.map(fn Model.block(tx_index: txi, hash: mb_hash) ->
@@ -388,12 +426,12 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
       |> Enum.map(fn {:aex9, ct_pk} -> encode_contract(ct_pk) end)
       |> Enum.zip(mb_hashes)
-      |> Enum.filter(fn {contract_id, {_mb_hash, mb_txi}} ->
+      |> Enum.filter(fn {contract_id, {mb_txi, _mb_hash}} ->
         ct_pk = Validate.id!(contract_id)
         Origin.tx_index!(state, {:contract, ct_pk}) > mb_txi
       end)
-      |> Enum.each(fn {contract_id, {mb_hash, _mb_txi}} ->
-        conn = get(conn, "/aex9/balances/hash/#{mb_hash}/#{contract_id}")
+      |> Enum.each(fn {contract_id, {_mb_txi, mb_hash}} ->
+        conn = get(conn, "/v3/aex9/#{contract_id}/balances", block_hash: mb_hash)
 
         assert %{
                  "amounts" => amounts,
@@ -413,7 +451,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       mb_height = 434_825
       mb_hash = "mh_iDZvfWrZ8QEFaBW9nGzrTv1KBPMh2dVW4z2Bn7NBALLqwFRB9"
       account_id = "ak_3n5eTrEzg2VDQK7Y2XJdShVeaDsdpZggA8JvpukGpwEKkiorv"
-      conn = get(conn, "/aex9/balances/hash/#{mb_hash}/account/#{account_id}")
+      conn = get(conn, "/aex9/balances/account/#{account_id}", blockhash: mb_hash)
 
       response_list = json_response(conn, 200)
 
@@ -439,7 +477,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets account balances up to a height", %{conn: conn} do
       kb_height = 434_825
       account_id = "ak_3n5eTrEzg2VDQK7Y2XJdShVeaDsdpZggA8JvpukGpwEKkiorv"
-      conn = get(conn, "/aex9/balances/gen/#{kb_height}/account/#{account_id}")
+      conn = get(conn, "/aex9/balances/account/#{account_id}", height: kb_height)
 
       response_list = json_response(conn, 200)
 
@@ -549,14 +587,9 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
     test "returns the empty amounts for aex9 contract without balance", %{conn: conn} do
       contract_id = "ct_U7whpYJo4xXoXjEpw39mWEPKgKM2kgSZk9em5FLK8Xq2FrRWE"
-      conn = get(conn, "/aex9/balances/#{contract_id}")
+      conn = get(conn, "/v3/aex9/#{contract_id}/balances")
 
-      assert %{
-               "amounts" => amounts,
-               "contract_id" => ^contract_id
-             } = json_response(conn, 200)
-
-      assert is_map(amounts) and map_size(amounts) == 0
+      assert %{"data" => []} = json_response(conn, 200)
     end
   end
 
@@ -1063,19 +1096,19 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
   end
 
-  describe "transfers_from_to_v1" do
+  describe "transfers_from_to_v2" do
     test "from a pair with many transfers", %{conn: conn} do
       from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
       to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
-      conn = get(conn, "/aex9/transfers/from-to/#{from_id}/#{to_id}")
+      conn = get(conn, "/v2/aex9/transfers/from-to/#{from_id}/#{to_id}")
 
-      response = json_response(conn, 200)
+      %{"data" => data} = json_response(conn, 200)
 
-      assert Enum.all?(response, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+      assert Enum.all?(data, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
                sender_id == from_id and recipient_id == to_id
              end)
 
-      assert response == Enum.sort_by(response, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert data == Enum.sort_by(data, fn %{"call_txi" => call_txi} -> call_txi end, &>=/2)
     end
   end
 end

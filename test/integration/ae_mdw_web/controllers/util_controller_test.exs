@@ -2,8 +2,11 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Database
+  alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+
+  require Model
 
   @moduletag :integration
 

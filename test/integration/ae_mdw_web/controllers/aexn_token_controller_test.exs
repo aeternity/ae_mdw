@@ -14,12 +14,12 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
   describe "aex9_tokens" do
     test "it gets aex9 tokens backwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9") |> json_response(200)
+               conn |> get("/v3/aex9") |> json_response(200)
 
       aex9_names = aex9_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
 
       assert @default_limit = length(aex9_tokens)
-      assert ^aex9_names = Enum.sort(aex9_names)
+      assert ^aex9_names = sort_names(aex9_names)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)
@@ -28,7 +28,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
         next_aex9_tokens |> Enum.map(fn %{"name" => name} -> name end) |> Enum.reverse()
 
       assert @default_limit = length(next_aex9_tokens)
-      assert ^next_aex9_names = Enum.sort(next_aex9_names)
+      assert ^next_aex9_names = sort_names(next_aex9_names)
       assert Enum.at(aex9_names, @default_limit - 1) >= Enum.at(next_aex9_names, 0)
 
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
@@ -36,12 +36,12 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
     test "it gets aex9 tokens forwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9", direction: "forward") |> json_response(200)
+               conn |> get("/v3/aex9", direction: "forward") |> json_response(200)
 
       aex9_names = Enum.map(aex9_tokens, fn %{"name" => name} -> name end)
 
       assert @default_limit = length(aex9_tokens)
-      assert ^aex9_names = Enum.sort(aex9_names)
+      assert ^aex9_names = sort_names(aex9_names)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)
@@ -59,21 +59,24 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       prefix = "AAA"
 
       assert %{"data" => aex9_tokens} =
-               conn |> get("/v2/aex9", prefix: prefix) |> json_response(200)
+               conn |> get("/v3/aex9", prefix: prefix) |> json_response(200)
 
       assert length(aex9_tokens) > 0
-      assert Enum.all?(aex9_tokens, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
+
+      assert Enum.all?(aex9_tokens, fn %{"name" => name} ->
+               String.starts_with?(String.downcase(name), String.downcase(prefix))
+             end)
     end
 
     test "it gets aex9 tokens backwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9", by: "symbol") |> json_response(200)
+               conn |> get("/v3/aex9", by: "symbol") |> json_response(200)
 
       aex9_symbols =
         aex9_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
 
       assert @default_limit = length(aex9_tokens)
-      assert ^aex9_symbols = Enum.sort(aex9_symbols)
+      assert ^aex9_symbols = sort_names(aex9_symbols)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)
@@ -82,7 +85,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
         next_aex9_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end) |> Enum.reverse()
 
       assert @default_limit = length(next_aex9_tokens)
-      assert ^next_aex9_symbols = Enum.sort(next_aex9_symbols)
+      assert ^next_aex9_symbols = sort_names(next_aex9_symbols)
       assert Enum.at(aex9_symbols, @default_limit - 1) >= Enum.at(next_aex9_symbols, 0)
 
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
@@ -90,12 +93,12 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
     test "it gets aex9 tokens forwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
-               conn |> get("/v2/aex9", direction: "forward", by: "symbol") |> json_response(200)
+               conn |> get("/v3/aex9", direction: "forward", by: "symbol") |> json_response(200)
 
       aex9_symbols = Enum.map(aex9_tokens, fn %{"symbol" => symbol} -> symbol end)
 
       assert @default_limit = length(aex9_tokens)
-      assert ^aex9_symbols = Enum.sort(aex9_symbols)
+      assert ^aex9_symbols = sort_names(aex9_symbols)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)
@@ -103,8 +106,10 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       next_aex9_symbols = Enum.map(next_aex9_tokens, fn %{"symbol" => symbol} -> symbol end)
 
       assert @default_limit = length(next_aex9_tokens)
-      assert ^next_aex9_symbols = Enum.sort(next_aex9_symbols)
-      assert Enum.at(aex9_symbols, @default_limit - 1) <= Enum.at(next_aex9_symbols, 0)
+      assert ^next_aex9_symbols = sort_names(next_aex9_symbols)
+
+      assert String.downcase(Enum.at(aex9_symbols, @default_limit - 1)) <=
+               String.downcase(Enum.at(next_aex9_symbols, 0))
 
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
     end
@@ -113,12 +118,12 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       prefix = "AAA"
 
       assert %{"data" => aex9_tokens} =
-               conn |> get("/v2/aex9", by: "symbol", prefix: prefix) |> json_response(200)
+               conn |> get("/v3/aex9", by: "symbol", prefix: prefix) |> json_response(200)
 
       assert length(aex9_tokens) > 0
 
       assert Enum.all?(aex9_tokens, fn %{"symbol" => symbol} ->
-               String.starts_with?(symbol, prefix)
+               String.starts_with?(String.downcase(symbol), String.downcase(prefix))
              end)
     end
 
@@ -127,14 +132,14 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       error_msg = "invalid cursor: #{cursor}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9", cursor: cursor) |> json_response(400)
+               conn |> get("/v3/aex9", cursor: cursor) |> json_response(400)
     end
   end
 
   describe "aex9_token" do
     test "it returns an aex9 token", %{conn: conn} do
       assert %{"contract_id" => @aex9_token_id} =
-               conn |> get("/v2/aex9/#{@aex9_token_id}") |> json_response(200)
+               conn |> get("/v3/aex9/#{@aex9_token_id}") |> json_response(200)
     end
 
     test "when not found, it returns 404", %{conn: conn} do
@@ -142,7 +147,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       error_msg = "not found: #{non_existent_id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9/#{non_existent_id}") |> json_response(404)
+               conn |> get("/v3/aex9/#{non_existent_id}") |> json_response(404)
     end
 
     test "when id is not valid, it returns 400", %{conn: conn} do
@@ -150,7 +155,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       error_msg = "invalid id: #{invalid_id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9/#{invalid_id}") |> json_response(400)
+               conn |> get("/v3/aex9/#{invalid_id}") |> json_response(400)
     end
   end
 
@@ -158,7 +163,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
     test "it returns an aex9 token balance", %{conn: conn} do
       assert %{"contract" => @aex9_token_id, "account" => @aex9_token_account_id} =
                conn
-               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}")
+               |> get("/v3/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}")
                |> json_response(200)
     end
 
@@ -169,7 +174,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{non_existent_id}/balances/#{account_id}")
+               |> get("/v3/aex9/#{non_existent_id}/balances/#{account_id}")
                |> json_response(400)
     end
 
@@ -179,7 +184,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{invalid_id}/balances/#{@aex9_token_account_id}")
+               |> get("/v3/aex9/#{invalid_id}/balances/#{@aex9_token_account_id}")
                |> json_response(400)
     end
   end
@@ -190,7 +195,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/account-balances/#{@aex9_token_account_id}", limit: limit)
+               |> get("/v3/accounts/#{@aex9_token_account_id}/aex9/balances", limit: limit)
                |> json_response(200)
 
       balances_contract_ids =
@@ -227,7 +232,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
+               |> get("/v3/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
                  limit: limit
                )
                |> json_response(200)
@@ -260,7 +265,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"data" => balances} =
                conn
-               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
+               |> get("/v3/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
                  scope: "gen:#{first}-#{last}",
                  limit: limit
                )
@@ -274,4 +279,6 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       assert Enum.at(balances_heights, limit - 1) <= last
     end
   end
+
+  defp sort_names(names), do: Enum.sort_by(names, &String.downcase/1)
 end

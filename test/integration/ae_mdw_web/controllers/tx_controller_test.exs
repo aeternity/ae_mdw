@@ -57,7 +57,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   describe "txi" do
     test "get a transaction by a given index", %{conn: conn} do
       valid_index = 15_499_122
-      conn = get(conn, "/txi/#{valid_index}")
+      conn = get(conn, "/v2/txs/#{valid_index}")
 
       assert json_response(conn, 200)["tx_index"] == valid_index
       assert tx = json_response(conn, 200)["tx"]
@@ -67,7 +67,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "gets spend_tx with recipient details having a name with multiple updates", %{conn: conn} do
       valid_index = 5_557_826
-      conn = get(conn, "/txi/#{valid_index}")
+      conn = get(conn, "/v2/txs/#{valid_index}")
 
       assert json_response(conn, 200)["tx_index"] == valid_index
       assert tx = json_response(conn, 200)["tx"]
@@ -82,7 +82,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_index = -10_000_000
-      conn = get(conn, "/txi/#{invalid_index}")
+      conn = get(conn, "/v2/txs/#{invalid_index}")
 
       assert json_response(conn, 400) == %{
                "error" => "invalid non-negative integer: #{invalid_index}"
@@ -93,12 +93,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       index = 90_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
       error_msg = "not found: #{index}"
 
-      assert %{"error" => ^error_msg} = conn |> get("/txi/#{index}") |> json_response(404)
+      assert %{"error" => ^error_msg} = conn |> get("/v2/txs/#{index}") |> json_response(404)
     end
 
     test "localhost has same result as mainnet", %{conn: conn} do
       txi = 1_000_001
-      path = "/txi/#{txi}"
+      path = "/v2/txs/#{txi}"
 
       conn = get(conn, path)
       assert %{"tx_index" => ^txi} = body = json_response(conn, 200)
@@ -109,7 +109,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   describe "txi for contract txs" do
     test "get a ContractCreateTx with compilation info", %{conn: conn} do
       valid_index = 1_737_468
-      conn = get(conn, "/txi/#{valid_index}")
+      conn = get(conn, "/v2/txs/#{valid_index}")
 
       assert json_response(conn, 200)["tx_index"] == valid_index
       assert tx = json_response(conn, 200)["tx"]
@@ -120,7 +120,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "get a ContractCreateTx with init args", %{conn: conn} do
       valid_index = 26_672_277
-      conn = get(conn, "/txi/#{valid_index}")
+      conn = get(conn, "/v2/txs/#{valid_index}")
 
       expected_args = [
         %{
@@ -153,7 +153,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "get a ContractCreateTx with init logs", %{conn: conn} do
       valid_index = 27_290_810
-      conn = get(conn, "/txi/#{valid_index}")
+      conn = get(conn, "/v2/txs/#{valid_index}")
 
       expected_logs = [
         %{
@@ -1006,7 +1006,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                assert {Model.name(active: active), _source} = Name.locate(state, plain_name)
 
                name_updates =
-                 state |> Name.stream_nested_resource(plain_name, active) |> Enum.to_list()
+                 state
+                 |> Name.stream_nested_resource(Model.NameUpdate, plain_name)
+                 |> Enum.to_list()
 
                if [] != name_updates do
                  assert recipient = tx["recipient"]
@@ -1821,7 +1823,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
              assert {Model.name(active: active), _source} = Name.locate(state, plain_name)
 
              name_updates =
-               state |> Name.stream_nested_resource(plain_name, active) |> Enum.to_list()
+               state
+               |> Name.stream_nested_resource(Model.NameUpdate, plain_name)
+               |> Enum.to_list()
 
              if [] != name_updates do
                assert recipient = tx["recipient"]
