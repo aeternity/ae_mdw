@@ -72,6 +72,7 @@ defmodule AeMdwWeb.Router do
       get "/stats/blocks", StatsController, :blocks_stats
       get "/stats/difficulty", StatsController, :difficulty_stats
       get "/stats/hashrate", StatsController, :hashrate_stats
+      get "/stats/total-accounts", StatsController, :total_accounts_stats
       get "/stats/names", StatsController, :names_stats
       get "/stats/total", StatsController, :total_stats
       get "/stats/delta", StatsController, :delta_stats
