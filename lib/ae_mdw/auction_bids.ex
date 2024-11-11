@@ -68,28 +68,33 @@ defmodule AeMdw.AuctionBids do
   end
 
   @spec fetch_auctions(state(), pagination(), order_by(), cursor(), opts()) ::
-          {cursor(), [auction_bid()], cursor()}
+          {:ok, {cursor(), [auction_bid()], cursor()}} | {:error, Error.t()}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
     last_micro_time = DbUtil.last_gen_and_time(state)
+    streamer = &Collection.stream(state, @table, &1, nil, cursor)
 
-    Collection.paginate(
-      &Collection.stream(state, @table, &1, nil, cursor),
+    streamer
+    |> Collection.paginate(
       pagination,
       &render(state, &1, last_micro_time, opts),
       & &1
     )
+    |> then(&{:ok, &1})
   end
 
   def fetch_auctions(state, pagination, :expiration, cursor, opts) do
-    last_micro_time = DbUtil.last_gen_and_time(state)
-    cursor = deserialize_exp_cursor(cursor)
+    with {:ok, cursor} <- deserialize_exp_cursor(cursor) do
+      last_micro_time = DbUtil.last_gen_and_time(state)
+      streamer = &Collection.stream(state, @table_expiration, &1, nil, cursor)
 
-    Collection.paginate(
-      &Collection.stream(state, @table_expiration, &1, nil, cursor),
-      pagination,
-      &render(state, &1, last_micro_time, opts),
-      &serialize_exp_cursor/1
-    )
+      streamer
+      |> Collection.paginate(
+        pagination,
+        &render(state, &1, last_micro_time, opts),
+        &serialize_exp_cursor/1
+      )
+      |> then(&{:ok, &1})
+    end
   end
 
   @spec auctions_stream(state(), prefix(), direction(), names_scope(), cursor()) ::
@@ -200,14 +205,17 @@ defmodule AeMdw.AuctionBids do
 
   defp txi_idx_txi({txi, _idx}), do: txi
 
-  defp serialize_exp_cursor({exp_height, name}), do: "#{exp_height}-#{name}"
+  defp serialize_exp_cursor({exp_height, name}),
+    do: "#{exp_height}-#{Base.encode64(name, padding: false)}"
 
-  defp deserialize_exp_cursor(nil), do: nil
+  defp deserialize_exp_cursor(nil), do: {:ok, nil}
 
   defp deserialize_exp_cursor(cursor_bin) do
-    case Regex.run(~r/\A(\d+)-([\w\.]+)\z/, cursor_bin) do
-      [_match0, exp_height, name] -> {String.to_integer(exp_height), name}
-      nil -> nil
+    with [_match0, exp_height, name] <- Regex.run(~r/\A(\d+)-([\w\.]+)\z/, cursor_bin),
+         {:ok, decoded_name} <- Base.decode64(name, padding: false) do
+      {:ok, {String.to_integer(exp_height), decoded_name}}
+    else
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 
