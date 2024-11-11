@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.92.0](https://www.github.com/aeternity/ae_mdw/compare/v1.91.1...v1.92.0) (2024-11-11)
+
+
+### Features
+
+* add total accounts stats ([#1960](https://www.github.com/aeternity/ae_mdw/issues/1960)) ([7210f83](https://www.github.com/aeternity/ae_mdw/commit/7210f83bd053cf6b3da089b87029c4225944c46f))
+
+
+### Bug Fixes
+
+* serialize/deserialize auction bids cursor to handle utf8 chars ([#2008](https://www.github.com/aeternity/ae_mdw/issues/2008)) ([4c409e6](https://www.github.com/aeternity/ae_mdw/commit/4c409e64fca98ff13d5f077774c640f77edb5a72))
+
+
+### Testing
+
+* fix integration tests ([#2001](https://www.github.com/aeternity/ae_mdw/issues/2001)) ([afae4d1](https://www.github.com/aeternity/ae_mdw/commit/afae4d16ed604d74e9e2c970c7618b6081ada366))
+
 ### [1.91.1](https://www.github.com/aeternity/ae_mdw/compare/v1.91.0...v1.91.1) (2024-11-07)
 
 
