@@ -1113,14 +1113,13 @@ defmodule AeMdwWeb.NameControllerTest do
       store: store
     } do
       by = "expiration"
-      direction = "forward"
       limit = 3
       key_hash = <<0::256>>
 
       store =
         1..21
         |> Enum.reduce(store, fn i, store ->
-          plain_name = "#{i}.chain"
+          plain_name = "玫瑰#{i}.chain"
 
           auction =
             Model.auction_bid(
@@ -1154,17 +1153,32 @@ defmodule AeMdwWeb.NameControllerTest do
         {:aec_db, [], [get_header: fn _block_hash -> :block end]},
         {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
-        assert %{"data" => [auction_bid1 | _rest] = auctions} =
+        assert %{"data" => [auction_bid1 | _rest] = auctions, "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names/auctions", by: by, direction: direction, limit: limit)
+                 |> get("/v2/names/auctions", by: by, direction: "forward", limit: limit)
                  |> json_response(200)
 
         assert %{
+                 "name" => "玫瑰1.chain",
                  "info" => %{"approximate_expire_time" => 123}
                } = auction_bid1
 
         assert ^limit = length(auctions)
+
+        assert %{"data" => [auction_bid4 | _rest], "prev" => prev_url} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        %{"name" => "玫瑰4.chain"} = auction_bid4
+
+        assert %{"data" => ^auctions} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
       end
     end
 

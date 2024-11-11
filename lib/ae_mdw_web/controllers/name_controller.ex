@@ -98,10 +98,12 @@ defmodule AeMdwWeb.NameController do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
       assigns
 
-    paginated_auctions =
-      AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [{:render_v3?, true} | opts])
-
-    WebUtil.render(conn, paginated_auctions)
+    with {:ok, paginated_auctions} <-
+           AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [
+             {:render_v3?, true} | opts
+           ]) do
+      WebUtil.render(conn, paginated_auctions)
+    end
   end
 
   @spec auctions_v2(Conn.t(), map()) :: Conn.t()
@@ -109,8 +111,10 @@ defmodule AeMdwWeb.NameController do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
       assigns
 
-    paginated_auctions = AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts)
-    WebUtil.render(conn, paginated_auctions)
+    with {:ok, paginated_auctions} <-
+           AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts) do
+      WebUtil.render(conn, paginated_auctions)
+    end
   end
 
   @spec auction_claims(Conn.t(), map()) :: Conn.t()
