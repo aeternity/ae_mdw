@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.91.2](https://www.github.com/aeternity/ae_mdw/compare/v1.91.1...v1.91.2) (2024-11-11)
+
+
+### Testing
+
+* fix integration tests ([#2001](https://www.github.com/aeternity/ae_mdw/issues/2001)) ([afae4d1](https://www.github.com/aeternity/ae_mdw/commit/afae4d16ed604d74e9e2c970c7618b6081ada366))
+
 ### [1.91.1](https://www.github.com/aeternity/ae_mdw/compare/v1.91.0...v1.91.1) (2024-11-07)
 
 
