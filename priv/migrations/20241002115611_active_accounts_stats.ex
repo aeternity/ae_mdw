@@ -27,7 +27,8 @@ defmodule AeMdw.Migrations.ActiveAccountsStats do
       end
     end)
 
-    :ets.new(:active_account_counter, [:bag, :named_table, :public, {:write_concurrency, :auto}])
+    _table =
+      :ets.new(:active_account_counter, [:bag, :named_table, :public, {:write_concurrency, :auto}])
 
     {_state, created_account_activity_entries} =
       Model.Tx
