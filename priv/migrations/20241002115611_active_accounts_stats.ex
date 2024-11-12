@@ -2,11 +2,9 @@ defmodule AeMdw.Migrations.ActiveAccountsStats do
   @moduledoc """
     Add active accounts stats
   """
-  # alias AeMdw.Collection
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
-  # alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.RocksDbCF
 
   require Model
@@ -29,8 +27,7 @@ defmodule AeMdw.Migrations.ActiveAccountsStats do
       end
     end)
 
-    _table =
-      :ets.new(:active_account_counter, [:bag, :named_table, :public, {:write_concurrency, :auto}])
+    :ets.new(:active_account_counter, [:bag, :named_table, :public, {:write_concurrency, :auto}])
 
     {_state, created_account_activity_entries} =
       Model.Tx
