@@ -60,4 +60,19 @@ defmodule AeMdw.Util.SortedTableTest do
     assert :not_found = SortedTable.lookup(t, :h)
     assert :not_found = SortedTable.lookup(SortedTable.delete(t, :b), :b)
   end
+
+  test "it returns the first/last value when keys are binaries" do
+    pk1 = <<0::256>>
+    pk2 = <<1::256>>
+    pk3 = <<2::256>>
+
+    t =
+      SortedTable.new()
+      |> SortedTable.insert(pk1, :a)
+      |> SortedTable.insert(pk2, :b)
+      |> SortedTable.insert(pk3, :c)
+
+    assert {:ok, ^pk3, :c} = SortedTable.prev(t, nil)
+    assert {:ok, ^pk1, :a} = SortedTable.next(t, nil)
+  end
 end

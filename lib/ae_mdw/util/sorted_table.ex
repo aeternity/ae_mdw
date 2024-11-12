@@ -54,8 +54,15 @@ defmodule AeMdw.Util.SortedTable do
   end
 
   @spec prev(t(), key() | nil) :: {:ok, key(), value()} | :none
+  def prev(t, nil) do
+    case :ets.last(t) do
+      @eot -> :none
+      key -> {:ok, key, :ets.lookup_element(t, key, 2)}
+    end
+  end
+
   def prev(t, key) do
-    case :ets.prev(t, key || []) do
+    case :ets.prev(t, key) do
       @eot -> :none
       key -> {:ok, key, :ets.lookup_element(t, key, 2)}
     end
