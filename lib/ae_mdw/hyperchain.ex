@@ -118,18 +118,23 @@ defmodule AeMdw.Hyperchain do
   end
 
   def fetch_validator(state, validator_id) do
-    # all_validator_entries =
-    #   state
-    #   |> Collection.stream(
-    #     Model.Validator,
-    #     Collection.generate_key_boundary({pubkey, Collection.integer()})
-    #   )
-    #   |> Enum.map(&State.fetch!(state, Model.Validator, &1))
-
     {:ok, pubkey} = Encoding.safe_decode(:account_pubkey, validator_id)
 
     current_height = State.height(state)
     {:ok, %{validators: validators}} = epoch_info_at_height(current_height)
+
+    rewards =
+      state
+      |> Collection.stream(
+        Model.LeaderPinInfo,
+        Collection.generate_key_boundary({pubkey, Collection.integer()})
+      )
+      |> Enum.map(fn key ->
+        Model.leader_pin_info(index: {^pubkey, epoch}, reward: reward) =
+          State.fetch!(Model.LeaderPinInfo, key)
+
+        %{epoch: epoch, reward: reward}
+      end)
 
     with {:ok, stake} <-
            Enum.find_value(validators, :not_found, fn {validator_pubkey, stake} ->
@@ -140,7 +145,8 @@ defmodule AeMdw.Hyperchain do
       {:ok,
        %{
          total_stakes: stake,
-         delegates: get_delegates(current_height, pubkey)
+         delegates: get_delegates(current_height, pubkey),
+         rewards_earned: rewards
        }}
     end
   end
