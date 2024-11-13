@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.92.1](https://www.github.com/aeternity/ae_mdw/compare/v1.92.0...v1.92.1) (2024-11-13)
+
+
+### Bug Fixes
+
+* reindex DEX swaps, now without DexCache ([#2013](https://www.github.com/aeternity/ae_mdw/issues/2013)) ([353bd2e](https://www.github.com/aeternity/ae_mdw/commit/353bd2ee592e6c8261aec7807b9dc5d4cc3096ef))
+
+
+### Miscellaneous
+
+* remove DEX cache, sync instead ([#2004](https://www.github.com/aeternity/ae_mdw/issues/2004)) ([0c6bf9d](https://www.github.com/aeternity/ae_mdw/commit/0c6bf9d9aa516ca99e929771c6878f5830b85e2d))
+
 ## [1.92.0](https://www.github.com/aeternity/ae_mdw/compare/v1.91.1...v1.92.0) (2024-11-11)
 
 
