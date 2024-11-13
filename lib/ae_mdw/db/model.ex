@@ -1336,6 +1336,30 @@ defmodule AeMdw.Db.Model do
             validators: list({pubkey(), non_neg_integer()})
           )
 
+  @validator_defaults [index: {<<>>, 0}, stake: 0]
+  defrecord :validator, @validator_defaults
+
+  @type validator_index() :: {pubkey(), Hyperchain.epoch()}
+  @type validator() :: record(:validator, index: validator_index(), stake: non_neg_integer())
+
+  @pin_info_defaults [index: 0, leader: <<>>, reward: 0]
+  defrecord :pin_info, @pin_info_defaults
+
+  @type pin_info_index() :: Hyperchain.epoch()
+  @type pin_info() ::
+          record(:pin_info,
+            index: pin_info_index(),
+            leader: pubkey(),
+            reward: amount()
+          )
+
+  @type leader_pin_info_index() :: {pubkey(), Hyperchain.epoch()}
+  @type leader_pin_info() ::
+          record(:leader_pin_info,
+            index: leader_pin_info_index(),
+            reward: amount()
+          )
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1495,7 +1519,10 @@ defmodule AeMdw.Db.Model do
   defp hyperchain_tables() do
     [
       AeMdw.Db.Model.HyperchainLeaderAtHeight,
-      AeMdw.Db.Model.EpochInfo
+      AeMdw.Db.Model.EpochInfo,
+      AeMdw.Db.Model.Validator,
+      AeMdw.Db.Model.PinInfo,
+      AeMdw.Db.Model.LeaderPinInfo
     ]
   end
 
@@ -1607,4 +1634,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol
   def record(AeMdw.Db.Model.HyperchainLeaderAtHeight), do: :hyperchain_leader_at_height
   def record(AeMdw.Db.Model.EpochInfo), do: :epoch_info
+  def record(AeMdw.Db.Model.Validator), do: :validator
+  def record(AeMdw.Db.Model.PinInfo), do: :pin_info
+  def record(AeMdw.Db.Model.LeaderPinInfo), do: :leader_pin_info
 end

@@ -48,17 +48,26 @@ defmodule AeMdw.Db.EpochMutation do
        validators: validators
      }} = Hyperchain.epoch_info_at_height(height)
 
-    State.put(
-      state,
-      Model.EpochInfo,
-      Model.epoch_info(
-        index: epoch,
-        first: first,
-        last: last,
-        length: length,
-        seed: seed,
-        validators: validators
+    state =
+      State.put(
+        state,
+        Model.EpochInfo,
+        Model.epoch_info(
+          index: epoch,
+          first: first,
+          last: last,
+          length: length,
+          seed: seed,
+          validators: validators
+        )
       )
-    )
+
+    Enum.reduce(validators, state, fn {pubkey, stake}, state ->
+      State.put(
+        state,
+        Model.Validator,
+        Model.validator(index: {pubkey, epoch}, stake: stake)
+      )
+    end)
   end
 end

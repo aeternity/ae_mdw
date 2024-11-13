@@ -24,25 +24,33 @@ defmodule AeMdw.Migrations.AddEpochInfo do
       )
 
     stream
-    |> Stream.map(fn %{
-                       first: first,
-                       last: last,
-                       length: length,
-                       seed: seed,
-                       epoch: epoch,
-                       validators: validators
-                     } ->
-      WriteMutation.new(
-        Model.EpochInfo,
-        Model.epoch_info(
-          index: epoch,
-          first: first,
-          last: last,
-          length: length,
-          seed: seed,
-          validators: validators
+    |> Stream.flat_map(fn %{
+                            first: first,
+                            last: last,
+                            length: length,
+                            seed: seed,
+                            epoch: epoch,
+                            validators: validators
+                          } ->
+      [
+        WriteMutation.new(
+          Model.EpochInfo,
+          Model.epoch_info(
+            index: epoch,
+            first: first,
+            last: last,
+            length: length,
+            seed: seed,
+            validators: validators
+          )
         )
-      )
+        | Enum.map(validators, fn {pubkey, stake} ->
+            WriteMutation.new(
+              Model.Validator,
+              Model.validator(index: {pubkey, epoch}, stake: stake)
+            )
+          end)
+      ]
     end)
     |> Stream.chunk_every(1000)
     |> Stream.map(fn mutations ->
