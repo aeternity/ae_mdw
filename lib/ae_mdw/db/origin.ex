@@ -20,6 +20,8 @@ defmodule AeMdw.Db.Origin do
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
   @typep txi() :: Txs.txi()
+  @typep txi_idx() :: Txs.txi_idx()
+  @typep pubkey() :: Db.pubkey()
 
   @doc """
   Tries to find the transaction that created a contract by finding it from 3
@@ -60,6 +62,16 @@ defmodule AeMdw.Db.Origin do
           {:ok, txi} -> txi
           :not_found -> raise "Origin #{inspect(creation_txi_locator)} not found"
         end
+    end
+  end
+
+  @spec creation_txi_idx(State.t(), pubkey()) :: {:ok, txi_idx()} | :not_found
+  def creation_txi_idx(state, pubkey) do
+    with :not_found <- State.get(state, Model.Origin, {:contract_create_tx, pubkey}),
+         :not_found <- State.get(state, Model.Origin, {:contract_call_tx, pubkey}) do
+      :not_found
+    else
+      {:ok, Model.origin(txi_idx: txi_idx)} -> {:ok, txi_idx}
     end
   end
 

@@ -16,7 +16,6 @@ defmodule AeMdw.Application do
   alias AeMdw.EtsCache
   alias AeMdw.Sync.Watcher
   alias AeMdwWeb.Websocket.BroadcasterCache
-  alias AeMdw.Sync.DexCache
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Sync.Server, as: SyncServer
   alias AeMdw.Sync.SyncingQueue
@@ -119,7 +118,6 @@ defmodule AeMdw.Application do
 
   def start_phase(:load, _start_type, []) do
     ObjectKeys.load()
-    DexCache.load()
   end
 
   def start_phase(:start_sync, _start_type, []) do

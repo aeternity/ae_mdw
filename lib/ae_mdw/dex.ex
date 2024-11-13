@@ -3,7 +3,6 @@ defmodule AeMdw.Dex do
   Search for DEX swaps.
   """
 
-  alias AeMdw.AexnContracts
   alias AeMdw.Util.Encoding
   alias AeMdw.Collection
   alias AeMdw.Contracts
@@ -15,7 +14,6 @@ defmodule AeMdw.Dex do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
   alias AeMdw.Validate
-  alias AeMdw.Sync.DexCache
   alias AeMdw.Txs
 
   require Model
@@ -49,7 +47,7 @@ defmodule AeMdw.Dex do
   def fetch_account_swaps(state, account_id, pagination, scope, cursor, query) do
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, cursor} <- deserialize_account_swaps_cursor(cursor),
-         {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+         {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
       state
       |> build_account_swaps_streamer(account_pk, filters, scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
@@ -60,18 +58,10 @@ defmodule AeMdw.Dex do
   @spec fetch_contract_swaps(State.t(), String.t(), pagination(), range(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
   def fetch_contract_swaps(state, contract_id, pagination, scope, cursor) do
-    with {:ok, searched_contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, contract_pks} <- DexCache.get_pair_contract_pk(searched_contract_pk),
-         {:ok, create_txis} <-
-           Enum.reduce_while(contract_pks, {:ok, []}, fn contract_pk, {:ok, create_txis} ->
-             case Origin.tx_index(state, {:contract, contract_pk}) do
-               {:ok, create_txi} -> {:cont, {:ok, [create_txi | create_txis]}}
-               :not_found -> {:halt, :not_found}
-             end
-           end),
+    with {:ok, token_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
       state
-      |> build_contract_swaps_streamer(create_txis, scope, cursor)
+      |> build_contract_swaps_streamer(token_pk, scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     else
@@ -116,19 +106,25 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_account_swaps_streamer(state, account_pk, %{create_txi: create_txi}, scope, cursor) do
+  defp build_account_swaps_streamer(
+         state,
+         account_pk,
+         %{pair_create_txi_idx: {pair_create_txi, _idx}},
+         scope,
+         cursor
+       ) do
     key_boundary =
       if scope do
         first_txi..last_txi//_step = gen_range_to_txi(state, scope)
 
         {
-          {account_pk, create_txi, first_txi, nil},
-          {account_pk, create_txi, last_txi, nil}
+          {account_pk, pair_create_txi, first_txi, nil},
+          {account_pk, pair_create_txi, last_txi, nil}
         }
       else
         {
-          {account_pk, create_txi, Util.min_int(), nil},
-          {account_pk, create_txi, Util.max_int(), nil}
+          {account_pk, pair_create_txi, Util.min_int(), nil},
+          {account_pk, pair_create_txi, Util.max_int(), nil}
         }
       end
 
@@ -193,24 +189,22 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_contract_swaps_streamer(state, create_txis, _scope, cursor) do
+  defp build_contract_swaps_streamer(state, token_pk, _scope, cursor) do
     fn direction ->
-      create_txis
-      |> Enum.map(fn create_txi ->
-        cursor =
-          case cursor do
-            {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
-            nil -> nil
-          end
+      create_txi = Origin.tx_index!(state, {:contract, token_pk})
 
-        key_boundary = {
-          {create_txi, Util.min_bin(), nil, nil},
-          {create_txi, Util.max_256bit_bin(), nil, nil}
-        }
+      cursor =
+        case cursor do
+          {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
+          nil -> nil
+        end
 
-        Collection.stream(state, @contract_swaps_table, direction, key_boundary, cursor)
-      end)
-      |> Collection.merge(direction)
+      key_boundary = {
+        {create_txi, Util.min_bin(), nil, nil},
+        {create_txi, Util.max_256bit_bin(), nil, nil}
+      }
+
+      Collection.stream(state, @contract_swaps_table, direction, key_boundary, cursor)
     end
   end
 
@@ -257,19 +251,19 @@ defmodule AeMdw.Dex do
 
     create_txi = get_create_txi(state, create_txi, txi, log_idx)
 
-    Model.tx(id: _tx_hash, block_index: {height, _mbi} = block_index, time: time) =
+    Model.tx(id: _tx_hash, block_index: {height, _mbi}, time: time) =
       State.fetch!(state, Model.Tx, create_txi)
 
-    Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
-    contract_pk = Origin.pubkey!(state, {:contract, create_txi})
-    %{token1: token1_pk, token2: token2_pk} = DexCache.get_pair(contract_pk)
+    pair_pk = Origin.pubkey!(state, {:contract, create_txi})
 
-    {:ok, {_name, _symbol, from_decimals}} = AexnContracts.call_meta_info(:aex9, token1_pk, hash)
-    {:ok, {_name, _symbol, to_decimals}} = AexnContracts.call_meta_info(:aex9, token2_pk, hash)
+    Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk) =
+      State.fetch!(state, Model.DexPair, pair_pk)
 
-    %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
+    Model.aexn_contract(meta_info: {_name, token1_symbol, from_decimals}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, token1_pk})
 
-    %{token1: token1_pk, token2: token2_pk} = DexCache.get_pair(contract_pk)
+    Model.aexn_contract(meta_info: {_name, token2_symbol, to_decimals}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, token2_pk})
 
     %{
       amount0_in: amount0_in,
@@ -308,14 +302,18 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp convert_param({"token_symbol", token_symbol}) when is_binary(token_symbol) do
-    case DexCache.get_token_pair_txi(token_symbol) do
-      :not_found -> {:error, ErrInput.NotAex9.exception(value: token_symbol)}
-      {:ok, create_txi} -> {:ok, {:create_txi, create_txi}}
+  defp convert_param(state, {"token_symbol", token_symbol}) when is_binary(token_symbol) do
+    case State.get(state, Model.DexTokenSymbol, token_symbol) do
+      :not_found ->
+        {:error, ErrInput.NotAex9.exception(value: token_symbol)}
+
+      {:ok, Model.dex_token_symbol(pair_create_txi_idx: pair_create_txi_idx)} ->
+        {:ok, {:pair_create_txi_idx, pair_create_txi_idx}}
     end
   end
 
-  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
+  defp convert_param(_state, other_param),
+    do: {:error, ErrInput.Query.exception(value: other_param)}
 
   @spec render_amounts(list(integer())) :: %{
           amount0_in: integer(),

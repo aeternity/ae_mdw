@@ -925,6 +925,34 @@ defmodule AeMdw.Db.Model do
   @type aexn_transfer() ::
           record(:aexn_transfer, index: aexn_transfer_index(), contract_pk: pubkey())
 
+  # dex pair:
+  #    index: pair_pk
+  @dex_pair_defaults [
+    index: nil,
+    token1_pk: nil,
+    token2_pk: nil
+  ]
+  defrecord :dex_pair, @dex_pair_defaults
+
+  @type dex_pair_index() :: pubkey()
+  @type dex_pair() ::
+          record(:dex_pair, index: dex_pair_index(), token1_pk: pubkey(), token2_pk: pubkey())
+
+  # dex token symbol:
+  #    index: token symbol
+  @dex_token_symbol_defaults [
+    index: nil,
+    pair_create_txi_idx: nil
+  ]
+  defrecord :dex_token_symbol, @dex_token_symbol_defaults
+
+  @type dex_token_symbol_index() :: aexn_symbol()
+  @type dex_token_symbol() ::
+          record(:dex_token_symbol,
+            index: dex_token_symbol_index(),
+            pair_create_txi_idx: txi_idx()
+          )
+
   # rev aexn transfer:
   #    index: {:aex9 | :aex141, to pk, call txi, from pk, amount | token_id, log idx}
   @rev_aexn_transfer_defaults [
@@ -1338,6 +1366,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.DataContractLog,
       AeMdw.Db.Model.EvtContractLog,
       AeMdw.Db.Model.CtEvtContractLog,
+      AeMdw.Db.Model.DexPair,
+      AeMdw.Db.Model.DexTokenSymbol,
       AeMdw.Db.Model.IdxContractLog,
       AeMdw.Db.Model.IntContractCall,
       AeMdw.Db.Model.GrpIntContractCall,
@@ -1516,4 +1546,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
   def record(AeMdw.Db.Model.Mempool), do: :mempool
+  def record(AeMdw.Db.Model.DexPair), do: :dex_pair
+  def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol
 end

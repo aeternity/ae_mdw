@@ -10,19 +10,12 @@ defmodule AeMdw.Migrations.DexEventsReindexing do
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Log
-  alias AeMdw.Sync.DexCache
 
   require Model
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    pair_pubkeys_set =
-      if State.next(state, Model.Field, nil) == :none do
-        MapSet.new()
-      else
-        load_pairs()
-        |> MapSet.new()
-      end
+    pairs = load_pairs(state)
 
     mutations =
       state
@@ -32,8 +25,7 @@ defmodule AeMdw.Migrations.DexEventsReindexing do
          Origin.pubkey!(state, {:contract, contract_txi})}
       end)
       |> Stream.filter(fn {Model.contract_log(ext_contract: ext_contract_pk), contract_pk} ->
-        MapSet.member?(pair_pubkeys_set, contract_pk) or
-          MapSet.member?(pair_pubkeys_set, ext_contract_pk)
+        MapSet.member?(pairs, contract_pk) or MapSet.member?(pairs, ext_contract_pk)
       end)
       |> Enum.flat_map(fn {Model.contract_log(
                              index: {contract_txi, txi, idx},
@@ -56,12 +48,7 @@ defmodule AeMdw.Migrations.DexEventsReindexing do
     |> Collection.stream(Model.EvtContractLog, :forward, key_boundary, nil)
   end
 
-  defp load_pairs() do
-    [:dex_pairs, :dex_pairs_symbols, :dex_tokens]
-    |> Enum.filter(&(:ets.info(&1, :name) == :undefined))
-    |> Enum.each(&:ets.new(&1, [:named_table, :set, :public]))
-
-    state = State.new()
+  defp load_pairs(state) do
     contract_pk = Contract.dex_factory_pubkey()
     pair_created_event_hash = :aec_hash.blake2b_256_hash("PairCreated")
 
@@ -83,13 +70,13 @@ defmodule AeMdw.Migrations.DexEventsReindexing do
             State.exists?(state, Model.AexnContract, {:aex9, token2_pk}) and
             match?({:ok, _pair_create_txi}, Origin.tx_index(state, {:contract, pair_pk}))
         end)
-        |> Enum.map(fn Model.contract_log(args: [token1_pk, token2_pk, pair_pk]) ->
-          DexCache.add_pair(state, pair_pk, token1_pk, token2_pk)
+        |> Enum.map(fn Model.contract_log(args: [_token1_pk, _token2_pk, pair_pk]) ->
           pair_pk
         end)
+        |> MapSet.new()
 
       :not_found ->
-        []
+        MapSet.new()
     end
   end
 
