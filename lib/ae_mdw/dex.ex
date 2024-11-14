@@ -354,11 +354,12 @@ defmodule AeMdw.Dex do
     |> Stream.map(fn Model.dex_pair(index: pair_pk) ->
       pair_pk
     end)
-    |> Enum.reduce_while({:ok, []}, fn pair_pk, {:ok, create_txis} ->
+    |> Enum.reduce([], fn pair_pk, create_txis ->
       case Origin.tx_index(state, {:contract, pair_pk}) do
-        {:ok, create_txi} -> {:cont, {:ok, [create_txi | create_txis]}}
-        :not_found -> {:halt, {:error, :not_found}}
+        {:ok, create_txi} -> [create_txi | create_txis]
+        :not_found -> create_txis
       end
     end)
+    |> then(&{:ok, &1})
   end
 end
