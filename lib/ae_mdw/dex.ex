@@ -57,11 +57,12 @@ defmodule AeMdw.Dex do
 
   @spec fetch_contract_swaps(State.t(), String.t(), pagination(), range(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
-  def fetch_contract_swaps(state, contract_id, pagination, scope, cursor) do
+  def fetch_contract_swaps(state, contract_id, pagination, _scope, cursor) do
     with {:ok, token_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, create_txis} <- get_pair_create_txis(state, token_pk),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
       state
-      |> build_contract_swaps_streamer(token_pk, scope, cursor)
+      |> build_contract_swaps_streamer(create_txis, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     else
@@ -189,22 +190,24 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_contract_swaps_streamer(state, token_pk, _scope, cursor) do
+  defp build_contract_swaps_streamer(state, create_txis, cursor) do
     fn direction ->
-      create_txi = Origin.tx_index!(state, {:contract, token_pk})
+      create_txis
+      |> Enum.map(fn create_txi ->
+        cursor =
+          case cursor do
+            {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
+            nil -> nil
+          end
 
-      cursor =
-        case cursor do
-          {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
-          nil -> nil
-        end
+        key_boundary =
+          Collection.generate_key_boundary(
+            {create_txi, Collection.binary(), Collection.integer(), Collection.integer()}
+          )
 
-      key_boundary = {
-        {create_txi, Util.min_bin(), nil, nil},
-        {create_txi, Util.max_256bit_bin(), nil, nil}
-      }
-
-      Collection.stream(state, @contract_swaps_table, direction, key_boundary, cursor)
+        Collection.stream(state, @contract_swaps_table, direction, key_boundary, cursor)
+      end)
+      |> Collection.merge(direction)
     end
   end
 
@@ -339,5 +342,23 @@ defmodule AeMdw.Dex do
     last_txi = DbUtil.last_gen_to_txi(state, last_gen)
 
     first_txi..last_txi
+  end
+
+  defp get_pair_create_txis(state, token_pk) do
+    state
+    |> Collection.stream(Model.DexPair, nil)
+    |> Stream.map(&State.fetch!(state, Model.DexPair, &1))
+    |> Stream.filter(fn Model.dex_pair(index: pair_pk, token1_pk: token1_pk, token2_pk: token2_pk) ->
+      token_pk in [pair_pk, token1_pk, token2_pk]
+    end)
+    |> Stream.map(fn Model.dex_pair(index: pair_pk) ->
+      pair_pk
+    end)
+    |> Enum.reduce_while({:ok, []}, fn pair_pk, {:ok, create_txis} ->
+      case Origin.tx_index(state, {:contract, pair_pk}) do
+        {:ok, create_txi} -> {:cont, {:ok, [create_txi | create_txis]}}
+        :not_found -> {:halt, {:error, :not_found}}
+      end
+    end)
   end
 end
