@@ -66,6 +66,12 @@ defmodule AeMdw.Hyperchain do
     |> Enum.zip(schedule)
   end
 
+  @spec validators_at_height(Blocks.height()) :: [term()]
+  def validators_at_height(height) do
+    {:ok, %{validators: validators}} = epoch_info_at_height(height)
+    validators
+  end
+
   @spec fetch_leaders(
           State.t(),
           Collection.pagination(),
@@ -231,22 +237,8 @@ defmodule AeMdw.Hyperchain do
           last
 
         top ->
-          asd =
-            State.fetch!(state, Model.HyperchainLeaderAtHeight, top)
-            |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
-              :aeapi.format_account_pubkey(leader)
-            end)
-
-          wasd =
-            State.fetch!(state, Model.HyperchainLeaderAtHeight, last)
-            |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
-              :aeapi.format_account_pubkey(leader)
-            end)
-
-          IO.inspect({asd, wasd}, label: "top, last")
           top
       end
-      |> tap(&IO.inspect({first, last, &1}, label: "first, last, top"))
 
     Model.hyperchain_leader_at_height(leader: last_leader) =
       State.fetch!(state, Model.HyperchainLeaderAtHeight, last_leader_height)
