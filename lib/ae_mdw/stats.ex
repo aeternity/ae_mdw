@@ -289,6 +289,14 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_active_accounts_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_active_accounts_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      fetch_statistics(state, pagination, filters, range, cursor, :active_accounts)
+    end
+  end
+
   defp fetch_statistics(state, pagination, filters, range, cursor, tag) do
     with {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
       paginated_statistics =

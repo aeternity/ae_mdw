@@ -26,6 +26,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()
+  @typep intervals() :: [{interval_by(), time()}]
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -159,7 +160,7 @@ defmodule AeMdw.Db.Sync.Stats do
     StatisticsMutation.new(mb_statistics ++ txs_statistics)
   end
 
-  @spec time_intervals(time()) :: [{interval_by(), time()}]
+  @spec time_intervals(time()) :: intervals()
   def time_intervals(time) do
     seconds = div(time, 1_000)
     %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
@@ -171,6 +172,42 @@ defmodule AeMdw.Db.Sync.Stats do
       {:day, day_start},
       {:week, week_start},
       {:month, month_start}
+    ]
+  end
+
+  @spec key_boundaries_for_intervals(pubkey(), intervals()) :: [
+          {interval_by(), {{pubkey(), pos_integer()}, {pubkey(), pos_integer()}}}
+        ]
+  def key_boundaries_for_intervals(pk, day: day_start, week: week_start, month: _month_start) do
+    initial_seconds = day_start * @seconds_per_day
+    %DateTime{year: year, month: month} = DateTime.from_unix!(initial_seconds)
+
+    month_start =
+      year
+      |> Date.new!(month, 1)
+      |> DateTime.new!(Time.new!(0, 0, 0))
+      |> DateTime.to_unix()
+
+    {new_year, new_month} =
+      case month do
+        12 -> {year + 1, 1}
+        _another_month -> {year, month + 1}
+      end
+
+    next_month_start =
+      new_year
+      |> Date.new!(new_month, 1)
+      |> DateTime.new!(Time.new!(0, 0, 0))
+      |> DateTime.to_unix()
+
+    [
+      day:
+        {{pk, day_start * @seconds_per_day * 1000},
+         {pk, (day_start + 1) * @seconds_per_day * 1000 - 1}},
+      week:
+        {{pk, week_start * 7 * @seconds_per_day * 1000},
+         {pk, (week_start + 1) * 7 * @seconds_per_day * 1000 - 1}},
+      month: {{pk, month_start * 1000}, {pk, next_month_start * 1000 - 1}}
     ]
   end
 

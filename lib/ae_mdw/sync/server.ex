@@ -36,6 +36,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.State
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
+  alias AeMdw.Db.AccountActivityMutation
   alias AeMdw.Db.AccountCreationMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Db.RollbackMutation
@@ -361,12 +362,15 @@ defmodule AeMdw.Sync.Server do
 
       time = Db.get_block_time(mb_hash)
 
-      account_creation_mutations =
-        Enum.map(accounts_set, fn pubkey ->
-          {block_index, mblock, AccountCreationMutation.new(pubkey, time)}
+      account_statistics_mutations =
+        Enum.flat_map(accounts_set, fn pubkey ->
+          [
+            {block_index, mblock, AccountCreationMutation.new(pubkey, time)},
+            {block_index, mblock, AccountActivityMutation.new(pubkey, time)}
+          ]
         end)
 
-      gen_mutations ++ account_balances_mutations ++ account_creation_mutations
+      gen_mutations ++ account_balances_mutations ++ account_statistics_mutations
     else
       gen_mutations
     end
