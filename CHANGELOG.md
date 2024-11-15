@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.93.0](https://www.github.com/aeternity/ae_mdw/compare/v1.92.2...v1.93.0) (2024-11-15)
+
+
+### Features
+
+* add active accounts stats ([#2010](https://www.github.com/aeternity/ae_mdw/issues/2010)) ([fd32144](https://www.github.com/aeternity/ae_mdw/commit/fd3214484daaa7d9f43c3dc6fd895483abe2842e))
+
+
+### Bug Fixes
+
+* get the last key from a binary keys table ([#2011](https://www.github.com/aeternity/ae_mdw/issues/2011)) ([3b7be6b](https://www.github.com/aeternity/ae_mdw/commit/3b7be6b5b65d838ec0ae905078ed355f3fa8a9a8))
+
 ### [1.92.2](https://www.github.com/aeternity/ae_mdw/compare/v1.92.1...v1.92.2) (2024-11-15)
 
 
