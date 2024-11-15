@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.92.3](https://www.github.com/aeternity/ae_mdw/compare/v1.92.2...v1.92.3) (2024-11-15)
+
+
+### Bug Fixes
+
+* get the last key from a binary keys table ([#2011](https://www.github.com/aeternity/ae_mdw/issues/2011)) ([3b7be6b](https://www.github.com/aeternity/ae_mdw/commit/3b7be6b5b65d838ec0ae905078ed355f3fa8a9a8))
+
 ### [1.92.2](https://www.github.com/aeternity/ae_mdw/compare/v1.92.1...v1.92.2) (2024-11-15)
 
 
