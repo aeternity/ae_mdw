@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.92.2](https://www.github.com/aeternity/ae_mdw/compare/v1.92.1...v1.92.2) (2024-11-15)
+
+
+### Bug Fixes
+
+* dex regression ([#2015](https://www.github.com/aeternity/ae_mdw/issues/2015)) ([fcd3081](https://www.github.com/aeternity/ae_mdw/commit/fcd3081866c6b870b9fce379e8a4258d351e3c7d))
+
 ### [1.92.1](https://www.github.com/aeternity/ae_mdw/compare/v1.92.0...v1.92.1) (2024-11-13)
 
 
