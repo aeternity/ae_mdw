@@ -215,10 +215,10 @@ paths:
         - name: ScopeParam
           in: query
           name: scope
-          description: 'Scopes results in a txi, generation or time(unix timestamp) range'
+          description: 'Scopes results in a generation or time(unix timestamp) range'
           schema:
               type: string
-              pattern: '(time|txi|gen):\d+(-\d+)?'
+              pattern: '(time|gen):\d+(-\d+)?'
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
 
