@@ -622,6 +622,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /stats/total-accounts:
+    get:
+      deprecated: false
+      description: Get total accounts created per interval stats.
+      operationId: GetTotalAccountsStats
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the stats.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total accounts stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Stat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats/active-accounts:
+    get:
+      deprecated: false
+      description: Get active accounts stats.
+      operationId: GetActiveAccountsStats
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the stats.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated active accounts stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Stat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /stats/names:
     get:
       deprecated: false
