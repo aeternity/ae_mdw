@@ -90,25 +90,23 @@ defmodule AeMdw.Contracts do
   @spec fetch_logs(State.t(), pagination(), range(), query(), cursor(), [logs_opt()]) ::
           {:ok, {cursor(), [log()], cursor()}} | {:error, Error.t()}
   def fetch_logs(state, pagination, range, query, cursor, opts) do
-    cursor = deserialize_logs_cursor(cursor)
-    scope = deserialize_scope(state, range)
+    with {:ok, filters} <- Util.convert_params(query, &convert_logs_param(state, &1)),
+         {:ok, cursor} <- deserialize_logs_cursor(cursor) do
+      scope = deserialize_scope(state, range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_logs_param(state, &1)) do
       encode_args = %{
         aexn_args?: Map.get(filters, :aexn_args, false),
         custom_args?: Map.get(filters, :custom_args, false)
       }
 
-      paginated_logs =
-        filters
-        |> build_logs_pagination(state, scope, cursor)
-        |> Collection.paginate(
-          pagination,
-          &render_log(state, &1, encode_args, opts),
-          &serialize_logs_cursor/1
-        )
-
-      {:ok, paginated_logs}
+      filters
+      |> build_logs_pagination(state, scope, cursor)
+      |> Collection.paginate(
+        pagination,
+        &render_log(state, &1, encode_args, opts),
+        &serialize_logs_cursor/1
+      )
+      |> then(&{:ok, &1})
     end
   end
 
@@ -117,8 +115,8 @@ defmodule AeMdw.Contracts do
   def fetch_contract_logs(state, contract_id, pagination, range, query, cursor) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, filters} <- Util.convert_params(query, &convert_logs_param(state, &1)),
+         {:ok, cursor} = deserialize_logs_cursor(cursor),
          {:ok, create_txi} <- create_txi(state, contract_pk) do
-      cursor = deserialize_logs_cursor(cursor)
       scope = deserialize_scope(state, range)
 
       encode_args = %{
@@ -143,8 +141,8 @@ defmodule AeMdw.Contracts do
   def fetch_contract_calls(state, contract_id, pagination, range, query, cursor) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)),
+         {:ok, cursor} <- deserialize_calls_cursor(cursor),
          {:ok, create_txi} <- create_txi(state, contract_pk) do
-      cursor = deserialize_calls_cursor(cursor)
       scope = deserialize_scope(state, range)
 
       filters
@@ -162,20 +160,18 @@ defmodule AeMdw.Contracts do
   @spec fetch_calls(State.t(), pagination(), range(), query(), cursor(), Keyword.t()) ::
           {:ok, {cursor(), [call()], cursor()}} | {:error, Error.t()}
   def fetch_calls(state, pagination, range, query, cursor, opts) do
-    cursor = deserialize_calls_cursor(cursor)
-    scope = deserialize_scope(state, range)
+    with {:ok, cursor} <- deserialize_calls_cursor(cursor),
+         {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+      scope = deserialize_scope(state, range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
-      paginated_calls =
-        filters
-        |> build_calls_pagination(state, scope, cursor)
-        |> Collection.paginate(
-          pagination,
-          &render_call(state, &1, opts),
-          &serialize_calls_cursor/1
-        )
-
-      {:ok, paginated_calls}
+      filters
+      |> build_calls_pagination(state, scope, cursor)
+      |> Collection.paginate(
+        pagination,
+        &render_call(state, &1, opts),
+        &serialize_calls_cursor/1
+      )
+      |> then(&{:ok, &1})
     end
   end
 
@@ -836,7 +832,7 @@ defmodule AeMdw.Contracts do
   defp serialize_logs_cursor({create_txi, call_txi, log_idx}),
     do: Base.hex_encode32("#{create_txi}$#{call_txi}$#{log_idx}", padding: false)
 
-  defp deserialize_logs_cursor(nil), do: nil
+  defp deserialize_logs_cursor(nil), do: {:ok, nil}
 
   defp deserialize_logs_cursor(cursor_bin) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor_bin, padding: false),
@@ -845,9 +841,9 @@ defmodule AeMdw.Contracts do
          {:ok, create_txi} <- deserialize_cursor_int(create_txi_bin),
          {:ok, call_txi} <- deserialize_cursor_int(call_txi_bin),
          {:ok, log_idx} <- deserialize_cursor_int(log_idx_bin) do
-      {create_txi, call_txi, log_idx}
+      {:ok, {create_txi, call_txi, log_idx}}
     else
-      _invalid_cursor -> nil
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 
@@ -860,7 +856,7 @@ defmodule AeMdw.Contracts do
     )
   end
 
-  defp deserialize_calls_cursor(nil), do: nil
+  defp deserialize_calls_cursor(nil), do: {:ok, nil}
 
   defp deserialize_calls_cursor(cursor_bin) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor_bin, padding: false),
@@ -872,9 +868,9 @@ defmodule AeMdw.Contracts do
          {:ok, pk} <- deserialize_cursor_string(pk_bin),
          {:ok, fname} <- deserialize_cursor_string(fname_bin),
          {:ok, pos} <- deserialize_cursor_int(pos_bin) do
-      {call_txi, local_idx, create_txi, pk, fname, pos}
+      {:ok, {call_txi, local_idx, create_txi, pk, fname, pos}}
     else
-      _invalid_cursor -> nil
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 

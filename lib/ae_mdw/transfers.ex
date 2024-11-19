@@ -34,16 +34,14 @@ defmodule AeMdw.Transfers do
   @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor()) ::
           {:ok, {cursor(), [transfer()], cursor()}} | {:error, Error.t()}
   def fetch_transfers(state, pagination, range, query, cursor) do
-    cursor = deserialize_cursor(cursor)
-    scope = deserialize_scope(state, range)
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      scope = deserialize_scope(state, range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      paginated_transfers =
-        filters
-        |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination, &render(state, &1), &serialize_cursor/1)
-
-      {:ok, paginated_transfers}
+      filters
+      |> build_streamer(state, scope, cursor)
+      |> Collection.paginate(pagination, &render(state, &1), &serialize_cursor/1)
+      |> then(&{:ok, &1})
     end
   end
 
@@ -148,7 +146,7 @@ defmodule AeMdw.Transfers do
     deserialize_scope(state, {:gen, first_gen..last_gen})
   end
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor, padding: false),
@@ -158,9 +156,9 @@ defmodule AeMdw.Transfers do
          {:ok, kind} <- deserialize_cursor_kind(kind_bin),
          {:ok, account_pk} <- deserialize_cursor_account_pk(account_pk_bin),
          {:ok, ref_txi_idx} <- deserialize_opt_txi_idx(ref_txi_idx_bin) do
-      {gen_txi, kind, account_pk, ref_txi_idx}
+      {:ok, {gen_txi, kind, account_pk, ref_txi_idx}}
     else
-      _invalid_cursor -> nil
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
 
