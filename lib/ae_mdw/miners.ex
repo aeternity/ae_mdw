@@ -8,6 +8,7 @@ defmodule AeMdw.Miners do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
 
   require Model
@@ -54,7 +55,7 @@ defmodule AeMdw.Miners do
   defp deserialize_cursor(cursor_bin) do
     case Enc.safe_decode(:account_pubkey, cursor_bin) do
       {:ok, miner_pk} -> {:ok, miner_pk}
-      {:error, _reason} -> nil
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 end
