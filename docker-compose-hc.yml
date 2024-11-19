@@ -1,0 +1,50 @@
+services:
+  ae_mdw_hc:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        RUNNER_IMAGE: "hexpm/elixir:1.17.3-erlang-26.2.5.3-debian-bullseye-20240926-slim"
+        USER: root
+        MIX_ENV: dev
+        NODE_IMAGE: aeternity/aeternity:master
+        PATH_PREFIX: "/v3"
+    image: aeternity/ae_mdw_dev${IMAGE_NAME_SUFFIX:-}:latest
+    ports:
+      - "4000:4000" #MDW's default port
+      - "4001:4001" #MDW's websocket default port
+      - "3113:3113" #Node's default internal API port
+      - "3013:3013" #Node's default external API port
+      - "3014:3014" #Node's channels default websocket port
+    volumes:
+      - ${PWD}/data_hc/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
+      - ${PWD}/data_hc/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db
+      - ${PWD}/hyperchain/aeternity.yaml:/home/aeternity/aeternity.yaml
+      - ${PWD}/docker/aeternity-dev.yaml:/home/aeternity/aeternity-dev.yaml
+      - ${PWD}/docker/accounts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.genesis/accounts_test.json
+      - ${PWD}/hyperchains/accounts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.ceres/hc_devnet_accounts.json
+      - ${PWD}/hyperchains/contracts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.ceres/hc_devnet_contracts.json
+      - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
+      - ${PWD}:/app
+      - ${PWD}/docker/gitconfig:/root/.gitconfig
+    environment:
+      - AETERNITY_CONFIG=${AETERNITY_CONFIG:-/home/aeternity/aeternity.yaml}
+    networks:
+      ae_mdw_net_hc:
+        aliases:
+          - mdw.aeternity.localhost
+      localnet_default:
+  node_sdk_hc:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ${PWD}/node_sdk:/app
+    entrypoint: ""
+    networks:
+      - ae_mdw_net_hc
+networks:
+  ae_mdw_net_hc:
+    name: ae_mdw_net_hc
+    driver: bridge
+  localnet_default:
+    external: true

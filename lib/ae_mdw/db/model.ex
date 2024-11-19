@@ -1353,6 +1353,9 @@ defmodule AeMdw.Db.Model do
             reward: amount()
           )
 
+  @leader_pin_info_defaults [index: {<<>>, 0}, reward: 0]
+  defrecord :leader_pin_info, @leader_pin_info_defaults
+
   @type leader_pin_info_index() :: {pubkey(), Hyperchain.epoch()}
   @type leader_pin_info() ::
           record(:leader_pin_info,

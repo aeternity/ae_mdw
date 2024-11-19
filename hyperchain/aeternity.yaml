@@ -1,0 +1,58 @@
+chain:
+  consensus:
+    '0':
+      config:
+        child_block_time: 30000
+        child_epoch_length: 600
+        pinning_reward_value: 100
+        contract_owner: 'ak_11111111111111111111111111111115rHyByZ'
+        election_contract: 'ct_t7ESuRFvGdYHwM6KJhKbSnFUJQhnB9aCFed1RWR89ShNDgwWA'
+        parent_chain:
+          consensus:
+            network_id: 'devnet'
+            type: 'AE2AE'
+          parent_epoch_length: 10
+          polling:
+            fetch_interval: 500
+            nodes:
+              - 'http://localhost:13013'
+          start_height: 10
+        rewards_contract: 'ct_LRbi65kmLtE7YMkG6mvG5TxAXTsPJDZjAtsPuaXtRyPA7gnfJ'
+        stakers:
+          - hyper_chain_account:
+              priv: '61784e636987c2e6a508a35f078105f1f380addbc770eb613f704dd8baa24f9704b8fe238454ddae58fc1a5133631b6736d45d988e9c70300907d567a3fa0fd7'
+              pub: 'ak_35dj3xq5XToJX6sjKaE886BLR6kJicqfATgggXKy93brWbYQ7'
+          - hyper_chain_account:
+              priv: '776e98b16b0f0165b78d3fbbd6938a71cef36479c232a4731b65bab38acdaaa3412fc33de634276ce3e226476308c36cfdfb906776233aec318e8d3bdf6256ab'
+              pub: 'ak_Vi71E49G2jQD3fUdmzHQjG3X5oA844oZKx7QHfDDTm8NhqUaM'
+          - hyper_chain_account:
+              priv: 'ee8717e491a973e06730cfcd6d700d41f0c68ca36fd22ad0be7102513b3fca6c2057ee2969052490e3638e8ffb22bdaf5060189125481268611f046f951d4715'
+              pub: 'ak_FFAuLh2W236SfVPg6YasUW9VwzmsshstdHQ1Nx5wGtWaZQQy2'
+        staking_contract: 'ct_LRbi65kmLtE7YMkG6mvG5TxAXTsPJDZjAtsPuaXtRyPA7gnfJ'
+      type: 'hyperchain'
+  db_direct_access: true
+  hard_forks:
+    '6': 0
+  persist: true
+
+fork_management:
+  network_id: 'hc_devnet'
+
+http:
+  endpoints:
+    hyperchain: true
+    dry-run: true
+    debug: true
+
+peers: ['aenode://pp_2ETVSXALx7WwgWTstCHxEQ3QNetRCZJfacPCc331pNvcHw2ENL@localhost:23015']
+include_default_peers: false
+
+mining:
+  autostart: false
+  beneficiary: 'ak_2NFBoqehqzUELrEC2n37eMp7tQTtyYF5hCQndpb63Sa8d9muPG'
+
+logging:
+  level: debug
+
+metrics:
+  port: 0

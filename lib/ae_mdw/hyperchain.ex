@@ -66,6 +66,12 @@ defmodule AeMdw.Hyperchain do
     |> Enum.zip(schedule)
   end
 
+  @spec validators_at_height(Blocks.height()) :: [term()]
+  def validators_at_height(height) do
+    {:ok, %{validators: validators}} = epoch_info_at_height(height)
+    validators
+  end
+
   @spec fetch_leaders(
           State.t(),
           Collection.pagination(),
@@ -131,7 +137,7 @@ defmodule AeMdw.Hyperchain do
       )
       |> Enum.map(fn key ->
         Model.leader_pin_info(index: {^pubkey, epoch}, reward: reward) =
-          State.fetch!(Model.LeaderPinInfo, key)
+          State.fetch!(state, Model.LeaderPinInfo, key)
 
         %{epoch: epoch, reward: reward}
       end)
