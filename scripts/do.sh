@@ -24,12 +24,23 @@ case $1 in
     iex --sname $NAME -S mix phx.server
     ;;
 
+  "hc-shell")
+    mix local.hex --force && mix local.rebar --force && mix deps.get
+    AETERNITY_CONFIG=./hyperchains/aeternity.yaml iex --sname $NAME -S mix phx.server
+    ;;
+
+
   "remsh")
     iex --sname console --remsh $NAME
     ;;
 
   "docker-shell")
     docker-compose -f docker-compose-dev.yml run --rm --workdir=/app --entrypoint="" --use-aliases --service-ports ae_mdw /bin/bash
+    ;;
+
+  "hc-docker-shell")
+    maybe_create_db_directory "./data_hc"
+    docker-compose -f docker-compose-hc.yml run --rm --workdir=/app --entrypoint="" --use-aliases --service-ports ae_mdw_hc /bin/bash
     ;;
 
   "testnet-docker-shell")

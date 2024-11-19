@@ -3,6 +3,7 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
+  alias AeMdw.Hyperchain
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -139,23 +140,35 @@ defmodule AeMdw.Stats do
   def fetch_stats(state) do
     with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
            State.get(state, Model.Stat, @tps_stat_key),
-         {:ok, Model.stat(payload: miners_count)} <-
-           State.get(state, Model.Stat, @miners_count_stat_key),
          {:ok, milliseconds_per_block} <- milliseconds_per_block(state) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
-      {:ok,
-       %{
-         max_transactions_per_second: tps,
-         max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
-         miners_count: miners_count,
-         last_24hs_transactions: last_24hs_txs_count,
-         transactions_trend: trend,
-         last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
-         fees_trend: fees_trend,
-         milliseconds_per_block: milliseconds_per_block
-       }}
+      stats =
+        %{
+          max_transactions_per_second: tps,
+          max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
+          last_24hs_transactions: last_24hs_txs_count,
+          transactions_trend: trend,
+          last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
+          fees_trend: fees_trend,
+          milliseconds_per_block: milliseconds_per_block
+        }
+
+      stats =
+        if Hyperchain.hyperchain?() do
+          validators_count =
+            state |> State.height() |> Hyperchain.validators_at_height() |> length()
+
+          Map.put(stats, :validators_count, validators_count)
+        else
+          Model.stat(payload: miners_count) =
+            State.get(state, Model.Stat, @miners_count_stat_key)
+
+          Map.put(stats, :miners_count, miners_count)
+        end
+
+      {:ok, stats}
     else
       _no_stats ->
         {:error, ErrInput.NotFound.exception(value: "no stats")}
