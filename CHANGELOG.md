@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.94.0](https://www.github.com/aeternity/ae_mdw/compare/v1.93.0...v1.94.0) (2024-11-19)
+
+
+### Features
+
+* scope statistics via scope param ([#1998](https://www.github.com/aeternity/ae_mdw/issues/1998)) ([e5daa8a](https://www.github.com/aeternity/ae_mdw/commit/e5daa8abd45544dee29159b88ccdea92ae2667f9))
+
+
+### Bug Fixes
+
+* always validate cursor deserialization, including miners ([#2020](https://www.github.com/aeternity/ae_mdw/issues/2020)) ([e627c2c](https://www.github.com/aeternity/ae_mdw/commit/e627c2c819abfa3dd333cacc68846996eb105c2e))
+
+
+### Miscellaneous
+
+* remove Plug.Session usage from Endpoint ([#2005](https://www.github.com/aeternity/ae_mdw/issues/2005)) ([6ec809f](https://www.github.com/aeternity/ae_mdw/commit/6ec809f4e274a8290102c82f0f30b9ec235f170f))
+
 ## [1.93.0](https://www.github.com/aeternity/ae_mdw/compare/v1.92.2...v1.93.0) (2024-11-15)
 
 
