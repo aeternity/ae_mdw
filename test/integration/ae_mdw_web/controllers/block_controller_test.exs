@@ -187,12 +187,12 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
     test "get micro block by given key block index(height) and micro block index", %{conn: conn} do
       kbi = 305_222
-      mbi = 3
-      conn = get(conn, "/v2/blocks/#{kbi}/#{mbi}")
+      mb = "mh_SidHcZxja5FMYKLTf2gkhSZvLvoWkugck1NXZp2T7yzxeewQk"
+      conn = get(conn, "/v3/micro-blocks/#{mb}")
 
       auto_assert(
         %{
-          "hash" => "mh_SidHcZxja5FMYKLTf2gkhSZvLvoWkugck1NXZp2T7yzxeewQk",
+          "hash" => ^mb,
           "height" => ^kbi,
           "pof_hash" => "no_fraud",
           "prev_hash" => "mh_2uTHJ6AFFK2WicxKK26EPiS8ZD8gJfE6n22JspwVLFdZQsBSFU",
@@ -202,7 +202,8 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
           "state_hash" => "bs_zLCQ5W4uQgrPc8XVJbGUhSmMZvkcxTTwtyg9757TCVik7RxkH",
           "time" => 1_598_513_060_178,
           "txs_hash" => "bx_rs2yKJHpwADFgjuogFvSpcqYXSy6WjcN7Xw45rJLNCrrwtELB",
-          "version" => 4
+          "version" => 4,
+          "gas" => 19340
         } <- json_response(conn, 200)
       )
     end
@@ -214,20 +215,21 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       auto_assert(%{"error" => "invalid hash: invalid"} <- json_response(conn, 400))
     end
 
-    test "renders error when mickro block index is not present", %{conn: conn} do
-      kbi = 305_222
-      mbi = 4999
-      conn = get(conn, "/v2/blocks/#{kbi}/#{mbi}")
+    test "renders error when micro block hash is not present", %{conn: conn} do
+      mb_hash = :aeapi.format_micro_block_hash(<<1::256>>)
+      conn = get(conn, "/v3/micro-blocks/#{mb_hash}")
 
-      auto_assert(%{"error" => "not found: {305222, 4999}"} <- json_response(conn, 404))
+      auto_assert(
+        %{"error" => "not found: mh_11111111111111111111111111111118qjnEr"} <-
+          json_response(conn, 404)
+      )
     end
 
-    test "renders error when micro block index is invalid", %{conn: conn} do
-      kbi = 305_222
+    test "renders error when micro block hash is invalid", %{conn: conn} do
       mbi = "invalid"
-      conn = get(conn, "/v2/blocks/#{kbi}/#{mbi}")
+      conn = get(conn, "/v3/micro-blocks/#{mbi}")
 
-      auto_assert(%{"error" => "invalid block index: 305222/invalid"} <- json_response(conn, 400))
+      auto_assert(%{"error" => "invalid hash: invalid"} <- json_response(conn, 400))
     end
   end
 
@@ -367,7 +369,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/v2/blocks", scope: "gen:#{range}")
+      conn = get(conn, "/v3/key-blocks", scope: "gen:#{range}")
 
       assert json_response(conn, 400) ==
                %{"error" => "invalid range: #{range}"}
@@ -389,7 +391,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       assert %{"height" => ^height} =
                conn
-               |> get("/v2/blocks/#{height}")
+               |> get("/v3/key-blocks/#{height}")
                |> json_response(200)
     end
   end

@@ -114,6 +114,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       store: store
     } do
       kbi = 1
+      gas = 123
       hash = TS.key_block_hash(1)
       encoded_hash = Enc.encode(:key_block_hash, hash)
 
@@ -135,9 +136,10 @@ defmodule AeMdwWeb.BlockControllerTest do
         |> Store.put(Model.Block, Model.block(index: {kbi + 1, -1}, tx_index: 17, hash: hash))
 
       with_mocks [
-        {:aec_db, [], [get_header: fn _mb_hash -> :header end]},
+        {:aec_db, [],
+         [get_header: fn _mb_hash -> :header end, get_block: fn _mb_hash -> :block end]},
         {:aec_chain, [], [get_block: fn ^hash -> {:ok, :block} end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end, gas: fn :block -> gas end]},
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :micro end,
@@ -158,17 +160,20 @@ defmodule AeMdwWeb.BlockControllerTest do
 
         assert %{
                  "height" => ^kbi,
-                 "transactions_count" => 10
+                 "transactions_count" => 10,
+                 "gas" => ^gas
                } = block1
 
         assert %{
                  "height" => ^kbi,
-                 "transactions_count" => 5
+                 "transactions_count" => 5,
+                 "gas" => ^gas
                } = block2
 
         assert %{
                  "height" => ^kbi,
-                 "transactions_count" => 2
+                 "transactions_count" => 2,
+                 "gas" => ^gas
                } = block3
       end
     end
@@ -313,6 +318,7 @@ defmodule AeMdwWeb.BlockControllerTest do
   describe "micro-block" do
     test "it returns a micro block with txs counts", %{conn: conn, store: store} do
       kbi = 1
+      gas = 123
       decoded_hash = TS.micro_block_hash(0)
       encoded_hash = :aeser_api_encoder.encode(:micro_block_hash, decoded_hash)
 
@@ -333,8 +339,9 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       with_mocks [
         {:aec_chain, [], [get_block: fn ^decoded_hash -> {:ok, :block} end]},
-        {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_db, [],
+         [get_header: fn ^decoded_hash -> :header end, get_block: fn ^decoded_hash -> :block end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end, gas: fn :block -> gas end]},
         {:aec_headers, [],
          [
            height: fn :header -> kbi end,
@@ -351,7 +358,8 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{
                  "height" => ^kbi,
                  "micro_block_index" => 0,
-                 "transactions_count" => 6
+                 "transactions_count" => 6,
+                 "gas" => ^gas
                } =
                  conn
                  |> with_store(store)
@@ -365,6 +373,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       store: store
     } do
       kbi = 1
+      gas = 123
       decoded_hash = TS.micro_block_hash(0)
       encoded_hash = :aeser_api_encoder.encode(:micro_block_hash, decoded_hash)
 
@@ -385,8 +394,9 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       with_mocks [
         {:aec_chain, [], [get_block: fn ^decoded_hash -> {:ok, :block} end]},
-        {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_db, [],
+         [get_header: fn ^decoded_hash -> :header end, get_block: fn ^decoded_hash -> :block end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end, gas: fn :block -> gas end]},
         {:aec_headers, [],
          [
            height: fn :header -> kbi end,
@@ -403,7 +413,8 @@ defmodule AeMdwWeb.BlockControllerTest do
         assert %{
                  "height" => ^kbi,
                  "micro_block_index" => 0,
-                 "transactions_count" => 6
+                 "transactions_count" => 6,
+                 "gas" => ^gas
                } =
                  conn
                  |> with_store(store)

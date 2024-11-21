@@ -130,15 +130,14 @@ defmodule AeMdw.Db.Model do
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     On keyblock boundary: mb_index = -1}
-  @block_defaults [index: nil, tx_index: nil, hash: nil, gas: nil]
+  @block_defaults [index: nil, tx_index: nil, hash: nil]
   defrecord :block, @block_defaults
 
   @type block ::
           record(:block,
             index: block_index(),
             tx_index: txi(),
-            hash: Blocks.block_hash(),
-            gas: non_neg_integer()
+            hash: Blocks.block_hash()
           )
 
   # txs table :
