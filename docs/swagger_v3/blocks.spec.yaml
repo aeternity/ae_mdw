@@ -96,6 +96,7 @@ schemas:
       hash: "mh_JryFr55GwbEbEJivkvHwBPzqbhu6AvpcZqCiBoXzgZdLmNn2K"
       height: 685072
       pof_hash: "no_fraud"
+      gas: 1950000
       prev_hash: "mh_hH3qADCrnGvuup6JwjtNSacHLd9h3NJzAgr173jS9KUqijfTB"
       prev_key_hash: "kh_2rTj3FTZJ6fnuLFDJwAiDQZat2a23Lkp5uZQooxjwXEFhH4Vtw"
       signature: "sg_8hhU15cVMbukFj4FbdrFwwYnbzXYPnstu9PDnWZGbfQNpeHcB6tK1F3wvG1MPYySARgDRJYUh3YPJD3HctFwg6Y4rUGSR"
@@ -116,6 +117,7 @@ schemas:
       - signature
       - time
       - version
+      - gas
     properties:
       micro_block_index:
         description: The index of the micro-block on the micro-block height, starting from 0
@@ -128,6 +130,9 @@ schemas:
         $ref: '#/components/schemas/MicroBlockHash'
       height:
         description: The block height
+        type: integer
+      gas:
+        description: The gas used by the microblock
         type: integer
       pof_hash:
         description: \"no_fraud\" or api encoded Proof of Fraud hash
