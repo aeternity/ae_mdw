@@ -143,9 +143,10 @@ defmodule AeMdw.Db.Sync.Block do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_txs = :aec_blocks.txs(mblock)
+    mb_gas = :aec_blocks.gas(mblock)
     {ts, events} = :timer.tc(fn -> AeMdw.Contract.get_grouped_events(mblock) end)
     _sum = :ets.update_counter(:sync_profiling, {:dryrun, height}, ts, {{:dryrun, height}, 0})
-    mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
+    mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash, gas: mb_gas)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
     block_stats_mutation = BlockStatisticsMutation.new(mb_time)
 
