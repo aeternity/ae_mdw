@@ -203,7 +203,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
           "time" => 1_598_513_060_178,
           "txs_hash" => "bx_rs2yKJHpwADFgjuogFvSpcqYXSy6WjcN7Xw45rJLNCrrwtELB",
           "version" => 4,
-          "gas" => 19340
+          "gas" => 19_340
         } <- json_response(conn, 200)
       )
     end
