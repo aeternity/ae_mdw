@@ -118,6 +118,9 @@ defmodule AeMdw.Dex do
             contract_pk
         end
 
+      nil ->
+        Origin.pubkey!(state, {:contract, create_txi})
+
       contract_pk ->
         contract_pk
     end
