@@ -67,6 +67,9 @@ defmodule AeMdw.Db.IntTransfer do
         {@reward_block_kind, target_pk, amount}
       end)
 
+    beneficiaries =
+      Enum.map(miners_rewards, fn {target_pk, _amount} -> target_pk end)
+
     devs_transfers =
       Enum.map(devs_rewards, fn {target_pk, amount} ->
         {@reward_dev_kind, target_pk, amount}
@@ -75,7 +78,7 @@ defmodule AeMdw.Db.IntTransfer do
     [
       IntTransfersMutation.new(height, miners_transfers ++ devs_transfers),
       MinerRewardsMutation.new(miners_rewards),
-      TopMinerStatsMutation.new(miners_rewards, time)
+      TopMinerStatsMutation.new(beneficiaries, time)
     ]
   end
 

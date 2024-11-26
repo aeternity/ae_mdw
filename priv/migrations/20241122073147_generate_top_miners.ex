@@ -24,7 +24,7 @@ defmodule AeMdw.Migrations.GenerateTopMiners do
           |> :aec_blocks.to_header()
           |> :aec_headers.beneficiary()
 
-        TopMinerStatsMutation.new([{miner, 0}], time)
+        TopMinerStatsMutation.new([miner], time)
       end)
       |> Stream.chunk_every(1000)
       |> Stream.map(fn mutations ->
