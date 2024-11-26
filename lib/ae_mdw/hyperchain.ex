@@ -129,18 +129,27 @@ defmodule AeMdw.Hyperchain do
     current_height = State.height(state)
     {:ok, %{validators: validators}} = epoch_info_at_height(current_height)
 
-    rewards =
+    pinning_history =
       state
       |> Collection.stream(
         Model.LeaderPinInfo,
         Collection.generate_key_boundary({pubkey, Collection.integer()})
       )
-      |> Enum.map(fn key ->
+      |> Enum.into(%{}, fn key ->
         Model.leader_pin_info(index: {^pubkey, epoch}, reward: reward) =
           State.fetch!(state, Model.LeaderPinInfo, key)
 
-        %{epoch: epoch, reward: reward}
+        {epoch, reward}
       end)
+
+    total_rewards =
+      case State.get(state, Model.Miner, pubkey) do
+        {:ok, Model.miner(total_reward: total_reward)} ->
+          total_reward
+
+        :not_found ->
+          0
+      end
 
     with {:ok, stake} <-
            Enum.find_value(validators, :not_found, fn {validator_pubkey, stake} ->
@@ -152,7 +161,8 @@ defmodule AeMdw.Hyperchain do
        %{
          total_stakes: stake,
          delegates: get_delegates(current_height, pubkey),
-         rewards_earned: rewards
+         rewards_earned: total_rewards,
+         pinning_history: pinning_history
        }}
     end
   end
@@ -246,13 +256,13 @@ defmodule AeMdw.Hyperchain do
           asd =
             State.fetch!(state, Model.HyperchainLeaderAtHeight, top)
             |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
-              :aeapi.format_account_pubkey(leader)
+              Encoding.encode_account(leader)
             end)
 
           wasd =
             State.fetch!(state, Model.HyperchainLeaderAtHeight, last)
             |> then(fn Model.hyperchain_leader_at_height(leader: leader) ->
-              :aeapi.format_account_pubkey(leader)
+              Encoding.encode_account(leader)
             end)
 
           IO.inspect({asd, wasd}, label: "top, last")
@@ -270,8 +280,8 @@ defmodule AeMdw.Hyperchain do
       length: length,
       seed: seed,
       last_pin_height: last_pin_height,
-      parent_block_hash: :aeapi.format_key_block_hash(parent_block_hash),
-      last_leader: :aeapi.format_account_pubkey(last_leader),
+      parent_block_hash: Encoding.encode_block(:key, parent_block_hash),
+      last_leader: Encoding.encode_account(last_leader),
       epoch_start_time: epoch_start_time,
       validators:
         Enum.map(validators, fn {pubkey, number} ->
