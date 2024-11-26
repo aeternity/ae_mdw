@@ -12,6 +12,7 @@ defmodule AeMdw.Dex do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
   alias AeMdw.Util
   alias AeMdw.Validate
   alias AeMdw.Txs
@@ -20,6 +21,7 @@ defmodule AeMdw.Dex do
 
   @account_swaps_table Model.DexAccountSwapTokens
   @contract_swaps_table Model.DexContractSwapTokens
+  @contract_debug_swaps_table Model.DexContractTokenSwap
   @swaps_table Model.DexSwapTokens
 
   @ae_token_contract_pks Application.compile_env(:ae_mdw, :ae_token)
@@ -41,6 +43,7 @@ defmodule AeMdw.Dex do
   @typep page_cursor :: Collection.pagination_cursor()
   @typep query() :: map()
   @typep range :: {:gen, Range.t()} | nil
+  @typep pubkey() :: Db.pubkey()
 
   @spec fetch_account_swaps(State.t(), binary(), pagination(), range(), cursor(), query()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
@@ -71,6 +74,22 @@ defmodule AeMdw.Dex do
     end
   end
 
+  @spec fetch_debug_contract_swaps(State.t(), String.t(), pagination(), range(), cursor()) ::
+          {:ok, paginated_swaps()} | {:error, Error.t()}
+  def fetch_debug_contract_swaps(state, contract_id, pagination, _scope, cursor) do
+    with {:ok, token_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, cursor} <- deserialize_debug_contract_swaps_cursor(cursor),
+         {:ok, create_txi_idx} <- Origin.creation_txi_idx(state, token_pk) do
+      state
+      |> build_debug_contract_swaps_streamer(create_txi_idx, cursor)
+      |> Collection.paginate(pagination, &render_debug_swap(state, &1), &serialize_cursor/1)
+      |> then(&{:ok, &1})
+    else
+      :not_found -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   @spec fetch_swaps(State.t(), pagination(), range(), cursor()) ::
           {:ok, paginated_swaps()} | {:error, Error.t()}
   def fetch_swaps(state, pagination, scope, cursor) do
@@ -79,6 +98,28 @@ defmodule AeMdw.Dex do
       |> build_swaps_streamer(scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(&{:ok, &1})
+    end
+  end
+
+  @spec get_pair_pk(State.t(), Txs.txi(), Txs.txi(), Contracts.log_idx()) :: pubkey()
+  def get_pair_pk(state, create_txi, txi, log_idx) do
+    Model.contract_log(ext_contract: ext_contract) =
+      State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx})
+
+    case ext_contract do
+      {:parent_contract_pk, contract_pk} ->
+        create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+        case State.fetch!(state, Model.ContractLog, {create_txi, txi, log_idx}) do
+          Model.contract_log(ext_contract: nil) ->
+            contract_pk
+
+          Model.contract_log(ext_contract: contract_pk) ->
+            contract_pk
+        end
+
+      contract_pk ->
+        contract_pk
     end
   end
 
@@ -211,6 +252,23 @@ defmodule AeMdw.Dex do
     end
   end
 
+  defp build_debug_contract_swaps_streamer(state, create_txi_idx, cursor) do
+    fn direction ->
+      cursor =
+        case cursor do
+          {_create_txi_idx, txi, log_idx} -> {create_txi_idx, txi, log_idx}
+          nil -> nil
+        end
+
+      key_boundary =
+        Collection.generate_key_boundary(
+          {create_txi_idx, Collection.integer(), Collection.integer()}
+        )
+
+      Collection.stream(state, @contract_debug_swaps_table, direction, key_boundary, cursor)
+    end
+  end
+
   defp deserialize_account_swaps_cursor(nil), do: {:ok, nil}
 
   defp deserialize_account_swaps_cursor(cursor_hex) do
@@ -239,10 +297,35 @@ defmodule AeMdw.Dex do
     end
   end
 
+  defp deserialize_debug_contract_swaps_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_debug_contract_swaps_cursor(cursor_bin) do
+    with {:ok, cursor_bin} <- Base.hex_decode32(cursor_bin, padding: false),
+         {{create_txi, create_idx}, txi, log_idx}
+         when is_integer(create_txi) and is_integer(create_idx) and is_integer(txi) and
+                is_integer(log_idx) <-
+           :erlang.binary_to_term(cursor_bin) do
+      {:ok, {{create_txi, create_idx}, txi, log_idx}}
+    else
+      _invalid_cursor ->
+        {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
+
   defp serialize_cursor(cursor_tuple) do
     cursor_tuple
     |> :erlang.term_to_binary()
     |> Base.hex_encode32(padding: false)
+  end
+
+  defp render_debug_swap(state, {_create_txi_idx, txi, log_idx} = index) do
+    Model.dex_contract_token_swap(contract_call_create_txi: contract_call_create_txi) =
+      State.fetch!(state, Model.DexContractTokenSwap, index)
+
+    Model.contract_log(args: [from, _to]) =
+      State.fetch!(state, Model.ContractLog, {contract_call_create_txi, txi, log_idx})
+
+    render_swap(state, {contract_call_create_txi, from, txi, log_idx})
   end
 
   defp render_swap(state, {create_txi, <<_pk::256>> = caller_pk, txi, log_idx}),
