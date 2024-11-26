@@ -649,7 +649,7 @@ defmodule AeMdw.Stats do
       {:ok, bin} ->
         case :erlang.binary_to_term(bin) do
           cursor when is_tuple(cursor) -> {:ok, cursor}
-          _ -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+          _bad_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
         end
 
       :error ->

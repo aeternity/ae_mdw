@@ -3,7 +3,6 @@ defmodule AeMdw.Db.TopMinerStatsMutation do
   Increments the top miners stats.
   """
 
-  alias AeMdw.Collection
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
@@ -30,22 +29,14 @@ defmodule AeMdw.Db.TopMinerStatsMutation do
     time
     |> Stats.time_intervals()
     |> Enum.reduce(state, fn {interval_by, interval_start}, state ->
-      kb =
-        Collection.generate_key_boundary(
-          {interval_by, interval_start, Collection.integer(), Collection.binary()}
-        )
-
       state
-      |> Collection.stream(Model.TopMinerStats, :backward, kb, nil)
-      |> Stream.filter(fn {_interval_by, _interval_start, _count, bpk} ->
-        bpk == beneficiary_pk
-      end)
-      |> tap(&IO.inspect(Enum.count(&1)))
-      |> Enum.at(0, :none)
+      |> State.get(Model.TopMiner, {interval_by, interval_start, beneficiary_pk})
       |> case do
-        {^interval_by, ^interval_start, count, ^beneficiary_pk} ->
-          IO.inspect("updating")
-
+        {:ok,
+         Model.top_miner(
+           index: {^interval_by, ^interval_start, ^beneficiary_pk},
+           count: count
+         )} ->
           state
           |> State.delete(
             Model.TopMinerStats,
@@ -55,14 +46,23 @@ defmodule AeMdw.Db.TopMinerStatsMutation do
             Model.TopMinerStats,
             Model.top_miner_stats(index: {interval_by, interval_start, count + 1, beneficiary_pk})
           )
+          |> State.put(
+            Model.TopMiner,
+            Model.top_miner(
+              index: {interval_by, interval_start, beneficiary_pk},
+              count: count + 1
+            )
+          )
 
-        :none ->
-          IO.inspect("inserting missing")
-
-          State.put(
-            state,
+        :not_found ->
+          state
+          |> State.put(
             Model.TopMinerStats,
             Model.top_miner_stats(index: {interval_by, interval_start, 1, beneficiary_pk})
+          )
+          |> State.put(
+            Model.TopMiner,
+            Model.top_miner(index: {interval_by, interval_start, beneficiary_pk}, count: 1)
           )
       end
     end)
