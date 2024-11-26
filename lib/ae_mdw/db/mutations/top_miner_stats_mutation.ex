@@ -3,7 +3,7 @@ defmodule AeMdw.Db.TopMinerStatsMutation do
   Increments the top miners stats.
   """
 
-  alias AeMdw.Db.IntTransfer
+  alias AeMdw.Node.Db
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Stats
@@ -11,16 +11,16 @@ defmodule AeMdw.Db.TopMinerStatsMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:rewards, :time]
+  defstruct [:beneficiaries, :time]
 
-  @opaque t() :: %__MODULE__{rewards: IntTransfer.rewards(), time: non_neg_integer()}
+  @opaque t() :: %__MODULE__{beneficiaries: [Db.pubkey()], time: non_neg_integer()}
 
-  @spec new(IntTransfer.rewards(), non_neg_integer()) :: t()
-  def new(rewards, time), do: %__MODULE__{rewards: rewards, time: time}
+  @spec new([Db.pubkey()], non_neg_integer()) :: t()
+  def new(beneficiaries, time), do: %__MODULE__{beneficiaries: beneficiaries, time: time}
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{rewards: rewards, time: time}, state) do
-    Enum.reduce(rewards, state, fn {beneficiary_pk, _reward}, state ->
+  def execute(%__MODULE__{beneficiaries: beneficiaries, time: time}, state) do
+    Enum.reduce(beneficiaries, state, fn beneficiary_pk, state ->
       increment_top_miners(state, time, beneficiary_pk)
     end)
   end
