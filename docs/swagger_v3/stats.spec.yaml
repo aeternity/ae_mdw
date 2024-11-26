@@ -203,6 +203,32 @@ schemas:
     example:
       miner: ak_2whjDhTTmbN13vU7gAUsRbosBhmycho4h8LqHVqKwyGofDetQ9
       total_reward: 945000000000000000000
+  TopMinerStat:
+      type: object
+      description: TopMinerStat
+      required:
+        - miner
+        - blocks_mined
+        - start_date
+        - end_date
+      properties:
+        miner:
+          description: The miner (beneficiary) address
+          $ref: '#/components/schemas/AccountAddress'
+        blocks_mined:
+          description: The number of blocks mined
+          type: integer
+        start_date:
+          description: The statistic start date
+          type: string
+        end_date:
+          description: The statistic end date
+          type: string
+      example:
+        miner: ak_2whjDhTTmbN13vU7gAUsRbosBhmycho4h8LqHVqKwyGofDetQ9
+        blocks_mined: 945
+        start_date: "2024-02-28"
+        end_date: "2024-02-29"
   Stats:
     type: object
     description: Stats
@@ -322,6 +348,71 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Miner'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats/miners/top:
+    get:
+      deprecated: false
+      description: Get a list of top miners by blocks mined.
+      operationId: GetTopMinerStats
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the stats.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - name: type
+          description: The type of block.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - key
+              - micro
+            example: micro
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TopMinerStat'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
