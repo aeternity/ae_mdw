@@ -257,9 +257,9 @@ defmodule AeMdw.Blocks do
           end
       end
 
-    header = :aec_db.get_header(mb_hash)
-
-    gas = mb_hash |> :aec_db.get_block() |> :aec_blocks.gas()
+    block = :aec_db.get_block(mb_hash)
+    header = :aec_blocks.to_header(block)
+    gas = :aec_blocks.gas(block)
 
     header
     |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
