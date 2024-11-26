@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.GenerateTopMiners do
+  @moduledoc """
+  Generate top miners for blocks that have already passed
+  """
   alias AeMdw.Db.TopMinerStatsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDbCF
@@ -8,35 +11,28 @@ defmodule AeMdw.Migrations.GenerateTopMiners do
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    # dev_benefs =
-    #   for {protocol, _height} <- :aec_hard_forks.protocols(),
-    #       {pk, _share} <- :aec_dev_reward.beneficiaries(protocol) do
-    #     pk
-    #   end
-
-    # delay = :aec_governance.beneficiary_reward_delay()
-
-    {_state, count} =
+    count =
       Model.Block
       |> RocksDbCF.stream()
       |> Stream.filter(fn Model.block(index: {_key_index, micro_index}) -> micro_index == -1 end)
-      |> Stream.map(fn Model.block() = block ->
-        Model.block(hash: hash) = block
+      |> Stream.map(fn Model.block(hash: hash) ->
         {:ok, key_block} = :aec_chain.get_block(hash)
         time = :aec_blocks.time_in_msecs(key_block)
 
         miner =
           key_block
           |> :aec_blocks.to_header()
-          |> :aec_headers.miner()
+          |> :aec_headers.beneficiary()
 
         TopMinerStatsMutation.new([{miner, 0}], time)
       end)
       |> Stream.chunk_every(1000)
-      |> Enum.reduce({state, 0}, fn mutations, {state, count} ->
-        len = length(mutations)
-        {State.commit_db(state, mutations), count + len}
+      |> Stream.map(fn mutations ->
+        _state = State.commit_db(state, mutations)
+
+        length(mutations)
       end)
+      |> Enum.sum()
 
     {:ok, count}
   end
