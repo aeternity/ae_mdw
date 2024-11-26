@@ -304,11 +304,11 @@ defmodule AeMdw.Dex do
 
   defp deserialize_debug_contract_swaps_cursor(cursor_bin) do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor_bin, padding: false),
-         {{create_txi, create_idx}, txi, log_idx}
+         {{create_txi, create_idx}, txi, log_idx} = cursor
          when is_integer(create_txi) and is_integer(create_idx) and is_integer(txi) and
                 is_integer(log_idx) <-
            :erlang.binary_to_term(cursor_bin) do
-      {:ok, {{create_txi, create_idx}, txi, log_idx}}
+      {:ok, cursor}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_bin)}
