@@ -1282,16 +1282,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> json_response(200)
 
       [miner1, miner2, miner3, miner4] = miners
-      assert %{"miner" => ^miner1, "count" => 7} = st1
-      assert %{"miner" => ^miner2, "count" => 6} = st2
+      assert %{"miner" => ^miner1, "blocks_mined" => 7} = st1
+      assert %{"miner" => ^miner2, "blocks_mined" => 6} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner3, "count" => 5} = st3
-      assert %{"miner" => ^miner4, "count" => 4} = st4
+      assert %{"miner" => ^miner3, "blocks_mined" => 5} = st3
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -1311,20 +1311,20 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       [miner1, miner2, miner3, miner4] = miners
 
-      assert %{"miner" => ^miner4, "count" => 4} = st1
-      assert %{"miner" => ^miner3, "count" => 3} = st2
-      assert %{"miner" => ^miner2, "count" => 2} = st3
-      assert %{"miner" => ^miner1, "count" => 1} = st4
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 3} = st2
+      assert %{"miner" => ^miner2, "blocks_mined" => 2} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 1} = st4
 
       assert %{"prev" => prev_url, "data" => [st5, st6, st7, st8], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner1, "count" => 7} = st5
-      assert %{"miner" => ^miner2, "count" => 6} = st6
-      assert %{"miner" => ^miner3, "count" => 5} = st7
-      assert %{"miner" => ^miner4, "count" => 4} = st8
+      assert %{"miner" => ^miner1, "blocks_mined" => 7} = st5
+      assert %{"miner" => ^miner2, "blocks_mined" => 6} = st6
+      assert %{"miner" => ^miner3, "blocks_mined" => 5} = st7
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st8
 
       assert %{"data" => ^statistics} =
                conn
@@ -1345,16 +1345,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"miner" => ^miner4, "count" => 8} = st1
-      assert %{"miner" => ^miner3, "count" => 8} = st2
+      assert %{"miner" => ^miner4, "blocks_mined" => 8} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 8} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner2, "count" => 8} = st3
-      assert %{"miner" => ^miner1, "count" => 8} = st4
+      assert %{"miner" => ^miner2, "blocks_mined" => 8} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 8} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -1375,20 +1375,20 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"miner" => ^miner4, "count" => 8, "start_date" => "1970-01-08"} = st1
-      assert %{"miner" => ^miner3, "count" => 8, "start_date" => "1970-01-08"} = st2
-      assert %{"miner" => ^miner2, "count" => 8, "start_date" => "1970-01-08"} = st3
-      assert %{"miner" => ^miner1, "count" => 8, "start_date" => "1970-01-08"} = st4
+      assert %{"miner" => ^miner4, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st2
+      assert %{"miner" => ^miner2, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st4
 
       assert %{"prev" => prev_url, "data" => [st5, st6, st7, st8], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner4, "count" => 8, "start_date" => "1970-01-01"} = st5
-      assert %{"miner" => ^miner3, "count" => 8, "start_date" => "1970-01-01"} = st6
-      assert %{"miner" => ^miner2, "count" => 8, "start_date" => "1970-01-01"} = st7
-      assert %{"miner" => ^miner1, "count" => 8, "start_date" => "1970-01-01"} = st8
+      assert %{"miner" => ^miner4, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st5
+      assert %{"miner" => ^miner3, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st6
+      assert %{"miner" => ^miner2, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st7
+      assert %{"miner" => ^miner1, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st8
 
       assert %{"data" => ^statistics} =
                conn
@@ -1409,16 +1409,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"miner" => ^miner4, "count" => 16} = st1
-      assert %{"miner" => ^miner3, "count" => 16} = st2
+      assert %{"miner" => ^miner4, "blocks_mined" => 16} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 16} = st2
 
       assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner2, "count" => 16} = st3
-      assert %{"miner" => ^miner1, "count" => 16} = st4
+      assert %{"miner" => ^miner2, "blocks_mined" => 16} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 16} = st4
 
       assert %{"data" => ^statistics} =
                conn

@@ -560,7 +560,7 @@ defmodule AeMdw.Stats do
       start_date: months_to_iso(interval_start),
       end_date: months_to_iso(interval_start + 1),
       miner: :aeapi.format_account_pubkey(beneficiary_id),
-      count: count
+      blocks_mined: count
     }
   end
 
@@ -572,7 +572,7 @@ defmodule AeMdw.Stats do
       start_date: days_to_iso(interval_start * @days_per_week),
       end_date: days_to_iso((interval_start + 1) * @days_per_week),
       miner: :aeapi.format_account_pubkey(beneficiary_id),
-      count: count
+      blocks_mined: count
     }
   end
 
@@ -584,7 +584,7 @@ defmodule AeMdw.Stats do
       start_date: days_to_iso(interval_start),
       end_date: days_to_iso(interval_start + 1),
       miner: :aeapi.format_account_pubkey(beneficiary_id),
-      count: count
+      blocks_mined: count
     }
   end
 
