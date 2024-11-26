@@ -66,6 +66,7 @@ defmodule AeMdw.Node do
 
   @type hashrate() :: non_neg_integer()
   @type difficulty() :: non_neg_integer()
+  @type epoch() :: non_neg_integer()
 
   @opaque signed_tx() :: tuple()
   @opaque aetx() :: tuple()
@@ -343,6 +344,16 @@ defmodule AeMdw.Node do
     tx_mod_map()
     |> Map.keys()
     |> MapSet.new()
+  end
+
+  @spec epoch_start_height(epoch()) :: {:ok, height()} | {:error, atom()}
+  defmemo epoch_start_height(epoch) do
+    :aec_chain_hc.epoch_start_height(epoch)
+  end
+
+  @spec epoch_length(epoch()) :: {:ok, non_neg_integer()} | {:error, atom()}
+  defmemo epoch_length(epoch) do
+    :aec_chain_hc.epoch_length(epoch)
   end
 
   defp map_by_function_hash(signatures) do
