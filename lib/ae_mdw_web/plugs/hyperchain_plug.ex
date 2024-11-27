@@ -5,7 +5,7 @@ defmodule AeMdwWeb.Plugs.HyperchainPlug do
 
   alias Plug.Conn
   alias Phoenix.Controller
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
 
   @spec init(Plug.opts()) :: Plug.opts()
   def init(opts), do: opts

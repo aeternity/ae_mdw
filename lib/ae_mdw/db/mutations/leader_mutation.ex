@@ -6,7 +6,7 @@ defmodule AeMdw.Db.LeaderMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
 
   require Model
 

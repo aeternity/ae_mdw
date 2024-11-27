@@ -125,10 +125,10 @@ defmodule AeMdwWeb.Router do
       get "/dex/:contract_id/swaps", DexController, :contract_swaps
       get "/wealth", WealthController, :wealth
 
-      get "/hyperchain/leaders", HyperchainController, :leaders
-      get "/hyperchain/leaders/epoch/:epoch", HyperchainController, :leaders_by_epoch
-      get "/hyperchain/leaders/height/:height", HyperchainController, :leader_by_height
+      get "/hyperchain/schedule", HyperchainController, :schedule
+      get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
       get "/hyperchain/epochs", HyperchainController, :epochs
+      get "/hyperchain/validators", HyperchainController, :validators
       get "/hyperchain/validators/:validator_id", HyperchainController, :validator
 
       get "/api", UtilController, :static_file,

@@ -14,7 +14,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Sync.Watcher
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.MutationsCache

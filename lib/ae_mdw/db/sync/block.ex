@@ -30,7 +30,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.TypeCountersMutation
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
