@@ -31,6 +31,11 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
+  @spec connected_to_parent?() :: boolean()
+  def connected_to_parent?() do
+    :aec_consensus_hc.get_entropy_hash(1) != {:error, :not_in_cache}
+  end
+
   @spec epoch_info_at_height(Blocks.height()) :: {:ok, epoch_info()} | :error
   def epoch_info_at_height(height) do
     with {:ok, kb_hash} <- :aec_chain_state.get_key_block_hash_at_height(height),

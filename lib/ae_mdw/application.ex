@@ -14,6 +14,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
+  alias AeMdw.Hyperchain
   alias AeMdw.Sync.Watcher
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.MutationsCache
@@ -21,11 +22,13 @@ defmodule AeMdw.Application do
   alias AeMdw.Sync.SyncingQueue
 
   require Model
+  require Logger
 
   use Application
 
   @impl Application
   def start(_type, _args) do
+    hyperchain_checks()
     build_rev = Application.fetch_env!(:ae_mdw, :build_revision)
     :persistent_term.put({:ae_mdw, :build_revision}, build_rev)
 
@@ -141,5 +144,12 @@ defmodule AeMdw.Application do
   def config_change(changed, _new, removed) do
     AeMdwWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp hyperchain_checks() do
+    if Hyperchain.hyperchain?() and not Hyperchain.connected_to_parent?() do
+      Logger.error("Hyperchain is enabled but not connected to parent chain")
+      raise "Hyperchain is enabled but not connected to parent chain"
+    end
   end
 end
