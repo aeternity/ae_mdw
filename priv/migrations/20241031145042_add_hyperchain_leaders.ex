@@ -5,7 +5,7 @@ defmodule AeMdw.Migrations.AddHyperchainLeaders do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
 
   require Model
 

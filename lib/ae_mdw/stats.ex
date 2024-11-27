@@ -3,7 +3,6 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
-  alias AeMdw.Hyperchain
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -18,6 +17,7 @@ defmodule AeMdw.Stats do
   alias AeMdw.Util
   alias AeMdw.Validate
   alias AeMdw.Node.Db, as: NodeDb
+  alias AeMdw.Sync.Hyperchain
 
   require Model
 

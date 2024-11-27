@@ -1342,6 +1342,12 @@ defmodule AeMdw.Db.Model do
   @type validator_index() :: {pubkey(), Hyperchain.epoch()}
   @type validator() :: record(:validator, index: validator_index(), stake: non_neg_integer())
 
+  @rev_validator_defaults [index: {0, <<>>}]
+  defrecord :rev_validator, @rev_validator_defaults
+
+  @type rev_validator_index() :: {Hyperchain.epoch(), pubkey()}
+  @type rev_validator() :: record(:rev_validator, index: rev_validator_index())
+
   @pin_info_defaults [index: 0, leader: <<>>, reward: 0]
   defrecord :pin_info, @pin_info_defaults
 
@@ -1524,6 +1530,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.HyperchainLeaderAtHeight,
       AeMdw.Db.Model.EpochInfo,
       AeMdw.Db.Model.Validator,
+      AeMdw.Db.Model.RevValidator,
       AeMdw.Db.Model.PinInfo,
       AeMdw.Db.Model.LeaderPinInfo
     ]
@@ -1638,6 +1645,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.HyperchainLeaderAtHeight), do: :hyperchain_leader_at_height
   def record(AeMdw.Db.Model.EpochInfo), do: :epoch_info
   def record(AeMdw.Db.Model.Validator), do: :validator
+  def record(AeMdw.Db.Model.RevValidator), do: :rev_validator
   def record(AeMdw.Db.Model.PinInfo), do: :pin_info
   def record(AeMdw.Db.Model.LeaderPinInfo), do: :leader_pin_info
 end

@@ -6,7 +6,7 @@ defmodule AeMdw.Db.EpochMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
 
   require Model
 
@@ -63,10 +63,14 @@ defmodule AeMdw.Db.EpochMutation do
       )
 
     Enum.reduce(validators, state, fn {pubkey, stake}, state ->
-      State.put(
-        state,
+      state
+      |> State.put(
         Model.Validator,
         Model.validator(index: {pubkey, epoch}, stake: stake)
+      )
+      |> State.put(
+        Model.RevValidator,
+        Model.rev_validator(index: {epoch, pubkey})
       )
     end)
   end
