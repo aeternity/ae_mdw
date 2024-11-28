@@ -781,7 +781,7 @@ paths:
     get:
       deprecated: false
       description: Get total AEx9 token transfers.
-      operationId: GetNamesStats
+      operationId: GetAex9TransfersStats
       parameters:
         - name: interval_by
           description: The interval in which to return the stats.
