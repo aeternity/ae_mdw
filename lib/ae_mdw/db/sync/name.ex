@@ -245,6 +245,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.ActiveNameOwnerDeactivation, m_owner_deactivation)
     |> State.inc_stat(:names_activated)
     |> State.inc_stat(:micro_block_names_activated)
+    |> Names.increment_names_count(owner_pk)
   end
 
   @spec deactivate_name(

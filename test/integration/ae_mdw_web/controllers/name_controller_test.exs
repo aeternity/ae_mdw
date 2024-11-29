@@ -12,6 +12,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
   alias AeMdw.TestUtil
+  alias AeMdw.IntegrationUtil
 
   require Model
 
@@ -1437,6 +1438,40 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert @default_limit = length(next_names_and_auctions)
       assert ^next_plain_names = Enum.sort(next_plain_names)
       assert Enum.all?(next_plain_names, &String.starts_with?(&1, prefix))
+    end
+  end
+
+  describe "names count" do
+    test "it counts active names for a user", %{conn: conn} do
+      user_pks =
+        conn
+        |> get("/v3/names")
+        |> json_response(200)
+        |> then(fn %{"data" => data} ->
+          data
+          |> Enum.map(fn %{"ownership" => %{"current" => pk}} -> pk end)
+          |> Enum.uniq()
+        end)
+
+      for user_pk <- user_pks do
+        all =
+          conn
+          |> get("/v3/names", owned_by: user_pk)
+          |> json_response(200)
+          |> IntegrationUtil.scan(conn, [], &Kernel.++/2)
+
+        assert all > 0
+
+        active =
+          conn
+          |> get("/v3/names/count", owned_by: user_pk)
+          |> json_response(200)
+
+        assert active ==
+                 all
+                 |> Enum.filter(fn %{"active" => active} -> active end)
+                 |> length()
+      end
     end
   end
 

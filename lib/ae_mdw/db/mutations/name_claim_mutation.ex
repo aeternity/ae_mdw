@@ -117,7 +117,6 @@ defmodule AeMdw.Db.NameClaimMutation do
       |> Name.delete_inactive(plain_name)
       |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
       |> State.inc_stat(:burned_in_auctions, lock_amount)
-      |> Names.increment_names_count(owner_pk)
     else
       state3 =
         IntTransfer.fee(state2, {height, txi_idx}, :spend_name, owner_pk, txi_idx, name_fee)
