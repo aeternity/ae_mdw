@@ -69,4 +69,30 @@ defmodule AeMdw.Sync.Hyperchain do
     {:ok, %{validators: validators}} = epoch_info_at_height(height)
     validators
   end
+
+  @spec get_delegates(Blocks.height(), Db.pubkey()) :: {:ok, map()} | {:error, term()} | :error
+  def get_delegates(height, pubkey) do
+    with {:ok, kb_hash} <- :aec_chain_state.get_key_block_hash_at_height(height),
+         {tx_env, trees} <- :aetx_env.tx_env_and_trees_from_hash(:aetx_transaction, kb_hash),
+         {:ok,
+          {:tuple,
+           {_ct, _address, _creation_height, _stake, _pending_stake, _stake_limit, _is_online,
+            state}}} <-
+           :aec_consensus_hc.call_consensus_contract_result(
+             :staking,
+             tx_env,
+             trees,
+             ~c"get_validator_state",
+             [:aefa_fate_code.encode_arg({:address, pubkey})]
+           ) do
+      {:tuple,
+       {_main_staking_ct, _unstake_deley, _pending_unstake_amount, _pending_unstake, _name,
+        _description, _image_url, delegates, _shares}} = state
+
+      Enum.into(delegates, %{}, fn {{:address, pubkey}, stake} ->
+        {pubkey, stake}
+      end)
+      |> then(&{:ok, &1})
+    end
+  end
 end

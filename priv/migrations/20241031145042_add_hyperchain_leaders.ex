@@ -11,7 +11,7 @@ defmodule AeMdw.Migrations.AddHyperchainLeaders do
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    {:ok, %{last: last_height}} = :aec_chain_hc.epoch_info()
+    last_height = State.height(state)
 
     stream =
       Stream.resource(

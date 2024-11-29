@@ -7,7 +7,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Contracts
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.IntTransfer
-  alias AeMdw.Hyperchain
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -1369,6 +1369,13 @@ defmodule AeMdw.Db.Model do
             reward: amount()
           )
 
+  @delegate_defaults [index: {<<>>, 0, <<>>}, stake: 0]
+  defrecord :delegate, @delegate_defaults
+
+  # index: {validator_pk, epoch, delegate_pk}
+  @type delegate_index() :: {pubkey(), Blocks.height(), pubkey()}
+  @type delegate() :: record(:delegate, index: delegate_index(), stake: non_neg_integer())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1532,7 +1539,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Validator,
       AeMdw.Db.Model.RevValidator,
       AeMdw.Db.Model.PinInfo,
-      AeMdw.Db.Model.LeaderPinInfo
+      AeMdw.Db.Model.LeaderPinInfo,
+      AeMdw.Db.Model.Delegate
     ]
   end
 
@@ -1648,4 +1656,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.RevValidator), do: :rev_validator
   def record(AeMdw.Db.Model.PinInfo), do: :pin_info
   def record(AeMdw.Db.Model.LeaderPinInfo), do: :leader_pin_info
+  def record(AeMdw.Db.Model.Delegate), do: :delegate
 end

@@ -60,4 +60,17 @@ defmodule AeMdwWeb.HyperchainController do
       format_json(conn, validator)
     end
   end
+
+  @spec validator_delegates(Conn.t(), map()) :: Conn.t()
+  def validator_delegates(%Conn{assigns: assigns} = conn, %{
+        "validator_id" => validator_id
+      }) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} =
+      assigns
+
+    with {:ok, delegates} <-
+           Hyperchain.fetch_delegates(state, validator_id, pagination, scope, cursor) do
+      WebUtil.render(conn, delegates)
+    end
+  end
 end
