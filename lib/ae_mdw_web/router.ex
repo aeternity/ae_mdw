@@ -129,6 +129,11 @@ defmodule AeMdwWeb.Router do
       get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
       get "/hyperchain/epochs", HyperchainController, :epochs
       get "/hyperchain/validators", HyperchainController, :validators
+
+      get "/hyperchain/validators/:validator_id/delegates",
+          HyperchainController,
+          :validator_delegates
+
       get "/hyperchain/validators/:validator_id", HyperchainController, :validator
 
       get "/api", UtilController, :static_file,

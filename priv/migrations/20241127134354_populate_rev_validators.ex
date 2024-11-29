@@ -16,7 +16,6 @@ defmodule AeMdw.Migrations.PopulateRevValidators do
     end)
     |> Stream.chunk_every(100)
     |> Stream.map(fn mutations ->
-      IO.inspect(mutations)
       _state = State.commit(state, mutations)
       length(mutations)
     end)
