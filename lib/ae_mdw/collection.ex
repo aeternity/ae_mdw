@@ -23,7 +23,7 @@ defmodule AeMdw.Collection do
   @type pagination_cursor() :: {binary(), is_reversed?()} | nil
   @type stream_fn() :: (direction() -> Enumerable.t())
 
-  @type range() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
+  @type range() :: {:gen, Range.t()} | {:txi, Range.t()} | {:epoch, Range.t()} | nil
 
   @doc """
   Paginates a list or stream or records into a list of items and it's next cursor (if

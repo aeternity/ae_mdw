@@ -86,7 +86,7 @@ defmodule AeMdw.Hyperchain do
           Collection.range(),
           Collection.cursor()
         ) ::
-          {:ok, {Collection.cursor(), [validator()], Collection.cursor()}}
+          {:ok, {Collection.cursor(), [validator()], Collection.cursor()}} | {:error, term()}
   def fetch_validators(state, pagination, scope, cursor) do
     with {:ok, scope} <- deserialize_validator_scope(scope) do
       cursor = deserialize_validator_cursor(cursor)
@@ -100,6 +100,20 @@ defmodule AeMdw.Hyperchain do
         &serialize_validator_cursor/1
       )
       |> then(&{:ok, &1})
+    end
+  end
+
+  @spec fetch_validators_top(
+          State.t(),
+          Collection.pagination(),
+          Collection.cursor()
+        ) ::
+          {:ok, {Collection.cursor(), [validator()], Collection.cursor()}} | {:error, term()}
+  def fetch_validators_top(state, pagination, cursor) do
+    with current_height <- State.height(state),
+         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+      scope = {:epoch, epoch..epoch}
+      fetch_validators(state, pagination, scope, cursor)
     end
   end
 
@@ -152,6 +166,21 @@ defmodule AeMdw.Hyperchain do
         &serialize_validator_delegates_cursor/1
       )
       |> then(&{:ok, &1})
+    end
+  end
+
+  @spec fetch_delegates_top(
+          State.t(),
+          Db.pubkey(),
+          Collection.pagination(),
+          Collection.cursor()
+        ) :: {:ok, {Collection.cursor(), [Db.pubkey()], Collection.cursor()}}
+
+  def fetch_delegates_top(state, validator_id, pagination, cursor) do
+    with current_height <- State.height(state),
+         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+      scope = {:epoch, epoch..epoch}
+      fetch_delegates(state, validator_id, pagination, scope, cursor)
     end
   end
 
