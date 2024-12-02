@@ -54,6 +54,17 @@ defmodule AeMdwWeb.HyperchainController do
     end
   end
 
+  @spec validators_top(Conn.t(), map()) :: Conn.t()
+  def validators_top(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor} =
+      assigns
+
+    with {:ok, validators} <-
+           Hyperchain.fetch_validators_top(state, pagination, cursor) do
+      WebUtil.render(conn, validators)
+    end
+  end
+
   @spec validator(Conn.t(), map()) :: Conn.t()
   def validator(%Conn{assigns: %{state: state}} = conn, %{"validator_id" => validator_id}) do
     with {:ok, validator} <- Hyperchain.fetch_validator(state, validator_id) |> IO.inspect() do
@@ -70,6 +81,19 @@ defmodule AeMdwWeb.HyperchainController do
 
     with {:ok, delegates} <-
            Hyperchain.fetch_delegates(state, validator_id, pagination, scope, cursor) do
+      WebUtil.render(conn, delegates)
+    end
+  end
+
+  @spec validator_delegates_top(Conn.t(), map()) :: Conn.t()
+  def validator_delegates_top(%Conn{assigns: assigns} = conn, %{
+        "validator_id" => validator_id
+      }) do
+    %{state: state, pagination: pagination, cursor: cursor} =
+      assigns
+
+    with {:ok, delegates} <-
+           Hyperchain.fetch_delegates_top(state, validator_id, pagination, cursor) do
       WebUtil.render(conn, delegates)
     end
   end
