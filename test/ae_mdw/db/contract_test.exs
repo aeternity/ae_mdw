@@ -190,11 +190,11 @@ defmodule AeMdw.Db.ContractTest do
     end
 
     test "tracks dex pair creations and dex swaps" do
-      dex_pair_pk = :crypto.strong_rand_bytes(32)
-      dex_token1_pk = :crypto.strong_rand_bytes(32)
-      dex_token2_pk = :crypto.strong_rand_bytes(32)
-      height = Enum.random(100_000..999_999)
-      call_txi = Enum.random(100_000_000..999_999_999)
+      dex_pair_pk = <<100::256>>
+      dex_token1_pk = <<101::256>>
+      dex_token2_pk = <<102::256>>
+      height = 123
+      call_txi = 456
       create_token_txi = call_txi - 2
       create_pair_txi = call_txi - 1
 
@@ -209,6 +209,35 @@ defmodule AeMdw.Db.ContractTest do
 
       state =
         empty_state()
+        |> State.put(
+          Model.RevOrigin,
+          Model.rev_origin(
+            index: {{create_token_txi, -1}, :contract_create_tx},
+            pubkey: dex_pair_pk
+          )
+        )
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, dex_token1_pk, create_token_txi})
+        )
+        |> State.put(
+          Model.Origin,
+          Model.origin(
+            index: {:contract_create_tx, dex_token1_pk},
+            txi_idx: {create_token_txi, -1}
+          )
+        )
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, dex_token2_pk, create_token_txi})
+        )
+        |> State.put(
+          Model.Origin,
+          Model.origin(
+            index: {:contract_create_tx, dex_token2_pk},
+            txi_idx: {create_token_txi, -1}
+          )
+        )
         |> State.put(
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, dex_token1_pk}, meta_info: {"name1", "S1", 18})

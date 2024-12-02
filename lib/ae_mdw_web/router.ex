@@ -123,6 +123,7 @@ defmodule AeMdwWeb.Router do
 
       get "/dex/swaps", DexController, :swaps
       get "/dex/:contract_id/swaps", DexController, :contract_swaps
+      get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
       get "/api", UtilController, :static_file,
