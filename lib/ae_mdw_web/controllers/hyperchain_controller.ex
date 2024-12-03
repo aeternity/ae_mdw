@@ -24,6 +24,13 @@ defmodule AeMdwWeb.HyperchainController do
     end
   end
 
+  @spec epochs_top(Conn.t(), map()) :: Conn.t()
+  def epochs_top(%Conn{assigns: %{state: state}} = conn, _params) do
+    with {:ok, epoch} <- Hyperchain.fetch_epoch_top(state) do
+      format_json(conn, epoch)
+    end
+  end
+
   @spec schedule(Conn.t(), map()) :: Conn.t()
   def schedule(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} =
