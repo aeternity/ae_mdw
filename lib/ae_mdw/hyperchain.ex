@@ -46,6 +46,19 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
+  @spec fetch_epoch_top(State.t()) :: {:ok, Hyperchain.epoch()} | {:error, term()}
+  def fetch_epoch_top(state) do
+    current_height = State.height(state)
+
+    with {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height),
+         {:ok, Model.epoch_info(index: ^epoch)} <- State.get(state, Model.EpochInfo, epoch) do
+      {:ok, render_epoch_info(state, epoch)}
+    else
+      error when error in [:not_found, :error] ->
+        {:error, ErrInput.NotFound.exception(value: "epoch at height #{current_height}")}
+    end
+  end
+
   @spec fetch_leaders_schedule(
           State.t(),
           Collection.pagination(),
@@ -433,8 +446,6 @@ defmodule AeMdw.Hyperchain do
   end
 
   defp deserialize_validator_delegates_cursor(bin) do
-    IO.inspect(bin)
-
     bin
     |> Base.decode64!()
     |> :erlang.binary_to_term()
