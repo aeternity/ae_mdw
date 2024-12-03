@@ -86,9 +86,8 @@ defmodule AeMdw.Names do
     scope = deserialize_scope(range)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
-         :ok <- validate_height_filters(filters, order_by) do
-      last_micro_time = DbUtil.last_gen_and_time(state)
-
+         :ok <- validate_height_filters(filters, order_by),
+         {:ok, last_micro_time} <- DbUtil.last_gen_and_time(state) do
       paginated_names =
         filters
         |> build_height_streamer(state, order_by, scope, cursor)
@@ -99,6 +98,9 @@ defmodule AeMdw.Names do
         )
 
       {:ok, paginated_names}
+    else
+      {:error, reason} -> {:error, reason}
+      :no_blocks -> {:ok, {nil, [], nil}}
     end
   end
 
@@ -106,9 +108,8 @@ defmodule AeMdw.Names do
     cursor = deserialize_name_cursor(cursor)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
-         :ok <- validate_name_filters(filters) do
-      last_micro_time = DbUtil.last_gen_and_time(state)
-
+         :ok <- validate_name_filters(filters),
+         {:ok, last_micro_time} <- DbUtil.last_gen_and_time(state) do
       paginated_names =
         filters
         |> build_name_streamer(state, cursor)
@@ -119,6 +120,9 @@ defmodule AeMdw.Names do
         )
 
       {:ok, paginated_names}
+    else
+      {:error, reason} -> {:error, reason}
+      :no_blocks -> {:ok, {nil, [], nil}}
     end
   end
 
@@ -134,7 +138,7 @@ defmodule AeMdw.Names do
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
 
       {:ok, Model.name(index: plain_name), source} ->
-        last_micro_time = DbUtil.last_gen_and_time(state)
+        last_micro_time = DbUtil.last_gen_and_time!(state)
 
         {:ok, render_plain_name(state, {plain_name, source}, last_micro_time, opts)}
 
@@ -571,38 +575,43 @@ defmodule AeMdw.Names do
   def search_names(state, lifecycles, prefix, pagination, cursor, opts) do
     cursor = deserialize_name_cursor(cursor)
     scope = {prefix, prefix <> Util.max_256bit_bin()}
-    last_micro_time = DbUtil.last_gen_and_time(state)
 
-    fn direction ->
-      lifecycles
-      |> Enum.map(fn
-        :active ->
-          state
-          |> Collection.stream(@table_active, direction, scope, cursor)
-          |> Stream.map(&{&1, :active})
+    case DbUtil.last_gen_and_time(state) do
+      {:ok, last_micro_time} ->
+        fn direction ->
+          lifecycles
+          |> Enum.map(fn
+            :active ->
+              state
+              |> Collection.stream(@table_active, direction, scope, cursor)
+              |> Stream.map(&{&1, :active})
 
-        :inactive ->
-          state
-          |> Collection.stream(@table_inactive, direction, scope, cursor)
-          |> Stream.map(&{&1, :inactive})
+            :inactive ->
+              state
+              |> Collection.stream(@table_inactive, direction, scope, cursor)
+              |> Stream.map(&{&1, :inactive})
 
-        :auction ->
-          state
-          |> AuctionBids.auctions_stream(prefix, direction, scope, cursor)
-          |> Stream.map(&{&1, :auction})
-      end)
-      |> Collection.merge(direction)
+            :auction ->
+              state
+              |> AuctionBids.auctions_stream(prefix, direction, scope, cursor)
+              |> Stream.map(&{&1, :auction})
+          end)
+          |> Collection.merge(direction)
+        end
+        |> Collection.paginate(
+          pagination,
+          &render_search(state, &1, last_micro_time, opts),
+          &serialize_name_cursor/1
+        )
+
+      :no_blocks ->
+        {:ok, {nil, [], nil}}
     end
-    |> Collection.paginate(
-      pagination,
-      &render_search(state, &1, last_micro_time, opts),
-      &serialize_name_cursor/1
-    )
   end
 
   @spec fetch_previous_list(state(), plain_name()) :: [name()]
   def fetch_previous_list(state, plain_name) do
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time!(state)
     key_boundary = {{plain_name, @min_int}, {plain_name, @max_int}}
 
     state
