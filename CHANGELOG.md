@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.95.0](https://www.github.com/aeternity/ae_mdw/compare/v1.94.0...v1.95.0) (2024-12-03)
+
+
+### Features
+
+* add debug endpoint temporarily to list swaps by txi_idx ([#2024](https://www.github.com/aeternity/ae_mdw/issues/2024)) ([1935147](https://www.github.com/aeternity/ae_mdw/commit/193514796f84d367d168ad07469b156cf10601f2))
+* add gas to microblocks ([#2023](https://www.github.com/aeternity/ae_mdw/issues/2023)) ([8b605a7](https://www.github.com/aeternity/ae_mdw/commit/8b605a76f70a8ab619216cde94b4c801efe55027))
+
+
+### Bug Fixes
+
+* pass extra argument to function from the node ([#2028](https://www.github.com/aeternity/ae_mdw/issues/2028)) ([58f3c55](https://www.github.com/aeternity/ae_mdw/commit/58f3c55e5ed34a34531ff6779a31753940c301c8))
+* recalculate account active names counter ([#2027](https://www.github.com/aeternity/ae_mdw/issues/2027)) ([9279c9e](https://www.github.com/aeternity/ae_mdw/commit/9279c9e1d0a636afb94610bde85b9d2255bebcee))
+* rename aex9 transfers operation openapi docs ([#2026](https://www.github.com/aeternity/ae_mdw/issues/2026)) ([cff8565](https://www.github.com/aeternity/ae_mdw/commit/cff8565cdb8763bff2d85c2e80d264156c3224c4))
+
 ## [1.94.0](https://www.github.com/aeternity/ae_mdw/compare/v1.93.0...v1.94.0) (2024-11-19)
 
 
