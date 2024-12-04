@@ -144,7 +144,7 @@ defmodule AeMdw.Db.Origin do
         protocol |> :aec_fork_block_settings.contracts() |> Map.get("contracts", [])
       rescue
         e in ErlangError ->
-          Logger.error("Error fetching contracts for protocol #{protocol}: #{inspect(e)}")
+          Logger.warning("Error fetching contracts for protocol #{protocol}: #{inspect(e)}")
           []
 
         e ->
