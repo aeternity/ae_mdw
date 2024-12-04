@@ -542,6 +542,33 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  "token_id" => ^token_id,
                  "metadata" => %{"map" => %{"foo" => "bar"}}
                } =
+                 conn |> get("/v3/aex141/#{contract_id}/tokens/#{token_id}") |> json_response(200)
+
+        assert {:ok, ^account_pk} = Validate.id(account_id)
+      end
+    end
+
+    test "in v2, returns the account that owns a nft", %{conn: conn} do
+      contract_id = encode_contract(<<1_411::256>>)
+      account_pk = :crypto.strong_rand_bytes(32)
+      result = {:variant, [1, 1], 1, {%{foo: "bar"}}}
+      token_id = 123
+
+      with_mocks [
+        {AexnContracts, [:passthrough],
+         [
+           call_contract: fn
+             <<1_411::256>>, "owner", [^token_id] ->
+               {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}}
+
+             <<1_411::256>>, "metadata", [^token_id] ->
+               {:ok, {:variant, [0, 1], 1, {result}}}
+           end
+         ]}
+      ] do
+        assert %{
+                 "data" => account_id
+               } =
                  conn |> get("/v2/aex141/#{contract_id}/owner/#{token_id}") |> json_response(200)
 
         assert {:ok, ^account_pk} = Validate.id(account_id)
