@@ -1,5 +1,19 @@
 # Changelog
 
+### [1.95.1](https://www.github.com/aeternity/ae_mdw/compare/v1.95.0...v1.95.1) (2024-12-05)
+
+
+### Bug Fixes
+
+* handle empty aexn count ([#2034](https://www.github.com/aeternity/ae_mdw/issues/2034)) ([e164160](https://www.github.com/aeternity/ae_mdw/commit/e1641607efe55f54fee36c28b83e1f2c6fb11491))
+* handle no stats division by zero error ([#2036](https://www.github.com/aeternity/ae_mdw/issues/2036)) ([6c7ac6f](https://www.github.com/aeternity/ae_mdw/commit/6c7ac6f590edf04facd3e1ef1e20b9a6c8a13999))
+
+
+### Miscellaneous
+
+* change log lovel of log to warning from error ([#2029](https://www.github.com/aeternity/ae_mdw/issues/2029)) ([a0eb067](https://www.github.com/aeternity/ae_mdw/commit/a0eb0679def5fbf666fc50bffd8121632182ac0d))
+* fix default branch name in docker CI ([#2033](https://www.github.com/aeternity/ae_mdw/issues/2033)) ([f4ce73d](https://www.github.com/aeternity/ae_mdw/commit/f4ce73db9a98d778ce6fca1c8e653d2c83d2244e))
+
 ## [1.95.0](https://www.github.com/aeternity/ae_mdw/compare/v1.94.0...v1.95.0) (2024-12-03)
 
 
