@@ -55,9 +55,9 @@ defmodule AeMdw.Oracles do
   def fetch_oracles(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
-    last_gen_time = DbUtil.last_gen_and_time(state)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         {:ok, last_gen_time} <- DbUtil.last_gen_and_time(state) do
       paginated_oracles =
         filters
         |> build_streamer(state, scope, cursor)
@@ -68,6 +68,9 @@ defmodule AeMdw.Oracles do
         )
 
       {:ok, paginated_oracles}
+    else
+      {:error, reason} -> {:error, reason}
+      :no_blocks -> {:ok, {nil, [], nil}}
     end
   end
 
@@ -273,10 +276,10 @@ defmodule AeMdw.Oracles do
 
   @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(state, oracle_pk, opts) do
-    last_gen_time = DbUtil.last_gen_and_time(state)
-
     case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
+        last_gen_time = DbUtil.last_gen_and_time!(state)
+
         {:ok, render(state, m_oracle, source == Model.ActiveOracle, last_gen_time, opts)}
 
       nil ->
