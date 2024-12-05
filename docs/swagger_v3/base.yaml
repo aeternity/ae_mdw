@@ -22,10 +22,10 @@ components:
     ScopeParam:
       in: query
       name: scope
-      description: 'Scopes results in a txi or generation range'
+      description: 'Scopes results in a generation range'
       schema:
         type: string
-        pattern: '(txi|gen):\d+(-\d+)?'
+        pattern: '(gen):\d+(-\d+)?'
     DirectionParam:
       in: query
       name: direction

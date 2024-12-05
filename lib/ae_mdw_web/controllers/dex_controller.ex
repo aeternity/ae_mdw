@@ -44,4 +44,14 @@ defmodule AeMdwWeb.DexController do
       Util.render(conn, paginated_swaps)
     end
   end
+
+  @spec debug_contract_swaps(Conn.t(), map()) :: Conn.t()
+  def debug_contract_swaps(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with {:ok, paginated_swaps} <-
+           Dex.fetch_debug_contract_swaps(state, contract_id, pagination, scope, cursor) do
+      Util.render(conn, paginated_swaps)
+    end
+  end
 end

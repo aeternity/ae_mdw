@@ -629,27 +629,21 @@ defmodule AeMdw.Stats do
   defp last_24hs_txs_count_and_fee_with_trend(state) do
     time_24hs_ago = :aeu_time.now_in_msecs() - @seconds_per_day * 1_000
 
-    case State.next(state, Model.Time, {time_24hs_ago, -1}) do
-      {:ok, {_time, tx_index_24hs_ago}} ->
-        {:ok, last_tx_index} = State.prev(state, Model.Tx, nil)
-        time_48hs_ago = time_24hs_ago - @seconds_per_day * 1_000
-
-        {:ok, {_time, tx_index_48hs_ago}} = State.next(state, Model.Time, {time_48hs_ago, -1})
-
-        txs_count_24hs = last_tx_index - tx_index_24hs_ago
-        txs_count_48hs = tx_index_24hs_ago - tx_index_48hs_ago
-        trend = Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2)
-
-        average_tx_fees_24hs = average_tx_fees(state, tx_index_24hs_ago, last_tx_index)
-        average_tx_fees_48hs = average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago)
-
-        fee_trend =
-          Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2)
-
-        {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
-
-      :none ->
-        {{0, 0}, {0, 0}}
+    with {:ok, {_time, tx_index_24hs_ago}} <- State.next(state, Model.Time, {time_24hs_ago, -1}),
+         {:ok, last_tx_index} <- State.prev(state, Model.Tx, nil),
+         time_48hs_ago <- time_24hs_ago - @seconds_per_day * 1_000,
+         {:ok, {_time, tx_index_48hs_ago}} <- State.next(state, Model.Time, {time_48hs_ago, -1}),
+         txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago,
+         txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
+         trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
+         average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
+           average_tx_fees(state, tx_index_24hs_ago, last_tx_index),
+         average_tx_fees_48hs <- average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago),
+         fee_trend <-
+           Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
+      {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
+    else
+      _error -> {{0, 0}, {0, 0}}
     end
   end
 

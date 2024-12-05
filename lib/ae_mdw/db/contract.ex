@@ -467,8 +467,14 @@ defmodule AeMdw.Db.Contract do
     case String.printable?(amounts) do
       true ->
         amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
-
         create_txi = Dex.get_create_txi(state, create_txi, txi, idx)
+        pair_pk = Dex.get_pair_pk(state, create_txi, txi, idx)
+
+        Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk) =
+          State.fetch!(state, Model.DexPair, pair_pk)
+
+        {:ok, token1_create_txi_idx} = Origin.creation_txi_idx(state, token1_pk)
+        {:ok, token2_create_txi_idx} = Origin.creation_txi_idx(state, token2_pk)
 
         state
         |> State.put(
@@ -486,6 +492,14 @@ defmodule AeMdw.Db.Contract do
         |> State.put(
           Model.DexSwapTokens,
           Model.dex_swap_tokens(index: {txi, idx, create_txi})
+        )
+        |> State.put(
+          Model.DexContractTokenSwap,
+          Model.dex_contract_token_swap(index: {token1_create_txi_idx, txi, idx})
+        )
+        |> State.put(
+          Model.DexContractTokenSwap,
+          Model.dex_contract_token_swap(index: {token2_create_txi_idx, txi, idx})
         )
 
       false ->

@@ -1,15 +1,6 @@
 defmodule AeMdwWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :ae_mdw
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  @session_options [
-    store: :cookie,
-    key: "_ae_mdw_key",
-    signing_salt: "0cOe/zsp"
-  ]
-
   # You should set gzip to true if you are running phx.digest
   # when deploying your static files in production.
 
@@ -36,7 +27,6 @@ defmodule AeMdwWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug Plug.Session, @session_options
   plug CORSPlug
   plug AeMdwWeb.Router
 

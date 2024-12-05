@@ -62,9 +62,9 @@ defmodule AeMdwWeb.StatsController do
   def miners_stats(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    {prev_cursor, miners, next_cursor} = Miners.fetch_miners(state, pagination, cursor)
-
-    Util.render(conn, prev_cursor, miners, next_cursor)
+    with {:ok, paginated_miners} <- Miners.fetch_miners(state, pagination, cursor) do
+      Util.render(conn, paginated_miners)
+    end
   end
 
   @spec transactions_stats(Conn.t(), map()) :: Conn.t()

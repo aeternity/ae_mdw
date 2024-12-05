@@ -257,12 +257,15 @@ defmodule AeMdw.Blocks do
           end
       end
 
-    header = :aec_db.get_header(mb_hash)
+    block = :aec_db.get_block(mb_hash)
+    header = :aec_blocks.to_header(block)
+    gas = :aec_blocks.gas(block)
 
     header
     |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
     |> Map.put(:micro_block_index, mbi)
     |> Map.put(:transactions_count, txs_count)
+    |> Map.put(:gas, gas)
   end
 
   defp render_blocks(state, range, sort_mbs?) do

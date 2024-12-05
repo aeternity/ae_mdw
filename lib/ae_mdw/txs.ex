@@ -264,9 +264,9 @@ defmodule AeMdw.Txs do
     do: {:ok, fn _direction -> [] end}
 
   defp txs_streamer(state, range, query, cursor) do
-    with {:ok, ids_fields} <- extract_ids_fields(query) do
+    with {:ok, ids_fields} <- extract_ids_fields(query),
+         {:ok, cursor} <- deserialize_cursor(cursor) do
       types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
-      cursor = deserialize_cursor(cursor)
       ids_fields = Enum.to_list(ids_fields)
 
       scope =
@@ -633,13 +633,12 @@ defmodule AeMdw.Txs do
 
   defp serialize_cursor(txi), do: Integer.to_string(txi)
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor_bin) do
     case Integer.parse(cursor_bin) do
-      {n, ""} -> n
-      {_n, _rest} -> nil
-      :error -> nil
+      {n, ""} -> {:ok, n}
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 

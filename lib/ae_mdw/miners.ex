@@ -7,6 +7,8 @@ defmodule AeMdw.Miners do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
 
   require Model
@@ -17,13 +19,15 @@ defmodule AeMdw.Miners do
   @typep pubkey() :: Db.pubkey()
   @typep pagination() :: Collection.direction_limit()
 
-  @spec fetch_miners(state(), pagination(), cursor()) :: {cursor(), [miner()], cursor()}
+  @spec fetch_miners(state(), pagination(), cursor()) ::
+          {:ok, {cursor(), [miner()], cursor()}} | {:error, Error.t()}
   def fetch_miners(state, pagination, cursor) do
-    cursor = deserialize_cursor(cursor)
-
-    state
-    |> build_streamer(cursor)
-    |> Collection.paginate(pagination, &fetch_miner!(state, &1), &serialize_cursor/1)
+    with {:ok, cursor} <- deserialize_cursor(cursor) do
+      state
+      |> build_streamer(cursor)
+      |> Collection.paginate(pagination, &fetch_miner!(state, &1), &serialize_cursor/1)
+      |> then(&{:ok, &1})
+    end
   end
 
   @spec fetch_miner!(state(), pubkey()) :: miner()
@@ -46,12 +50,12 @@ defmodule AeMdw.Miners do
 
   defp serialize_cursor(miner_pk), do: Enc.encode(:account_pubkey, miner_pk)
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor_bin) do
     case Enc.safe_decode(:account_pubkey, cursor_bin) do
       {:ok, miner_pk} -> {:ok, miner_pk}
-      {:error, _reason} -> nil
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 end
