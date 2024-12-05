@@ -3,7 +3,7 @@ name: Dockerhub Pipeline
 on:
   push:
     branches:
-      - develop
+      - master
     tags:
       - v*
 
