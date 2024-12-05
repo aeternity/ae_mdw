@@ -8,6 +8,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Db.Model
   alias AeMdw.Db.MinerRewardsMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TopMinerStatsMutation
   alias AeMdw.Db.State
   alias AeMdw.Collection
 
@@ -40,6 +41,7 @@ defmodule AeMdw.Db.IntTransfer do
   def block_rewards_mutations(key_block) do
     height = :aec_blocks.height(key_block)
     delay = :aec_governance.beneficiary_reward_delay()
+    time = :aec_blocks.time_in_msecs(key_block)
 
     dev_benefs =
       for {protocol, _height} <- :aec_hard_forks.protocols(),
@@ -65,6 +67,9 @@ defmodule AeMdw.Db.IntTransfer do
         {@reward_block_kind, target_pk, amount}
       end)
 
+    beneficiaries =
+      Enum.map(miners_rewards, fn {target_pk, _amount} -> target_pk end)
+
     devs_transfers =
       Enum.map(devs_rewards, fn {target_pk, amount} ->
         {@reward_dev_kind, target_pk, amount}
@@ -72,7 +77,8 @@ defmodule AeMdw.Db.IntTransfer do
 
     [
       IntTransfersMutation.new(height, miners_transfers ++ devs_transfers),
-      MinerRewardsMutation.new(miners_rewards)
+      MinerRewardsMutation.new(miners_rewards),
+      TopMinerStatsMutation.new(beneficiaries, time)
     ]
   end
 
