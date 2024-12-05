@@ -91,7 +91,7 @@ defmodule AeMdw.Db.LeaderMutation do
 
       :error ->
         Logger.error(
-          "Error fetching delegates for leader #{leader} at height #{start_height} in epoch #{epoch}"
+          "Error fetching delegates for leader #{inspect(leader)} at height #{start_height} in epoch #{epoch}"
         )
 
         state

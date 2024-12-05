@@ -162,7 +162,7 @@ defmodule AeMdw.Stats do
 
           Map.put(stats, :validators_count, validators_count)
         else
-          Model.stat(payload: miners_count) =
+          {:ok, Model.stat(payload: miners_count)} =
             State.get(state, Model.Stat, @miners_count_stat_key)
 
           Map.put(stats, :miners_count, miners_count)
