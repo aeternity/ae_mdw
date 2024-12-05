@@ -144,8 +144,10 @@ defmodule AeMdwWeb.AexnTokenController do
   end
 
   defp aexn_count(state, aexn_type) do
-    Model.stat(payload: count) = State.fetch!(state, Model.Stat, Stats.aexn_count_key(aexn_type))
-    count
+    case State.get(state, Model.Stat, Stats.aexn_count_key(aexn_type)) do
+      {:ok, Model.stat(payload: count)} -> count
+      :not_found -> 0
+    end
   end
 
   defp aexn_contracts(
