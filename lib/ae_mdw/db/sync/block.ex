@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Sync.Block do
        3.3. Get the mutations from each micro-block and execute them.
   """
 
+  alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Blocks
   alias AeMdw.Db.BlockStatisticsMutation
   alias AeMdw.Db.EpochMutation
@@ -96,6 +97,14 @@ defmodule AeMdw.Db.Sync.Block do
           WriteMutation.new(Model.Block, key_block)
         end
 
+      genesis_accounts_balances_mutation =
+        if height == 0 do
+          :aec_fork_block_settings.genesis_accounts()
+          |> Enum.map(fn {pk, amount} ->
+            UpdateBalanceAccountMutation.new(pk, amount)
+          end)
+        end
+
       block_rewards_mutation =
         if height >= AE.min_block_reward_height() and
              :aec_consensus_hc != :aec_consensus.get_genesis_consensus_module() do
@@ -105,6 +114,7 @@ defmodule AeMdw.Db.Sync.Block do
       gen_mutations =
         [
           kb0_mutation,
+          genesis_accounts_balances_mutation,
           block_rewards_mutation,
           NamesExpirationMutation.new(height),
           OraclesExpirationMutation.new(height),

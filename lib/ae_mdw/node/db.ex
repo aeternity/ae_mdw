@@ -66,15 +66,23 @@ defmodule AeMdw.Node.Db do
     |> Enum.reverse()
   end
 
-  defp unfold_blocks({last_mb_hash, _last_kb_hash} = hashes, root_hash, true) do
+  defp unfold_blocks(hashes, root_hash, true) do
     Stream.unfold(hashes, fn
-      {_last_mb_hash, ^root_hash} ->
+      {nil, nil} ->
         nil
 
+      {_last_mb_hash, ^root_hash} ->
+        root_block = :aec_db.get_block(root_hash)
+        {{root_block, [], root_hash}, {nil, nil}}
+
+      {^root_hash, nil} ->
+        root_block = :aec_db.get_block(root_hash)
+        {{root_block, [], root_hash}, {nil, nil}}
+
       {last_kb_hash, nil} ->
-        {prev_key_block, micro_blocks} = get_kb_mbs(last_mb_hash)
+        {prev_key_block, micro_blocks} = get_kb_mbs(last_kb_hash)
         prev_hash = :aec_blocks.prev_hash(prev_key_block)
-        block = :aec_db.get_block(last_mb_hash)
+        block = :aec_db.get_block(last_kb_hash)
         prev_key_hash = :aec_blocks.prev_key_hash(block)
 
         {{block, micro_blocks, last_kb_hash}, {prev_hash, prev_key_hash}}
