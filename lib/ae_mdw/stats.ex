@@ -703,16 +703,27 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec milliseconds_per_block(State.t()) :: {:ok, non_neg_integer() | nil} | {:error, reason()}
   defp milliseconds_per_block(state) do
     with {:ok, first_block} <- :aec_chain.get_key_block_by_height(1),
          {:ok, last_gen} <- DbUtil.last_gen(state),
-         {:ok, last_block} <- :aec_chain.get_key_block_by_height(last_gen) do
+         {:ok, last_block} <- get_last_key_block(last_gen) do
       first_block_time = :aec_blocks.time_in_msecs(first_block)
 
       last_block_time =
         :aec_blocks.time_in_msecs(last_block)
 
       {:ok, div(last_block_time - first_block_time, last_gen)}
+    else
+      {:error, :chain_too_short} -> {:ok, nil}
+      error -> error
+    end
+  end
+
+  defp get_last_key_block(gen) do
+    case :aec_chain.get_key_block_by_height(gen) do
+      {:ok, block} -> {:ok, block}
+      {:error, :chain_too_short} -> :aec_chain.get_key_block_by_height(gen - 1)
     end
   end
 end
