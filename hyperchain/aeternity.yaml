@@ -2,7 +2,7 @@ chain:
   consensus:
     '0':
       config:
-        child_block_time: 30000
+        child_block_time: 3000
         child_epoch_length: 600
         pinning_reward_value: 100
         contract_owner: 'ak_11111111111111111111111111111115rHyByZ'
@@ -52,7 +52,8 @@ mining:
   beneficiary: 'ak_2NFBoqehqzUELrEC2n37eMp7tQTtyYF5hCQndpb63Sa8d9muPG'
 
 logging:
-  level: debug
+  level: warning
 
 metrics:
   port: 0
+
