@@ -620,7 +620,7 @@ defmodule AeMdw.Stats do
          {:ok, last_tx_index} <- State.prev(state, Model.Tx, nil),
          time_48hs_ago <- time_24hs_ago - @seconds_per_day * 1_000,
          {:ok, {_time, tx_index_48hs_ago}} <- State.next(state, Model.Time, {time_48hs_ago, -1}),
-         txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago,
+         txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago + 1,
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
          trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
          average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
