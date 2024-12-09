@@ -53,21 +53,19 @@ defmodule AeMdw.Oracles do
   @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
           {:ok, {cursor() | nil, [oracle()], cursor() | nil}} | {:error, Error.t()}
   def fetch_oracles(state, pagination, range, query, cursor, opts) do
-    cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          {:ok, last_gen_time} <- DbUtil.last_gen_and_time(state) do
-      paginated_oracles =
-        filters
-        |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(
-          pagination,
-          &render(state, &1, last_gen_time, opts),
-          &serialize_cursor/1
-        )
-
-      {:ok, paginated_oracles}
+      filters
+      |> build_streamer(state, scope, cursor)
+      |> Collection.paginate(
+        pagination,
+        &render(state, &1, last_gen_time, opts),
+        &serialize_cursor/1
+      )
+      |> then(&{:ok, &1})
     else
       {:error, reason} -> {:error, reason}
       :no_blocks -> {:ok, {nil, [], nil}}
@@ -404,14 +402,14 @@ defmodule AeMdw.Oracles do
   defp serialize_cursor({exp_height, oracle_pk}),
     do: "#{exp_height}-#{Enc.encode(:oracle_pubkey, oracle_pk)}"
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor_bin) do
     with [_match0, exp_height, encoded_pk] <- Regex.run(~r/(\d+)-(ok_\w+)/, cursor_bin),
          {:ok, pk} <- Enc.safe_decode(:oracle_pubkey, encoded_pk) do
-      {String.to_integer(exp_height), pk}
+      {:ok, {String.to_integer(exp_height), pk}}
     else
-      _nil_or_error -> nil
+      _nil_or_error -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 
