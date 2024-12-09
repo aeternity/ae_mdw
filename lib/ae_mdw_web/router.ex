@@ -112,7 +112,7 @@ defmodule AeMdwWeb.Router do
       get "/aex141/count", AexnTokenController, :aex141_count
       get "/aex141/transfers", AexnTransferController, :aex141_transfers
       get "/aex141/:contract_id", AexnTokenController, :aex141_contract
-      get "/aex141/:contract_id/tokens/:token_id", Aex141Controller, :nft_owner_v2
+      get "/aex141/:contract_id/tokens/:token_id", Aex141Controller, :nft_owner
       get "/aex141/:contract_id/tokens", Aex141Controller, :collection_owners
       get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
       get "/aex141/:contract_id/transfers", AexnTransferController, :aex141_transfers
@@ -178,7 +178,7 @@ defmodule AeMdwWeb.Router do
       get "/aex141", AexnTokenController, :aex141_contracts_v2
       get "/aex141/count", AexnTokenController, :aex141_count
       get "/aex141/:contract_id", AexnTokenController, :aex141_contract_v2
-      get "/aex141/:contract_id/owner/:token_id", Aex141Controller, :nft_owner
+      get "/aex141/:contract_id/owner/:token_id", Aex141Controller, :nft_owner_v2
       get "/aex141/:contract_id/metadata/:token_id", Aex141Controller, :nft_metadata
       get "/aex141/:contract_id/owners", Aex141Controller, :collection_owners
       get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
