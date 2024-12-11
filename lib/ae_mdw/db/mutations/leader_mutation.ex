@@ -3,7 +3,7 @@ defmodule AeMdw.Db.LeaderMutation do
     Possibly put the new leaders for a hyperchain
   """
 
-  alias AeMdw.Collection
+  # alias AeMdw.Collection
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -43,7 +43,7 @@ defmodule AeMdw.Db.LeaderMutation do
     height
     |> Hyperchain.epoch_info_at_height()
     |> case do
-      {:ok, %{epoch: epoch, first: start_height}} ->
+      {:ok, %{epoch: epoch, first: _start_height}} ->
         state =
           height
           |> Hyperchain.leaders_for_epoch_at_height()
@@ -64,19 +64,20 @@ defmodule AeMdw.Db.LeaderMutation do
           end)
 
         state
-        |> Collection.stream(
-          Model.RevValidator,
-          :backward,
-          Collection.generate_key_boundary({epoch, Collection.binary()}),
-          nil
-        )
-        |> Enum.reduce(state, fn {^epoch, leader}, state ->
-          put_delegates(state, start_height, epoch, leader)
-        end)
+        # |> Collection.stream(
+        #   Model.RevValidator,
+        #   :backward,
+        #   Collection.generate_key_boundary({epoch, Collection.binary()}),
+        #   nil
+        # )
+
+        # |> Enum.reduce(state, fn {^epoch, leader}, state ->
+        #   put_delegates(state, start_height, epoch, leader)
+        # end)
     end
   end
 
-  defp put_delegates(state, start_height, epoch, leader) do
+  def put_delegates(state, start_height, epoch, leader) do
     start_height
     |> Hyperchain.get_delegates(leader)
     |> case do
