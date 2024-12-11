@@ -3051,9 +3051,20 @@ Returns the owner wallet address of a NFT.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/tokens/2' | jq .
-
 {
-  "data": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW"
+  "contract_id" : "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+  "metadata" : {
+    "map" : {
+      "description" : "Heaven or metaverse? We don't care!",
+      "immutable_attributes" : "[object Object]",
+      "media_type" : "IMAGE",
+      "media_url" : "ipfs://Qmef7Xrh1YTgQqXbr86o3TrFoya9ZLk1RVdXMga1JjEjnm",
+      "mutable_attributes" : "[object Object]",
+      "name" : "The path to heaven"
+    }
+  },
+  "owner" : "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+  "token_id" : 2
 }
 ```
 

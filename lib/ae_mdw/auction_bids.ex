@@ -44,7 +44,7 @@ defmodule AeMdw.AuctionBids do
   def fetch(state, plain_name, opts) do
     case State.get(state, @table, plain_name) do
       {:ok, auction_bid} ->
-        last_micro_time = DbUtil.last_gen_and_time(state)
+        last_micro_time = DbUtil.last_gen_and_time!(state)
 
         {:ok, render(state, auction_bid, last_micro_time, opts)}
 
@@ -70,21 +70,26 @@ defmodule AeMdw.AuctionBids do
   @spec fetch_auctions(state(), pagination(), order_by(), cursor(), opts()) ::
           {:ok, {cursor(), [auction_bid()], cursor()}} | {:error, Error.t()}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
-    last_micro_time = DbUtil.last_gen_and_time(state)
-    streamer = &Collection.stream(state, @table, &1, nil, cursor)
+    case DbUtil.last_gen_and_time(state) do
+      {:ok, last_micro_time} ->
+        streamer = &Collection.stream(state, @table, &1, nil, cursor)
 
-    streamer
-    |> Collection.paginate(
-      pagination,
-      &render(state, &1, last_micro_time, opts),
-      & &1
-    )
-    |> then(&{:ok, &1})
+        streamer
+        |> Collection.paginate(
+          pagination,
+          &render(state, &1, last_micro_time, opts),
+          & &1
+        )
+        |> then(&{:ok, &1})
+
+      :no_blocks ->
+        {:ok, {nil, [], nil}}
+    end
   end
 
   def fetch_auctions(state, pagination, :expiration, cursor, opts) do
-    with {:ok, cursor} <- deserialize_exp_cursor(cursor) do
-      last_micro_time = DbUtil.last_gen_and_time(state)
+    with {:ok, cursor} <- deserialize_exp_cursor(cursor),
+         {:ok, last_micro_time} <- DbUtil.last_gen_and_time(state) do
       streamer = &Collection.stream(state, @table_expiration, &1, nil, cursor)
 
       streamer
@@ -94,6 +99,9 @@ defmodule AeMdw.AuctionBids do
         &serialize_exp_cursor/1
       )
       |> then(&{:ok, &1})
+    else
+      {:error, reason} -> {:error, reason}
+      :no_blocks -> {:ok, {nil, [], nil}}
     end
   end
 

@@ -61,16 +61,24 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  @spec last_gen_and_time(state()) :: {Blocks.height(), Blocks.time()}
+  @spec last_gen_and_time!(state()) :: {Blocks.height(), Blocks.time()}
+  def last_gen_and_time!(state) do
+    case last_gen_and_time(state) do
+      {:ok, gen_time} -> gen_time
+      :no_blocks -> raise RuntimeError, message: "can't get last key for table Model.Block"
+    end
+  end
+
+  @spec last_gen_and_time(state()) :: {:ok, {Blocks.height(), Blocks.time()}} | :no_blocks
   def last_gen_and_time(state) do
     case State.prev(state, Model.Block, nil) do
       {:ok, {height, _mbi}} ->
         Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
 
-        {height, block_time(block_hash)}
+        {:ok, {height, block_time(block_hash)}}
 
       :none ->
-        raise RuntimeError, message: "can't get last key for table Model.Block"
+        :no_blocks
     end
   end
 

@@ -541,7 +541,7 @@ defmodule AeMdw.Db.Format do
     cs = Name.stream_nested_resource(state, Model.NameClaim, plain_name, active_h)
     us = Name.stream_nested_resource(state, Model.NameUpdate, plain_name, active_h)
     ts = Name.stream_nested_resource(state, Model.NameTransfer, plain_name, active_h)
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time!(state)
 
     %{
       active_from: active_h,
@@ -574,7 +574,7 @@ defmodule AeMdw.Db.Format do
     name_ttl = Names.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
     last_bid = put_in(last_bid, keys, name_ttl)
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time!(state)
     auction_end_time = DbUtil.height_to_time(state, auction_end, last_gen, last_micro_time)
 
     %{
