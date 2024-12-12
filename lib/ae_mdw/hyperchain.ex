@@ -8,6 +8,7 @@ defmodule AeMdw.Hyperchain do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util.Encoding
   alias AeMdw.Sync.Hyperchain
@@ -46,7 +47,7 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
-  @spec fetch_epoch_top(State.t()) :: {:ok, Hyperchain.epoch()} | {:error, term()}
+  @spec fetch_epoch_top(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_epoch_top(state) do
     current_height = State.height(state)
 
