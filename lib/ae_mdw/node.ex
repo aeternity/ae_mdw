@@ -413,7 +413,7 @@ defmodule AeMdw.Node do
 
   defmemop tx_groups_map() do
     type_groups_map =
-      ~w(oracle name contract channel spend ga paying)a
+      ~w(oracle name contract channel spend ga paying hc)a
       |> Map.new(&{to_string(&1), &1})
 
     tx_types()

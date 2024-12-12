@@ -8,6 +8,7 @@ defmodule AeMdw.Hyperchain do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util.Encoding
   alias AeMdw.Sync.Hyperchain
@@ -46,7 +47,7 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
-  @spec fetch_epoch_top(State.t()) :: {:ok, Hyperchain.epoch()} | {:error, term()}
+  @spec fetch_epoch_top(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_epoch_top(state) do
     current_height = State.height(state)
 
@@ -242,8 +243,8 @@ defmodule AeMdw.Hyperchain do
   end
 
   defp get_delegates(state, epoch, pubkey) do
-    Collection.stream(
-      state,
+    state
+    |> Collection.stream(
       Model.Delegate,
       :backward,
       Collection.generate_key_boundary({pubkey, epoch, Collection.binary()}),
@@ -338,7 +339,7 @@ defmodule AeMdw.Hyperchain do
         {:ok, {first_gen, last_gen}}
 
       {:epoch, first_epoch..last_epoch//_step} ->
-        with {:ok, epoch_length} = Node.epoch_length(last_epoch),
+        with {:ok, epoch_length} <- Node.epoch_length(last_epoch),
              {:ok, first_gen} <- Node.epoch_start_height(first_epoch),
              {:ok, last_gen} <- Node.epoch_start_height(last_epoch) do
           {:ok, {first_gen, last_gen + epoch_length - 1}}

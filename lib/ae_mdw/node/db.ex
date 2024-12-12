@@ -3,6 +3,7 @@ defmodule AeMdw.Node.Db do
 
   import AeMdw.Util
 
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.DryRun.Runner
@@ -31,26 +32,81 @@ defmodule AeMdw.Node.Db do
   @spec get_blocks_per_height(Blocks.height(), Blocks.block_hash() | Blocks.height()) :: [
           {Blocks.height(), [micro_block()], Blocks.block_hash() | nil}
         ]
-  def get_blocks_per_height(from_height, block_hash) when is_binary(block_hash),
-    do: get_blocks_per_height(from_height, block_hash, nil)
+  def get_blocks_per_height(from_height, block_hash_or_height) do
+    if Hyperchain.hyperchain?() do
+      get_blocks_per_height_hyperchain(from_height, block_hash_or_height)
+    else
+      blocks_per_height(from_height, block_hash_or_height)
+    end
+  end
 
-  def get_blocks_per_height(from_height, to_height) when is_integer(to_height) do
+  defp blocks_per_height(from_height, block_hash) when is_binary(block_hash),
+    do: blocks_per_height(from_height, block_hash, nil)
+
+  defp blocks_per_height(from_height, to_height) when is_integer(to_height) do
     {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
 
     last_mb_hash = :aec_headers.prev_hash(header)
     {:ok, last_kb_hash} = :aec_headers.hash_header(header)
 
-    get_blocks_per_height(from_height, last_mb_hash, last_kb_hash)
+    blocks_per_height(from_height, last_mb_hash, last_kb_hash)
   end
 
-  defp get_blocks_per_height(from_height, last_mb_hash, last_kb_hash) do
+  defp blocks_per_height(from_height, last_mb_hash, last_kb_hash) do
     {:ok, root_hash} =
       :aec_chain.genesis_block()
       |> :aec_blocks.to_header()
       |> :aec_headers.hash_header()
 
     {last_mb_hash, last_kb_hash}
-    |> Stream.unfold(fn
+    |> unfold_blocks(root_hash)
+    |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
+      :aec_blocks.height(key_block) >= from_height
+    end)
+    |> Enum.reverse()
+  end
+
+  defp get_blocks_per_height_hyperchain(from_height, to_height) when is_integer(to_height) do
+    {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
+    {:ok, last_kb_hash} = :aec_headers.hash_header(header)
+
+    get_blocks_per_height_hyperchain(from_height, last_kb_hash)
+  end
+
+  defp get_blocks_per_height_hyperchain(from_height, last_kb_hash) when is_binary(last_kb_hash) do
+    {:ok, root_hash} =
+      :aec_chain.genesis_block()
+      |> :aec_blocks.to_header()
+      |> :aec_headers.hash_header()
+
+    last_kb_hash
+    |> unfold_blocks_hyperchain(root_hash)
+    |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
+      :aec_blocks.height(key_block) >= from_height
+    end)
+    |> Enum.reverse()
+  end
+
+  defp unfold_blocks_hyperchain(last_kb_hash, root_hash) do
+    Stream.unfold(last_kb_hash, fn
+      ^root_hash ->
+        nil
+
+      last_kb_hash ->
+        prev_key_hash =
+          last_kb_hash
+          |> :aec_db.get_block()
+          |> :aec_blocks.prev_key_hash()
+
+        {:ok, %{key_block: prev_key_block, micro_blocks: micro_blocks}} =
+          :aec_chain.get_generation_by_hash(prev_key_hash, :backward)
+
+        {{prev_key_block, micro_blocks, last_kb_hash}, prev_key_hash}
+    end)
+  end
+
+  defp unfold_blocks(hashes, root_hash) do
+    Stream.unfold(hashes, fn
       {_last_mb_hash, ^root_hash} ->
         nil
 
@@ -63,10 +119,6 @@ defmodule AeMdw.Node.Db do
 
         {{key_block, micro_blocks, last_kb_hash}, {prev_hash, key_hash}}
     end)
-    |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
-      :aec_blocks.height(key_block) >= from_height
-    end)
-    |> Enum.reverse()
   end
 
   defp get_kb_mbs(last_mb_hash) do
