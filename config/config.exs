@@ -5,6 +5,9 @@ alias AeMdw.Db.Model
 
 node_root = System.get_env("NODEROOT", "../aeternity/_build/local/")
 
+config :esbuild,
+  version: "0.8.2"
+
 config :ae_mdw, AeMdw.Db.RocksDb,
   data_dir: "#{node_root}/rel/aeternity/data/mdw.db",
   drop_tables: [
@@ -33,7 +36,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "kATf71kudJsgA1dgCQKcmgelicqJHG8EID8rwROwJHpWHb53EdzW7YDclJZ8mxLP",
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
+  pubsub_server: AeMdw.PubSub,
   live_view: [signing_salt: "Oy680JAN"],
   code_reloader: false,
   watchers: [],
