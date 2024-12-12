@@ -21,7 +21,7 @@ defmodule AeMdw.Migrations.AddEpochInfo do
               :error -> {:halt, height}
             end
           end,
-          fn _ -> :ok end
+          fn _height -> :ok end
         )
 
       stream
