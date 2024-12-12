@@ -89,7 +89,8 @@ defmodule AeMdw.Sync.Hyperchain do
        {_main_staking_ct, _unstake_deley, _pending_unstake_amount, _pending_unstake, _name,
         _description, _image_url, delegates, _shares}} = state
 
-      Enum.into(delegates, %{}, fn {{:address, pubkey}, stake} ->
+      delegates
+      |> Enum.into(%{}, fn {{:address, pubkey}, stake} ->
         {pubkey, stake}
       end)
       |> then(&{:ok, &1})

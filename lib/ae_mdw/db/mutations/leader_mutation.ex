@@ -7,6 +7,7 @@ defmodule AeMdw.Db.LeaderMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Node
   alias AeMdw.Sync.Hyperchain
 
   require Model
@@ -32,6 +33,29 @@ defmodule AeMdw.Db.LeaderMutation do
       put_new_leaders(state, height)
     else
       state
+    end
+  end
+
+  @spec put_delegates(State.t(), Node.height(), Node.epoch(), Hyperchain.leader()) :: State.t()
+  def put_delegates(state, start_height, epoch, leader) do
+    start_height
+    |> Hyperchain.get_delegates(leader)
+    |> case do
+      {:ok, delegates} ->
+        Enum.reduce(delegates, state, fn {delegate, stake}, acc_state ->
+          State.put(
+            acc_state,
+            Model.Delegate,
+            Model.delegate(index: {leader, epoch, delegate}, stake: stake)
+          )
+        end)
+
+      :error ->
+        Logger.error(
+          "Error fetching delegates for leader #{inspect(leader)} at height #{start_height} in epoch #{epoch}"
+        )
+
+        state
     end
   end
 
@@ -74,28 +98,6 @@ defmodule AeMdw.Db.LeaderMutation do
         # |> Enum.reduce(state, fn {^epoch, leader}, state ->
         #   put_delegates(state, start_height, epoch, leader)
         # end)
-    end
-  end
-
-  def put_delegates(state, start_height, epoch, leader) do
-    start_height
-    |> Hyperchain.get_delegates(leader)
-    |> case do
-      {:ok, delegates} ->
-        Enum.reduce(delegates, state, fn {delegate, stake}, acc_state ->
-          State.put(
-            acc_state,
-            Model.Delegate,
-            Model.delegate(index: {leader, epoch, delegate}, stake: stake)
-          )
-        end)
-
-      :error ->
-        Logger.error(
-          "Error fetching delegates for leader #{inspect(leader)} at height #{start_height} in epoch #{epoch}"
-        )
-
-        state
     end
   end
 end

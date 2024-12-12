@@ -25,7 +25,7 @@ defmodule AeMdw.Migrations.AddHyperchainLeaders do
               leaders = Hyperchain.leaders_for_epoch_at_height(height)
               {leaders, height + length(leaders)}
           end,
-          fn _ -> :ok end
+          fn _height -> :ok end
         )
 
       stream

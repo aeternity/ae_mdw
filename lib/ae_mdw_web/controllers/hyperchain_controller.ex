@@ -74,7 +74,7 @@ defmodule AeMdwWeb.HyperchainController do
 
   @spec validator(Conn.t(), map()) :: Conn.t()
   def validator(%Conn{assigns: %{state: state}} = conn, %{"validator_id" => validator_id}) do
-    with {:ok, validator} <- Hyperchain.fetch_validator(state, validator_id) |> IO.inspect() do
+    with {:ok, validator} <- Hyperchain.fetch_validator(state, validator_id) do
       format_json(conn, validator)
     end
   end
