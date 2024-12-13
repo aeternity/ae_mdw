@@ -1322,7 +1322,7 @@ defmodule AeMdw.Db.Model do
             leader: pubkey()
           )
 
-  @epoch_info_defaults [index: 0, first: 0, last: 0, length: 0, seed: <<>>, validators: []]
+  @epoch_info_defaults [index: 0, first: 0, last: 0, length: 0, seed: <<>>]
   defrecord :epoch_info, @epoch_info_defaults
 
   @type epoch_info_index() :: Hyperchain.epoch()
@@ -1332,8 +1332,7 @@ defmodule AeMdw.Db.Model do
             first: Blocks.height(),
             last: Blocks.height(),
             length: non_neg_integer(),
-            seed: binary() | :undefined,
-            validators: list({pubkey(), non_neg_integer()})
+            seed: binary() | :undefined
           )
 
   @validator_defaults [index: {<<>>, 0}, stake: 0]

@@ -51,8 +51,7 @@ defmodule AeMdw.Hyperchain do
   def fetch_epoch_top(state) do
     current_height = State.height(state)
 
-    with {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height),
-         {:ok, Model.epoch_info(index: ^epoch)} <- State.get(state, Model.EpochInfo, epoch) do
+    with {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
       {:ok, render_epoch_info(state, epoch)}
     else
       error when error in [:not_found, :error] ->
@@ -259,25 +258,22 @@ defmodule AeMdw.Hyperchain do
     |> then(&render_leader(state, &1))
   end
 
-  defp render_leader(_state, leader) do
-    leader
-    |> inspect()
+  defp render_leader(_state, Model.hyperchain_leader_at_height(index: height, leader: leader)) do
+    %{height: height, leader: Encoding.encode_account(leader)}
   end
 
-  defp render_epoch_info(state, epoch) when is_integer(epoch) do
-    Model.epoch_info(
-      index: ^epoch,
-      first: first,
-      last: last,
-      length: length,
-      seed: seed,
-      validators: validators
-    ) = State.fetch!(state, Model.EpochInfo, epoch)
+  defp render_epoch_info(state, epoch_index) when is_integer(epoch_index) do
+    epoch =
+      Model.epoch_info(index: ^epoch_index) = State.fetch!(state, Model.EpochInfo, epoch_index)
 
+    render_epoch_info(state, epoch)
+  end
+
+  defp render_epoch_info(
+         state,
+         Model.epoch_info(index: epoch, first: first, last: last, length: length, seed: seed)
+       ) do
     last_pin_height = first - 1
-
-    {:ok, parent_block_hash} =
-      :aec_chain_state.get_key_block_hash_at_height(last_pin_height)
 
     {:ok, last_block} =
       :aec_chain.get_key_block_by_height(last_pin_height)
@@ -301,6 +297,21 @@ defmodule AeMdw.Hyperchain do
     Model.hyperchain_leader_at_height(leader: last_leader) =
       State.fetch!(state, Model.HyperchainLeaderAtHeight, last_leader_height)
 
+    validators =
+      state
+      |> Collection.stream(
+        Model.RevValidator,
+        :backward,
+        Collection.generate_key_boundary({epoch, Collection.binary()}),
+        nil
+      )
+      |> Enum.map(fn {^epoch, pubkey} ->
+        Model.validator(stake: stake) =
+          State.fetch!(state, Model.Validator, {pubkey, epoch})
+
+        %{validator: Encoding.encode_account(pubkey), stake: stake}
+      end)
+
     %{
       epoch: epoch,
       first: first,
@@ -308,13 +319,9 @@ defmodule AeMdw.Hyperchain do
       length: length,
       seed: seed,
       last_pin_height: last_pin_height,
-      parent_block_hash: Encoding.encode_block(:key, parent_block_hash),
       last_leader: Encoding.encode_account(last_leader),
       epoch_start_time: epoch_start_time,
-      validators:
-        Enum.map(validators, fn {pubkey, number} ->
-          %{validator: Encoding.encode_account(pubkey), stake: number}
-        end)
+      validators: validators
     }
   end
 
