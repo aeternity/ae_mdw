@@ -618,43 +618,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
-/accounts/{accountId}/names/claims:
-  get:
-    deprecated: false
-    description: Get all name claims of an account
-    operationId: GetAccountNameClaims
-    parameters:
-      - name: accountId
-        in: path
-        description: The account that made the claims
-        required: true
-        schema:
-          $ref: '#/components/schemas/AccountAddress'
-      - $ref: '#/components/parameters/LimitParam'
-      - $ref: '#/components/parameters/ScopeParam'
-      - $ref: '#/components/parameters/DirectionParam'
-    responses:
-      '200':
-        description: Returns the name the active and inactive name claims
-        content:
-          application/json:
-            schema:
-              allOf:
-                - type: object
-                  required:
-                    - data
-                  properties:
-                    data:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/NameClaim'
-                - $ref: '#/components/schemas/PaginatedResponse'
-      '404':
-        description: Not Found
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotFoundResponse'
+  /accounts/{accountId}/names/claims:
+    get:
+      deprecated: false
+      description: Get all name claims of an account
+      operationId: GetAccountNameClaims
+      parameters:
+        - name: accountId
+          in: path
+          description: The account that made the claims
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the name the active and inactive name claims
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NameClaim'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
   /names/{id}/claims:
     get:
       deprecated: false
