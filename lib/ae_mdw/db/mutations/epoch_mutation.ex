@@ -57,8 +57,7 @@ defmodule AeMdw.Db.EpochMutation do
           first: first,
           last: last,
           length: length,
-          seed: seed,
-          validators: validators
+          seed: seed
         )
       )
 
