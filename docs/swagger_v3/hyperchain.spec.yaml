@@ -125,6 +125,8 @@ paths:
       operationId: GetEpochs
       parameters:
         - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
       responses:
         '200':
           description: Returns paginated list of information about Epochs
@@ -170,6 +172,10 @@ paths:
       deprecated: false
       description: Get Validators information
       operationId: GetValidators
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
       responses:
         '200':
           description: Returns validator information
@@ -197,6 +203,13 @@ paths:
       deprecated: false
       description: Get Validator information
       operationId: GetValidator
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema: 
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         '200':
           description: Returns validator information
@@ -215,6 +228,16 @@ paths:
       deprecated: false
       description: Get Delegates information for validator
       operationId: GetValidatorDelegates
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
       responses:
         '200':
           description: Returns delegates information
@@ -242,6 +265,16 @@ paths:
       deprecated: false
       description: Get top Delegates information for validator
       operationId: GetTopValidatorDelegates
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema: 
+            $ref: '#/components/schemas/AccountAddress'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
       responses:
         '200':
           description: Returns top validator delegates information
@@ -271,6 +304,8 @@ paths:
       operationId: GetSchedules
       parameters:
         - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
       responses:
         '200':
           description: Returns schedule information
@@ -298,6 +333,13 @@ paths:
       deprecated: false
       description: Get Schedule information
       operationId: GetSchedule
+      parameters:
+        - name: height
+          in: path
+          description: Schedule height
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Returns schedule information
