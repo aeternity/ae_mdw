@@ -1389,7 +1389,7 @@ defmodule AeMdw.Db.Model do
       oracle_tables(),
       stat_tables(),
       tasks_tables(),
-      if(Hyperchain.hyperchain?(), do: hyperchain_tables(), else: [])
+      hyperchain_tables()
     ])
   end
 
