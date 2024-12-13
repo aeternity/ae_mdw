@@ -26,7 +26,7 @@ case $1 in
 
   "hc-shell")
     mix local.hex --force && mix local.rebar --force && mix deps.get
-    AETERNITY_CONFIG=./hyperchains/aeternity.yaml iex --sname $NAME -S mix phx.server
+    AETERNITY_CONFIG=./hyperchain/aeternity.yaml iex --sname $NAME -S mix phx.server
     ;;
 
 
