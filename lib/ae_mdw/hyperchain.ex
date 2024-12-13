@@ -51,9 +51,12 @@ defmodule AeMdw.Hyperchain do
   def fetch_epoch_top(state) do
     current_height = State.height(state)
 
-    with {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
-      {:ok, render_epoch_info(state, epoch)}
-    else
+    current_height
+    |> Hyperchain.epoch_info_at_height()
+    |> case do
+      {:ok, %{epoch: epoch}} ->
+        {:ok, render_epoch_info(state, epoch)}
+
       error when error in [:not_found, :error] ->
         {:error, ErrInput.NotFound.exception(value: "epoch at height #{current_height}")}
     end
