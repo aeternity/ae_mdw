@@ -49,6 +49,11 @@ chain:
   hard_forks:
     '6': 0
   persist: true
+  currency:
+    name: Hyper Aeternity
+    symbol: HAE
+  display:
+    network_name: Local Hyperchain
 
 fork_management:
   network_id: 'hc_devnet'
