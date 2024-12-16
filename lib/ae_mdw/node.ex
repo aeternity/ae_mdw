@@ -328,6 +328,11 @@ defmodule AeMdw.Node do
     :aetx.type_to_swagger_name(tx_type)
   end
 
+  @spec epoch_start_height(epoch()) :: {:ok, height()} | {:error, atom()}
+  def epoch_start_height(epoch) do
+    :aec_chain_hc.epoch_start_height(epoch)
+  end
+
   @spec tx_prefixes :: MapSet.t()
   defmemo tx_prefixes() do
     tx_types()
@@ -344,11 +349,6 @@ defmodule AeMdw.Node do
     tx_mod_map()
     |> Map.keys()
     |> MapSet.new()
-  end
-
-  @spec epoch_start_height(epoch()) :: {:ok, height()} | {:error, atom()}
-  defmemo epoch_start_height(epoch) do
-    :aec_chain_hc.epoch_start_height(epoch)
   end
 
   @spec epoch_length(epoch()) :: {:ok, non_neg_integer()} | {:error, atom()}
