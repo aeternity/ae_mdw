@@ -39,7 +39,7 @@ defmodule AeMdw.Sync.Hyperchain do
     end
   end
 
-  @spec leaders_for_epoch_at_height(Blocks.height()) :: [{Blocks.height(), leader()}]
+  @spec leaders_for_epoch_at_height(Blocks.height()) :: [{leader(), Blocks.height()}]
   def leaders_for_epoch_at_height(height) do
     {:ok, kb_hash} = :aec_chain_state.get_key_block_hash_at_height(height)
     {_tx_env, _trees} = run_env = :aetx_env.tx_env_and_trees_from_hash(:aetx_transaction, kb_hash)
@@ -59,9 +59,7 @@ defmodule AeMdw.Sync.Hyperchain do
 
     {:ok, schedule} = :aec_chain_hc.validator_schedule(run_env, seed, validators, length)
 
-    first
-    |> Stream.iterate(fn x -> x + 1 end)
-    |> Enum.zip(schedule)
+    Enum.with_index(schedule, first)
   end
 
   @spec validators_at_height(Blocks.height()) :: [term()]

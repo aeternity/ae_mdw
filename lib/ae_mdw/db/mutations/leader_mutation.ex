@@ -69,7 +69,7 @@ defmodule AeMdw.Db.LeaderMutation do
       {:ok, %{epoch: epoch, first: _start_height}} ->
         height
         |> Hyperchain.leaders_for_epoch_at_height()
-        |> Enum.reduce(state, fn {height, leader}, state ->
+        |> Enum.reduce(state, fn {leader, height}, state ->
           state
           |> State.put(
             Model.HyperchainLeaderAtHeight,
