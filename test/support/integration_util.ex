@@ -9,6 +9,7 @@ defmodule AeMdw.IntegrationUtil do
   @endpoint AeMdwWeb.Endpoint
 
   defmodule PaginationParams do
+    @moduledoc false
     @enforce_keys [:url]
     defstruct [:url, params: [], entries_range: 1..10]
   end
@@ -29,6 +30,7 @@ defmodule AeMdw.IntegrationUtil do
     |> scan(conn, new_acc, f)
   end
 
+  @spec test_pagination(Conn.t(), PaginationParams.t()) :: any()
   def test_pagination(conn, %PaginationParams{
         url: url,
         params: params,
