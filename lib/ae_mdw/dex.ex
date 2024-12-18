@@ -238,12 +238,6 @@ defmodule AeMdw.Dex do
     fn direction ->
       create_txis
       |> Enum.map(fn create_txi ->
-        cursor =
-          case cursor do
-            {account_pk, txi, log_idx} -> {create_txi, account_pk, txi, log_idx}
-            nil -> nil
-          end
-
         key_boundary =
           Collection.generate_key_boundary(
             {create_txi, Collection.binary(), Collection.integer(), Collection.integer()}
@@ -293,7 +287,7 @@ defmodule AeMdw.Dex do
          {create_txi, <<_pk::256>> = account_pk, txi, log_idx}
          when is_integer(create_txi) and is_integer(txi) and is_integer(log_idx) <-
            :erlang.binary_to_term(cursor_bin) do
-      {:ok, {account_pk, txi, log_idx}}
+      {:ok, {create_txi, account_pk, txi, log_idx}}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_hex)}
