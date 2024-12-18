@@ -26,7 +26,6 @@
 - [Oracles](#oracles)
 - [Channels](#channels)
 - [AEX9 tokens](#aex9-tokens)
-- [AEX9 contract balances](#aex9-contract-balances)
 - [NFTs](#aex141)
 - [Statistics](#statistics)
 - [Activities](#activities)
@@ -43,6 +42,11 @@ The middleware is a caching and reporting layer which sits in front of the nodes
 
 The architecture of the app is explained [here](docs/architecture.md).
 
+## Prerequisites
+
+For running it without Docker, ensure that you have [Elixir 1.17](https://elixir-lang.org/install.html) installed, using Erlang 26 or newer.
+
+If using Docker, make sure you have [Docker 27](https://docs.docker.com/engine/install/) or newer.
 
 ## Setup
 
@@ -3259,7 +3263,7 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v3/aex141/transfers?to=ak_QVSUoGrJ31
 
 ---
 
-## Stats
+## Statistics
 
 ### `/v3/stats/delta`
 
