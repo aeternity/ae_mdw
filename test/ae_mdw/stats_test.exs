@@ -2,6 +2,7 @@ defmodule AeMdw.StatsTest do
   use ExUnit.Case
   import Mock
 
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Db.State
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
@@ -38,7 +39,8 @@ defmodule AeMdw.StatsTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
-         end}
+         end},
+        {Hyperchain, [], hyperchain?: fn -> false end}
       ]) do
         assert {:ok,
                 %{

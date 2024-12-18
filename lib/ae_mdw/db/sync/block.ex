@@ -15,11 +15,14 @@ defmodule AeMdw.Db.Sync.Block do
        3.3. Get the mutations from each micro-block and execute them.
   """
 
+  alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Blocks
   alias AeMdw.Db.BlockStatisticsMutation
+  alias AeMdw.Db.EpochMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlockMutation
+  alias AeMdw.Db.LeaderMutation
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.State
@@ -28,6 +31,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.TypeCountersMutation
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
@@ -93,6 +97,14 @@ defmodule AeMdw.Db.Sync.Block do
           WriteMutation.new(Model.Block, key_block)
         end
 
+      genesis_accounts_balances_mutation =
+        if height == 0 do
+          :aec_fork_block_settings.genesis_accounts()
+          |> Enum.map(fn {pk, amount} ->
+            UpdateBalanceAccountMutation.new(pk, amount)
+          end)
+        end
+
       block_rewards_mutation =
         if height >= AE.min_block_reward_height() and
              :aec_consensus_hc != :aec_consensus.get_genesis_consensus_module() do
@@ -102,6 +114,7 @@ defmodule AeMdw.Db.Sync.Block do
       gen_mutations =
         [
           kb0_mutation,
+          genesis_accounts_balances_mutation,
           block_rewards_mutation,
           NamesExpirationMutation.new(height),
           OraclesExpirationMutation.new(height),
@@ -114,6 +127,10 @@ defmodule AeMdw.Db.Sync.Block do
             starting_from_mb0?
           ),
           next_kb_mutation
+          | hyperchain_mutations([
+              EpochMutation.new(height),
+              LeaderMutation.new(height)
+            ])
         ]
         |> Enum.reject(&is_nil/1)
 
@@ -121,6 +138,14 @@ defmodule AeMdw.Db.Sync.Block do
 
       {[{height, blocks_mutations}], txi}
     end)
+  end
+
+  defp hyperchain_mutations(mutations) do
+    if Hyperchain.hyperchain?() do
+      mutations
+    else
+      []
+    end
   end
 
   defp micro_block_mutations(mblock, mbi, first_txi, false = _use_cache?) do
