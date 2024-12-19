@@ -448,7 +448,6 @@ defmodule AeMdw.Contract do
 
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     txs = :aec_blocks.txs(micro_block)
-    height = :aec_blocks.height(micro_block)
     txs_taken = txs_until_last_contract_tx(txs)
 
     if txs_taken != [] do
@@ -463,7 +462,7 @@ defmodule AeMdw.Contract do
       {:value, trees_in, _difficulty, _fork_id, _fees, _fraud} =
         :aec_db.find_block_state_and_data(prev_hash, true)
 
-      trees_in = consensus.state_pre_transform_micro_node(height, node, trees_in)
+      trees_in = consensus.state_pre_transform_micro_node(node, trees_in)
       env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
 
       {:ok, _sigs, _trees, events} =
