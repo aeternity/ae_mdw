@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.96.1](https://www.github.com/aeternity/ae_mdw/compare/v1.96.0...v1.96.1) (2024-12-19)
+
+
+### Bug Fixes
+
+* update consensus.state_pre_transform_micro_node function ([#2049](https://www.github.com/aeternity/ae_mdw/issues/2049)) ([7b010f3](https://www.github.com/aeternity/ae_mdw/commit/7b010f359c2b0caee22990b551906c5360030b81))
+
 ## [1.96.0](https://www.github.com/aeternity/ae_mdw/compare/v1.95.0...v1.96.0) (2024-12-18)
 
 
