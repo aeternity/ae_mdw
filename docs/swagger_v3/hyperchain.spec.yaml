@@ -1,0 +1,355 @@
+schemas:
+  Schedule:
+    description: Schedule information
+    type: object
+    properties:
+      height:
+        type: integer
+        example: 1
+      leader:
+        type: string
+        example:  "ak_1111111111111111111111111111111111111111111111111"
+    required:
+      - height
+      - leader
+  Validator:
+    description: Validator information
+    type: object
+    properties:
+      epoch:
+        type: integer
+        example: 1
+      validator:
+        type: string
+        example: "ak_1111111111111111111111111111111111111111111111111"
+      total_stakes:
+        type: integer
+        example: 1000000000000000000
+      delegates:
+        type: integer
+        example: 5
+      rewards_earned:
+        type: integer
+        example: 1000000000000000000
+      pinning_history:
+        type: object
+        additionalProperties:
+          type: integer
+        example: {"1": 1000000000000000000, "2": 2000000000000000000}
+    required:
+      - epoch
+      - validator
+      - total_stakes
+      - delegates
+      - rewards_earned
+      - pinning_history
+  Delegate:
+    description: Delegate information
+    type: object
+    properties:
+      epoch:
+        type: integer
+        example: 1
+      delegate:
+        type: string
+        example: "ak_1111111111111111111111111111111111111111111111111"
+      stake:
+        type: integer
+        example: 1000000000000000000
+      validator:
+        type: string
+        example: "ak_1111111111111111111111111111111111111111111111111"
+    required:
+      - epoch
+      - delegate
+      - stake
+      - validator
+  EpochInfo:
+    description: Epoch information
+    type: object
+    properties:
+      epoch:
+        type: integer
+        example: 1
+      first:
+        type: integer
+        example: 1
+      last:
+        type: integer
+        example: 10
+      length:
+        type: integer
+        example: 10
+      seed:
+        type: string
+        example: "kh_1111111111111111111111111111111111111111111111111"
+      last_pin_height:
+        type: integer
+        example: 10
+      parent_block_hash:
+        type: string
+        example: "kh_1111111111111111111111111111111111111111111111111"
+      last_leader:
+        type: string
+        example: "ak_1111111111111111111111111111111111111111111111111"
+      epoch_start_time:
+        type: integer
+        example: 1629820800000
+      validators:
+        type: array
+        items:
+          type: object
+          properties:
+            validator:
+              type: string
+              example: "ak_1111111111111111111111111111111111111111111111111"
+            stake:
+              type: integer
+              example: 1000000000000000000
+    required:
+      - epoch
+      - first
+      - last
+      - length
+      - seed
+      - last_pin_height
+      - parent_block_hash
+      - last_leader
+      - epoch_start_time
+      - validators
+paths:
+  /hyperchain/epochs:
+    get:
+      deprecated: false
+      description: Get Epoch information
+      operationId: GetEpochs
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
+      responses:
+        '200':
+          description: Returns paginated list of information about Epochs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EpochInfo'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/epochs/top:
+    get:
+      deprecated: false
+      description: Get Top Epoch information
+      operationId: GetEpochTop
+      responses:
+        '200':
+          description: Returns information about the top epoch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpochInfo'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/validators:
+    get:
+      deprecated: false
+      description: Get Validators information
+      operationId: GetValidators
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
+      responses:
+        '200':
+          description: Returns validator information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Validator'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/validators/{validator}:
+    get:
+      deprecated: false
+      description: Get Validator information
+      operationId: GetValidator
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema: 
+            $ref: '#/components/schemas/AccountAddress'
+      responses:
+        '200':
+          description: Returns validator information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Validator'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/validators/{validator}/delegates:
+    get:
+      deprecated: false
+      description: Get Delegates information for validator
+      operationId: GetValidatorDelegates
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
+      responses:
+        '200':
+          description: Returns delegates information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Delegate'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/validators/{validator}/delegates/top:
+    get:
+      deprecated: false
+      description: Get top Delegates information for validator
+      operationId: GetTopValidatorDelegates
+      parameters:
+        - name: validator
+          in: path
+          description: Validator address
+          required: true
+          schema: 
+            $ref: '#/components/schemas/AccountAddress'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
+      responses:
+        '200':
+          description: Returns top validator delegates information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Delegate'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/schedule:
+    get:
+      deprecated: false
+      description: Get Schedule information
+      operationId: GetSchedules
+      parameters:
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/HyperchainScopeParam'
+      responses:
+        '200':
+          description: Returns schedule information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Schedule'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /hyperchain/schedule/height/{height}:
+    get:
+      deprecated: false
+      description: Get Schedule information
+      operationId: GetSchedule
+      parameters:
+        - name: height
+          in: path
+          description: Schedule height
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Returns schedule information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

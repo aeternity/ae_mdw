@@ -126,6 +126,23 @@ defmodule AeMdwWeb.Router do
       get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
+      get "/hyperchain/schedule", HyperchainController, :schedule
+      get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
+      get "/hyperchain/epochs", HyperchainController, :epochs
+      get "/hyperchain/epochs/top", HyperchainController, :epochs_top
+      get "/hyperchain/validators", HyperchainController, :validators
+      get "/hyperchain/validators/top", HyperchainController, :validators_top
+
+      get "/hyperchain/validators/:validator_id/delegates",
+          HyperchainController,
+          :validator_delegates
+
+      get "/hyperchain/validators/:validator_id/delegates/top",
+          HyperchainController,
+          :validator_delegates_top
+
+      get "/hyperchain/validators/:validator_id", HyperchainController, :validator
+
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v3.json"}
     end
