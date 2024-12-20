@@ -51,7 +51,7 @@ defmodule AeMdw.Stats do
           | :hashrate
           | :contracts
           | :total_accounts
-  @type interval_by() :: :day | :week | :month
+  @type interval_by() :: :day | :week | :month | :height
   @type interval_start() :: non_neg_integer()
 
   @tps_stat_key :max_tps
@@ -72,7 +72,8 @@ defmodule AeMdw.Stats do
   @interval_by_mapping %{
     "day" => :day,
     "week" => :week,
-    "month" => :month
+    "month" => :month,
+    "height" => :height
   }
 
   @spec max_tps_key() :: atom()
@@ -165,10 +166,6 @@ defmodule AeMdw.Stats do
   @spec fetch_delta_stat!(State.t(), height()) :: delta_stat()
   def fetch_delta_stat!(state, height),
     do: render_delta_stat(state, State.fetch!(state, Model.DeltaStat, height))
-
-  @spec fetch_total_stat!(State.t(), height()) :: total_stat()
-  def fetch_total_stat!(state, height),
-    do: render_total_stat(state, State.fetch!(state, Model.TotalStat, height))
 
   @spec fetch_nft_stats(State.t(), pubkey()) :: nft_stats()
   def fetch_nft_stats(state, contract_pk) do
@@ -496,6 +493,10 @@ defmodule AeMdw.Stats do
 
   defp render_total_stats(state, gens), do: Enum.map(gens, &fetch_total_stat!(state, &1))
 
+  @spec fetch_total_stat!(State.t(), height()) :: total_stat()
+  defp fetch_total_stat!(state, height),
+    do: render_total_stat(state, State.fetch!(state, Model.TotalStat, height))
+
   defp render_delta_stat(
          state,
          Model.delta_stat(
@@ -513,7 +514,8 @@ defmodule AeMdw.Stats do
            burned_in_auctions: burned_in_auctions,
            channels_opened: channels_opened,
            channels_closed: channels_closed,
-           locked_in_channels: locked_in_channels
+           locked_in_channels: locked_in_channels,
+           total_accounts: total_accounts
          )
        ) do
     %{
@@ -532,7 +534,8 @@ defmodule AeMdw.Stats do
       channels_opened: channels_opened,
       channels_closed: channels_closed,
       locked_in_channels: locked_in_channels,
-      last_tx_hash: fetch_last_tx_hash!(state, height)
+      last_tx_hash: fetch_last_tx_hash!(state, height),
+      total_accounts: total_accounts
     }
   end
 

@@ -5,6 +5,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
+  alias AeMdw.IntegrationUtil
 
   @moduletag :integration
 
@@ -283,6 +284,96 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
           |> get("/v3/stats/total", scope_type: "gen", range: range, limit: 1)
           |> json_response(200)
       )
+    end
+  end
+
+  describe "stats" do
+    test "it returns stats", %{conn: conn} do
+      assert %{
+               "miners_count" => _miners_count,
+               "fees_trend" => _fees_trend,
+               "last_24hs_average_transaction_fees" => _last_24hs_average_transaction_fees,
+               "last_24hs_transactions" => _last_24hs_transactions,
+               "max_transactions_per_second" => _max_transactions_per_second,
+               "max_transactions_per_second_block_hash" =>
+                 _max_transactions_per_second_block_hash,
+               "milliseconds_per_block" => _milliseconds_per_block,
+               "transactions_trend" => _transactions_trend
+             } =
+               conn
+               |> get("/v3/stats")
+               |> json_response(200)
+    end
+  end
+
+  describe "miners_stats" do
+    test "it returns miners stats", %{conn: conn} do
+      assert %{
+               "data" => [
+                 %{
+                   "miner" => _miner,
+                   "total_reward" => _total_reward
+                 }
+                 | _rest_of_data
+               ]
+             } =
+               conn
+               |> get("/v3/stats/miners")
+               |> json_response(200)
+    end
+
+    test "pagination works", %{conn: conn} do
+      IntegrationUtil.test_pagination(conn, %IntegrationUtil.PaginationParams{
+        url: "/v3/stats/miners"
+      })
+    end
+  end
+
+  describe "transaction_stats" do
+    test "it returns transaction stats", %{conn: conn} do
+      assert %{
+               "data" => [
+                 %{
+                   "count" => _count,
+                   "end_date" => _end_date,
+                   "start_date" => _start_date
+                 }
+                 | _rest_of_data
+               ]
+             } =
+               conn
+               |> get("/v3/stats/transactions")
+               |> json_response(200)
+    end
+
+    test "pagination works", %{conn: conn} do
+      IntegrationUtil.test_pagination(conn, %IntegrationUtil.PaginationParams{
+        url: "/v3/stats/transactions"
+      })
+    end
+  end
+
+  describe "blocks_stats" do
+    test "it returns blocks stats", %{conn: conn} do
+      assert %{
+               "data" => [
+                 %{
+                   "count" => _count,
+                   "end_date" => _end_date,
+                   "start_date" => _start_date
+                 }
+                 | _rest_of_data
+               ]
+             } =
+               conn
+               |> get("/v3/stats/blocks")
+               |> json_response(200)
+    end
+
+    test "pagination works", %{conn: conn} do
+      IntegrationUtil.test_pagination(conn, %IntegrationUtil.PaginationParams{
+        url: "/v3/stats/blocks"
+      })
     end
   end
 end

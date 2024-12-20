@@ -230,6 +230,26 @@ defmodule AeMdw.Db.Sync.Stats do
     end)
   end
 
+  @spec increment_height_statistics(
+          State.t(),
+          Stats.statistic_tag(),
+          Blocks.height(),
+          pos_integer()
+        ) :: State.t()
+  def increment_height_statistics(state, key, height, increment) do
+    index = {key, :height, height}
+
+    State.update(
+      state,
+      Model.Statistic,
+      index,
+      fn Model.statistic(count: count) = statistics ->
+        Model.statistic(statistics, count: count + increment)
+      end,
+      Model.statistic(index: index, count: 0)
+    )
+  end
+
   defp increment_collection_nfts(state, contract_pk, nil),
     do: update_stat_counter(state, Stats.nfts_count_key(contract_pk))
 

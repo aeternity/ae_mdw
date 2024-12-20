@@ -113,7 +113,8 @@ defmodule AeMdw.Db.StatsMutation do
       burned_in_auctions: get(state, :burned_in_auctions, 0),
       channels_opened: get(state, :channels_opened, 0),
       channels_closed: get(state, :channels_closed, 0),
-      locked_in_channels: get(state, :locked_in_channels, 0)
+      locked_in_channels: get(state, :locked_in_channels, 0),
+      total_accounts: get(state, :total_accounts, 0)
     )
   end
 
@@ -160,6 +161,12 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_auctions = spent_in_auctions - refund_in_auctions
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
+    total_accounts =
+      case State.get(state, Model.Statistic, {:total_accounts, :height, height}) do
+        {:ok, Model.statistic(count: count)} -> count
+        :not_found -> 0
+      end
+
     Model.delta_stat(
       index: height,
       auctions_started: max(0, current_active_auctions - prev_active_auctions),
@@ -175,7 +182,8 @@ defmodule AeMdw.Db.StatsMutation do
       burned_in_auctions: burned_in_auctions,
       channels_opened: channels_opened,
       channels_closed: channels_closed,
-      locked_in_channels: locked_in_channels
+      locked_in_channels: locked_in_channels,
+      total_accounts: total_accounts
     )
   end
 

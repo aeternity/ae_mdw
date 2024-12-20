@@ -11,8 +11,9 @@ defmodule AeMdw.Accounts do
 
   require Model
 
-  @spec maybe_increase_creation_statistics(State.t(), Db.pubkey(), Blocks.time()) :: State.t()
-  def maybe_increase_creation_statistics(state, pubkey, time) do
+  @spec maybe_increase_creation_statistics(State.t(), Db.pubkey(), Blocks.time(), Blocks.height()) ::
+          State.t()
+  def maybe_increase_creation_statistics(state, pubkey, time, height) do
     state
     |> State.get(Model.AccountCreation, pubkey)
     |> case do
@@ -23,6 +24,8 @@ defmodule AeMdw.Accounts do
           Model.account_creation(index: pubkey, creation_time: time)
         )
         |> SyncStats.increment_statistics(:total_accounts, time, 1)
+        |> SyncStats.increment_height_statistics(:total_accounts, height, 1)
+        |> State.inc_stat(:total_accounts)
 
       _account_creation ->
         state

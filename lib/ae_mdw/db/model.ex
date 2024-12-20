@@ -1206,7 +1206,8 @@ defmodule AeMdw.Db.Model do
     burned_in_auctions: 0,
     channels_opened: 0,
     channels_closed: 0,
-    locked_in_channels: 0
+    locked_in_channels: 0,
+    total_accounts: 0
   ]
   defrecord :delta_stat, @delta_stat_defaults
 
@@ -1227,7 +1228,8 @@ defmodule AeMdw.Db.Model do
             burned_in_auctions: integer(),
             channels_opened: non_neg_integer(),
             channels_closed: non_neg_integer(),
-            locked_in_channels: integer()
+            locked_in_channels: integer(),
+            total_accounts: non_neg_integer()
           )
 
   # summarized statistics

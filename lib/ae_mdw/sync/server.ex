@@ -321,7 +321,7 @@ defmodule AeMdw.Sync.Server do
     new_state =
       gens_mutations
       |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
-        blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
+        blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations, height)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
         :ok = profile_sync("sync_db", height, ts, blocks_mutations)
@@ -340,7 +340,7 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp maybe_add_accounts_balance_mutations(gen_mutations) do
+  defp maybe_add_accounts_balance_mutations(gen_mutations, height) do
     accounts_set =
       Enum.reduce(gen_mutations, MapSet.new(), fn
         {{_height, -1}, _block, _mutations}, set ->
@@ -365,7 +365,7 @@ defmodule AeMdw.Sync.Server do
       account_statistics_mutations =
         Enum.flat_map(accounts_set, fn pubkey ->
           [
-            {block_index, mblock, AccountCreationMutation.new(pubkey, time)},
+            {block_index, mblock, AccountCreationMutation.new(pubkey, time, height)},
             {block_index, mblock, AccountActivityMutation.new(pubkey, time)}
           ]
         end)
@@ -409,7 +409,7 @@ defmodule AeMdw.Sync.Server do
     # start syncing from memory, then anticipates commit to avoid committing only after 10 gens
     if from_height == AeMdw.Db.Util.synced_height(State.mem_state()) do
       Enum.reduce(gens_mutations, empty_state, fn {height, gen_mutations}, state ->
-        gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
+        gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations, height)
 
         {ts, commited_state} =
           :timer.tc(fn ->
@@ -433,8 +433,9 @@ defmodule AeMdw.Sync.Server do
   defp exec_all_mem_mutations(state, gens_mutations) do
     blocks_mutations =
       gens_mutations
-      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-      |> maybe_add_accounts_balance_mutations()
+      |> Enum.flat_map(fn {height, blocks_mutations} ->
+        maybe_add_accounts_balance_mutations(blocks_mutations, height)
+      end)
 
     {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
     Log.info("[sync_mem] exec until height=#{height}")
