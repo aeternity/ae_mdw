@@ -464,48 +464,53 @@ defmodule AeMdw.Db.Contract do
   defp write_pair_created(state, _contract_pk, _args), do: state
 
   defp write_swap_tokens(state, create_txi, txi, idx, [from, to], amounts) do
-    case String.printable?(amounts) do
-      true ->
-        amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
-        create_txi = Dex.get_create_txi(state, create_txi, txi, idx)
-        pair_pk = Dex.get_pair_pk(state, create_txi, txi, idx)
+    if String.printable?(amounts) do
+      create_txi = Dex.get_create_txi(state, create_txi, txi, idx)
+      pair_pk = Dex.get_pair_pk(state, create_txi, txi, idx)
 
-        Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk) =
-          State.fetch!(state, Model.DexPair, pair_pk)
+      case State.get(state, Model.DexPair, pair_pk) do
+        {:ok, Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk)} ->
+          amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
+          {:ok, token1_create_txi_idx} = Origin.creation_txi_idx(state, token1_pk)
+          {:ok, token2_create_txi_idx} = Origin.creation_txi_idx(state, token2_pk)
 
-        {:ok, token1_create_txi_idx} = Origin.creation_txi_idx(state, token1_pk)
-        {:ok, token2_create_txi_idx} = Origin.creation_txi_idx(state, token2_pk)
-
-        state
-        |> State.put(
-          Model.DexAccountSwapTokens,
-          Model.dex_account_swap_tokens(
-            index: {from, create_txi, txi, idx},
-            to: to,
-            amounts: amounts
+          state
+          |> State.put(
+            Model.DexAccountSwapTokens,
+            Model.dex_account_swap_tokens(
+              index: {from, create_txi, txi, idx},
+              to: to,
+              amounts: amounts
+            )
           )
-        )
-        |> State.put(
-          Model.DexContractSwapTokens,
-          Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
-        )
-        |> State.put(
-          Model.DexSwapTokens,
-          Model.dex_swap_tokens(index: {txi, idx, create_txi})
-        )
-        |> State.put(
-          Model.DexContractTokenSwap,
-          Model.dex_contract_token_swap(index: {token1_create_txi_idx, txi, idx})
-        )
-        |> State.put(
-          Model.DexContractTokenSwap,
-          Model.dex_contract_token_swap(index: {token2_create_txi_idx, txi, idx})
-        )
+          |> State.put(
+            Model.DexContractSwapTokens,
+            Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
+          )
+          |> State.put(
+            Model.DexSwapTokens,
+            Model.dex_swap_tokens(index: {txi, idx, create_txi})
+          )
+          |> State.put(
+            Model.DexContractTokenSwap,
+            Model.dex_contract_token_swap(index: {token1_create_txi_idx, txi, idx})
+          )
+          |> State.put(
+            Model.DexContractTokenSwap,
+            Model.dex_contract_token_swap(index: {token2_create_txi_idx, txi, idx})
+          )
 
-      false ->
-        Log.warn("[write_swap_tokens] amounts not printable: #{create_txi}")
+        :not_found ->
+          Log.warn(
+            "[write_swap_tokens] pair not found: #{inspect(pair_pk)} (#{inspect({txi, idx})})"
+          )
 
-        state
+          state
+      end
+    else
+      Log.warn("[write_swap_tokens] amounts not printable: #{create_txi}")
+
+      state
     end
   end
 

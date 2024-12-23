@@ -22,28 +22,31 @@ defmodule AeMdw.Migrations.IndexDexSwapsByToken do
     |> Stream.flat_map(fn {_evt_hash, txi, contract_txi, log_idx} ->
       pair_pk = Dex.get_pair_pk(state, contract_txi, txi, log_idx)
 
-      Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk) =
-        State.fetch!(state, Model.DexPair, pair_pk)
+      case State.get(state, Model.DexPair, pair_pk) do
+        {:ok, Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk)} ->
+          {:ok, token1_create_txi_idx} = Origin.creation_txi_idx(state, token1_pk)
+          {:ok, token2_create_txi_idx} = Origin.creation_txi_idx(state, token2_pk)
 
-      {:ok, token1_create_txi_idx} = Origin.creation_txi_idx(state, token1_pk)
-      {:ok, token2_create_txi_idx} = Origin.creation_txi_idx(state, token2_pk)
+          [
+            WriteMutation.new(
+              Model.DexContractTokenSwap,
+              Model.dex_contract_token_swap(
+                index: {token1_create_txi_idx, txi, log_idx},
+                contract_call_create_txi: contract_txi
+              )
+            ),
+            WriteMutation.new(
+              Model.DexContractTokenSwap,
+              Model.dex_contract_token_swap(
+                index: {token2_create_txi_idx, txi, log_idx},
+                contract_call_create_txi: contract_txi
+              )
+            )
+          ]
 
-      [
-        WriteMutation.new(
-          Model.DexContractTokenSwap,
-          Model.dex_contract_token_swap(
-            index: {token1_create_txi_idx, txi, log_idx},
-            contract_call_create_txi: contract_txi
-          )
-        ),
-        WriteMutation.new(
-          Model.DexContractTokenSwap,
-          Model.dex_contract_token_swap(
-            index: {token2_create_txi_idx, txi, log_idx},
-            contract_call_create_txi: contract_txi
-          )
-        )
-      ]
+        :not_found ->
+          []
+      end
     end)
     |> Stream.chunk_every(1_000)
     |> Stream.map(fn mutations ->
