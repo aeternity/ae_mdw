@@ -290,7 +290,6 @@ defmodule AeMdw.Node.Db do
     {:value, micro_block} = :aec_db.find_block(mb_hash)
 
     node = :aec_chain_state.wrap_block(micro_block)
-    height = :aec_blocks.height(micro_block)
     prev_hash = :aec_block_insertion.node_prev_hash(node)
 
     {:value, trees_in, _tree, _difficulty, _fees, _fraud} =
@@ -301,8 +300,8 @@ defmodule AeMdw.Node.Db do
       |> :aec_blocks.to_header()
       |> :aec_headers.consensus_module()
 
-    height
-    |> consensus_mod.state_pre_transform_micro_node(node, trees_in)
+    node
+    |> consensus_mod.state_pre_transform_micro_node(trees_in)
     |> :aec_trees.accounts()
   end
 
