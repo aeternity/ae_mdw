@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.96.2](https://www.github.com/aeternity/ae_mdw/compare/v1.96.1...v1.96.2) (2025-01-07)
+
+
+### Bug Fixes
+
+* adjust state_pre_transform_micro_node function on Db mod ([#2053](https://www.github.com/aeternity/ae_mdw/issues/2053)) ([407f5a1](https://www.github.com/aeternity/ae_mdw/commit/407f5a1f71704d0d6b27f7242e32f791d841cc0d))
+* allow more tries for the contract nonce when retrieving events ([#2055](https://www.github.com/aeternity/ae_mdw/issues/2055)) ([933ee8a](https://www.github.com/aeternity/ae_mdw/commit/933ee8a07281d1c81d30f33bd60278df3a610c0a))
+* ignore the case where the swap event does not belong to any pair ([#2052](https://www.github.com/aeternity/ae_mdw/issues/2052)) ([5cfac38](https://www.github.com/aeternity/ae_mdw/commit/5cfac382e3c5df907224111f4a0c8f3f11ec3b33))
+
 ### [1.96.1](https://www.github.com/aeternity/ae_mdw/compare/v1.96.0...v1.96.1) (2024-12-19)
 
 
