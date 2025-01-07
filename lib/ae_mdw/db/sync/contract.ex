@@ -26,6 +26,8 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @type call_record() :: tuple()
 
+  @nonce_tries_margin 1_000
+
   @spec events_mutations(
           [Contract.event()],
           Blocks.block_hash(),
@@ -61,7 +63,7 @@ defmodule AeMdw.Db.Sync.Contract do
           recipient_id = :aec_spend_tx.recipient_id(tx)
           total_amount = :aec_spend_tx.amount(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
-          nonce_tries = length(events)
+          nonce_tries = length(events) + @nonce_tries_margin
           {fname, create_contract_create_aetx(block_hash, contract_pk, total_amount, nonce_tries)}
 
         {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
