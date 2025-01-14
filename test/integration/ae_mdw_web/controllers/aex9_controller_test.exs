@@ -71,7 +71,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
           "contract_id" => ^contract_id,
           "contract_tx_hash" => "th_2w36BEYthD48fmveWrHLvzYpyKeTHtWLXCSqLEQjiSFARGfdaM",
           "decimals" => 18,
-          "event_supply" => 32_067_122_530_333_274_155_599,
+          "event_supply" => 31_701_626_408_971_753_079_388,
           "extensions" => ["allowances"],
           "holders" => _holders,
           "initial_supply" => 0,
