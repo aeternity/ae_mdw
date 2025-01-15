@@ -32,4 +32,7 @@ defmodule AeMdw.Util.Encoding do
   @spec encode_block(atom(), binary()) :: encoded_hash()
   def encode_block(:key, hash), do: encode(:key_block_hash, hash)
   def encode_block(:micro, hash), do: encode(:micro_block_hash, hash)
+
+  @spec safe_decode(atom(), encoded_hash()) :: {:ok, pubkey()} | :error
+  defdelegate safe_decode(type, pk), to: :aeser_api_encoder
 end

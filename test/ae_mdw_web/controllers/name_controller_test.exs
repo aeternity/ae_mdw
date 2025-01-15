@@ -1289,9 +1289,9 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "renders empty result when no blocks", %{conn: conn} do
+    test "renders empty result when no blocks", %{conn: conn, store: store} do
       assert %{"data" => [], "next" => nil, "prev" => nil} =
-               conn |> get("/v3/names/auctions") |> json_response(200)
+               conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do

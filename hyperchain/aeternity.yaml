@@ -1,0 +1,78 @@
+chain:
+  consensus:
+    '0':
+      config:
+        child_block_time: 3000
+        child_epoch_length: 600
+        contract_owner: 'ak_11111111111111111111111111111115rHyByZ'
+        default_pinning_behavior: true
+        election_contract: 'ct_LRbi65kmLtE7YMkG6mvG5TxAXTsPJDZjAtsPuaXtRyPA7gnfJ'
+        fixed_coinbase: 100
+        parent_chain:
+          consensus:
+            network_id: 'devnet'
+            type: 'AE2AE'
+          parent_epoch_length: 10
+          polling:
+            fetch_interval: 500
+            nodes:
+              - 'http://localhost:13013'
+          start_height: 10
+        pinners:
+          - parent_chain_account:
+              owner: 'ak_YuCypRSAkPkYkUhcbyNhob2D2iKshCEijLrNricUSkNeQ3XNk'
+              priv: '982656c160c428591e177f63bf5c8091497a480e1b137b9d985cc06b6495b1666055e85c1ece02a46a73864de9d21444fe852a3a26fd7a1f9164697064af03bc'
+              pub: 'ak_jRmFmxZDa6NPsEdPrVtKp9546jKJTmqYqAewc9ivn7abfrHjR'
+          - parent_chain_account:
+              owner: 'ak_2bMCPWriTf7HcJ2Py7SWuqG9CM3Z3Mux5AnuM4PQqaZ457FfWW'
+              priv: '3d59b9ce1be2a49f9512a3ef2e3209918ba96b9ac4f7e7df5529a1adf6904ea53cd203720974d8ff1afdd4425fa40a0cbc8c41c8ef35118f67c4bf42c9d54643'
+              pub: 'ak_TnaKwd3QPL6VFJsWqb2LMz16hWh3SA4J6jjjaWiPqG2wmSBnq'
+          - parent_chain_account:
+              owner: 'ak_UeA2rsmQkUzhS81DrhvmSNrFSViNrUoE75vGRm3SvZ1bKRm38'
+              priv: 'c1c1bc302828ca238933b5323e3caebe291294244bdd117ff442542f6618519f27973ccf20fd0e3aa2814154782bba4fdf568f548417c3c3b81d5fb077d20b94'
+              pub: 'ak_JSJ159FpcGb7UWD8mu3Sef3tP62MB7966wXPsXVRXNfXNiFCR'
+        pinning_reward_value: 1000
+        rewards_contract: 'ct_KJgjAXMtRF68AbT5A2aC9fTk8PA4WFv26cFSY27fXs6FtYQHK'
+        stakers:
+          - hyper_chain_account:
+              priv: '492541e275cd28b011cba088f754adc067164115755ace8549e2ca1c82854466486ee0357316e9caca590456faf5fcf8eed50fa64ae7ac05348ef84d34c6eac1'
+              pub: 'ak_YuCypRSAkPkYkUhcbyNhob2D2iKshCEijLrNricUSkNeQ3XNk'
+          - hyper_chain_account:
+              priv: 'e0974f38b5b3314eb8e4bf081834a1637998b38cc59409c9b81416de50838781d1b01b2c2d1ab8b5402cf5a061d1491ec06fabc6c18b4fd6fcbd4e77acd6609e'
+              pub: 'ak_2bMCPWriTf7HcJ2Py7SWuqG9CM3Z3Mux5AnuM4PQqaZ457FfWW'
+          - hyper_chain_account:
+              priv: '25a3056fb11451d0d3b9b98bab97cb2714b61937e9797ea0f8157cd62e6116c03ec2eb1a4c86475e65c43eb05bb9570e1dda71aa4ea3993d0309cffc5f9006c5'
+              pub: 'ak_UeA2rsmQkUzhS81DrhvmSNrFSViNrUoE75vGRm3SvZ1bKRm38'
+        staking_contract: 'ct_KJgjAXMtRF68AbT5A2aC9fTk8PA4WFv26cFSY27fXs6FtYQHK'
+      type: 'hyperchain'
+  db_direct_access: true
+  hard_forks:
+    '6': 0
+  persist: true
+  currency:
+    name: Hyper Aeternity
+    symbol: HAE
+  display:
+    network_name: Local Hyperchain
+
+fork_management:
+  network_id: 'hc_devnet'
+
+http:
+  endpoints:
+    hyperchain: true
+    dry-run: true
+
+peers: ['aenode://pp_2ETVSXALx7WwgWTstCHxEQ3QNetRCZJfacPCc331pNvcHw2ENL@localhost:23015']
+include_default_peers: false
+
+mining:
+  autostart: false
+  beneficiary: 'ak_2b8YNe9XoFDJtwaCAc6A4LLLj2sSUNqoJth66xRa87EQPGwxe7'
+
+logging:
+  level: warning
+
+metrics:
+  port: 0
+

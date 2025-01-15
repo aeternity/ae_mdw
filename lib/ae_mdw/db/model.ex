@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Contracts
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.IntTransfer
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -1311,6 +1312,69 @@ defmodule AeMdw.Db.Model do
             tx: mempool_tx()
           )
 
+  @hyperchain_leader_at_height_defaults [index: 0, leader: <<>>]
+  defrecord :hyperchain_leader_at_height, @hyperchain_leader_at_height_defaults
+
+  @type hyperchain_leader_at_height_index() :: height()
+  @type hyperchain_leader_at_height() ::
+          record(:hyperchain_leader_at_height,
+            index: hyperchain_leader_at_height_index(),
+            leader: pubkey()
+          )
+
+  @epoch_info_defaults [index: 0, first: 0, last: 0, length: 0, seed: <<>>]
+  defrecord :epoch_info, @epoch_info_defaults
+
+  @type epoch_info_index() :: Hyperchain.epoch()
+  @type epoch_info() ::
+          record(:epoch_info,
+            index: epoch_info_index(),
+            first: Blocks.height(),
+            last: Blocks.height(),
+            length: non_neg_integer(),
+            seed: binary() | :undefined
+          )
+
+  @validator_defaults [index: {<<>>, 0}, stake: 0]
+  defrecord :validator, @validator_defaults
+
+  @type validator_index() :: {pubkey(), Hyperchain.epoch()}
+  @type validator() :: record(:validator, index: validator_index(), stake: non_neg_integer())
+
+  @rev_validator_defaults [index: {0, <<>>}]
+  defrecord :rev_validator, @rev_validator_defaults
+
+  @type rev_validator_index() :: {Hyperchain.epoch(), pubkey()}
+  @type rev_validator() :: record(:rev_validator, index: rev_validator_index())
+
+  @pin_info_defaults [index: 0, leader: <<>>, reward: 0]
+  defrecord :pin_info, @pin_info_defaults
+
+  @type pin_info_index() :: Hyperchain.epoch()
+  @type pin_info() ::
+          record(:pin_info,
+            index: pin_info_index(),
+            leader: pubkey(),
+            reward: amount()
+          )
+
+  @leader_pin_info_defaults [index: {<<>>, 0}, reward: 0]
+  defrecord :leader_pin_info, @leader_pin_info_defaults
+
+  @type leader_pin_info_index() :: {pubkey(), Hyperchain.epoch()}
+  @type leader_pin_info() ::
+          record(:leader_pin_info,
+            index: leader_pin_info_index(),
+            reward: amount()
+          )
+
+  @delegate_defaults [index: {<<>>, 0, <<>>}, stake: 0]
+  defrecord :delegate, @delegate_defaults
+
+  # index: {validator_pk, epoch, delegate_pk}
+  @type delegate_index() :: {pubkey(), Blocks.height(), pubkey()}
+  @type delegate() :: record(:delegate, index: delegate_index(), stake: non_neg_integer())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -1323,7 +1387,8 @@ defmodule AeMdw.Db.Model do
       name_tables(),
       oracle_tables(),
       stat_tables(),
-      tasks_tables()
+      tasks_tables(),
+      hyperchain_tables()
     ])
   end
 
@@ -1466,6 +1531,18 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
+  defp hyperchain_tables() do
+    [
+      AeMdw.Db.Model.HyperchainLeaderAtHeight,
+      AeMdw.Db.Model.EpochInfo,
+      AeMdw.Db.Model.Validator,
+      AeMdw.Db.Model.RevValidator,
+      AeMdw.Db.Model.PinInfo,
+      AeMdw.Db.Model.LeaderPinInfo,
+      AeMdw.Db.Model.Delegate
+    ]
+  end
+
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
   def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
@@ -1572,4 +1649,11 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair
   def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol
+  def record(AeMdw.Db.Model.HyperchainLeaderAtHeight), do: :hyperchain_leader_at_height
+  def record(AeMdw.Db.Model.EpochInfo), do: :epoch_info
+  def record(AeMdw.Db.Model.Validator), do: :validator
+  def record(AeMdw.Db.Model.RevValidator), do: :rev_validator
+  def record(AeMdw.Db.Model.PinInfo), do: :pin_info
+  def record(AeMdw.Db.Model.LeaderPinInfo), do: :leader_pin_info
+  def record(AeMdw.Db.Model.Delegate), do: :delegate
 end

@@ -66,6 +66,7 @@ defmodule AeMdw.Node do
 
   @type hashrate() :: non_neg_integer()
   @type difficulty() :: non_neg_integer()
+  @type epoch() :: non_neg_integer()
 
   @opaque signed_tx() :: tuple()
   @opaque aetx() :: tuple()
@@ -92,6 +93,8 @@ defmodule AeMdw.Node do
 
   @typep method_hash :: binary()
   @typep method_signature :: {list(), any()}
+  @typep consensus :: atom()
+  @typep trees_in :: term()
 
   @spec aex9_signatures :: %{method_hash() => method_signature()}
   defmemo aex9_signatures() do
@@ -327,6 +330,21 @@ defmodule AeMdw.Node do
     :aetx.type_to_swagger_name(tx_type)
   end
 
+  @spec epoch_start_height(epoch()) :: {:ok, height()} | {:error, atom()}
+  def epoch_start_height(epoch) do
+    :aec_chain_hc.epoch_start_height(epoch)
+  end
+
+  @spec state_pre_transform_micro_node(consensus(), height(), node(), trees_in()) :: trees_in()
+  def state_pre_transform_micro_node(consensus, height, node, trees_in) do
+    try do
+      consensus.state_pre_transform_micro_node(height, node, trees_in)
+    rescue
+      UndefinedFunctionError ->
+        consensus.state_pre_transform_micro_node(node, trees_in)
+    end
+  end
+
   @spec tx_prefixes :: MapSet.t()
   defmemo tx_prefixes() do
     tx_types()
@@ -343,6 +361,11 @@ defmodule AeMdw.Node do
     tx_mod_map()
     |> Map.keys()
     |> MapSet.new()
+  end
+
+  @spec epoch_length(epoch()) :: {:ok, non_neg_integer()} | {:error, atom()}
+  defmemo epoch_length(epoch) do
+    :aec_chain_hc.epoch_length(epoch)
   end
 
   defp map_by_function_hash(signatures) do
@@ -402,7 +425,7 @@ defmodule AeMdw.Node do
 
   defmemop tx_groups_map() do
     type_groups_map =
-      ~w(oracle name contract channel spend ga paying)a
+      ~w(oracle name contract channel spend ga paying hc)a
       |> Map.new(&{to_string(&1), &1})
 
     tx_types()
