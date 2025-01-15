@@ -38,6 +38,8 @@ jobs:
       - name: Node Setup
         uses: ./.github/actions/node-setup
 
+        run: rm -rf test_data.db/
+
       - name: Execute coverage
         run: elixir --sname aeternity@localhost -S mix coveralls
 
