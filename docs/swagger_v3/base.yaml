@@ -26,6 +26,13 @@ components:
       schema:
         type: string
         pattern: '(gen):\d+(-\d+)?'
+    HyperchainScopeParam:
+      in: query
+      name: scope
+      description: 'Scopes results in a hyperchain epoch range'
+      schema:
+        type: string
+        pattern: '(epoch):\d+(-\d+)?'
     DirectionParam:
       in: query
       name: direction

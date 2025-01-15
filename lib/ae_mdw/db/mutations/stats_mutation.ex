@@ -230,7 +230,7 @@ defmodule AeMdw.Db.StatsMutation do
 
   defp get(state, stat_sync_key, default), do: State.get_stat(state, stat_sync_key, default)
 
-  defp fetch_total_stat(_state, 0) do
+  defp fetch_total_stat(_state, height) when height == 0 or height == 1 do
     Model.total_stat()
   end
 

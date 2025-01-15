@@ -17,7 +17,8 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   @scope_types %{
     "gen" => :gen,
     "txi" => :txi,
-    "time" => :time
+    "time" => :time,
+    "epoch" => :epoch
   }
   @scope_types_keys Map.keys(@scope_types)
 
@@ -117,7 +118,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
          _txi_scope? = false,
          state
        )
-       when scope_type in ["gen", "time"] do
+       when scope_type in ["gen", "time", "epoch"] do
     extract_direction_and_scope(params, true, state)
   end
 
