@@ -453,6 +453,7 @@ defmodule AeMdw.Contract do
 
     if txs_taken != [] do
       header = :aec_blocks.to_header(micro_block)
+      height = :aec_headers.height(header)
       consensus = :aec_headers.consensus_module(header)
       node = :aec_chain_state.wrap_block(micro_block)
       time = :aec_block_insertion.node_time(node)
