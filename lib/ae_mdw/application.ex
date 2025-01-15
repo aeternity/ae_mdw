@@ -48,7 +48,8 @@ defmodule AeMdw.Application do
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor,
       AeMdw.Sync.Supervisor,
-      AeMdw.APM.Telemetry
+      AeMdw.APM.Telemetry,
+      {Phoenix.PubSub, [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2]}
     ]
 
     children =
