@@ -7,5 +7,5 @@ runs:
     - name: Setup Node
       shell: bash
       run: |
-        curl -L https://github.com/aeternity/aeternity/releases/download/v7.0.0/aeternity-v7.0.0-ubuntu-x86_64.tar.gz -o aeternity.tgz\
+        curl -L https://github.com/aeternity/aeternity/releases/download/v7.3.0-rc3/aeternity-v7.3.0-rc-ubuntu-x86_64.tar.gz -o aeternity.tgz\
         && mkdir -p ${NODEROOT}/rel/aeternity && tar xf aeternity.tgz -C ${NODEROOT}/rel/aeternity && cp -rf ${NODEROOT}/rel/aeternity/lib/ ${NODEROOT}

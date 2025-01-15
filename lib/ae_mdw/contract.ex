@@ -474,7 +474,8 @@ defmodule AeMdw.Contract do
       {:value, trees_in, _difficulty, _fork_id, _fees, _fraud} =
         :aec_db.find_block_state_and_data(prev_hash, true)
 
-      trees_in = consensus.state_pre_transform_micro_node(node, trees_in)
+      trees_in = Node.state_pre_transform_micro_node(consensus, height, node, trees_in)
+
       env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
 
       {:ok, _sigs, _trees, events} =

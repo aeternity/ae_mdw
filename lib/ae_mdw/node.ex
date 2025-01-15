@@ -93,6 +93,8 @@ defmodule AeMdw.Node do
 
   @typep method_hash :: binary()
   @typep method_signature :: {list(), any()}
+  @typep consensus :: atom()
+  @typep trees_in :: term()
 
   @spec aex9_signatures :: %{method_hash() => method_signature()}
   defmemo aex9_signatures() do
@@ -331,6 +333,16 @@ defmodule AeMdw.Node do
   @spec epoch_start_height(epoch()) :: {:ok, height()} | {:error, atom()}
   def epoch_start_height(epoch) do
     :aec_chain_hc.epoch_start_height(epoch)
+  end
+
+  @spec state_pre_transform_micro_node(consensus(), height(), node(), trees_in()) :: trees_in()
+  def state_pre_transform_micro_node(consensus, height, node, trees_in) do
+    try do
+      consensus.state_pre_transform_micro_node(height, node, trees_in)
+    rescue
+      UndefinedFunctionError ->
+        consensus.state_pre_transform_micro_node(node, trees_in)
+    end
   end
 
   @spec tx_prefixes :: MapSet.t()

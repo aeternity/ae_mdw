@@ -344,8 +344,10 @@ defmodule AeMdw.Node.Db do
       |> :aec_blocks.to_header()
       |> :aec_headers.consensus_module()
 
-    node
-    |> consensus_mod.state_pre_transform_micro_node(trees_in)
+    height = :aec_blocks.height(micro_block)
+
+    consensus_mod
+    |> Node.state_pre_transform_micro_node(height, node, trees_in)
     |> :aec_trees.accounts()
   end
 
