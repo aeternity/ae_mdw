@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.97.0](https://github.com/aeternity/ae_mdw/compare/v1.96.2...v1.97.0) (2025-01-16)
+
+
+### Features
+
+* add hyperchain sync support ([74e098d](https://github.com/aeternity/ae_mdw/commit/74e098d5b4dfbb6765f7b034b90f77d2eaa15fea))
+
 ### [1.96.2](https://www.github.com/aeternity/ae_mdw/compare/v1.96.1...v1.96.2) (2025-01-07)
 
 
