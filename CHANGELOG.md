@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.97.0](https://github.com/aeternity/ae_mdw/compare/v1.96.2...v1.97.0) (2025-01-16)
+
+
+### Features
+
+* add hyperchain sync support ([74e098d](https://github.com/aeternity/ae_mdw/commit/74e098d5b4dfbb6765f7b034b90f77d2eaa15fea))
+
+
+### Miscellaneous
+
+* bump release-please version to 4 ([#2062](https://github.com/aeternity/ae_mdw/issues/2062)) ([35af3fa](https://github.com/aeternity/ae_mdw/commit/35af3fab1be41d598ff86a54a6502a30e4dda5c2))
+* get rid of runtime startup warnings ([#2039](https://github.com/aeternity/ae_mdw/issues/2039)) ([ddf61e5](https://github.com/aeternity/ae_mdw/commit/ddf61e520b343a208f64ca06a93c32367ca48329))
+
 ### [1.96.2](https://www.github.com/aeternity/ae_mdw/compare/v1.96.1...v1.96.2) (2025-01-07)
 
 
