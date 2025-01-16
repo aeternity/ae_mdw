@@ -16,3 +16,4 @@ jobs:
           release-type: elixir
           include-component-in-tag: false
           config-file: release-please-config.json
+          manifest-file: .rease-please-manifest.json
