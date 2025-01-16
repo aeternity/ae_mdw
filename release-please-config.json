@@ -1,4 +1,9 @@
 {
+   "packages":{
+      ".":{
+         
+      }
+   },
    "changelog-sections":[
       {
          "type":"feat",

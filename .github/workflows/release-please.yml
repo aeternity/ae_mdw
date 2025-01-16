@@ -15,4 +15,4 @@ jobs:
           token: ${{secrets.BOT_GITHUB_TOKEN}}
           release-type: elixir
           include-component-in-tag: false
-          config-file: .release-please-config.json
+          config-file: release-please-config.json
