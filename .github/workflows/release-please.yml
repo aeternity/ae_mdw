@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - master
+      - migrate-release-please
 name: release-please
 jobs:
   release-please:
@@ -11,4 +12,5 @@ jobs:
         with:
           token: ${{secrets.BOT_GITHUB_TOKEN}}
           release-type: elixir
-          changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"fix","section":"Bug Fixes","hidden":false},{"type":"ci","section":"CI / CD","hidden":false},{"type":"test","section":"Testing","hidden":false},{"type":"refactor","section":"Refactorings","hidden":false},{"type":"chore","section":"Miscellaneous","hidden":false}]'
+          include-component-in-tag: false
+          manifest-file: .release-please-manifest.json
