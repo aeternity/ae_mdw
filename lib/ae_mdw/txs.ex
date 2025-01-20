@@ -119,7 +119,7 @@ defmodule AeMdw.Txs do
 
   def count(state, nil, params) when map_size(params) == 0 do
     case DbUtil.last_txi(state) do
-      {:ok, count} -> {:ok, count}
+      {:ok, count} -> {:ok, count + 1}
       :none -> {:ok, 0}
     end
   end

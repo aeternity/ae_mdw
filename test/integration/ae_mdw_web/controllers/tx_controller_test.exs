@@ -176,9 +176,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   describe "count" do
     test "get count of transactions at the current height", %{conn: conn} do
-      %Conn{assigns: %{state: state}} = conn = get(conn, "/v2/txs/count")
+      %Conn{assigns: %{state: state}} = conn = get(conn, "/v3/transactions/count")
 
-      assert json_response(conn, 200) == Util.last_txi!(state)
+      assert json_response(conn, 200) == Util.last_txi!(state) + 1
     end
   end
 

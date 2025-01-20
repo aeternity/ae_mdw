@@ -1871,8 +1871,9 @@ defmodule AeMdwWeb.TxControllerTest do
     test "it returns all tx count by default", %{conn: conn, empty_store: store} do
       tx = Model.tx(index: tx_index) = TS.tx(0)
       store = Store.put(store, Model.Tx, tx)
+      actual_count = tx_index + 1
 
-      assert ^tx_index =
+      assert ^actual_count =
                conn
                |> with_store(store)
                |> get("/v3/transactions/count")
