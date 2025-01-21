@@ -496,26 +496,27 @@ defmodule AeMdw.Sync.Server do
   defp profile_sync(sync_type, height, exec_ts, blocks_mutations) do
     mutations = Enum.map(blocks_mutations, &elem(&1, 2))
 
-    with [{_key, dryrun_ts}] <- :ets.lookup(:sync_profiling, {:dryrun, height}),
-         [{_key, txs_ts}] <- :ets.lookup(:sync_profiling, {:txs, height}) do
-      true = :ets.delete(:sync_profiling, {:dryrun, height - 1})
-      true = :ets.delete(:sync_profiling, {:txs, height - 1})
+    _lookup_return =
+      with [{_key, dryrun_ts}] <- :ets.lookup(:sync_profiling, {:dryrun, height}),
+           [{_key, txs_ts}] <- :ets.lookup(:sync_profiling, {:txs, height}) do
+        true = :ets.delete(:sync_profiling, {:dryrun, height - 1})
+        true = :ets.delete(:sync_profiling, {:txs, height - 1})
 
-      mutations_map =
-        mutations
-        |> List.flatten()
-        |> Enum.reject(&is_nil/1)
-        |> Enum.frequencies_by(fn
-          %mod{} -> mod
-          nil -> nil
-        end)
+        mutations_map =
+          mutations
+          |> List.flatten()
+          |> Enum.reject(&is_nil/1)
+          |> Enum.frequencies_by(fn
+            %mod{} -> mod
+            nil -> nil
+          end)
 
-      mutations_count = length(mutations)
+        mutations_count = length(mutations)
 
-      Log.info(
-        "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
-      )
-    end
+        Log.info(
+          "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
+        )
+      end
 
     :ok
   end

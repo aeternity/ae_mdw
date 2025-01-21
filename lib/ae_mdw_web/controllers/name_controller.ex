@@ -88,7 +88,6 @@ defmodule AeMdwWeb.NameController do
          {{info, source}, _plain_name} <- {Name.locate(state, plain_name), plain_name} do
       format_json(conn, Format.to_map(state, info, source, Util.expand?(opts)))
     else
-      {:error, reason} -> {:error, reason}
       {nil, plain_name} -> {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end

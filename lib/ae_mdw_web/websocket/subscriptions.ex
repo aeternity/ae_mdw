@@ -155,10 +155,11 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   end
 
   defp maybe_demonitor(pid) do
-    with [{^pid, ref, _count}] <- :ets.lookup(@subs_pids, pid) do
-      Process.demonitor(ref, [:flush])
-      :ets.delete(@subs_pids, pid)
-    end
+    _lookup_return =
+      with [{^pid, ref, _count}] <- :ets.lookup(@subs_pids, pid) do
+        Process.demonitor(ref, [:flush])
+        :ets.delete(@subs_pids, pid)
+      end
 
     :ok
   end
