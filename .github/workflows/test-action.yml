@@ -38,6 +38,7 @@ jobs:
       - name: Node Setup
         uses: ./.github/actions/node-setup
 
+      - name: Clear database directory
         run: rm -rf test_data.db/
 
       - name: Execute coverage
