@@ -240,6 +240,7 @@ defmodule AeMdwWeb.Router do
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners_stats
       get "/wealth", WealthController, :wealth
+      get "/status", UtilController, :status
 
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v2.json"}
