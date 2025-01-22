@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.97.1](https://github.com/aeternity/ae_mdw/compare/v1.97.0...v1.97.1) (2025-01-22)
+
+
+### Bug Fixes
+
+* fix regression by returning the v2 status endpoint ([#2073](https://github.com/aeternity/ae_mdw/issues/2073)) ([4d4da97](https://github.com/aeternity/ae_mdw/commit/4d4da97c4c7e98cf522e24a45c4cd496ff1caec8))
+* return the correct number of transactions ([#2057](https://github.com/aeternity/ae_mdw/issues/2057)) ([817ea69](https://github.com/aeternity/ae_mdw/commit/817ea69eee193d27676585afcf58e3e5829cb7e8))
+
+
+### Miscellaneous
+
+* fix test-action database dir removal ([#2072](https://github.com/aeternity/ae_mdw/issues/2072)) ([cd73793](https://github.com/aeternity/ae_mdw/commit/cd737935108c3667244e7205d9799608fb4379d4))
+
 ## [1.97.0](https://github.com/aeternity/ae_mdw/compare/v1.96.2...v1.97.0) (2025-01-17)
 
 
