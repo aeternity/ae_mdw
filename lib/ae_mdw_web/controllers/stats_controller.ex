@@ -77,6 +77,16 @@ defmodule AeMdwWeb.StatsController do
     end
   end
 
+  @spec transactions_total_stats(Conn.t(), map()) :: Conn.t()
+  def transactions_total_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, query: query, scope: scope} = assigns
+
+    with {:ok, count} <-
+           Stats.fetch_transactions_total_stats(state, query, scope) do
+      format_json(conn, count)
+    end
+  end
+
   @spec blocks_stats(Conn.t(), map()) :: Conn.t()
   def blocks_stats(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns

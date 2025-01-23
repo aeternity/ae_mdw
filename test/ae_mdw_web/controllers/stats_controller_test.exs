@@ -159,6 +159,11 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
     end
 
     test "it returns the count of transactions filtered by a tx type", %{conn: conn, store: store} do
@@ -167,17 +172,21 @@ defmodule AeMdwWeb.StatsControllerTest do
       st3_index = {{:transactions, :spend_tx}, :day, 0}
       st4_index = {{:transactions, :spend_tx}, :day, 1}
       st5_index = {{:transactions, :spend_tx}, :day, 3}
+      st6_index = {{:transactions, :all}, :day, 1}
+      st7_index = {{:transactions, :all}, :day, 3}
       {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
         |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
         |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
-        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 2))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st5_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: st6_index, count: 5))
+        |> Store.put(Model.Statistic, Model.statistic(index: st7_index, count: 3))
 
       conn = with_store(conn, store)
 
@@ -205,6 +214,21 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+
+      assert 10 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total", tx_type: "spend")
+               |> json_response(200)
+
+      assert 1 ==
+               conn
+               |> get("/v3/stats/transactions/total", tx_type: "oracle_register")
+               |> json_response(200)
     end
 
     test "when interval_by = week, it returns the count of transactions for the latest weekly periods",
@@ -215,6 +239,9 @@ defmodule AeMdwWeb.StatsControllerTest do
       st1_index = {{:transactions, :all}, :week, 2}
       st2_index = {{:transactions, :all}, :week, 3}
       st3_index = {{:transactions, :all}, :week, 4}
+      st4_index = {{:transactions, :all}, :day, 2}
+      st5_index = {{:transactions, :all}, :day, 9}
+      st6_index = {{:transactions, :all}, :day, 16}
       {network_start_time, network_end_time} = network_time_interval()
 
       store =
@@ -224,6 +251,9 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: st5_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: st6_index, count: 5))
 
       conn = with_store(conn, store)
 
@@ -246,6 +276,29 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"data" => ^statistics} =
                conn
                |> get(prev_url)
+               |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
+
+      assert 4 ==
+               conn
+               |> get("/v3/stats/transactions/total", max_start_date: "1970-01-10")
+               |> json_response(200)
+
+      assert 3 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 max_start_date: "1970-01-10",
+                 min_start_date: "1970-01-08"
+               )
+               |> json_response(200)
+
+      assert 5 ==
+               conn
+               |> get("/v3/stats/transactions/total", min_start_date: "1970-01-11")
                |> json_response(200)
     end
 
@@ -328,6 +381,11 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"data" => ^statistics} =
                conn
                |> get(prev_url)
+               |> json_response(200)
+
+      assert 0 ==
+               conn
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
     end
   end

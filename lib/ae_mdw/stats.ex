@@ -228,6 +228,25 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_transactions_total_stats(State.t(), query(), range()) ::
+          {:ok, non_neg_integer()}
+  def fetch_transactions_total_stats(state, query, range) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
+      tx_tag = Map.get(filters, :tx_type, :all)
+
+      streamer =
+        build_statistics_streamer(state, {:transactions, tx_tag}, filters, range, nil, false)
+
+      :backward
+      |> streamer.()
+      |> Enum.reduce(0, fn index, acc ->
+        Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
+        acc + count
+      end)
+      |> then(&{:ok, &1})
+    end
+  end
+
   @spec fetch_blocks_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_blocks_stats(state, pagination, query, range, cursor) do
@@ -325,7 +344,14 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp build_statistics_streamer(state, tag, filters, range, cursor) do
+  defp build_statistics_streamer(
+         state,
+         tag,
+         filters,
+         range,
+         cursor,
+         fill_dates \\ true
+       ) do
     interval_by = Map.get(filters, :interval_by, :day)
     {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
     min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
@@ -367,7 +393,13 @@ defmodule AeMdw.Stats do
     fn direction ->
       state
       |> Collection.stream(Model.Statistic, direction, key_boundary, cursor)
-      |> fill_missing_dates(tag, interval_by, direction, cursor, min_date, max_date)
+      |> then(fn stream ->
+        if fill_dates do
+          fill_missing_dates(stream, tag, interval_by, direction, cursor, min_date, max_date)
+        else
+          stream
+        end
+      end)
     end
   end
 

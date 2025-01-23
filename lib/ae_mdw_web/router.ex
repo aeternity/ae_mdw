@@ -69,6 +69,7 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:id/transactions/count", TxController, :count_id
 
       get "/stats/transactions", StatsController, :transactions_stats
+      get "/stats/transactions/total", StatsController, :transactions_total_stats
       get "/stats/blocks", StatsController, :blocks_stats
       get "/stats/difficulty", StatsController, :difficulty_stats
       get "/stats/hashrate", StatsController, :hashrate_stats
