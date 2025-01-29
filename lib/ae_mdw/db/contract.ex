@@ -493,11 +493,17 @@ defmodule AeMdw.Db.Contract do
           )
           |> State.put(
             Model.DexContractTokenSwap,
-            Model.dex_contract_token_swap(index: {token1_create_txi_idx, txi, idx})
+            Model.dex_contract_token_swap(
+              index: {token1_create_txi_idx, txi, idx},
+              contract_call_create_txi: create_txi
+            )
           )
           |> State.put(
             Model.DexContractTokenSwap,
-            Model.dex_contract_token_swap(index: {token2_create_txi_idx, txi, idx})
+            Model.dex_contract_token_swap(
+              index: {token2_create_txi_idx, txi, idx},
+              contract_call_create_txi: create_txi
+            )
           )
 
         :not_found ->
