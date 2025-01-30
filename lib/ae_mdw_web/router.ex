@@ -247,8 +247,6 @@ defmodule AeMdwWeb.Router do
     end
 
     # v1-only routes
-    get "/blocks/:range_or_dir", BlockController, :blocks_v1
-
     get "/tx/:hash_or_index", TxController, :tx_v2
     get "/txs/:direction", TxController, :txs_v2
     get "/txs/:scope_type/:range", TxController, :txs_v2

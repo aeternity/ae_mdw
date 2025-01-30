@@ -116,9 +116,9 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
           {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
-  def fetch_blocks(state, direction, range, cursor, limit, sort_mbs?) do
+  def fetch_blocks(state, direction, range, cursor, limit) do
     with {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, last_gen} <- DbUtil.last_gen(state) do
       range =
@@ -130,7 +130,7 @@ defmodule AeMdw.Blocks do
       case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
         {:ok, prev_cursor, range, next_cursor} ->
           {:ok,
-           {serialize_cursor(prev_cursor), render_blocks(state, range, sort_mbs?),
+           {serialize_cursor(prev_cursor), render_blocks(state, range),
             serialize_cursor(next_cursor)}}
 
         :error ->
@@ -268,7 +268,7 @@ defmodule AeMdw.Blocks do
     |> Map.put(:gas, gas)
   end
 
-  defp render_blocks(state, range, sort_mbs?) do
+  defp render_blocks(state, range) do
     Enum.map(range, fn gen ->
       [key_block | micro_blocks] =
         state
@@ -292,20 +292,11 @@ defmodule AeMdw.Blocks do
         end)
         |> Enum.group_by(fn %{"block_hash" => block_hash} -> block_hash end)
 
-      put_mbs_from_db(key_block, micro_blocks, blocks_txs, sort_mbs?)
+      put_mbs_from_db(key_block, micro_blocks, blocks_txs)
     end)
   end
 
-  defp put_mbs_from_db(key_block, micro_blocks, blocks_txs, false) do
-    micro_blocks =
-      micro_blocks
-      |> db_read_mbs(blocks_txs)
-      |> Map.new()
-
-    Map.put(key_block, "micro_blocks", micro_blocks)
-  end
-
-  defp put_mbs_from_db(key_block, micro_blocks, blocks_txs, true) do
+  defp put_mbs_from_db(key_block, micro_blocks, blocks_txs) do
     micro_blocks =
       micro_blocks
       |> db_read_mbs(blocks_txs)
