@@ -687,13 +687,23 @@ defmodule AeMdw.Stats do
   end
 
   defp average_tx_fees(state, start_txi, end_txi) do
+    IO.inspect(start_txi, label: "start_txi")
+    IO.inspect(end_txi, label: "end_txi")
     txs_count = end_txi - start_txi + 1
 
     if txs_count != 0 do
       start_txi..end_txi
       |> Enum.reduce(0, fn tx_index, acc ->
         Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, tx_index)
-        fee = NodeDb.get_tx_fee(tx_hash)
+        fee = NodeDb.get_tx_fee!(tx_hash)
+
+        if fee == nil do
+          NodeDb.get_tx_fee!(tx_hash)
+          |> IO.inspect(label: "fee")
+          IO.inspect(tx_hash, label: "tx_hash")
+          IO.inspect(tx_hash, label: "#{tx_index} tx_hash")
+          IO.inspect(tx_index, label: "tx_index")
+        end
 
         acc + fee
       end)

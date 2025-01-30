@@ -142,8 +142,8 @@ defmodule AeMdw.Db.Model do
           )
 
   # txs table :
-  #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi}
-  @tx_defaults [index: nil, id: nil, block_index: nil, time: nil]
+  #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi}, time = block_time, fee = fee
+  @tx_defaults [index: nil, id: nil, block_index: nil, time: nil, fee: nil]
   defrecord :tx, @tx_defaults
 
   @type tx_index() :: txi()
@@ -152,7 +152,8 @@ defmodule AeMdw.Db.Model do
             index: tx_index(),
             id: Txs.tx_hash(),
             block_index: block_index(),
-            time: Blocks.time()
+            time: Blocks.time(),
+            fee: non_neg_integer()
           )
 
   # txs time index :
