@@ -68,21 +68,6 @@ defmodule AeMdwWeb.Router do
       get "/accounts/:account_id/dex/swaps", DexController, :account_swaps
       get "/accounts/:id/transactions/count", TxController, :count_id
 
-      get "/stats/transactions", StatsController, :transactions_stats
-      get "/stats/transactions/total", StatsController, :transactions_total_stats
-      get "/stats/blocks", StatsController, :blocks_stats
-      get "/stats/difficulty", StatsController, :difficulty_stats
-      get "/stats/hashrate", StatsController, :hashrate_stats
-      get "/stats/total-accounts", StatsController, :total_accounts_stats
-      get "/stats/active-accounts", StatsController, :active_accounts_stats
-      get "/stats/names", StatsController, :names_stats
-      get "/stats/total", StatsController, :total_stats
-      get "/stats/delta", StatsController, :delta_stats
-      get "/stats/miners", StatsController, :miners_stats
-      get "/stats/contracts", StatsController, :contracts_stats
-      get "/stats/aex9-transfers", StatsController, :aex9_transfers_stats
-      get "/stats", StatsController, :stats
-
       get "/names", NameController, :names
       get "/names/count", NameController, :names_count
       get "/names/auctions", NameController, :auctions
@@ -143,6 +128,23 @@ defmodule AeMdwWeb.Router do
           :validator_delegates_top
 
       get "/hyperchain/validators/:validator_id", HyperchainController, :validator
+
+      scope "/stats" do
+        get "/transactions", StatsController, :transactions_stats
+        get "/transactions/cumulative", StatsController, :transactions_cumulative_stats
+        get "/blocks", StatsController, :blocks_stats
+        get "/difficulty", StatsController, :difficulty_stats
+        get "/hashrate", StatsController, :hashrate_stats
+        get "/total-accounts", StatsController, :total_accounts_stats
+        get "/active-accounts", StatsController, :active_accounts_stats
+        get "/names", StatsController, :names_stats
+        get "/total", StatsController, :total_stats
+        get "/delta", StatsController, :delta_stats
+        get "/miners", StatsController, :miners_stats
+        get "/contracts", StatsController, :contracts_stats
+        get "/aex9-transfers", StatsController, :aex9_transfers_stats
+        get "/", StatsController, :stats
+      end
 
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v3.json"}

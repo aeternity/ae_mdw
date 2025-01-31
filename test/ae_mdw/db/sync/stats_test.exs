@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Sync.StatsTest do
 
   import Mock
   alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.CumulativeStatisticsMutation
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Stats
 
@@ -32,42 +33,68 @@ defmodule AeMdw.Db.Sync.StatsTest do
       ]
 
       mutation1 =
-        StatisticsMutation.new([
-          {{{:blocks, :micro}, :day, 0}, 1},
-          {{{:blocks, :all}, :day, 0}, 1},
-          {{{:blocks, :micro}, :week, 0}, 1},
-          {{{:blocks, :all}, :week, 0}, 1},
-          {{{:blocks, :micro}, :month, 0}, 1},
-          {{{:blocks, :all}, :month, 0}, 1},
-          {{{:transactions, :all}, :day, 0}, 19},
-          {{{:transactions, :oracle_register_tx}, :day, 0}, 18},
-          {{{:transactions, :spend_tx}, :day, 0}, 1},
-          {{{:transactions, :all}, :week, 0}, 19},
-          {{{:transactions, :oracle_register_tx}, :week, 0}, 18},
-          {{{:transactions, :spend_tx}, :week, 0}, 1},
-          {{{:transactions, :all}, :month, 0}, 19},
-          {{{:transactions, :oracle_register_tx}, :month, 0}, 18},
-          {{{:transactions, :spend_tx}, :month, 0}, 1}
-        ])
+        [
+          StatisticsMutation.new([
+            {{{:blocks, :micro}, :day, 0}, 1},
+            {{{:blocks, :all}, :day, 0}, 1},
+            {{{:blocks, :micro}, :week, 0}, 1},
+            {{{:blocks, :all}, :week, 0}, 1},
+            {{{:blocks, :micro}, :month, 0}, 1},
+            {{{:blocks, :all}, :month, 0}, 1},
+            {{{:transactions, :all}, :day, 0}, 19},
+            {{{:transactions, :oracle_register_tx}, :day, 0}, 18},
+            {{{:transactions, :spend_tx}, :day, 0}, 1},
+            {{{:transactions, :all}, :week, 0}, 19},
+            {{{:transactions, :oracle_register_tx}, :week, 0}, 18},
+            {{{:transactions, :spend_tx}, :week, 0}, 1},
+            {{{:transactions, :all}, :month, 0}, 19},
+            {{{:transactions, :oracle_register_tx}, :month, 0}, 18},
+            {{{:transactions, :spend_tx}, :month, 0}, 1}
+          ]),
+          CumulativeStatisticsMutation.new([
+            {{{:cumulative_transactions, :all}, :day, 0}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :day, 0}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :day, 0}, 1},
+            {{{:cumulative_transactions, :all}, :week, 0}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :week, 0}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :week, 0}, 1},
+            {{{:cumulative_transactions, :all}, :month, 0}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :month, 0}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :month, 0}, 1}
+          ])
+        ]
 
       mutation2 =
-        StatisticsMutation.new([
-          {{{:blocks, :micro}, :day, 365}, 1},
-          {{{:blocks, :all}, :day, 365}, 1},
-          {{{:blocks, :micro}, :week, 52}, 1},
-          {{{:blocks, :all}, :week, 52}, 1},
-          {{{:blocks, :micro}, :month, 12}, 1},
-          {{{:blocks, :all}, :month, 12}, 1},
-          {{{:transactions, :all}, :day, 365}, 19},
-          {{{:transactions, :oracle_register_tx}, :day, 365}, 18},
-          {{{:transactions, :spend_tx}, :day, 365}, 1},
-          {{{:transactions, :all}, :week, 52}, 19},
-          {{{:transactions, :oracle_register_tx}, :week, 52}, 18},
-          {{{:transactions, :spend_tx}, :week, 52}, 1},
-          {{{:transactions, :all}, :month, 12}, 19},
-          {{{:transactions, :oracle_register_tx}, :month, 12}, 18},
-          {{{:transactions, :spend_tx}, :month, 12}, 1}
-        ])
+        [
+          StatisticsMutation.new([
+            {{{:blocks, :micro}, :day, 365}, 1},
+            {{{:blocks, :all}, :day, 365}, 1},
+            {{{:blocks, :micro}, :week, 52}, 1},
+            {{{:blocks, :all}, :week, 52}, 1},
+            {{{:blocks, :micro}, :month, 12}, 1},
+            {{{:blocks, :all}, :month, 12}, 1},
+            {{{:transactions, :all}, :day, 365}, 19},
+            {{{:transactions, :oracle_register_tx}, :day, 365}, 18},
+            {{{:transactions, :spend_tx}, :day, 365}, 1},
+            {{{:transactions, :all}, :week, 52}, 19},
+            {{{:transactions, :oracle_register_tx}, :week, 52}, 18},
+            {{{:transactions, :spend_tx}, :week, 52}, 1},
+            {{{:transactions, :all}, :month, 12}, 19},
+            {{{:transactions, :oracle_register_tx}, :month, 12}, 18},
+            {{{:transactions, :spend_tx}, :month, 12}, 1}
+          ]),
+          CumulativeStatisticsMutation.new([
+            {{{:cumulative_transactions, :all}, :day, 365}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :day, 365}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :day, 365}, 1},
+            {{{:cumulative_transactions, :all}, :week, 52}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :week, 52}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :week, 52}, 1},
+            {{{:cumulative_transactions, :all}, :month, 12}, 19},
+            {{{:cumulative_transactions, :oracle_register_tx}, :month, 12}, 18},
+            {{{:cumulative_transactions, :spend_tx}, :month, 12}, 1}
+          ])
+        ]
 
       assert ^mutation1 = Stats.micro_block_mutations(time1, type_counts)
       assert ^mutation2 = Stats.micro_block_mutations(time2, type_counts)

@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
+  alias AeMdw.Db.CumulativeStatisticsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -141,23 +142,35 @@ defmodule AeMdw.Db.Sync.Stats do
         ]
       end)
 
-    txs_statistics =
-      if total_count > 0 do
-        Enum.flat_map(intervals, fn {interval, interval_start} ->
-          tx_type_statistics =
-            Enum.map(type_counts, fn {tx_type, count} ->
-              {{{:transactions, tx_type}, interval, interval_start}, count}
-            end)
+    if total_count > 0 do
+      txs_statistics =
+        generate_tx_statistics(:transactions, intervals, type_counts, total_count)
 
-          total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
+      cumulative_txs_statistics =
+        generate_tx_statistics(:cumulative_transactions, intervals, type_counts, total_count)
 
-          [total_statistic | tx_type_statistics]
+      [
+        StatisticsMutation.new(mb_statistics ++ txs_statistics),
+        CumulativeStatisticsMutation.new(cumulative_txs_statistics)
+      ]
+    else
+      StatisticsMutation.new(mb_statistics)
+    end
+  end
+
+  @spec generate_tx_statistics(Stats.statistic_tag(), intervals(), type_counts(), pos_integer()) ::
+          [Stats.statistic()]
+  def generate_tx_statistics(tag, intervals, type_counts, total_count) do
+    Enum.flat_map(intervals, fn {interval, interval_start} ->
+      tx_type_statistics =
+        Enum.map(type_counts, fn {tx_type, count} ->
+          {{{tag, tx_type}, interval, interval_start}, count}
         end)
-      else
-        []
-      end
 
-    StatisticsMutation.new(mb_statistics ++ txs_statistics)
+      total_statistic = {{{tag, :all}, interval, interval_start}, total_count}
+
+      [total_statistic | tx_type_statistics]
+    end)
   end
 
   @spec time_intervals(time()) :: intervals()
