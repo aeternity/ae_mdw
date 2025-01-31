@@ -45,7 +45,7 @@ defmodule AeMdw.Stats do
   @type blocks_tag() :: {:blocks, :key | :micro | :all}
   @type statistic_tag() ::
           {:transactions, Node.tx_type() | :all}
-          | {:cumulative_transactions, Node.tx_type() | :all}
+          | {:total_transactions, Node.tx_type() | :all}
           | :names_activated
           | :aex9_transfers
           | blocks_tag()
@@ -234,26 +234,7 @@ defmodule AeMdw.Stats do
   def fetch_transactions_total_stats(state, query, range) do
     with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
       tx_tag = Map.get(filters, :tx_type, :all)
-
-      streamer =
-        build_statistics_streamer(state, {:transactions, tx_tag}, filters, range, nil)
-
-      :backward
-      |> streamer.()
-      |> Enum.reduce(0, fn index, acc ->
-        Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
-        acc + count
-      end)
-      |> then(&{:ok, &1})
-    end
-  end
-
-  @spec fetch_transactions_cumulative_stats(State.t(), query(), range()) ::
-          {:ok, non_neg_integer()}
-  def fetch_transactions_cumulative_stats(state, query, range) do
-    with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
-      tx_tag = Map.get(filters, :tx_type, :all)
-      tag = {:cumulative_transactions, tx_tag}
+      tag = {:total_transactions, tx_tag}
 
       interval_by = :day
       filters = Map.put(filters, :interval_by, interval_by)

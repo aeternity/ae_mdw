@@ -1,7 +1,7 @@
-defmodule AeMdw.Db.CumulativeStatisticsMutationTest do
+defmodule AeMdw.Db.TotalStatisticsMutationTest do
   use ExUnit.Case, async: false
 
-  alias AeMdw.Db.CumulativeStatisticsMutation
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
@@ -16,7 +16,7 @@ defmodule AeMdw.Db.CumulativeStatisticsMutationTest do
 
   describe "execute/2" do
     test "it creates and updates a statistic per day" do
-      indexfn = fn interval_start -> {{:cumulative_transactions, :all}, :day, interval_start} end
+      indexfn = fn interval_start -> {{:total_transactions, :all}, :day, interval_start} end
 
       records = [
         {indexfn.(1), 1},
@@ -32,7 +32,7 @@ defmodule AeMdw.Db.CumulativeStatisticsMutationTest do
         |> MemStore.new()
         |> State.new()
 
-      mutation = CumulativeStatisticsMutation.new(records)
+      mutation = TotalStatisticsMutation.new(records)
 
       new_state = State.commit_mem(state, [mutation])
 

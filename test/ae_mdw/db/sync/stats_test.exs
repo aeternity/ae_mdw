@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Sync.StatsTest do
 
   import Mock
   alias AeMdw.Db.StatisticsMutation
-  alias AeMdw.Db.CumulativeStatisticsMutation
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Stats
 
@@ -51,16 +51,16 @@ defmodule AeMdw.Db.Sync.StatsTest do
             {{{:transactions, :oracle_register_tx}, :month, 0}, 18},
             {{{:transactions, :spend_tx}, :month, 0}, 1}
           ]),
-          CumulativeStatisticsMutation.new([
-            {{{:cumulative_transactions, :all}, :day, 0}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :day, 0}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :day, 0}, 1},
-            {{{:cumulative_transactions, :all}, :week, 0}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :week, 0}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :week, 0}, 1},
-            {{{:cumulative_transactions, :all}, :month, 0}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :month, 0}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :month, 0}, 1}
+          TotalStatisticsMutation.new([
+            {{{:total_transactions, :all}, :day, 0}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :day, 0}, 18},
+            {{{:total_transactions, :spend_tx}, :day, 0}, 1},
+            {{{:total_transactions, :all}, :week, 0}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :week, 0}, 18},
+            {{{:total_transactions, :spend_tx}, :week, 0}, 1},
+            {{{:total_transactions, :all}, :month, 0}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :month, 0}, 18},
+            {{{:total_transactions, :spend_tx}, :month, 0}, 1}
           ])
         ]
 
@@ -83,16 +83,16 @@ defmodule AeMdw.Db.Sync.StatsTest do
             {{{:transactions, :oracle_register_tx}, :month, 12}, 18},
             {{{:transactions, :spend_tx}, :month, 12}, 1}
           ]),
-          CumulativeStatisticsMutation.new([
-            {{{:cumulative_transactions, :all}, :day, 365}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :day, 365}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :day, 365}, 1},
-            {{{:cumulative_transactions, :all}, :week, 52}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :week, 52}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :week, 52}, 1},
-            {{{:cumulative_transactions, :all}, :month, 12}, 19},
-            {{{:cumulative_transactions, :oracle_register_tx}, :month, 12}, 18},
-            {{{:cumulative_transactions, :spend_tx}, :month, 12}, 1}
+          TotalStatisticsMutation.new([
+            {{{:total_transactions, :all}, :day, 365}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :day, 365}, 18},
+            {{{:total_transactions, :spend_tx}, :day, 365}, 1},
+            {{{:total_transactions, :all}, :week, 52}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :week, 52}, 18},
+            {{{:total_transactions, :spend_tx}, :week, 52}, 1},
+            {{{:total_transactions, :all}, :month, 12}, 19},
+            {{{:total_transactions, :oracle_register_tx}, :month, 12}, 18},
+            {{{:total_transactions, :spend_tx}, :month, 12}, 1}
           ])
         ]
 

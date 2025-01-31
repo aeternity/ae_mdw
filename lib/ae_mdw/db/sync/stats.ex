@@ -5,7 +5,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
-  alias AeMdw.Db.CumulativeStatisticsMutation
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -28,7 +28,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()
   @typep intervals() :: [{interval_by(), time()}]
-  @typep tx_tag() :: :transactions | :cumulative_transactions
+  @typep tx_tag() :: :transactions | :total_transactions
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -147,12 +147,12 @@ defmodule AeMdw.Db.Sync.Stats do
       txs_statistics =
         generate_tx_statistics(:transactions, intervals, type_counts, total_count)
 
-      cumulative_txs_statistics =
-        generate_tx_statistics(:cumulative_transactions, intervals, type_counts, total_count)
+      total_txs_statistics =
+        generate_tx_statistics(:total_transactions, intervals, type_counts, total_count)
 
       [
         StatisticsMutation.new(mb_statistics ++ txs_statistics),
-        CumulativeStatisticsMutation.new(cumulative_txs_statistics)
+        TotalStatisticsMutation.new(total_txs_statistics)
       ]
     else
       StatisticsMutation.new(mb_statistics)

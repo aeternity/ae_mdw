@@ -126,8 +126,8 @@ defmodule AeMdwWeb.StatsControllerTest do
     } do
       {network_start_time, network_end_time} = network_time_interval()
 
-      cumulative_indexfn = fn interval_start ->
-        {{:cumulative_transactions, :all}, :day, interval_start}
+      total_indexfn = fn interval_start ->
+        {{:total_transactions, :all}, :day, interval_start}
       end
 
       indexfn = fn interval_start -> {{:transactions, :all}, :day, interval_start} end
@@ -139,9 +139,9 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(29), count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(30), count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(31), count: 3))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(29), count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(30), count: 6))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(31), count: 9))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(29), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(30), count: 6))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(31), count: 9))
 
       conn = with_store(conn, store)
 
@@ -168,22 +168,22 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 9 ==
                conn
-               |> get("/v3/stats/transactions/cumulative")
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
 
       assert 8 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", min_start_date: "1970-01-31")
+               |> get("/v3/stats/transactions/total", min_start_date: "1970-01-31")
                |> json_response(200)
 
       assert 6 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", max_start_date: "1970-01-31")
+               |> get("/v3/stats/transactions/total", max_start_date: "1970-01-31")
                |> json_response(200)
 
       assert 5 ==
                conn
-               |> get("/v3/stats/transactions/cumulative",
+               |> get("/v3/stats/transactions/total",
                  min_start_date: "1970-01-31",
                  max_start_date: "1970-01-31"
                )
@@ -197,8 +197,8 @@ defmodule AeMdwWeb.StatsControllerTest do
         {{:transactions, tx_type}, :day, interval_start}
       end
 
-      cumulative_indexfn = fn tx_type, interval_start ->
-        {{:cumulative_transactions, tx_type}, :day, interval_start}
+      total_indexfn = fn tx_type, interval_start ->
+        {{:total_transactions, tx_type}, :day, interval_start}
       end
 
       store =
@@ -213,35 +213,35 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 0), count: 1))
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:all, 0), count: 2)
+          Model.statistic(index: total_indexfn.(:all, 0), count: 2)
         )
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:oracle_register_tx, 0), count: 1)
+          Model.statistic(index: total_indexfn.(:oracle_register_tx, 0), count: 1)
         )
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:spend_tx, 0), count: 1)
+          Model.statistic(index: total_indexfn.(:spend_tx, 0), count: 1)
         )
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:all, 1), count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 1), count: 5))
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:all, 1), count: 7)
+          Model.statistic(index: total_indexfn.(:all, 1), count: 7)
         )
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:spend_tx, 1), count: 6)
+          Model.statistic(index: total_indexfn.(:spend_tx, 1), count: 6)
         )
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:all, 3), count: 3))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 3), count: 3))
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:all, 3), count: 10)
+          Model.statistic(index: total_indexfn.(:all, 3), count: 10)
         )
         |> Store.put(
           Model.Statistic,
-          Model.statistic(index: cumulative_indexfn.(:spend_tx, 3), count: 9)
+          Model.statistic(index: total_indexfn.(:spend_tx, 3), count: 9)
         )
 
       conn = with_store(conn, store)
@@ -273,17 +273,17 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 10 ==
                conn
-               |> get("/v3/stats/transactions/cumulative")
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
 
       assert 9 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", tx_type: "spend")
+               |> get("/v3/stats/transactions/total", tx_type: "spend")
                |> json_response(200)
 
       assert 6 ==
                conn
-               |> get("/v3/stats/transactions/cumulative",
+               |> get("/v3/stats/transactions/total",
                  tx_type: "spend",
                  max_start_date: "1970-01-02"
                )
@@ -291,7 +291,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 8 ==
                conn
-               |> get("/v3/stats/transactions/cumulative",
+               |> get("/v3/stats/transactions/total",
                  tx_type: "spend",
                  min_start_date: "1970-01-02"
                )
@@ -299,7 +299,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 5 ==
                conn
-               |> get("/v3/stats/transactions/cumulative",
+               |> get("/v3/stats/transactions/total",
                  tx_type: "spend",
                  min_start_date: "1970-01-02",
                  max_start_date: "1970-01-03"
@@ -308,7 +308,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 1 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", tx_type: "oracle_register")
+               |> get("/v3/stats/transactions/total", tx_type: "oracle_register")
                |> json_response(200)
     end
 
@@ -321,8 +321,8 @@ defmodule AeMdwWeb.StatsControllerTest do
         {{:transactions, :all}, interval_by, interval_start}
       end
 
-      cumulative_indexfn = fn interval_start ->
-        {{:cumulative_transactions, :all}, :day, interval_start}
+      total_indexfn = fn interval_start ->
+        {{:total_transactions, :all}, :day, interval_start}
       end
 
       {network_start_time, network_end_time} = network_time_interval()
@@ -337,9 +337,9 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 1), count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 7), count: 3))
         |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 14), count: 5))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(1), count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(7), count: 4))
-        |> Store.put(Model.Statistic, Model.statistic(index: cumulative_indexfn.(14), count: 9))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(1), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(7), count: 4))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(14), count: 9))
 
       conn = with_store(conn, store)
 
@@ -366,17 +366,17 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 9 ==
                conn
-               |> get("/v3/stats/transactions/cumulative")
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
 
       assert 4 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", max_start_date: "1970-01-08")
+               |> get("/v3/stats/transactions/total", max_start_date: "1970-01-08")
                |> json_response(200)
 
       assert 3 ==
                conn
-               |> get("/v3/stats/transactions/cumulative",
+               |> get("/v3/stats/transactions/total",
                  max_start_date: "1970-01-08",
                  min_start_date: "1970-01-08"
                )
@@ -384,7 +384,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 5 ==
                conn
-               |> get("/v3/stats/transactions/cumulative", min_start_date: "1970-01-11")
+               |> get("/v3/stats/transactions/total", min_start_date: "1970-01-11")
                |> json_response(200)
     end
 
@@ -471,7 +471,7 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert 0 ==
                conn
-               |> get("/v3/stats/transactions/cumulative")
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
     end
   end

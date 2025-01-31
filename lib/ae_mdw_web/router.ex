@@ -131,7 +131,7 @@ defmodule AeMdwWeb.Router do
 
       scope "/stats" do
         get "/transactions", StatsController, :transactions_stats
-        get "/transactions/cumulative", StatsController, :transactions_cumulative_stats
+        get "/transactions/total", StatsController, :transactions_total_stats
         get "/blocks", StatsController, :blocks_stats
         get "/difficulty", StatsController, :difficulty_stats
         get "/hashrate", StatsController, :hashrate_stats

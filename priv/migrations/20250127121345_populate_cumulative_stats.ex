@@ -1,10 +1,10 @@
-defmodule AeMdw.Migrations.PopulateCumulativeStats do
+defmodule AeMdw.Migrations.PopulateTotalStats do
   @moduledoc """
-  This migration populates the cumulative statistics table from the transaction statistics table. It can be run multiple times without any side effects.
+  This migration populates the total statistics table from the transaction statistics table. It can be run multiple times without any side effects.
   """
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Collection
-  alias AeMdw.Db.CumulativeStatisticsMutation
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
@@ -15,7 +15,7 @@ defmodule AeMdw.Migrations.PopulateCumulativeStats do
   def run(state, _from_start?) do
     old_kb =
       Collection.generate_key_boundary(
-        {{:cumulative_transactions, Collection.gen_range(0, "")}, Collection.binary(),
+        {{:total_transactions, Collection.gen_range(0, "")}, Collection.binary(),
          Collection.integer()}
       )
 
@@ -36,11 +36,11 @@ defmodule AeMdw.Migrations.PopulateCumulativeStats do
                        index: {{:transactions, tx_type}, interval_by, interval_start},
                        count: count
                      ) ->
-      {{{:cumulative_transactions, tx_type}, interval_by, interval_start}, count}
+      {{{:total_transactions, tx_type}, interval_by, interval_start}, count}
     end)
     |> Stream.chunk_every(1000)
     |> Enum.map(fn statistics ->
-      CumulativeStatisticsMutation.new(statistics)
+      TotalStatisticsMutation.new(statistics)
     end)
     |> then(fn mutations ->
       _state = State.commit(state, mutations)

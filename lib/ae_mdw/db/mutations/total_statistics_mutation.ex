@@ -1,6 +1,6 @@
-defmodule AeMdw.Db.CumulativeStatisticsMutation do
+defmodule AeMdw.Db.TotalStatisticsMutation do
   @moduledoc """
-  Increments the statistics count.
+  Updates the statistics cumulatively instead of keeping it as deltas
   """
 
   alias AeMdw.Db.State
