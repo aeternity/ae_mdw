@@ -28,6 +28,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()
   @typep intervals() :: [{interval_by(), time()}]
+  @typep tx_tag() :: :transactions | :cumulative_transactions
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -158,8 +159,8 @@ defmodule AeMdw.Db.Sync.Stats do
     end
   end
 
-  @spec generate_tx_statistics(Stats.statistic_tag(), intervals(), type_counts(), pos_integer()) ::
-          [Stats.statistic()]
+  @spec generate_tx_statistics(tx_tag(), intervals(), type_counts(), pos_integer()) ::
+          list({{Stats.statistic_tag(), Stats.interval_by(), time()}, pos_integer()})
   def generate_tx_statistics(tag, intervals, type_counts, total_count) do
     Enum.flat_map(intervals, fn {interval, interval_start} ->
       tx_type_statistics =

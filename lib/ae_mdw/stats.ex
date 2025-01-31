@@ -45,6 +45,7 @@ defmodule AeMdw.Stats do
   @type blocks_tag() :: {:blocks, :key | :micro | :all}
   @type statistic_tag() ::
           {:transactions, Node.tx_type() | :all}
+          | {:cumulative_transactions, Node.tx_type() | :all}
           | :names_activated
           | :aex9_transfers
           | blocks_tag()

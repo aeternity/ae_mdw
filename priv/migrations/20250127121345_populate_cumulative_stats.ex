@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.PopulateCumulativeStats do
+  @moduledoc """
+  This migration populates the cumulative statistics table from the transaction statistics table. It can be run multiple times without any side effects.
+  """
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Collection
   alias AeMdw.Db.CumulativeStatisticsMutation
