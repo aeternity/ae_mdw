@@ -56,7 +56,7 @@ schemas:
           gas: 200000
           gas_price: 1000000000
           nonce: 66
-          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4 
+          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4
           ttl: 0
           vm_version: 5
   ContractCall:

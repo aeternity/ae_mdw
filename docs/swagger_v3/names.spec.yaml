@@ -1,5 +1,5 @@
 schemas:
-  NameTx:
+  NameRevokeTx:
     nullable: true
     type: object
     required:
@@ -26,29 +26,23 @@ schemas:
         items:
           $ref: '#/components/schemas/Signature'
       tx:
-        type: object
-        required:
-          - account_id
-          - fee
-          - name_id
-          - nonce
-          - type
-          - version
-        properties:
-          account_id:
-            $ref: '#/components/schemas/AccountAddress'
-          fee:
-            type: integer
-          name_id:
-            $ref: '#/components/schemas/NameHash'
-          nonce:
-            type: integer
-          ttl:
-            type: integer
-          type:
-            type: string
-          version:
-            type: integer
+        allOf:
+          - oneOf:
+            - $ref: '#/components/schemas/NameRevokeTx'
+            - $ref: '#/components/schemas/ContractCallTx'
+          - type: object
+            required:
+              - type
+              - version
+              - nonce
+            properties:
+              type:
+                type: string
+                enum:
+                  - NameRevokeTx
+                  - ContractCallTx
+              version:
+                type: integer
     example:
       block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       block_height: 45784
@@ -124,7 +118,7 @@ schemas:
         type: integer
         example: 134626900000000000000
       revoke:
-        $ref: '#/components/schemas/NameTx'
+        $ref: '#/components/schemas/NameRevokeTx'
       claims_count:
         type: integer
         example: 3
@@ -181,9 +175,27 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            oneOf:
-              - $ref: '#/components/schemas/NameClaimTx'
-              - $ref: '#/components/schemas/ContractCallTx'
+            allOf:
+              - oneOf:
+                  - $ref: '#/components/schemas/NameClaimTx'
+                  - $ref: '#/components/schemas/ContractCallTx'
+              - type: object
+                required:
+                  - nonce
+                  - name_id
+                  - type
+                  - version
+                properties:
+                  name_id:
+                    $ref: '#/components/schemas/NameHash'
+                  type:
+                    type: string
+                    enum:
+                      - NameClaimTx
+                      - ContractCallTx
+                    example: NameClaimTx
+                  version:
+                    type: integer
       name:
         $ref: '#/components/schemas/NameString'
       name_fee:

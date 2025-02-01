@@ -39,11 +39,16 @@ schemas:
             required:
               - version
               - type
+              - tx_hash
             properties:
               version:
                 type: integer
               type:
                 type: string
+              tx_hash:
+                deprecated: true
+                description: use the outer `hash` instead
+                $ref: '#/components/schemas/TransactionHash'
           - oneOf:
             - title: OracleRegisterTx
               allOf:
