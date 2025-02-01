@@ -181,8 +181,7 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            type: object
-            # TODO: define properties
+            $ref: '#/components/schemas/NameClaimTx'
             example:
               account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
               fee: 16540000000000
@@ -227,8 +226,7 @@ schemas:
         type: integer
         example: 45784
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameClaimTx'
         example:
           account_id: "ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r"
           fee: 16540000000000
@@ -264,8 +262,7 @@ schemas:
         type: string
         example: NameTransferTx
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameTransferTx'
         example:
           account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           fee: 30000
@@ -300,8 +297,7 @@ schemas:
         type: string
         example: NameUpdateTx
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameUpdateTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -340,8 +336,7 @@ schemas:
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameUpdateTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
