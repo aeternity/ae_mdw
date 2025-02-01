@@ -232,6 +232,7 @@ schemas:
       query_id:
         $ref: '#/components/schemas/OracleQueryId'
       response:
+        # TODO: omit `query` field of OracleResponse since it is missed in the actual response
         $ref: '#/components/schemas/OracleResponse'
       source_tx_hash:
         description: The hash of the transaction in which the query was created
@@ -332,7 +333,8 @@ schemas:
       query_id:
         $ref: '#/components/schemas/OracleQueryId'
       query:
-        $ref: '#/components/schemas/OracleResponse'
+        # TODO: omit `response` field of OracleQuery since it is missed in the actual response
+        $ref: '#/components/schemas/OracleQuery'
       source_tx_hash:
         description: The hash of the transaction in which the response was created
         $ref: '#/components/schemas/TransactionHash'
