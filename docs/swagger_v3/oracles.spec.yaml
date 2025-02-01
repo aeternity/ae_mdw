@@ -221,7 +221,7 @@ schemas:
       ttl: 289505
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         description: The time of the block
@@ -321,7 +321,7 @@ schemas:
       ttl: 289505
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         description: The time of the block
@@ -388,7 +388,7 @@ schemas:
       source_tx_type: "OracleExtendTx"
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       height:
         description: The block height

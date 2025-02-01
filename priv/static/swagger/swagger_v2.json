@@ -1589,7 +1589,7 @@
         },
         "properties": {
           "block_hash": {
-            "description": "The hash of the block in which it ocurred",
+            "description": "The hash of the block in which it occurred",
             "type": "string"
           },
           "block_time": {
@@ -1692,7 +1692,7 @@
         },
         "properties": {
           "block_hash": {
-            "description": "The hash of the block in which it ocurred",
+            "description": "The hash of the block in which it occurred",
             "type": "string"
           },
           "block_time": {
