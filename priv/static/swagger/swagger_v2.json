@@ -1708,7 +1708,7 @@
             "type": "string"
           },
           "query": {
-            "$ref": "#/components/schemas/OracleResponse"
+            "$ref": "#/components/schemas/OracleQuery"
           },
           "source_tx_hash": {
             "description": "The hash of the transaction in which the response was created",
