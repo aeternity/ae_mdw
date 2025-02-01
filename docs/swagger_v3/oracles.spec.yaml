@@ -57,6 +57,8 @@ schemas:
           nonce:
             type: integer
           oracle_id:
+            deprecated: true
+            description: use `account_id` instead (the same value with a different prefix)
             $ref: '#/components/schemas/OracleAddress'
           oracle_ttl:
             description: Expiration of the oracle
@@ -110,7 +112,7 @@ schemas:
           - sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
         tx:
             abi_version: 0
-            account_id: ak_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
+            account_id: ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
             fee: 20000
             nonce: 1
             oracle_id: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
