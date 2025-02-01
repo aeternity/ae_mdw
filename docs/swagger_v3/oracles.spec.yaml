@@ -398,39 +398,7 @@ schemas:
         description: The type of the transaction in which the extend was done, it can be either via a contract call or an extend transaction
         type: string
       tx:
-        type: object
-        required:
-          - fee
-          - nonce
-          - oracle_id
-          - oracle_ttl
-        properties:
-          fee:
-            description: The transaction fee
-            type: integer
-          nonce:
-            description: The nonce
-            type: integer
-          oracle_id:
-            description: The oracle ID of this query
-            $ref: '#/components/schemas/OracleAddress'
-          oracle_ttl:
-            description: Expiration of the oracle
-            type: object
-            required:
-              - type
-              - value
-            properties:
-              type:
-                enum:
-                - delta
-                - block
-                type: string
-              value:
-                type: integer
-          ttl:
-            description: Transaction TTL
-            type: integer
+        $ref: '#/components/schemas/OracleExtendTx'
     required:
       - block_hash
       - height
