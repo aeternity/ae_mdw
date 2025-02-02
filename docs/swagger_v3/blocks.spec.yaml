@@ -4,6 +4,10 @@ schemas:
     type: string
     example: bs_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
     pattern: ^bs_\w{38,50}$
+  ByteArray:
+    type: string
+    example: ba_wAAAAKv2ZV4=
+    pattern: ^ba_\w+$
   KeyBlock:
     example:
       beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
@@ -25,6 +29,7 @@ schemas:
     required:
       - beneficiary
       - beneficiary_reward
+      - flags
       - hash
       - height
       - info
@@ -44,6 +49,8 @@ schemas:
       beneficiary_reward:
         description: The beneficiary reward
         type: integer
+      flags:
+        $ref: '#/components/schemas/ByteArray'
       hash:
         $ref: '#/components/schemas/KeyBlockHash'
       height:
@@ -119,6 +126,7 @@ schemas:
       - time
       - version
       - gas
+      - flags
     properties:
       micro_block_index:
         description: The index of the micro-block on the micro-block height, starting from 0
@@ -164,6 +172,8 @@ schemas:
       version:
         description: The version
         type: integer
+      flags:
+        $ref: '#/components/schemas/ByteArray'
     title: MicroBlock
     type: object
 paths:
