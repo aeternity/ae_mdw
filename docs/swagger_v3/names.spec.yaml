@@ -335,7 +335,8 @@ schemas:
       name:
         $ref: '#/components/schemas/NameString'
       key:
-        $ref: '#/components/schemas/AccountAddress'
+        type: string
+        example: account_pubkey
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
