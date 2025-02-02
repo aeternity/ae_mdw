@@ -24,6 +24,7 @@ schemas:
       version: 3
     required:
       - beneficiary
+      - beneficiary_reward
       - hash
       - height
       - info
