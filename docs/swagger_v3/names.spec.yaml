@@ -102,8 +102,9 @@ schemas:
         type: integer
         example: 362026
       pointers:
-        type: object
-        additionalProperties: true
+        type: array
+        items:
+          $ref: "#/components/schemas/NamePointer"
       auction:
         $ref: '#/components/schemas/Auction'
         nullable: true
