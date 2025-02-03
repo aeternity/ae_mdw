@@ -23,10 +23,6 @@ schemas:
         type: integer
       hash:
         $ref: '#/components/schemas/TransactionHash'
-      tx_hash:
-        deprecated: true
-        description: use `hash` instead
-        $ref: '#/components/schemas/TransactionHash'
       micro_index:
         type: integer
       micro_time:
