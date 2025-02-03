@@ -1,8 +1,6 @@
 defmodule AeMdwWeb.BlockController do
   use AeMdwWeb, :controller
 
-  import AeMdw.Util, only: [parse_int: 1]
-
   alias AeMdw.Blocks
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
@@ -23,7 +21,7 @@ defmodule AeMdwWeb.BlockController do
   def block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi}) do
     case Validate.nonneg_int(hash_or_kbi) do
       {:ok, kbi} ->
-        case Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
+        case Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1) do
           {:ok, {_prev_cursor, [block], _next_cursor}} ->
             format_json(conn, block)
 
@@ -42,29 +40,10 @@ defmodule AeMdwWeb.BlockController do
   end
 
   @doc """
-  Endpoint for block info by hash or kbi.
-  """
-  @spec block_v1(Conn.t(), map()) :: Conn.t()
-  def block_v1(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
-    case parse_int(hash_or_kbi) do
-      {:ok, _kbi} ->
-        blocki(conn, Map.put(params, "kbi", hash_or_kbi))
-
-      :error ->
-        case Blocks.fetch(state, hash_or_kbi) do
-          {:ok, block} -> format_json(conn, block)
-          {:error, reason} -> {:error, reason}
-        end
-    end
-  end
-
-  @doc """
-  Endpoint for block info by kbi.
+  Endpoint for block info by kbi and mbi.
   """
   @spec blocki(Conn.t(), map()) :: Conn.t()
-  def blocki(%Conn{assigns: %{state: state}} = conn, %{"kbi" => kbi} = params) do
-    mbi = Map.get(params, "mbi", "-1")
-
+  def blocki(%Conn{assigns: %{state: state}} = conn, %{"kbi" => kbi, "mbi" => mbi}) do
     with {:ok, block_index} <- Validate.block_index(kbi <> "/" <> mbi),
          {:ok, block} <- Blocks.fetch(state, block_index) do
       format_json(conn, block)
@@ -115,24 +94,6 @@ defmodule AeMdwWeb.BlockController do
   end
 
   @doc """
-  Endpoint for blocks info based on pagination.
-  """
-  @spec blocks_v1(Conn.t(), map()) :: Conn.t()
-  def blocks_v1(%Conn{assigns: assigns} = conn, _params) do
-    %{
-      state: state,
-      pagination: {direction, _is_reversed?, limit, _has_cursor?},
-      cursor: cursor,
-      scope: scope
-    } = assigns
-
-    with {:ok, paginated_blocks} <-
-           Blocks.fetch_blocks(state, direction, scope, cursor, limit, false) do
-      Util.render(conn, paginated_blocks)
-    end
-  end
-
-  @doc """
   Endpoint for paginated blocks with sorted micro blocks per time.
   """
   @spec blocks(Conn.t(), map()) :: Conn.t()
@@ -144,8 +105,7 @@ defmodule AeMdwWeb.BlockController do
       scope: scope
     } = assigns
 
-    with {:ok, paginated_blocks} <-
-           Blocks.fetch_blocks(state, direction, scope, cursor, limit, true) do
+    with {:ok, paginated_blocks} <- Blocks.fetch_blocks(state, direction, scope, cursor, limit) do
       Util.render(conn, paginated_blocks)
     end
   end
