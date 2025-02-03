@@ -16,16 +16,16 @@ services:
       - "3013:3013" #Node's default external API port
       - "3014:3014" #Node's channels default websocket port
     volumes:
-      - ${PWD}/data_testnet/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
-      - ${PWD}/data_testnet/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db
-      - ${PWD}/docker/aeternity_testnet.yaml:/home/aeternity/aeternity.yaml
-      - ${PWD}/docker/aeternity-dev.yaml:/home/aeternity/aeternity-dev.yaml
-      - ${PWD}/docker/accounts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.genesis/accounts_test.json
-      - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
+      - ${PWD}/data_testnet/mnesia:/home/aeternity/node/data/mnesia
+      - ${PWD}/data_testnet/mdw.db:/home/aeternity/node/data/mdw.db
+      - ${PWD}/docker/aeternity_testnet.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml
+      - ${PWD}/docker/aeternity-dev.yaml:/home/aeternity/.aeternity/aeternity/aeternity-dev.yaml
+      - ${PWD}/docker/accounts.json:/home/aeternity/node/data/aecore/.genesis/accounts_test.json
+      - ${PWD}/priv:/home/aeternity/ae_mdw/priv
       - ${PWD}:/app
       - ${PWD}/docker/gitconfig:/root/.gitconfig
     environment:
-      - AETERNITY_CONFIG=${AETERNITY_CONFIG:-/home/aeternity/aeternity.yaml}
+      - AETERNITY_CONFIG=${AETERNITY_CONFIG:-/home/aeternity/.aeternity/aeternity/aeternity.yaml}
     networks:
       ae_mdw_net_testnet:
         aliases:

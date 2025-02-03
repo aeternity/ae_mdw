@@ -13,4 +13,4 @@ services:
     volumes:
       - ${PWD}:/app
     environment:
-      AETERNITY_CONFIG: /home/aeternity/aeternity.yaml
+      AETERNITY_CONFIG: /home/aeternity/.aeternity/aeternity/aeternity.yaml
