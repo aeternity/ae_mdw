@@ -106,7 +106,8 @@ defmodule AeMdw.MixProject do
           :sext,
           :rocksdb,
           :telemetry,
-          :aeapi
+          :aeapi,
+          :aec_parent_connector
         ]
       ],
       dialyzer: dialyzer(),
