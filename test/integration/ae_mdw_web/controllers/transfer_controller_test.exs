@@ -458,5 +458,36 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
+
+    test "renders the correct fee_lock_name transfers schema", %{conn: conn} do
+      kind_prefix = "fee_lock_name"
+
+      conn = get(conn, "/v3/transfers", kind: kind_prefix)
+      response = json_response(conn, 200)
+
+      assert @default_limit = Enum.count(response["data"])
+
+      assert Enum.all?(response["data"], fn %{
+                                              "kind" => kind,
+                                              "ref_tx_hash" => ref_tx_hash,
+                                              "ref_block_hash" => ref_block_hash,
+                                              "ref_tx_type" => ref_tx_type
+                                            } ->
+               String.starts_with?(ref_tx_hash, "th_") &&
+                 (String.starts_with?(ref_block_hash, "mh_") ||
+                    String.starts_with?(ref_block_hash, "kh_")) &&
+                 String.ends_with?(ref_tx_type, "Tx") &&
+                 kind == kind_prefix
+             end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert @default_limit = Enum.count(response_next["data"])
+
+      assert Enum.all?(response_next["data"], fn %{"kind" => kind} ->
+               kind == kind_prefix
+             end)
+    end
   end
 end
