@@ -46,6 +46,7 @@ defmodule AeMdw.MixProject do
           :aec_hard_forks,
           :aec_hash,
           :aec_headers,
+          :aec_parent_connector,
           :aec_paying_for_tx,
           :aec_spend_tx,
           :aec_sync,
@@ -106,8 +107,7 @@ defmodule AeMdw.MixProject do
           :sext,
           :rocksdb,
           :telemetry,
-          :aeapi,
-          :aec_parent_connector
+          :aeapi
         ]
       ],
       dialyzer: dialyzer(),
