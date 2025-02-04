@@ -67,6 +67,7 @@ schemas:
         type: integer
         example: 608269
       internal_tx:
+        # TODO: define properties
         type: object
         example:
           fee: 0
