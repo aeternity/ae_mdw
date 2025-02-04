@@ -35,58 +35,29 @@ schemas:
         $ref: '#/components/schemas/TransactionEncoded'
       tx:
         type: object
-        required:
-          - fee
-          - nonce
-          - oracle_id
-          - oracle_ttl
-          - type
-          - version
-          - abi_version
-          - account_id
-          - query_fee
-          - query_format
-          - response_format
-        properties:
-          fee:
-            type: integer
-          nonce:
-            type: integer
-          oracle_id:
-            $ref: '#/components/schemas/OracleAddress'
-          oracle_ttl:
-            description: Expiration of the oracle
-            type: object
+        allOf:
+          - $ref: '#/components/schemas/OracleRegisterTx'
+          - type: object
             required:
+              - oracle_id
               - type
-              - value
+              - version
+              - tx_hash
             properties:
+              # TODO: remove `oracle_id` since it is always the same as `account_id`
+              oracle_id:
+                deprecated: true
+                description: use `account_id` instead
+                $ref: '#/components/schemas/OracleAddress'
               type:
-                enum:
-                - delta
-                - block
+                # TODO: define as enum
                 type: string
-              value:
+              version:
                 type: integer
-          ttl:
-            type: integer
-          type:
-            type: string
-          version:
-            type: integer
-          abi_version:
-            type: number
-          # TODO: remove `account_id` since it is always the same as `oracle_id`
-          account_id:
-            deprecated: true
-            description: use `oracle_id` instead
-            $ref: '#/components/schemas/AccountAddress'
-          query_fee:
-            type: number
-          query_format:
-            type: string
-          response_format:
-            type: string
+              tx_hash:
+                deprecated: true
+                description: use the outer `hash` instead
+                $ref: '#/components/schemas/TransactionHash'
   Oracle:
     example:
       active: false
