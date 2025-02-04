@@ -622,6 +622,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /stats/transactions/total:
+    get:
+      deprecated: false
+      description: Get the total count of transactions for the given period.
+      operationId: GetTotalTransactionsStats
+      parameters:
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - name: tx_type
+          description: The type of the transactions
+          in: query
+          required: false
+          schema:
+            type: string
+            example: contract_call
+      responses:
+        '200':
+          description: Returns the count of transactions for the given period
+          content:
+            application/json:
+              schema:
+                type: integer
+                example: 100
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /stats/total-accounts:
     get:
       deprecated: false

@@ -45,6 +45,7 @@ defmodule AeMdw.Stats do
   @type blocks_tag() :: {:blocks, :key | :micro | :all}
   @type statistic_tag() ::
           {:transactions, Node.tx_type() | :all}
+          | {:total_transactions, Node.tx_type() | :all}
           | :names_activated
           | :aex9_transfers
           | blocks_tag()
@@ -228,6 +229,55 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_transactions_total_stats(State.t(), query(), range()) ::
+          {:ok, non_neg_integer()}
+  def fetch_transactions_total_stats(state, query, range) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
+      tx_tag = Map.get(filters, :tx_type, :all)
+      tag = {:total_transactions, tx_tag}
+
+      interval_by = :day
+      filters = Map.put(filters, :interval_by, interval_by)
+
+      {first_index, last_index} =
+        generate_key_boundary(state, tag, filters, range)
+
+      first_statistic_count =
+        state
+        |> State.prev(Model.Statistic, first_index)
+        |> case do
+          {:ok, {^tag, ^interval_by, _interval_start} = index} ->
+            Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
+            count
+
+          _otherwise ->
+            0
+        end
+
+      last_statistic_count =
+        state
+        |> State.get(Model.Statistic, last_index)
+        |> case do
+          {:ok, Model.statistic(count: count)} ->
+            count
+
+          :not_found ->
+            state
+            |> State.prev(Model.Statistic, last_index)
+            |> case do
+              {:ok, {^tag, ^interval_by, _interval_start} = index} ->
+                Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
+                count
+
+              _otherwise ->
+                0
+            end
+        end
+
+      {:ok, abs(last_statistic_count - first_statistic_count)}
+    end
+  end
+
   @spec fetch_blocks_stats(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_blocks_stats(state, pagination, query, range, cursor) do
@@ -325,17 +375,35 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp build_statistics_streamer(state, tag, filters, range, cursor) do
-    interval_by = Map.get(filters, :interval_by, :day)
-    {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
-    min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
-    max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
+  defp build_statistics_streamer(
+         state,
+         tag,
+         filters,
+         range,
+         cursor
+       ) do
+    key_boundary =
+      {{^tag, interval_by, min_date}, {^tag, interval_by, max_date}} =
+      generate_key_boundary(state, tag, filters, range)
 
     cursor =
       case cursor do
         nil -> nil
         interval_start -> {tag, interval_by, interval_start}
       end
+
+    fn direction ->
+      state
+      |> Collection.stream(Model.Statistic, direction, key_boundary, cursor)
+      |> fill_missing_dates(tag, interval_by, direction, cursor, min_date, max_date)
+    end
+  end
+
+  defp generate_key_boundary(state, tag, filters, range) do
+    interval_by = Map.get(filters, :interval_by, :day)
+    {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
+    min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
+    max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
 
     {min_date, max_date} =
       if range do
@@ -362,13 +430,7 @@ defmodule AeMdw.Stats do
         {min_date, max_date}
       end
 
-    key_boundary = {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
-
-    fn direction ->
-      state
-      |> Collection.stream(Model.Statistic, direction, key_boundary, cursor)
-      |> fill_missing_dates(tag, interval_by, direction, cursor, min_date, max_date)
-    end
+    {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
   end
 
   defp fill_missing_dates(stream, tag, interval_by, :backward, cursor, min_date, max_date) do

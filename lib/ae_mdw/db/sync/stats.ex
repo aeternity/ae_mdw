@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -27,6 +28,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep txi() :: Txs.txi()
   @typep interval_by() :: Stats.interval_by()
   @typep intervals() :: [{interval_by(), time()}]
+  @typep tx_tag() :: :transactions | :total_transactions
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -141,23 +143,35 @@ defmodule AeMdw.Db.Sync.Stats do
         ]
       end)
 
-    txs_statistics =
-      if total_count > 0 do
-        Enum.flat_map(intervals, fn {interval, interval_start} ->
-          tx_type_statistics =
-            Enum.map(type_counts, fn {tx_type, count} ->
-              {{{:transactions, tx_type}, interval, interval_start}, count}
-            end)
+    if total_count > 0 do
+      txs_statistics =
+        generate_tx_statistics(:transactions, intervals, type_counts, total_count)
 
-          total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
+      total_txs_statistics =
+        generate_tx_statistics(:total_transactions, intervals, type_counts, total_count)
 
-          [total_statistic | tx_type_statistics]
+      [
+        StatisticsMutation.new(mb_statistics ++ txs_statistics),
+        TotalStatisticsMutation.new(total_txs_statistics)
+      ]
+    else
+      StatisticsMutation.new(mb_statistics)
+    end
+  end
+
+  @spec generate_tx_statistics(tx_tag(), intervals(), type_counts(), pos_integer()) ::
+          list({{Stats.statistic_tag(), Stats.interval_by(), time()}, pos_integer()})
+  def generate_tx_statistics(tag, intervals, type_counts, total_count) do
+    Enum.flat_map(intervals, fn {interval, interval_start} ->
+      tx_type_statistics =
+        Enum.map(type_counts, fn {tx_type, count} ->
+          {{{tag, tx_type}, interval, interval_start}, count}
         end)
-      else
-        []
-      end
 
-    StatisticsMutation.new(mb_statistics ++ txs_statistics)
+      total_statistic = {{{tag, :all}, interval, interval_start}, total_count}
+
+      [total_statistic | tx_type_statistics]
+    end)
   end
 
   @spec time_intervals(time()) :: intervals()

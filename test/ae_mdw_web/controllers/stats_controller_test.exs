@@ -124,18 +124,24 @@ defmodule AeMdwWeb.StatsControllerTest do
       conn: conn,
       store: store
     } do
-      st1_index = {{:transactions, :all}, :day, 29}
-      st2_index = {{:transactions, :all}, :day, 30}
-      st3_index = {{:transactions, :all}, :day, 31}
       {network_start_time, network_end_time} = network_time_interval()
+
+      total_indexfn = fn interval_start ->
+        {{:total_transactions, :all}, :day, interval_start}
+      end
+
+      indexfn = fn interval_start -> {{:transactions, :all}, :day, interval_start} end
 
       store =
         store
         |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
         |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
-        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
-        |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(29), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(30), count: 5))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(31), count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(29), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(30), count: 6))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(31), count: 9))
 
       conn = with_store(conn, store)
 
@@ -159,25 +165,84 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
+
+      assert 8 ==
+               conn
+               |> get("/v3/stats/transactions/total", min_start_date: "1970-01-31")
+               |> json_response(200)
+
+      assert 6 ==
+               conn
+               |> get("/v3/stats/transactions/total", max_start_date: "1970-01-31")
+               |> json_response(200)
+
+      assert 5 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 min_start_date: "1970-01-31",
+                 max_start_date: "1970-01-31"
+               )
+               |> json_response(200)
     end
 
     test "it returns the count of transactions filtered by a tx type", %{conn: conn, store: store} do
-      st1_index = {{:transactions, :all}, :day, 0}
-      st2_index = {{:transactions, :oracle_register_tx}, :day, 0}
-      st3_index = {{:transactions, :spend_tx}, :day, 0}
-      st4_index = {{:transactions, :spend_tx}, :day, 1}
-      st5_index = {{:transactions, :spend_tx}, :day, 3}
       {network_start_time, network_end_time} = network_time_interval()
+
+      indexfn = fn tx_type, interval_start ->
+        {{:transactions, tx_type}, :day, interval_start}
+      end
+
+      total_indexfn = fn tx_type, interval_start ->
+        {{:total_transactions, tx_type}, :day, interval_start}
+      end
 
       store =
         store
         |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
         |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
-        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 5))
-        |> Store.put(Model.Statistic, Model.statistic(index: st5_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:all, 0), count: 2))
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: indexfn.(:oracle_register_tx, 0), count: 1)
+        )
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 0), count: 1))
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:all, 0), count: 2)
+        )
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:oracle_register_tx, 0), count: 1)
+        )
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:spend_tx, 0), count: 1)
+        )
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:all, 1), count: 5))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 1), count: 5))
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:all, 1), count: 7)
+        )
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:spend_tx, 1), count: 6)
+        )
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:all, 3), count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:spend_tx, 3), count: 3))
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:all, 3), count: 10)
+        )
+        |> Store.put(
+          Model.Statistic,
+          Model.statistic(index: total_indexfn.(:spend_tx, 3), count: 9)
+        )
 
       conn = with_store(conn, store)
 
@@ -205,6 +270,46 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+
+      assert 10 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total", tx_type: "spend")
+               |> json_response(200)
+
+      assert 6 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 tx_type: "spend",
+                 max_start_date: "1970-01-02"
+               )
+               |> json_response(200)
+
+      assert 8 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 tx_type: "spend",
+                 min_start_date: "1970-01-02"
+               )
+               |> json_response(200)
+
+      assert 5 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 tx_type: "spend",
+                 min_start_date: "1970-01-02",
+                 max_start_date: "1970-01-03"
+               )
+               |> json_response(200)
+
+      assert 1 ==
+               conn
+               |> get("/v3/stats/transactions/total", tx_type: "oracle_register")
+               |> json_response(200)
     end
 
     test "when interval_by = week, it returns the count of transactions for the latest weekly periods",
@@ -212,18 +317,29 @@ defmodule AeMdwWeb.StatsControllerTest do
            conn: conn,
            store: store
          } do
-      st1_index = {{:transactions, :all}, :week, 2}
-      st2_index = {{:transactions, :all}, :week, 3}
-      st3_index = {{:transactions, :all}, :week, 4}
+      indexfn = fn interval_by, interval_start ->
+        {{:transactions, :all}, interval_by, interval_start}
+      end
+
+      total_indexfn = fn interval_start ->
+        {{:total_transactions, :all}, :day, interval_start}
+      end
+
       {network_start_time, network_end_time} = network_time_interval()
 
       store =
         store
         |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
         |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
-        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
-        |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
-        |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:week, 2), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:week, 3), count: 5))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:week, 4), count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 1), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 7), count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: indexfn.(:day, 14), count: 5))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(1), count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(7), count: 4))
+        |> Store.put(Model.Statistic, Model.statistic(index: total_indexfn.(14), count: 9))
 
       conn = with_store(conn, store)
 
@@ -246,6 +362,29 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"data" => ^statistics} =
                conn
                |> get(prev_url)
+               |> json_response(200)
+
+      assert 9 ==
+               conn
+               |> get("/v3/stats/transactions/total")
+               |> json_response(200)
+
+      assert 4 ==
+               conn
+               |> get("/v3/stats/transactions/total", max_start_date: "1970-01-08")
+               |> json_response(200)
+
+      assert 3 ==
+               conn
+               |> get("/v3/stats/transactions/total",
+                 max_start_date: "1970-01-08",
+                 min_start_date: "1970-01-08"
+               )
+               |> json_response(200)
+
+      assert 5 ==
+               conn
+               |> get("/v3/stats/transactions/total", min_start_date: "1970-01-11")
                |> json_response(200)
     end
 
@@ -328,6 +467,11 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"data" => ^statistics} =
                conn
                |> get(prev_url)
+               |> json_response(200)
+
+      assert 0 ==
+               conn
+               |> get("/v3/stats/transactions/total")
                |> json_response(200)
     end
   end

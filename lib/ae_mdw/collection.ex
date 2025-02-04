@@ -139,7 +139,7 @@ defmodule AeMdw.Collection do
   def integer_256bit(), do: :integer_256bit
   @spec binary() :: :binary
   def binary(), do: :binary
-  @spec gen_range(first :: integer(), last :: integer()) :: {:gen_range, integer(), integer()}
+  @spec gen_range(first :: term(), last :: term()) :: {:gen_range, term(), term()}
   def gen_range(first, last), do: {:gen_range, first, last}
 
   defp get_min_key(:pos_integer), do: 0
