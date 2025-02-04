@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.98.0](https://github.com/aeternity/ae_mdw/compare/v1.97.1...v1.98.0) (2025-02-04)
+
+
+### Features
+
+* add endpoint to get the total count of transactions for a given period ([#2074](https://github.com/aeternity/ae_mdw/issues/2074)) ([263c3ae](https://github.com/aeternity/ae_mdw/commit/263c3ae034530b53107c7f6d04e0b0b09f53ba2c))
+
+
+### Bug Fixes
+
+* include DEX contract swaps contract_create_txi ([#2076](https://github.com/aeternity/ae_mdw/issues/2076)) ([c3e232e](https://github.com/aeternity/ae_mdw/commit/c3e232e9b3518ab7f7014e940babf9377efdfa56))
+* replace hc check to use the node functions ([#2084](https://github.com/aeternity/ae_mdw/issues/2084)) ([efed991](https://github.com/aeternity/ae_mdw/commit/efed991fb2473d4b3e6dc28d9fdfaeb6d48bcdc0))
+* swapped fields in transfer render function ([#2083](https://github.com/aeternity/ae_mdw/issues/2083)) ([b3e9e43](https://github.com/aeternity/ae_mdw/commit/b3e9e43d96548d1c925f3ae288148538b65c1d64))
+
+
+### Miscellaneous
+
+* pin ae_plugin to the current master by ref ([#2088](https://github.com/aeternity/ae_mdw/issues/2088)) ([c7bbe90](https://github.com/aeternity/ae_mdw/commit/c7bbe90d16bd143cfe2862f611101d3372b4a085))
+* remove block v1 endpoint due to significant performance impact ([#2077](https://github.com/aeternity/ae_mdw/issues/2077)) ([bc5bb69](https://github.com/aeternity/ae_mdw/commit/bc5bb69907aa6cd80bd5e78a03382942b899308a))
+
 ## [1.97.1](https://github.com/aeternity/ae_mdw/compare/v1.97.0...v1.97.1) (2025-01-22)
 
 
