@@ -193,7 +193,7 @@ defmodule AeMdw.Transfers do
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
 
-    {ref_tx_type, ref_tx_hash, ref_block_hash} =
+    {ref_block_hash, ref_tx_hash, ref_tx_type} =
       case opt_ref_txi_idx do
         -1 ->
           {nil, nil, nil}
