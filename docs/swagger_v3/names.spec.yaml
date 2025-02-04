@@ -27,28 +27,18 @@ schemas:
           $ref: '#/components/schemas/Signature'
       tx:
         type: object
-        required:
-          - account_id
-          - fee
-          - name_id
-          - nonce
-          - type
-          - version
-        properties:
-          account_id:
-            $ref: '#/components/schemas/AccountAddress'
-          fee:
-            type: integer
-          name_id:
-            $ref: '#/components/schemas/NameHash'
-          nonce:
-            type: integer
-          ttl:
-            type: integer
-          type:
-            type: string
-          version:
-            type: integer
+        allOf:
+          - $ref: '#/components/schemas/NameRevokeTx'
+          - type: object
+            required:
+              - type
+              - version
+            properties:
+              type:
+                # TODO: define as enum
+                type: string
+              version:
+                type: integer
     example:
       block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       block_height: 45784
@@ -181,7 +171,23 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            $ref: '#/components/schemas/NameClaimTx'
+            type: object
+            allOf:
+              - $ref: '#/components/schemas/NameClaimTx'
+              - type: object
+                required:
+                  - name_id
+                  - type
+                  - version
+                properties:
+                  name_id:
+                    $ref: '#/components/schemas/NameHash'
+                  type:
+                    # TODO: define as enum
+                    type: string
+                    example: NameClaimTx
+                  version:
+                    type: integer
             example:
               account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
               fee: 16540000000000
