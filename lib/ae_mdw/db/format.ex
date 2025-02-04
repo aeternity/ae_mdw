@@ -191,12 +191,12 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+  def to_map(state, Model.tx(id: hash) = rec),
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
   def to_map(
         state,
-        {:tx, index, _hash, {_kb_index, mb_index}, mb_time},
+        Model.tx(index: index, block_index: {_kb_index, mb_index}, time: mb_time),
         {block_hash, type, signed_tx, tx_rec}
       ) do
     header = :aec_db.get_header(block_hash)

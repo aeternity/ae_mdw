@@ -966,7 +966,6 @@ defmodule AeMdwWeb.StatsControllerTest do
       fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
 
       with_mocks([
-        {AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end},
         {:aec_chain, [],
          get_key_block_by_height: fn
            1 -> {:ok, :first_block}
@@ -1081,7 +1080,7 @@ defmodule AeMdwWeb.StatsControllerTest do
     |> Enum.reduce({store, 1}, fn txi, {store, i} ->
       {
         store
-        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, fee: txi))
         |> Store.put(
           Model.Time,
           Model.time(index: {now - :timer.hours(i * 5), txi})
