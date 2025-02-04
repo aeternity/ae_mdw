@@ -26,7 +26,7 @@ defmodule AeMdw.Sync.Hyperchain do
 
   @spec connected_to_parent?() :: boolean()
   def connected_to_parent?() do
-    :aec_consensus_hc.get_entropy_hash(1) != {:error, :not_in_cache}
+    :check_parent == :aec_parent_connector.request_top()
   end
 
   @spec epoch_info_at_height(Blocks.height()) :: {:ok, epoch_info()} | :error
