@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.99.0](https://github.com/aeternity/ae_mdw/compare/v1.98.0...v1.99.0) (2025-02-05)
+
+
+### Features
+
+* add top miners endpoint ([#2000](https://github.com/aeternity/ae_mdw/issues/2000)) ([03d3f80](https://github.com/aeternity/ae_mdw/commit/03d3f80b2cfc0a97b67fb4fcdc8e1ce3d3f6d4b8))
+
+
+### Miscellaneous
+
+* update dialyzer to catch further errors ([#2078](https://github.com/aeternity/ae_mdw/issues/2078)) ([bd2fd2f](https://github.com/aeternity/ae_mdw/commit/bd2fd2f81161cd9295664a86a834be8afc015c29))
+
 ## [1.98.0](https://github.com/aeternity/ae_mdw/compare/v1.97.1...v1.98.0) (2025-02-04)
 
 
