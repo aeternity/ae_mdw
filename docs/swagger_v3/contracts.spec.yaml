@@ -24,7 +24,7 @@ schemas:
         type: string
         example: ContractCreateTx
       create_tx:
-        type: object
+        $ref: '#/components/schemas/ContractCreateTx'
         example:
           abi_version: 3
           amount: 25123
@@ -67,6 +67,7 @@ schemas:
         type: integer
         example: 608269
       internal_tx:
+        # TODO: define properties
         type: object
         example:
           fee: 0

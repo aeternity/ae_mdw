@@ -92,7 +92,7 @@ defmodule AeMdw.Activities do
      where the first field of the spend transaction is the account's being queried.
   * `{{10, 20, 20}, {:int_contract_call, pos}}` - Where `pos` is the field position for the address of the internal contract call.
   * `{{20, 14, 30}, {:aexn, type, <<address-1>>, <<address-2>>, value, index}}` - Where a aexn token of type `type` was send from address-1 to address-2 with the given `value` and `index`.
-  * `{{30, -1, 2}, {:int_transfer, address, kind, ref_txi}}` - Where an internal transfer of kind `kind` ocurred to the given `address`.
+  * `{{30, -1, 2}, {:int_transfer, address, kind, ref_txi}}` - Where an internal transfer of kind `kind` occurred to the given `address`.
   """
   @spec fetch_account_activities(state(), binary(), pagination(), range(), query(), cursor()) ::
           {:ok, {activity() | nil, [activity()], activity() | nil}} | {:error, Error.t()}
