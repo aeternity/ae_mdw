@@ -186,7 +186,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Oracle, [:passthrough], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {Format, [:passthrough],
          [
-           to_map: fn _state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} ->
+           to_map: fn _state, Model.tx(id: hash) ->
              %{
                "hash" => Enc.encode(:tx_hash, hash),
                "tx" => %{
