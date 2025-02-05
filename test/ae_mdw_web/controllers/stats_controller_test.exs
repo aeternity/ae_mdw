@@ -1007,7 +1007,6 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
       with_mocks([
-        {AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end},
         {:aec_chain, [],
          get_key_block_by_height: fn
            1 -> {:ok, :first_block}
@@ -1048,7 +1047,6 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
       with_mocks([
-        {AeMdw.Node.Db, [], get_tx_fee: fn <<i::256>> -> i end},
         {:aec_chain, [],
          get_key_block_by_height: fn
            1 -> {:ok, :first_block}
