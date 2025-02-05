@@ -62,15 +62,13 @@ defmodule AeMdw.Dex do
           {:ok, paginated_swaps()} | {:error, Error.t()}
   def fetch_contract_swaps(state, contract_id, pagination, _scope, cursor) do
     with {:ok, token_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txis} <- get_pair_create_txis(state, token_pk),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
+      create_txis = get_pair_create_txis(state, token_pk)
+
       state
       |> build_contract_swaps_streamer(create_txis, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
-    else
-      :not_found -> {:error, ErrInput.NotAex9.exception(value: contract_id)}
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -440,6 +438,5 @@ defmodule AeMdw.Dex do
         :not_found -> create_txis
       end
     end)
-    |> then(&{:ok, &1})
   end
 end

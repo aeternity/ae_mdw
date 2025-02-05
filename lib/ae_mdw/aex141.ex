@@ -74,13 +74,7 @@ defmodule AeMdw.Aex141 do
            {:owner, call_contract(contract_pk, "owner", [token_id])} do
       {:ok, render_nft(contract_pk, account_pk, token_id, metadata_type, opts)}
     else
-      :error ->
-        {:error, ErrInput.NotFound.exception(value: token_id)}
-
       {:int, _invalid_int} ->
-        {:error, ErrInput.NotFound.exception(value: token_id)}
-
-      :not_found ->
         {:error, ErrInput.NotFound.exception(value: token_id)}
 
       {:owner, {:ok, mismatch}} ->

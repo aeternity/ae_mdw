@@ -3,6 +3,7 @@ defmodule AeMdw.Validate do
 
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.State
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Names
   alias :aeser_api_encoder, as: Enc
@@ -98,7 +99,7 @@ defmodule AeMdw.Validate do
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
   @spec plain_name(State.t(), String.t()) ::
-          {:ok, pubkey()} | {:error, {ErrInput.t(), String.t()}}
+          {:ok, pubkey()} | {:error, Error.t()}
   def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
