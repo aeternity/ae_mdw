@@ -166,4 +166,14 @@ defmodule AeMdwWeb.StatsController do
       Util.render(conn, paginated_stats)
     end
   end
+
+  @spec top_miners_stats(Conn.t(), map()) :: Conn.t()
+  def top_miners_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_stats} <-
+           Stats.fetch_top_miners_stats(state, pagination, query, scope, cursor) do
+      Util.render(conn, paginated_stats)
+    end
+  end
 end

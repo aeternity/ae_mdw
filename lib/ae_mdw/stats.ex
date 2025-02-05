@@ -360,6 +360,24 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_top_miners_stats(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_top_miners_stats(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         {:ok, cursor} <- deserialize_top_miners_cursor(cursor) do
+      paginated_top_miners =
+        state
+        |> build_top_miners_streamer(filters, range, cursor)
+        |> Collection.paginate(
+          pagination,
+          &render_top_miner_statistic(state, &1),
+          &serialize_top_miners_cursor/1
+        )
+
+      {:ok, paginated_top_miners}
+    end
+  end
+
   defp fetch_statistics(state, pagination, filters, range, cursor, tag) do
     with {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
       paginated_statistics =
@@ -431,6 +449,21 @@ defmodule AeMdw.Stats do
       end
 
     {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
+  end
+
+  defp build_top_miners_streamer(state, filters, _scope, cursor) do
+    interval_by = Map.get(filters, :interval_by, :day)
+    {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
+    min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
+    max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
+
+    key_boundary =
+      {{interval_by, min_date, 0, Util.min_bin()},
+       {interval_by, max_date, Util.max_int(), Util.max_256bit_bin()}}
+
+    fn direction ->
+      Collection.stream(state, Model.TopMinerStats, direction, key_boundary, cursor)
+    end
   end
 
   defp fill_missing_dates(stream, tag, interval_by, :backward, cursor, min_date, max_date) do
@@ -519,6 +552,42 @@ defmodule AeMdw.Stats do
     render_statistic(state, {:virtual, statistic_key, count})
   end
 
+  defp render_top_miner_statistic(
+         _state,
+         {:month, interval_start, count, beneficiary_id}
+       ) do
+    %{
+      start_date: months_to_iso(interval_start),
+      end_date: months_to_iso(interval_start + 1),
+      miner: :aeapi.format_account_pubkey(beneficiary_id),
+      blocks_mined: count
+    }
+  end
+
+  defp render_top_miner_statistic(
+         _state,
+         {:week, interval_start, count, beneficiary_id}
+       ) do
+    %{
+      start_date: days_to_iso(interval_start * @days_per_week),
+      end_date: days_to_iso((interval_start + 1) * @days_per_week),
+      miner: :aeapi.format_account_pubkey(beneficiary_id),
+      blocks_mined: count
+    }
+  end
+
+  defp render_top_miner_statistic(
+         _state,
+         {:day, interval_start, count, beneficiary_id}
+       ) do
+    %{
+      start_date: days_to_iso(interval_start),
+      end_date: days_to_iso(interval_start + 1),
+      miner: :aeapi.format_account_pubkey(beneficiary_id),
+      blocks_mined: count
+    }
+  end
+
   defp convert_blocks_param({"type", "key"}), do: {:ok, {:block_type, :key}}
   defp convert_blocks_param({"type", "micro"}), do: {:ok, {:block_type, :micro}}
   defp convert_blocks_param(param), do: convert_param(param)
@@ -558,12 +627,33 @@ defmodule AeMdw.Stats do
   defp serialize_statistics_cursor({:virtual, {_tag, _interval_by, interval_start}, _count}),
     do: "#{interval_start}"
 
+  defp serialize_top_miners_cursor({_interval_by, _interval_start, _count, _ben} = cursor) do
+    cursor
+    |> :erlang.term_to_binary()
+    |> Base.encode64()
+  end
+
   defp deserialize_statistic_cursor(nil), do: {:ok, nil}
 
   defp deserialize_statistic_cursor(cursor_bin) do
     case Integer.parse(cursor_bin) do
       {interval_start, ""} -> {:ok, interval_start}
       _error_or_invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
+
+  defp deserialize_top_miners_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_top_miners_cursor(cursor_bin) do
+    case Base.decode64(cursor_bin) do
+      {:ok, bin} ->
+        case :erlang.binary_to_term(bin) do
+          cursor when is_tuple(cursor) -> {:ok, cursor}
+          _bad_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+        end
+
+      :error ->
+        {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 

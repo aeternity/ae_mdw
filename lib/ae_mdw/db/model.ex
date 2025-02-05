@@ -1311,6 +1311,21 @@ defmodule AeMdw.Db.Model do
             index: mempool_index(),
             tx: mempool_tx()
           )
+  @type top_miner_stats_index() ::
+          {Stats.interval_by(), Stats.interval_start(), pos_integer(), pubkey()}
+  @type top_miner_stats() ::
+          record(:top_miner_stats, index: top_miner_stats_index())
+
+  @top_miner_stats_defaults [:index]
+  defrecord :top_miner_stats, @top_miner_stats_defaults
+
+  @type top_miner_index() ::
+          {Stats.interval_by(), Stats.interval_start(), pubkey()}
+  @type top_miner() ::
+          record(:top_miner, index: top_miner_index, count: pos_integer())
+
+  @top_miner_defaults [index: nil, count: nil]
+  defrecord :top_miner, @top_miner_defaults
 
   @hyperchain_leader_at_height_defaults [index: 0, leader: <<>>]
   defrecord :hyperchain_leader_at_height, @hyperchain_leader_at_height_defaults
@@ -1516,7 +1531,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.DeltaStat,
       AeMdw.Db.Model.TotalStat,
       AeMdw.Db.Model.Stat,
-      AeMdw.Db.Model.Statistic
+      AeMdw.Db.Model.Statistic,
+      AeMdw.Db.Model.TopMinerStats,
+      AeMdw.Db.Model.TopMiner
     ]
   end
 
@@ -1656,4 +1673,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.PinInfo), do: :pin_info
   def record(AeMdw.Db.Model.LeaderPinInfo), do: :leader_pin_info
   def record(AeMdw.Db.Model.Delegate), do: :delegate
+  def record(AeMdw.Db.Model.TopMinerStats), do: :top_miner_stats
+  def record(AeMdw.Db.Model.TopMiner), do: :top_miner
 end

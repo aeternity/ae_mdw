@@ -1220,6 +1220,213 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
   end
 
+  describe "top miners stats" do
+    setup %{store: store, conn: conn} do
+      miner1 = <<1::256>>
+      miner2 = <<2::256>>
+      miner3 = <<3::256>>
+      miner4 = <<4::256>>
+      {network_start_time, network_end_time} = network_time_interval()
+
+      store =
+        [
+          Model.top_miner_stats(index: {:day, 0, 7, miner1}),
+          Model.top_miner_stats(index: {:day, 0, 6, miner2}),
+          Model.top_miner_stats(index: {:day, 0, 5, miner3}),
+          Model.top_miner_stats(index: {:day, 0, 4, miner4}),
+          Model.top_miner_stats(index: {:day, 1, 1, miner1}),
+          Model.top_miner_stats(index: {:day, 1, 2, miner2}),
+          Model.top_miner_stats(index: {:day, 1, 3, miner3}),
+          Model.top_miner_stats(index: {:day, 1, 4, miner4}),
+          Model.top_miner_stats(index: {:week, 0, 8, miner1}),
+          Model.top_miner_stats(index: {:week, 0, 8, miner2}),
+          Model.top_miner_stats(index: {:week, 0, 8, miner3}),
+          Model.top_miner_stats(index: {:week, 0, 8, miner4}),
+          Model.top_miner_stats(index: {:week, 1, 8, miner1}),
+          Model.top_miner_stats(index: {:week, 1, 8, miner2}),
+          Model.top_miner_stats(index: {:week, 1, 8, miner3}),
+          Model.top_miner_stats(index: {:week, 1, 8, miner4}),
+          Model.top_miner_stats(index: {:month, 0, 16, miner1}),
+          Model.top_miner_stats(index: {:month, 0, 16, miner2}),
+          Model.top_miner_stats(index: {:month, 0, 16, miner3}),
+          Model.top_miner_stats(index: {:month, 0, 16, miner4})
+        ]
+        |> Enum.reduce(store, fn mutation, store ->
+          Store.put(store, Model.TopMinerStats, mutation)
+        end)
+        |> Store.put(Model.Time, Model.time(index: {network_start_time, 0}))
+        |> Store.put(Model.Time, Model.time(index: {network_end_time, 200}))
+
+      miners =
+        [
+          miner1,
+          miner2,
+          miner3,
+          miner4
+        ]
+        |> Enum.map(&:aeapi.format_account_pubkey/1)
+
+      conn = with_store(conn, store)
+
+      {:ok, %{store: store, miners: miners, conn: conn}}
+    end
+
+    test "it returns the top miners for specific date", %{conn: conn, miners: miners} do
+      assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners/top",
+                 limit: 2,
+                 min_start_date: "1970-01-01",
+                 max_start_date: "1970-01-01"
+               )
+               |> json_response(200)
+
+      [miner1, miner2, miner3, miner4] = miners
+      assert %{"miner" => ^miner1, "blocks_mined" => 7} = st1
+      assert %{"miner" => ^miner2, "blocks_mined" => 6} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner3, "blocks_mined" => 5} = st3
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st4
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "it returns the top miners for each day", %{conn: conn, miners: miners} do
+      assert %{"prev" => nil, "data" => [st1, st2, st3, st4] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners/top",
+                 limit: 4,
+                 min_start_date: "1970-01-01",
+                 max_start_date: "1970-01-02"
+               )
+               |> json_response(200)
+
+      [miner1, miner2, miner3, miner4] = miners
+
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 3} = st2
+      assert %{"miner" => ^miner2, "blocks_mined" => 2} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 1} = st4
+
+      assert %{"prev" => prev_url, "data" => [st5, st6, st7, st8], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner1, "blocks_mined" => 7} = st5
+      assert %{"miner" => ^miner2, "blocks_mined" => 6} = st6
+      assert %{"miner" => ^miner3, "blocks_mined" => 5} = st7
+      assert %{"miner" => ^miner4, "blocks_mined" => 4} = st8
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "it returns top miners for a week", %{conn: conn, miners: miners} do
+      [miner1, miner2, miner3, miner4] = miners
+
+      assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners/top",
+                 limit: 2,
+                 interval_by: "week",
+                 min_start_date: "1970-01-01",
+                 max_start_date: "1970-01-07"
+               )
+               |> json_response(200)
+
+      assert %{"miner" => ^miner4, "blocks_mined" => 8} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 8} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner2, "blocks_mined" => 8} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 8} = st4
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "it returns top miners for multiple weeks", %{conn: conn, miners: miners} do
+      [miner1, miner2, miner3, miner4] = miners
+
+      assert %{"prev" => nil, "data" => [st1, st2, st3, st4] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners/top",
+                 limit: 4,
+                 interval_by: "week",
+                 min_start_date: "1970-01-01",
+                 max_start_date: "1970-01-13"
+               )
+               |> json_response(200)
+
+      assert %{"miner" => ^miner4, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st2
+      assert %{"miner" => ^miner2, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 8, "start_date" => "1970-01-08"} = st4
+
+      assert %{"prev" => prev_url, "data" => [st5, st6, st7, st8], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner4, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st5
+      assert %{"miner" => ^miner3, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st6
+      assert %{"miner" => ^miner2, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st7
+      assert %{"miner" => ^miner1, "blocks_mined" => 8, "start_date" => "1970-01-01"} = st8
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "it returns top miners for a month", %{conn: conn, miners: miners} do
+      [miner1, miner2, miner3, miner4] = miners
+
+      assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners/top",
+                 limit: 2,
+                 interval_by: "month",
+                 min_start_date: "1970-01-01",
+                 max_start_date: "1970-01-31"
+               )
+               |> json_response(200)
+
+      assert %{"miner" => ^miner4, "blocks_mined" => 16} = st1
+      assert %{"miner" => ^miner3, "blocks_mined" => 16} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3, st4], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner2, "blocks_mined" => 16} = st3
+      assert %{"miner" => ^miner1, "blocks_mined" => 16} = st4
+
+      assert %{"data" => ^statistics} =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+  end
+
   defp add_transactions_every_5_hours(store, start_txi, end_txi, now) do
     end_txi..start_txi
     |> Enum.reduce({store, 1}, fn txi, {store, i} ->
