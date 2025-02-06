@@ -37,12 +37,12 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
-  def to_raw_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
+  def to_raw_map(state, Model.tx(id: hash) = mdw_tx),
     do: to_raw_map(state, mdw_tx, AE.Db.get_tx_data(hash))
 
   def to_raw_map(
         state,
-        {:tx, index, hash, {kb_index, mb_index}, mb_time},
+        Model.tx(index: index, id: hash, block_index: {kb_index, mb_index}, time: mb_time),
         {block_hash, tx_type, signed_tx, tx_rec}
       ) do
     tx_map =
@@ -191,12 +191,12 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+  def to_map(state, Model.tx(id: hash) = rec),
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
   def to_map(
         state,
-        {:tx, index, _hash, {_kb_index, mb_index}, mb_time},
+        Model.tx(index: index, block_index: {_kb_index, mb_index}, time: mb_time),
         {block_hash, type, signed_tx, tx_rec}
       ) do
     header = :aec_db.get_header(block_hash)

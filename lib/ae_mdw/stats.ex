@@ -16,7 +16,6 @@ defmodule AeMdw.Stats do
   alias AeMdw.Node
   alias AeMdw.Util
   alias AeMdw.Validate
-  alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Sync.Hyperchain
 
   require Model
@@ -844,8 +843,7 @@ defmodule AeMdw.Stats do
     if txs_count != 0 do
       start_txi..end_txi
       |> Enum.reduce(0, fn tx_index, acc ->
-        Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, tx_index)
-        fee = NodeDb.get_tx_fee(tx_hash)
+        Model.tx(fee: fee) = State.fetch!(state, Model.Tx, tx_index)
 
         acc + fee
       end)
