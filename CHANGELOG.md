@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.99.0](https://github.com/aeternity/ae_mdw/compare/v1.98.0...v1.99.0) (2025-02-06)
+
+
+### Features
+
+* add top miners endpoint ([#2000](https://github.com/aeternity/ae_mdw/issues/2000)) ([03d3f80](https://github.com/aeternity/ae_mdw/commit/03d3f80b2cfc0a97b67fb4fcdc8e1ce3d3f6d4b8))
+
+
+### Bug Fixes
+
+* move tx fees to txs table to fix stats endpoint ([#2085](https://github.com/aeternity/ae_mdw/issues/2085)) ([d2301a7](https://github.com/aeternity/ae_mdw/commit/d2301a7e88ee8b96187ca4d7fb446826d3dc5fe1))
+
+
+### Miscellaneous
+
+* update dialyzer to catch further errors ([#2078](https://github.com/aeternity/ae_mdw/issues/2078)) ([bd2fd2f](https://github.com/aeternity/ae_mdw/commit/bd2fd2f81161cd9295664a86a834be8afc015c29))
+
 ## [1.98.0](https://github.com/aeternity/ae_mdw/compare/v1.97.1...v1.98.0) (2025-02-04)
 
 
