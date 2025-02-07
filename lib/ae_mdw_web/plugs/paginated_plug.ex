@@ -34,7 +34,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @spec call(Conn.t(), opts()) :: Conn.t()
   def call(
-        %Conn{params: params, query_params: query_params, assigns: %{state: state}} = conn,
+        %Conn{params: params, query_params: _query_params, assigns: %{state: state}} = conn,
         opts
       ) do
     txi_scope? = Keyword.get(opts, :txi_scope?, true)
@@ -55,7 +55,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
       |> assign(:order_by, order_by)
       |> assign(:scope, scope)
       |> assign(:offset, {limit, page})
-      |> assign(:query, Map.drop(query_params, @pagination_params))
+      |> clean_query()
     else
       {:error, error_msg} ->
         conn
@@ -251,5 +251,12 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   defp generate_range(_state, scope_type, first, last) do
     {scope_type, first..last}
+  end
+
+  defp clean_query(%Conn{query_params: query_params} = conn) do
+    query_params
+    |> Map.drop(@pagination_params)
+    |> Map.reject(fn {key, _val} -> String.starts_with?(key, "_") end)
+    |> then(&assign(conn, :query, &1))
   end
 end

@@ -148,6 +148,33 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> json_response(400)
     end
+
+    test "it ignores query_params starting with _", %{conn: conn} do
+      store = empty_store()
+
+      assert %{pagination: {:forward, false, 10, false}, query: first_query} =
+               conn
+               |> with_store(store)
+               |> put_query(%{"_ignore_me" => "20", "direction" => "forward"})
+               |> PaginatedPlug.call([])
+               |> get_assigns()
+
+      assert map_size(first_query) == 0
+
+      assert %{pagination: {:forward, false, 10, false}, query: %{"id" => 1} = second_query} =
+               conn
+               |> with_store(store)
+               |> put_query(%{
+                 "_ignore_me" => "20",
+                 "direction" => "forward",
+                 "limit" => "10",
+                 "id" => 1
+               })
+               |> PaginatedPlug.call([])
+               |> get_assigns()
+
+      assert map_size(second_query) == 1
+    end
   end
 
   defp put_query(conn, query), do: %Conn{conn | params: query, query_params: query}
