@@ -181,8 +181,7 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            type: object
-            # TODO: define properties
+            $ref: '#/components/schemas/Tx'
             example:
               account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
               fee: 16540000000000
@@ -219,7 +218,7 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         example: NameClaimTx
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
@@ -261,7 +260,7 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         example: NameTransferTx
       tx:
         type: object
@@ -297,7 +296,7 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         example: NameUpdateTx
       tx:
         type: object
@@ -354,7 +353,7 @@ schemas:
               key: "account_pubkey"
           ttl: 60000
       source_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         example: NameUpdateTx
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
