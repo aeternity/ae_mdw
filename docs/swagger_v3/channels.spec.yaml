@@ -55,7 +55,7 @@ schemas:
         description: The last height in which the channel was updated on chain
         example: 141956
       last_updated_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         description: The transaction type of the last transaction that updated the channel
         example: ChannelDepositTx
       last_updated_time:
