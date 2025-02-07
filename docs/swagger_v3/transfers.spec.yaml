@@ -30,7 +30,7 @@ schemas:
         nullable: true
         $ref: '#/components/schemas/TransactionHash'
       ref_tx_type:
-        type: string
+        $ref: '#/components/schemas/TransactionType'
         nullable: true
         example: ChannelDepositTx
 paths:
