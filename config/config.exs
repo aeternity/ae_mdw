@@ -9,7 +9,7 @@ config :esbuild,
   version: "0.8.2"
 
 config :ae_mdw, AeMdw.Db.RocksDb,
-  data_dir: "#{node_root}/rel/aeternity/data/mdw.db",
+  data_dir: "#{node_root}/data/mdw.db",
   drop_tables: [
     Model.AsyncTasks,
     Model.Aex9Balance,
