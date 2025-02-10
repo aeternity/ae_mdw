@@ -16,14 +16,22 @@ if System.get_env("INTEGRATION_TEST") != "1" do
 end
 
 # HTTP
+protocol_opts = [max_request_line_length: 1_024]
+
 config :ae_mdw, AeMdwWeb.Endpoint,
-  http: [port: 4002],
+  http: [
+    port: 4002,
+    http_1_options: protocol_opts,
+    http_2_options: [enabled: true]
+  ],
   server: false
 
 config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   http: [
     port: 4003,
-    protocol_options: [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+    http_1_options: protocol_opts,
+    http_2_options: [enabled: true],
+    thousand_island_options: [read_timeout: 30 * :timer.seconds(60)]
   ],
   server: true
 

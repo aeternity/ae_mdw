@@ -14,13 +14,6 @@ config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 config :ae_mdw, :enable_v3?, true
 config :ae_mdw, memstore_lifetime_secs: 60
 
-ip =
-  if System.get_env("DISABLE_IPV6", "false") in ["true", "1"] do
-    {0, 0, 0, 0}
-  else
-    {0, 0, 0, 0, 0, 0, 0, 0}
-  end
-
 log_level =
   case System.get_env("LOG_LEVEL") do
     "none" -> :none
@@ -47,26 +40,35 @@ logger_backends =
 
 # Endpoint
 if env != :test do
+  ip =
+    if System.get_env("DISABLE_IPV6") in ["true", "1"] do
+      {0, 0, 0, 0}
+    else
+      {0, 0, 0, 0, 0, 0, 0, 0}
+    end
+
   port = String.to_integer(System.get_env("PORT") || "4000")
-  protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+  protocol_opts = [max_request_line_length: 1_024]
 
   config :ae_mdw, AeMdwWeb.Endpoint,
     http: [
       ip: ip,
       port: port,
-      protocol_options: protocol_opts
+      http_1_options: protocol_opts,
+      http_2_options: [enabled: true]
     ],
     debug_errors: env == :dev,
     cache_static_manifest: "priv/static/cache_manifest.json"
 
   ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
-  timeout_opts = [inactivity_timeout: 30 * 60_000, idle_timeout: 30 * 60_000]
 
   config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
     http: [
       ip: ip,
       port: ws_port,
-      protocol_options: protocol_opts ++ timeout_opts
+      http_1_options: protocol_opts,
+      http_2_options: [enabled: true],
+      thousand_island_options: [read_timeout: 30 * :timer.seconds(60)]
     ]
 
   config :logger,
