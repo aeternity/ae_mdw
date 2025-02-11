@@ -1,4 +1,18 @@
 schemas:
+  ChannelLastUpdatedTxType:
+    type: string
+    enum:
+      - ChannelCloseSoloTx
+      - ChannelCloseMutualTx
+      - ChannelCreateTx
+      - ChannelDepositTx
+      - ChannelForceProgressTx
+      - ChannelSetDelegatesTx
+      - ChannelSettleTx
+      - ChannelSlashTx
+      - ChannelSnapshotSoloTx
+      - ChannelWithdrawTx
+      - ChannelOffChainTx
   Channel:
     type: object
     required:
@@ -55,7 +69,7 @@ schemas:
         description: The last height in which the channel was updated on chain
         example: 141956
       last_updated_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        $ref: '#/components/schemas/ChannelLastUpdatedTxType'
         description: The transaction type of the last transaction that updated the channel
         example: ChannelDepositTx
       last_updated_time:
