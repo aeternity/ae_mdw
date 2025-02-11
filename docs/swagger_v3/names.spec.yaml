@@ -218,7 +218,9 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - NameClaimTx
+          - ContractCallTx
         example: NameClaimTx
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
@@ -226,8 +228,9 @@ schemas:
         type: integer
         example: 45784
       tx:
-        type: object
-        # TODO: define properties
+        anyOf:
+          - $ref: '#/components/schemas/NameClaimTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r"
           fee: 16540000000000
@@ -260,11 +263,14 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - NameTransferTx
+          - ContractCallTx
         example: NameTransferTx
       tx:
-        type: object
-        # TODO: define properties
+        anyOf:
+          - $ref: '#/components/schemas/NameTransferTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           fee: 30000
@@ -296,11 +302,14 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - NameUpdateTx
+          - ContractCallTx
         example: NameUpdateTx
       tx:
-        type: object
-        # TODO: define properties
+        anyOf:
+          - $ref: '#/components/schemas/NameUpdateTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -339,8 +348,9 @@ schemas:
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
-        type: object
-        # TODO: define properties
+        anyOf:
+          - $ref: '#/components/schemas/NameUpdateTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -353,7 +363,9 @@ schemas:
               key: "account_pubkey"
           ttl: 60000
       source_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - NameUpdateTx
+          - ContractCallTx
         example: NameUpdateTx
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
