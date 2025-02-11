@@ -1,4 +1,10 @@
 schemas:
+  TransferRefTxType:
+    type: string
+    enum:
+      - ContractCallTx
+      - NameClaimTx
+      - OracleQueryTx
   Transfer:
     type: object
     required:
@@ -30,13 +36,13 @@ schemas:
         nullable: true
         $ref: '#/components/schemas/TransactionHash'
       ref_tx_type:
-        $ref: '#/components/schemas/TransactionType'
+        $ref: '#/components/schemas/TransferRefTxType'
         nullable: true
-        example: ChannelDepositTx
+        example: OracleQueryTx
 paths:
   /transfers:
     get:
-      deprecated: false
+      deprecated: false 
       description: Get multiple transfers.
       operationId: GetTransfers
       parameters:

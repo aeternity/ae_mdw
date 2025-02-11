@@ -152,31 +152,4 @@ components:
         - prev
     TransactionType:
       type: string  
-      enum:
-        - SpendTx
-        - OracleRegisterTx
-        - OracleExtendTx
-        - OracleQueryTx
-        - OracleResponseTx
-        - NamePreclaimTx
-        - NameClaimTx
-        - NameTransferTx
-        - NameUpdateTx
-        - NameRevokeTx
-        - ContractCreateTx
-        - ContractCallTx
-        - GAAttachTx
-        - GAMetaTx
-        - ChannelCreateTx
-        - ChannelDepositTx
-        - ChannelWithdrawTx
-        - ChannelForceProgressTx
-        - ChannelCloseMutualTx
-        - ChannelCloseSoloTx
-        - ChannelSlashTx
-        - ChannelSettleTx
-        - ChannelSnapshotSoloTx
-        - ChannelSetDelegatesTx
-        - ChannelOffchainTx
-        - ChannelClientReconnectTx
-        - PayingForTx
+      $ref: '#/components/schemas/Tx/allOf/0/properties/type'

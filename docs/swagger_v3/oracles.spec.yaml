@@ -34,58 +34,45 @@ schemas:
       encoded_tx:
         $ref: '#/components/schemas/TransactionEncoded'
       tx:
-        type: object
-        required:
-          - fee
-          - nonce
-          - oracle_id
-          - oracle_ttl
-          - type
-          - version
-          - abi_version
-          - account_id
-          - query_fee
-          - query_format
-          - response_format
+        anyOf:
+          - allOf:
+            - title: OracleRegisterTx
+            - $ref: '#/components/schemas/OracleRegisterTx'
+            - properties:
+                type:
+                  type: string
+                  example: OracleRegisterTx
+                  enum:
+                    - OracleRegisterTx
+                version:
+                  type: integer
+          - allOf:
+            - title: ContractCallTx
+            - $ref: '#/components/schemas/ContractCallTx'
+            - properties:
+                type:
+                  type: string
+                  example: ContractCallTx
+                  enum:
+                    - ContractCallTx
+                version:
+                  type: integer
+          - allOf:
+            - title: ContractCreateTx
+            - $ref: '#/components/schemas/ContractCreateTx'
+            - properties:
+                type:
+                  type: string
+                  example: ContractCreateTx
+                  enum:
+                    - ContractCreateTx
+                version:
+                  type: integer
         properties:
-          fee:
-            type: integer
-          nonce:
-            type: integer
           oracle_id:
             deprecated: true
             description: use `account_id` instead (the same value with a different prefix)
             $ref: '#/components/schemas/OracleAddress'
-          oracle_ttl:
-            description: Expiration of the oracle
-            type: object
-            required:
-              - type
-              - value
-            properties:
-              type:
-                enum:
-                - delta
-                - block
-                type: string
-              value:
-                type: integer
-          ttl:
-            type: integer
-          type:
-            type: string
-          version:
-            type: integer
-          abi_version:
-            type: number
-          account_id:
-            $ref: '#/components/schemas/AccountAddress'
-          query_fee:
-            type: number
-          query_format:
-            type: string
-          response_format:
-            type: string
   Oracle:
     example:
       active: false
@@ -119,7 +106,7 @@ schemas:
             query_format: "query"
             response_format: "response"
             ttl: 1587577871376
-            type: "OracleRegisterTx"
+            type: "OracleTx"
             version: 1
         tx_hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
       register_time: 1587577771376
@@ -218,8 +205,11 @@ schemas:
         description: The hash of the transaction in which the query was created
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
+        type: string
         description: The type of the transaction in which the query was created, it can be either via a contract call or a query transaction
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - ContractCallTx
+          - OracleQueryTx
       fee:
         description: The transaction fee
         type: integer
@@ -296,8 +286,11 @@ schemas:
         description: The hash of the transaction in which the response was created
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
+        type: string
         description: The type of the transaction in which the response was created, it can be either via a contract call or a respond transaction
-        $ref: '#/components/schemas/TransactionType'
+        enum:
+          - ContractCallTx
+          - OracleRespondTx
       fee:
         description: The transaction fee
         type: integer
@@ -356,41 +349,19 @@ schemas:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         description: The type of the transaction in which the extend was done, it can be either via a contract call or an extend transaction
-        $ref: '#/components/schemas/TransactionType'
+        type: string
+        enum:
+          - ContractCallTx
+          - OracleExtendTx
       tx:
-        type: object
+        anyOf:
+          - $ref: "#/components/schemas/OracleExtendTx"
+          - $ref: "#/components/schemas/ContractCallTx"
         required:
           - fee
           - nonce
           - oracle_id
           - oracle_ttl
-        properties:
-          fee:
-            description: The transaction fee
-            type: integer
-          nonce:
-            description: The nonce
-            type: integer
-          oracle_id:
-            description: The oracle ID of this query
-            $ref: '#/components/schemas/OracleAddress'
-          oracle_ttl:
-            description: Expiration of the oracle
-            type: object
-            required:
-              - type
-              - value
-            properties:
-              type:
-                enum:
-                - delta
-                - block
-                type: string
-              value:
-                type: integer
-          ttl:
-            description: Transaction TTL
-            type: integer
     required:
       - block_hash
       - height
