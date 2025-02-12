@@ -10,12 +10,9 @@ defmodule AeMdwWeb.StatsController do
 
   @stats_limit 1_000
 
-  plug(PaginatedPlug when action not in ~w(transactions_stats blocks_stats names_stats)a)
-
   plug(
     PaginatedPlug,
-    [max_limit: @stats_limit]
-    when action in ~w(transactions_stats blocks_stats names_stats)a
+    max_limit: @stats_limit
   )
 
   action_fallback(FallbackController)

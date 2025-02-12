@@ -177,6 +177,24 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
     end
   end
 
+  test "it recognises max_limit option", %{conn: conn} do
+    store = empty_store()
+
+    assert %{"error" => "limit too large: 1000"} =
+             conn
+             |> with_store(store)
+             |> put_query(%{"limit" => "1000"})
+             |> PaginatedPlug.call([])
+             |> json_response(400)
+
+    assert %{pagination: {:backward, false, 1000, false}} =
+             conn
+             |> with_store(store)
+             |> put_query(%{"limit" => "1000"})
+             |> PaginatedPlug.call(max_limit: 1000)
+             |> get_assigns()
+  end
+
   defp put_query(conn, query), do: %Conn{conn | params: query, query_params: query}
 
   defp get_assigns(%Conn{assigns: assigns}), do: assigns
