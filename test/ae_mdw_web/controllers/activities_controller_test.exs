@@ -977,7 +977,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
            tx_hash_to_txi: fn
              _state, ^tx1_hash -> {:ok, txi1}
              _state, ^tx2_hash -> {:ok, txi2}
-             _state, tx_hash -> IO.inspect(["TX HASH", tx_hash])
            end
          ]}
       ] do
