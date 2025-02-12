@@ -26,7 +26,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> get_assigns()
 
-      assert %{"error" => "invalid direction: foo"} =
+      assert %{"error" => "invalid query: invalid direction `foo`"} =
                conn
                |> with_store(store)
                |> put_query(%{"limit" => "20", "direction" => "foo"})
@@ -40,7 +40,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> get_assigns()
 
-      assert %{"error" => "invalid limit: 0"} =
+      assert %{"error" => "invalid query: invalid limit `0`"} =
                conn
                |> with_store(store)
                |> put_query(%{"limit" => "0"})
@@ -117,7 +117,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> get_assigns()
 
-      assert %{"error" => "invalid unix time: 10000000000000"} =
+      assert %{"error" => "invalid scope: invalid unix time `10000000000000`"} =
                conn
                |> with_store(store)
                |> put_query(%{
@@ -134,7 +134,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                |> PaginatedPlug.call([])
                |> json_response(400)
 
-      assert %{"error" => "invalid range: asdf"} =
+      assert %{"error" => "invalid scope: asdf"} =
                conn
                |> with_store(store)
                |> put_query(%{"range" => "asdf"})
@@ -145,6 +145,13 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
                conn
                |> with_store(store)
                |> put_query(%{"range" => "10-20", "scope_type" => "foo"})
+               |> PaginatedPlug.call([])
+               |> json_response(400)
+
+      assert %{"error" => "invalid scope: asd-asd-asd"} =
+               conn
+               |> with_store(store)
+               |> put_query(%{"scope" => "transaction:asd-asd-asd"})
                |> PaginatedPlug.call([])
                |> json_response(400)
     end

@@ -584,6 +584,28 @@ defmodule AeMdw.Txs do
     end
   end
 
+  @spec tx_hash_to_txi(State.t(), binary()) :: {:ok, txi()} | {:error, Error.t()}
+  def tx_hash_to_txi(state, tx_hash) do
+    encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
+
+    with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
+         {:ok, mb_height} <- Db.find_block_height(mb_hash) do
+      state
+      |> Blocks.fetch_txis_from_gen(mb_height)
+      |> Stream.map(&State.fetch!(state, @table, &1))
+      |> Enum.find_value(
+        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
+        fn
+          Model.tx(index: txi, id: ^tx_hash) -> {:ok, txi}
+          _tx -> nil
+        end
+      )
+    else
+      _no_block_or_header ->
+        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)}
+    end
+  end
+
   defp render(state, tx, opts) do
     if Keyword.get(opts, :render_v3?, false) do
       render_v3(state, tx)

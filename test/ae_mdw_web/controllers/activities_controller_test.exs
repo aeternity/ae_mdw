@@ -11,6 +11,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
+  alias AeMdw.Txs
 
   import Mock
 
@@ -897,6 +898,103 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  |> get(next_url)
                  |> json_response(200)
 
+        assert %{"height" => ^height2, "type" => "InternalTransferEvent"} = activity2
+      end
+    end
+
+    test "when it has both gen-based and tx-based events and scoping via tx", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      height1 = 397
+      height2 = 398
+      height3 = 399
+      txi1 = 123
+      kb_hash = TS.key_block_hash(0)
+      txi2 = 456
+      txi3 = 789
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      encoded_tx1_hash = Enc.encode(:tx_hash, tx1_hash)
+      encoded_tx2_hash = Enc.encode(:tx_hash, tx2_hash)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.key_block_hash(0)
+      mb_hash2 = TS.key_block_hash(1)
+      contract_pk = <<100::256>>
+      meta_info_aex9 = {"AE9Name", "AEXSymbol", 10}
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(index: {account_pk, "reward_dev", {height2, -1}, -1})
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height2, -1}, "reward_dev", account_pk, -1},
+            amount: 30
+          )
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {height2, -1}, hash: kb_hash, tx_index: txi2)
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, 1, nil, 1},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi3, 2, nil, 2},
+            contract_pk: contract_pk
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height3, 0}, id: tx2_hash))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height3, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height3, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info_aex9)
+        )
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {Txs, [:passthrough],
+         [
+           tx_hash_to_txi: fn
+             _state, ^tx1_hash -> {:ok, txi1}
+             _state, ^tx2_hash -> {:ok, txi2}
+             _state, tx_hash -> IO.inspect(["TX HASH", tx_hash])
+           end
+         ]}
+      ] do
+        assert %{
+                 "prev" => nil,
+                 "data" => [activity1, activity2],
+                 "next" => nil
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/activities",
+                   direction: "forward",
+                   scope: "transaction:#{encoded_tx1_hash}-#{encoded_tx2_hash}"
+                 )
+                 |> json_response(200)
+
+        assert %{"height" => ^height1, "type" => "Aex9TransferEvent"} = activity1
         assert %{"height" => ^height2, "type" => "InternalTransferEvent"} = activity2
       end
     end

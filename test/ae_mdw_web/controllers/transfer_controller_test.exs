@@ -100,7 +100,7 @@ defmodule AeMdwWeb.TransferControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      error_msg = "invalid range: #{range}"
+      error_msg = "invalid scope: #{range}"
       conn = get(conn, "/v3/transfers", scope: "gen:#{range}")
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
