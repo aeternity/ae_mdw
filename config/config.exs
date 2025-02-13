@@ -35,7 +35,11 @@ config :ae_mdw,
 config :ae_mdw, AeMdwWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "kATf71kudJsgA1dgCQKcmgelicqJHG8EID8rwROwJHpWHb53EdzW7YDclJZ8mxLP",
-  render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: AeMdwWeb.ErrorJSON],
+    layout: false
+  ],
   pubsub_server: AeMdw.PubSub,
   live_view: [signing_salt: "Oy680JAN"],
   code_reloader: false,
@@ -43,6 +47,12 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   check_origin: false
 
 config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [json: AeMdwWeb.ErrorJSON],
+    layout: false
+  ],
   code_reloader: false,
   watchers: [],
   check_origin: false

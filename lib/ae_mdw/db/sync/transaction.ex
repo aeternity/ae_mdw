@@ -152,7 +152,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         ]
       ])
     else
-      Log.error("Contract not found=#{encode_contract(contract_pk)}}")
+      Log.error("Contract not deployed=#{encode_contract(contract_pk)}}")
       mutations
     end
   end
