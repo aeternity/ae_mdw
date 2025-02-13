@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.100.0](https://github.com/aeternity/ae_mdw/compare/v1.99.0...v1.100.0) (2025-02-13)
+
+
+### Features
+
+* increase the limit of the stats endpoints to 1000 ([#2095](https://github.com/aeternity/ae_mdw/issues/2095)) ([042a78f](https://github.com/aeternity/ae_mdw/commit/042a78fc438438cdc496d16b43551b6a03a0cbf3))
+
+
+### Bug Fixes
+
+* ignore query params that start with underscore ([#2090](https://github.com/aeternity/ae_mdw/issues/2090)) ([14e4074](https://github.com/aeternity/ae_mdw/commit/14e40747d5bacd9fe1440e7192b0a8d8266ea655))
+
+
+### Miscellaneous
+
+* use Phoenix with Bandit HTTP server ([#2093](https://github.com/aeternity/ae_mdw/issues/2093)) ([29bd874](https://github.com/aeternity/ae_mdw/commit/29bd8746eb4a4fbf19ebd4374dcff0e17ebcadb6))
+
 ## [1.99.0](https://github.com/aeternity/ae_mdw/compare/v1.98.0...v1.99.0) (2025-02-06)
 
 
