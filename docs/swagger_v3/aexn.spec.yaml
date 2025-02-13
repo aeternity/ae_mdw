@@ -336,7 +336,7 @@ schemas:
         type: integer
       tx_type:
         description: Transaction type, indicating a state of a balance for that block height
-        type: string
+        $ref: '#/components/schemas/TransactionType'
     required:
       - amount
       - block_hash
