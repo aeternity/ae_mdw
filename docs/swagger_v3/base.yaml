@@ -19,6 +19,15 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    StatsLimitParam:
+      in: query
+      name: limit
+      description: 'Limit paginated resources (max 1000)'
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 10
     ScopeParam:
       in: query
       name: scope
