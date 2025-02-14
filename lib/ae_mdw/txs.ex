@@ -557,23 +557,8 @@ defmodule AeMdw.Txs do
 
   @spec fetch(State.t(), txi() | tx_hash(), opts()) :: {:ok, tx()} | {:error, Error.t()}
   def fetch(state, tx_hash, opts) when is_binary(tx_hash) do
-    encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
-
-    with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
-         {:ok, mb_height} <- Db.find_block_height(mb_hash) do
-      state
-      |> Blocks.fetch_txis_from_gen(mb_height)
-      |> Stream.map(&State.fetch!(state, @table, &1))
-      |> Enum.find_value(
-        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
-        fn
-          Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, opts)}
-          _tx -> nil
-        end
-      )
-    else
-      _no_block_or_header ->
-        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)}
+    with {:ok, tx} <- tx_hash_to_tx(state, tx_hash) do
+      {:ok, render(state, tx, opts)}
     end
   end
 
@@ -584,8 +569,8 @@ defmodule AeMdw.Txs do
     end
   end
 
-  @spec tx_hash_to_txi(State.t(), binary()) :: {:ok, txi()} | {:error, Error.t()}
-  def tx_hash_to_txi(state, tx_hash) do
+  @spec tx_hash_to_tx(State.t(), binary()) :: {:ok, Model.tx()} | {:error, Error.t()}
+  def tx_hash_to_tx(state, tx_hash) do
     encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
 
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
@@ -596,7 +581,7 @@ defmodule AeMdw.Txs do
       |> Enum.find_value(
         {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
         fn
-          Model.tx(index: txi, id: ^tx_hash) -> {:ok, txi}
+          Model.tx(id: ^tx_hash) = tx -> {:ok, tx}
           _tx -> nil
         end
       )

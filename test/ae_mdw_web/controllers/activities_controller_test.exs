@@ -974,9 +974,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {Txs, [:passthrough],
          [
-           tx_hash_to_txi: fn
-             _state, ^tx1_hash -> {:ok, txi1}
-             _state, ^tx2_hash -> {:ok, txi2}
+           tx_hash_to_tx: fn
+             _state, ^tx1_hash -> {:ok, Model.tx(index: txi1)}
+             _state, ^tx2_hash -> {:ok, Model.tx(index: txi2)}
            end
          ]}
       ] do

@@ -272,7 +272,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp tx_hashes_to_txis(tx_hashes, state) do
     Enum.reduce_while(tx_hashes, {:ok, []}, fn tx_hash, {:ok, txis} ->
       with {:ok, tx_hash} <- Validate.hash(tx_hash, :tx_hash),
-           {:ok, txi} <- Txs.tx_hash_to_txi(state, tx_hash) do
+           {:ok, Model.tx(index: txi)} <- Txs.tx_hash_to_tx(state, tx_hash) do
         {:cont, {:ok, txis ++ [txi]}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
