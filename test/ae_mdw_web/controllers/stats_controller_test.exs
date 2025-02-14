@@ -1084,7 +1084,7 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/blocks", limit: 301)
                |> json_response(200)
 
-      assert %{"error" => "limit too large: 1001"} =
+      assert %{"error" => "invalid query: limit too large `1001`"} =
                conn
                |> get("/v3/stats/blocks", limit: 1001)
                |> json_response(400)

@@ -384,7 +384,10 @@ defmodule AeMdwWeb.OracleControllerTest do
     end
 
     test "when both tx_hash and expand is sent, it displays error", %{conn: conn} do
-      assert %{"error" => "either `tx_hash` or `expand` parameters should be used, but not both."} =
+      assert %{
+               "error" =>
+                 "invalid query: either `tx_hash` or `expand` parameters should be used, but not both."
+             } =
                conn
                |> get("/v2/oracles", tx_hash: "true", expand: "true")
                |> json_response(400)

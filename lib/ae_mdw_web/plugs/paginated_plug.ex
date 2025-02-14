@@ -3,10 +3,15 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   import Plug.Conn
 
-  alias AeMdw.Db.State
+  alias AeMdw.Db.Model
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Txs
+  alias AeMdw.Validate
   alias Phoenix.Controller
   alias Plug.Conn
+
+  require Model
 
   @typep opt() ::
            {:order_by, [atom()]}
@@ -18,7 +23,8 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     "gen" => :gen,
     "txi" => :txi,
     "time" => :time,
-    "epoch" => :epoch
+    "epoch" => :epoch,
+    "transaction" => :tx
   }
   @scope_types_keys Map.keys(@scope_types)
 
@@ -57,27 +63,32 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
       |> assign(:offset, {limit, page})
       |> clean_query()
     else
-      {:error, error_msg} ->
+      {:error, %ErrInput{message: message}} ->
         conn
         |> put_status(:bad_request)
-        |> Controller.json(%{"error" => error_msg})
+        |> Controller.json(%{"error" => message})
         |> halt()
     end
   end
 
   def call(conn, _opts), do: conn
 
-  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}, _txi_scope?, _state),
-    do: {:ok, :forward, @default_scope}
-
-  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}, _txi_scope?, _state),
-    do: {:ok, :backward, @default_scope}
-
-  defp extract_direction_and_scope(%{"range_or_dir" => range} = params, txi_scope?, state) do
-    params
-    |> Map.delete("range_or_dir")
-    |> Map.put("range", range)
-    |> extract_direction_and_scope(txi_scope?, state)
+  defp extract_direction_and_scope(
+         %{"scope" => "transaction:" <> transaction_scope} = params,
+         _txi_scope,
+         state
+       ) do
+    with tx_hashes when length(tx_hashes) > 0 and length(tx_hashes) <= 2 <-
+           String.split(transaction_scope, "-"),
+         {:ok, txis} <- tx_hashes_to_txis(tx_hashes, state) do
+      case txis do
+        [from, to] -> generate_range(state, :txi, from, to, params)
+        [single] -> generate_range(state, :txi, single, single, params)
+      end
+    else
+      {:error, reason} -> {:error, reason}
+      _invalid_scope -> {:error, ErrInput.Scope.exception(value: transaction_scope)}
+    end
   end
 
   defp extract_direction_and_scope(
@@ -88,29 +99,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
-    range
-    |> extract_range()
-    |> case do
-      {:ok, first, last} when first < last ->
-        {:forward, generate_range(state, scope_type, first, last)}
-
-      {:ok, first, last} when first > last ->
-        {:backward, generate_range(state, scope_type, last, first)}
-
-      {:ok, first, last} ->
-        if Map.get(params, "direction", "backward") == "forward" do
-          {:forward, generate_range(state, scope_type, last, first)}
-        else
-          {:backward, generate_range(state, scope_type, last, first)}
-        end
-
-      {:error, reason} ->
-        {nil, {:error, reason}}
-    end
-    |> case do
-      {_direction, {:error, reason}} -> {:error, reason}
-      {direction, range} -> {:ok, direction, range}
-    end
+    extract_range(state, scope_type, range, params)
   end
 
   defp extract_direction_and_scope(
@@ -118,12 +107,12 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
          _txi_scope? = false,
          state
        )
-       when scope_type in ["gen", "time", "epoch"] do
+       when scope_type in ["gen", "time", "epoch", "transaction"] do
     extract_direction_and_scope(params, true, state)
   end
 
   defp extract_direction_and_scope(%{"scope_type" => scope_type}, _txi_scope?, _state),
-    do: {:error, "invalid scope: #{scope_type}"}
+    do: {:error, ErrInput.Scope.exception(value: scope_type)}
 
   defp extract_direction_and_scope(%{"range" => _range} = params, txi_scope?, state),
     do: extract_direction_and_scope(Map.put(params, "scope_type", "gen"), txi_scope?, state)
@@ -137,7 +126,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
         |> extract_direction_and_scope(txi_scope?, state)
 
       _invalid_scope ->
-        {:error, "invalid scope: #{scope}"}
+        {:error, ErrInput.Scope.exception(value: scope)}
     end
   end
 
@@ -148,40 +137,87 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     do: {:ok, :backward, @default_scope}
 
   defp extract_direction_and_scope(%{"direction" => direction}, _txi_scope?, _state),
-    do: {:error, "invalid direction: #{direction}"}
+    do: {:error, ErrInput.Query.exception(value: "invalid direction `#{direction}`")}
 
   defp extract_direction_and_scope(_params, _txi_scope?, _state),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_range(range) when is_binary(range) do
+  defp extract_range(state, scope_type, range, params) when is_binary(range) do
     case String.split(range, "-") do
       [from, to] ->
         case {Integer.parse(from), Integer.parse(to)} do
-          {{from, ""}, {to, ""}} when from >= 0 and to >= 0 -> {:ok, from, to}
-          {_from_err, _to_err} -> {:error, "invalid range: #{range}"}
+          {{from, ""}, {to, ""}} when from >= 0 and to >= 0 ->
+            generate_range(state, scope_type, from, to, params)
+
+          {_from_err, _to_err} ->
+            {:error, ErrInput.Scope.exception(value: range)}
         end
 
       [single] ->
         case Integer.parse(single) do
-          {single, ""} when single >= 0 -> {:ok, single, single}
-          _single_err -> {:error, "invalid range: #{range}"}
+          {single, ""} when single >= 0 ->
+            generate_range(state, scope_type, single, single, params)
+
+          _single_err ->
+            {:error, ErrInput.Scope.exception(value: range)}
         end
 
       _splitted_range ->
-        {:error, "invalid range: #{range}"}
+        {:error, ErrInput.Scope.exception(value: range)}
     end
   end
 
-  defp extract_range(range), do: {:error, "invalid range: #{range}"}
+  defp extract_range(_state, _scope_type, range, _params),
+    do: {:error, ErrInput.Scope.exception(value: "invalid range: #{inspect(range)}")}
+
+  defp generate_range(state, :time, first, last, params) do
+    with {_first, {:ok, first_parsed}} <- {first, DateTime.from_unix(first)},
+         {_last, {:ok, last_parsed}} <- {last, DateTime.from_unix(last)} do
+      {first_txi, last_txi} =
+        DbUtil.time_to_txi(
+          state,
+          DateTime.to_unix(first_parsed, :millisecond),
+          DateTime.to_unix(last_parsed, :millisecond)
+        )
+
+      generate_range(state, :txi, first_txi, last_txi, params)
+    else
+      {invalid_unix_time, {:error, _reason}} ->
+        {:error, ErrInput.Scope.exception(value: "invalid unix time `#{invalid_unix_time}`")}
+    end
+  end
+
+  defp generate_range(_state, scope_type, first, last, _params) when first < last do
+    {:ok, :forward, {scope_type, first..last}}
+  end
+
+  defp generate_range(_state, scope_type, first, last, _params) when last < first do
+    {:ok, :backward, {scope_type, last..first}}
+  end
+
+  defp generate_range(_state, scope_type, first, last, params) do
+    if Map.get(params, "direction", "backward") == "forward" do
+      {:ok, :forward, {scope_type, last..first}}
+    else
+      {:ok, :backward, {scope_type, last..first}}
+    end
+  end
 
   defp extract_limit(params, max_limit) do
     limit_bin = Map.get(params, "limit", "#{@default_limit}")
 
     case Integer.parse(limit_bin) do
-      {limit, ""} when limit <= max_limit and limit > 0 -> {:ok, limit}
-      {limit, ""} when limit > max_limit -> {:error, "limit too large: #{limit}"}
-      {_limit, _rest} -> {:error, "invalid limit: #{limit_bin}"}
-      :error -> {:error, "invalid limit: #{limit_bin}"}
+      {limit, ""} when limit <= max_limit and limit > 0 ->
+        {:ok, limit}
+
+      {limit, ""} when limit > max_limit ->
+        {:error, ErrInput.Query.exception(value: "limit too large `#{limit}`")}
+
+      {_limit, _rest} ->
+        {:error, ErrInput.Query.exception(value: "invalid limit `#{limit_bin}`")}
+
+      :error ->
+        {:error, ErrInput.Query.exception(value: "invalid limit `#{limit_bin}`")}
     end
   end
 
@@ -195,7 +231,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
       {valid_orders, order_by} ->
         case Enum.find(valid_orders, &(Atom.to_string(&1) == order_by)) do
-          nil -> {:error, "invalid query: by=#{order_by}"}
+          nil -> {:error, ErrInput.Query.exception(value: "by=#{order_by}")}
           valid_order_by -> {:ok, valid_order_by}
         end
     end
@@ -206,7 +242,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_page(%{"page" => page}) do
     case Integer.parse(page) do
       {page, ""} -> {:ok, page}
-      _err_or_invalid -> {:error, "invalid_page: #{page}"}
+      _err_or_invalid -> {:error, ErrInput.Query.exception(value: "invalid_page `#{page}`")}
     end
   end
 
@@ -219,7 +255,10 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     tx_hash? = Map.get(params, "tx_hash", "false") != "false"
 
     if expand? and tx_hash? do
-      {:error, "either `tx_hash` or `expand` parameters should be used, but not both."}
+      {:error,
+       ErrInput.Query.exception(
+         value: "either `tx_hash` or `expand` parameters should be used, but not both."
+       )}
     else
       {:ok,
        [
@@ -230,27 +269,15 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
-  @spec generate_range(State.t(), atom(), pos_integer(), pos_integer()) ::
-          {atom(), Range.t()} | {:error, atom()}
-  defp generate_range(state, :time, first, last) do
-    with {_first, {:ok, first_parsed}} <- {first, DateTime.from_unix(first)},
-         {_last, {:ok, last_parsed}} <- {last, DateTime.from_unix(last)} do
-      {first_txi, last_txi} =
-        DbUtil.time_to_txi(
-          state,
-          DateTime.to_unix(first_parsed, :millisecond),
-          DateTime.to_unix(last_parsed, :millisecond)
-        )
-
-      generate_range(state, :txi, first_txi, last_txi)
-    else
-      {invalid_unix_time, {:error, _reason}} ->
-        {:error, "invalid unix time: #{invalid_unix_time}"}
-    end
-  end
-
-  defp generate_range(_state, scope_type, first, last) do
-    {scope_type, first..last}
+  defp tx_hashes_to_txis(tx_hashes, state) do
+    Enum.reduce_while(tx_hashes, {:ok, []}, fn tx_hash, {:ok, txis} ->
+      with {:ok, tx_hash} <- Validate.hash(tx_hash, :tx_hash),
+           {:ok, Model.tx(index: txi)} <- Txs.tx_hash_to_tx(state, tx_hash) do
+        {:cont, {:ok, txis ++ [txi]}}
+      else
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp clean_query(%Conn{query_params: query_params} = conn) do

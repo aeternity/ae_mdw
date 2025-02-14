@@ -557,6 +557,20 @@ defmodule AeMdw.Txs do
 
   @spec fetch(State.t(), txi() | tx_hash(), opts()) :: {:ok, tx()} | {:error, Error.t()}
   def fetch(state, tx_hash, opts) when is_binary(tx_hash) do
+    with {:ok, tx} <- tx_hash_to_tx(state, tx_hash) do
+      {:ok, render(state, tx, opts)}
+    end
+  end
+
+  def fetch(state, txi, opts) do
+    case State.get(state, @table, txi) do
+      {:ok, tx} -> {:ok, render(state, tx, opts)}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: txi)}
+    end
+  end
+
+  @spec tx_hash_to_tx(State.t(), binary()) :: {:ok, Model.tx()} | {:error, Error.t()}
+  def tx_hash_to_tx(state, tx_hash) do
     encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
 
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
@@ -567,20 +581,13 @@ defmodule AeMdw.Txs do
       |> Enum.find_value(
         {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
         fn
-          Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, opts)}
+          Model.tx(id: ^tx_hash) = tx -> {:ok, tx}
           _tx -> nil
         end
       )
     else
       _no_block_or_header ->
         {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)}
-    end
-  end
-
-  def fetch(state, txi, opts) do
-    case State.get(state, @table, txi) do
-      {:ok, tx} -> {:ok, render(state, tx, opts)}
-      :not_found -> {:error, ErrInput.NotFound.exception(value: txi)}
     end
   end
 

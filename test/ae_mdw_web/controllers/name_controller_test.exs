@@ -334,7 +334,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid direction: #{direction}"
+      error = "invalid query: invalid direction `#{direction}`"
 
       assert %{"error" => ^error} =
                conn
@@ -713,7 +713,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid direction: #{direction}"
+      error = "invalid query: invalid direction `#{direction}`"
 
       assert %{"error" => ^error} =
                conn
@@ -1305,7 +1305,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid direction: #{direction}"
+      error = "invalid query: invalid direction `#{direction}`"
 
       assert %{"error" => ^error} =
                conn
@@ -1701,7 +1701,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid direction: #{direction}"
+      error = "invalid query: invalid direction `#{direction}`"
 
       assert %{"error" => ^error} =
                conn |> get("/v3/names?by=#{by}&direction=#{direction}") |> json_response(400)
