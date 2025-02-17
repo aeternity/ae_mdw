@@ -111,6 +111,12 @@ defmodule AeMdw.Activities do
                    DbUtil.last_gen_to_txi(state, last_gen)}
                 }
 
+              {:txi, first_txi..last_txi//_step} ->
+                {
+                  {DbUtil.txi_to_gen(state, first_txi), DbUtil.txi_to_gen(state, last_txi)},
+                  {first_txi, last_txi}
+                }
+
               nil ->
                 {nil, nil}
             end

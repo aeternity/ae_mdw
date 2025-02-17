@@ -10,7 +10,7 @@ defmodule AeMdw.Validate do
 
   @typep pubkey :: AE.Db.pubkey()
   @typep hash_str :: String.t()
-  @typep hash_type :: :micro_block_hash | :key_block_hash
+  @typep hash_type :: :micro_block_hash | :key_block_hash | :tx_hash
   @typep hash :: AE.Db.hash()
   @typep id :: String.t() | {:id, atom(), pubkey()} | Names.raw_data_pointer()
   @typep tx_type :: AE.tx_type()
@@ -18,10 +18,10 @@ defmodule AeMdw.Validate do
   @typep tx_field :: atom()
   @type block_index :: AeMdw.Blocks.block_index()
 
-  @spec hash(hash_str(), hash_type()) :: {:ok, hash()} | {:error, {ErrInput.Hash, binary()}}
+  @spec hash(hash_str(), hash_type()) :: {:ok, hash()} | {:error, Error.t()}
   def hash(hash_str, type) do
     with {:error, :invalid_encoding} <- Enc.safe_decode(type, hash_str) do
-      {:error, {ErrInput.Hash, hash_str}}
+      {:error, ErrInput.Hash.exception(value: hash_str)}
     end
   end
 
