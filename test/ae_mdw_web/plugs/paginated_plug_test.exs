@@ -187,7 +187,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlugTest do
   test "it recognises max_limit option", %{conn: conn} do
     store = empty_store()
 
-    assert %{"error" => "limit too large: 1000"} =
+    assert %{"error" => "invalid query: limit too large `1000`"} =
              conn
              |> with_store(store)
              |> put_query(%{"limit" => "1000"})
