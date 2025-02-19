@@ -1295,7 +1295,7 @@ defmodule AeMdwWeb.NameControllerTest do
       store = NullStore.new()
 
       with_mocks [
-        {DbUtil, [:passthrough], [block_time: fn <<id::256>> -> id end]}
+        {DbUtil, [:passthrough], [block_time: fn _id -> 1 end]}
       ] do
         assert %{"data" => [], "next" => nil, "prev" => nil} =
                  conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
