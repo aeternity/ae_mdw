@@ -27,28 +27,18 @@ schemas:
           $ref: '#/components/schemas/Signature'
       tx:
         type: object
-        required:
-          - account_id
-          - fee
-          - name_id
-          - nonce
-          - type
-          - version
-        properties:
-          account_id:
-            $ref: '#/components/schemas/AccountAddress'
-          fee:
-            type: integer
-          name_id:
-            $ref: '#/components/schemas/NameHash'
-          nonce:
-            type: integer
-          ttl:
-            type: integer
-          type:
-            type: string
-          version:
-            type: integer
+        allOf:
+          - $ref: '#/components/schemas/NameRevokeTx'
+          - type: object
+            required:
+              - type
+              - version
+            properties:
+              type:
+                # TODO: define as enum
+                type: string
+              version:
+                type: integer
     example:
       block_hash: mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR
       block_height: 45784
@@ -58,13 +48,13 @@ schemas:
       signatures:
         - sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
       tx:
-        account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao,
-        fee: 16660000000000,
-        name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain,
-        name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff,
-        nonce: 4,
-        ttl: 2762,
-        type: NameRevokeTx,
+        account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao
+        fee: 16660000000000
+        name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain
+        name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff
+        nonce: 4
+        ttl: 2762
+        type: NameRevokeTx
         version: 1
   Name:
     description: Name
@@ -102,8 +92,9 @@ schemas:
         type: integer
         example: 362026
       pointers:
-        type: object
-        additionalProperties: true
+        type: array
+        items:
+          $ref: "#/components/schemas/NamePointer"
       auction:
         $ref: '#/components/schemas/Auction'
         nullable: true
@@ -181,7 +172,22 @@ schemas:
               $ref: '#/components/schemas/Signature'
           tx:
             type: object
-            # TODO: define properties
+            allOf:
+              - $ref: '#/components/schemas/NameClaimTx'
+              - type: object
+                required:
+                  - name_id
+                  - type
+                  - version
+                properties:
+                  name_id:
+                    $ref: '#/components/schemas/NameHash'
+                  type:
+                    # TODO: define as enum
+                    type: string
+                    example: NameClaimTx
+                  version:
+                    type: integer
             example:
               account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
               fee: 16540000000000
@@ -226,8 +232,7 @@ schemas:
         type: integer
         example: 45784
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameClaimTx'
         example:
           account_id: "ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r"
           fee: 16540000000000
@@ -263,8 +268,7 @@ schemas:
         type: string
         example: NameTransferTx
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameTransferTx'
         example:
           account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           fee: 30000
@@ -299,8 +303,7 @@ schemas:
         type: string
         example: NameUpdateTx
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameUpdateTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -334,12 +337,12 @@ schemas:
       name:
         $ref: '#/components/schemas/NameString'
       key:
-        $ref: '#/components/schemas/AccountAddress'
+        type: string
+        example: account_pubkey
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
-        type: object
-        # TODO: define properties
+        $ref: '#/components/schemas/NameUpdateTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
