@@ -1291,14 +1291,8 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "renders empty result when no blocks", %{conn: conn} do
-      store = NullStore.new()
-
-      # block_hash
-      # |> :aec_db.get_header()
-      # |> :aec_headers.time_in_msecs()
+    test "renders empty result when no blocks", %{conn: conn, store: store} do
       with_mocks [
-        {DbUtil, [:passthrough], [block_time: fn _id -> 1 end]},
         {:aec_db, [], [get_header: fn _id -> :header end]},
         {:aec_headers, [], [time_in_msecs: fn :header -> 1 end]}
       ] do
