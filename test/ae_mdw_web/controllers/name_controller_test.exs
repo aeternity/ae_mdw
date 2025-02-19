@@ -8,6 +8,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Store
   alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -1289,7 +1290,9 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "renders empty result when no blocks", %{conn: conn, store: store} do
+    test "renders empty result when no blocks", %{conn: conn} do
+      store = NullStore.new()
+
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
     end
