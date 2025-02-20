@@ -8,10 +8,12 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Store
   alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
   alias AeMdw.Validate
+  alias AeMdw.Db.Util, as: DbUtil
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
   import AeMdw.Db.ModelFixtures, only: [new_name: 0]
@@ -1290,8 +1292,13 @@ defmodule AeMdwWeb.NameControllerTest do
     end
 
     test "renders empty result when no blocks", %{conn: conn, store: store} do
-      assert %{"data" => [], "next" => nil, "prev" => nil} =
-               conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
+      with_mocks [
+        {:aec_db, [], [get_header: fn _id -> :header end]},
+        {:aec_headers, [], [time_in_msecs: fn :header -> 1 end]}
+      ] do
+        assert %{"data" => [], "next" => nil, "prev" => nil} =
+                 conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
+      end
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
