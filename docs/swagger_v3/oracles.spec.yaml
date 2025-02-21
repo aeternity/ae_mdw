@@ -41,13 +41,14 @@ schemas:
               type:
                 type: string
           - oneOf:
-            - allOf:
-              - $ref: '#/components/schemas/OracleRegisterTx'
-              - properties:
-                  oracle_id:
-                    deprecated: true
-                    description: use `account_id` instead (the same value with a different prefix)
-                    $ref: '#/components/schemas/OracleAddress'
+            - title: OracleRegisterTx
+              allOf:
+                - $ref: '#/components/schemas/OracleRegisterTx'
+                - properties:
+                    oracle_id:
+                      deprecated: true
+                      description: use `account_id` instead (the same value with a different prefix)
+                      $ref: '#/components/schemas/OracleAddress'
             - $ref: '#/components/schemas/ContractCallTx'
             - $ref: '#/components/schemas/ContractCreateTx'
             discriminator:
