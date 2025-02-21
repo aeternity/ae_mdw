@@ -262,8 +262,6 @@ defmodule AeMdwWeb.Router do
 
     get "/transfers/:scope_type/:range", TransferController, :transfers
 
-    get "/aex9/by_name", Aex9Controller, :by_names
-
     get "/aex9/balance/hash/:blockhash/:contract_id/:account_id",
         Aex9Controller,
         :balance_for_hash
