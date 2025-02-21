@@ -1,11 +1,4 @@
 schemas:
-  ContractSourceTxType:
-    description: Contract source transaction type
-    type: string
-    enum:
-      - ContractCreateTx
-      - GaAttachTx
-      - PayingForTx
   ContractInternalTx:
     description: Contract internal transaction
     type: object
@@ -42,9 +35,13 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        type: string
-        $ref: '#/components/schemas/ContractSourceTxType'
+        description: Contract source transaction type
         example: ContractCreateTx
+        type: string
+        enum:
+          - ContractCreateTx
+          - GaAttachTx
+          - PayingForTx
       create_tx:
         type: object
         anyOf:

@@ -228,7 +228,7 @@ schemas:
         type: integer
         example: 45784
       tx:
-        anyOf:
+        oneOf:
           - $ref: '#/components/schemas/NameClaimTx'
           - $ref: '#/components/schemas/ContractCallTx'
         example:

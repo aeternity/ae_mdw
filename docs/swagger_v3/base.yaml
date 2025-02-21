@@ -151,5 +151,4 @@ components:
         - next
         - prev
     TransactionType:
-      type: string  
       $ref: '#/components/schemas/Tx/allOf/0/properties/type'
