@@ -145,7 +145,7 @@ defmodule AeMdw.MixProject do
   # Specifies your project dependencies.
   defp deps() do
     [
-      {:ae_plugin, github: "aeternity/ae_plugin", ref: "cacff2c"},
+      {:ae_plugin, github: "aeternity/ae_plugin", ref: "82c6372"},
       {:stream_split, "~> 0.1.5"},
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},

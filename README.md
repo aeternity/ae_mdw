@@ -93,7 +93,7 @@ chown -R 1000 data
 
 In case you want to setup different accounts on testnet with initial balance you can add this volume to `docker-compose-dev.yml`:
 
-`- ${PWD}/accounts_test.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.genesis/accounts_test.json`
+`- ${PWD}/accounts_test.json:/home/aeternity/node/data/aecore/.genesis/accounts_test.json`
 
 An example of `accounts_test.json` is:
 

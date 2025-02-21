@@ -35,30 +35,26 @@ RUN mkdir -p /home/aeternity/node
 COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
 
 # Set build git revision
-RUN mkdir /home/aeternity/node/ae_mdw
+RUN mkdir /home/aeternity/ae_mdw
 COPY .git .git
-RUN BUILD_REV="$(git log -1 --format=%h)" && echo $BUILD_REV > /home/aeternity/node/ae_mdw/AEMDW_REVISION
+RUN BUILD_REV="$(git log -1 --format=%h)" && echo $BUILD_REV > /home/aeternity/ae_mdw/AEMDW_REVISION
 
 WORKDIR /home/aeternity/node
 
 # Download, and unzip latest aeternity release archive
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
-ENV NODEROOT=/home/aeternity/node/local
-ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
-RUN mkdir -p ./local/rel/aeternity/data/mnesia
+ENV NODEROOT=/home/aeternity/node/
 
-
-COPY --from=aeternity /home/aeternity/node ./local/rel/aeternity
-RUN chmod +x ${NODEDIR}/bin/aeternity
-RUN cp -r ./local/rel/aeternity/lib local/
-RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/*/sys.config
+COPY --from=aeternity /home/aeternity/node ./
+RUN chmod +x ${NODEROOT}/bin/aeternity
+RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEROOT}/releases/*/sys.config
 
 # Check if the config file is OK
-RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
+RUN ${NODEROOT}/bin/aeternity check_config /home/aeternity/aeternity.yaml
 
 # prepare build dir
-WORKDIR /home/aeternity/node/ae_mdw
+WORKDIR /home/aeternity/ae_mdw
 
 # This is necessary for QEMU build, otherwise it crashes when building for another platform: https://elixirforum.com/t/mix-deps-get-memory-explosion-when-doing-cross-platform-docker-build/57157
 ENV ERL_FLAGS="+JMsingle true"
@@ -96,7 +92,7 @@ RUN mix compile
 COPY config/runtime.exs config/
 
 # Generate swagger V3 file
-RUN cp /home/aeternity/node/local/lib/aehttp-*/priv/oas3.yaml docs/swagger_v3/node_oas3.yaml
+RUN cp /home/aeternity/node/lib/aehttp-*/priv/oas3.yaml docs/swagger_v3/node_oas3.yaml
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
 ARG PATH_PREFIX
 RUN scripts/swagger-docs.py
@@ -126,21 +122,22 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
-ENV NODEROOT=/home/aeternity/node/local
-ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
-
-WORKDIR "/home/aeternity/node"
+ENV NODEROOT=/home/aeternity/node/
 
 # set runner ENV
 ARG MIX_ENV="prod"
 ENV MIX_ENV=${MIX_ENV}
-ENV AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
+ENV AETERNITY_CONFIG=/home/aeternity/.aeternity/aeternity/aeternity.yaml
 
 # Only copy the final release from the build stage
-COPY --from=builder /home/aeternity/node/ae_mdw/_build/${MIX_ENV}/rel/ae_mdw ./
-COPY --from=builder /home/aeternity/node/local ./local
-COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
-COPY ./docker/aeternity-dev.yaml /home/aeternity/aeternity-dev.yaml
+WORKDIR "/home/aeternity/node"
+COPY --from=builder /home/aeternity/node/ ./
+
+WORKDIR "/home/aeternity/ae_mdw"
+COPY --from=builder /home/aeternity/ae_mdw/_build/${MIX_ENV}/rel/ae_mdw ./
+
+COPY ./docker/aeternity.yaml /home/aeternity/.aeternity/aeternity/aeternity.yaml
+COPY ./docker/aeternity-dev.yaml /home/aeternity/.aeternity/aeternity/aeternity-dev.yaml
 COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
 
 COPY --from=aeternity /usr/local/lib/librocksdb.so.7.10.2 /usr/local/lib/
@@ -153,8 +150,8 @@ RUN chmod +x /home/aeternity/healthcheck.sh
 
 # Create data directories in advance so that volumes can be mounted in there
 # see https://github.com/moby/moby/issues/2259 for more about this nasty hack
-RUN mkdir -p ./local/rel/aeternity/data/mnesia \
-    && mkdir -p ./local/rel/aeternity/data/mdw.db
+RUN mkdir -p /home/aeternity/node/data/mnesia \
+    && mkdir -p /home/aeternity/node/data/mdw.db
 
 RUN useradd --uid 1000 --shell /bin/bash aeternity \
     && chown -R aeternity:aeternity /home/aeternity
@@ -163,8 +160,8 @@ ARG USER=aeternity
 USER ${USER}
 
 # Clear old logs
-RUN rm -rf /home/aeternity/node/ae_mdw/log
-RUN mkdir -p /home/aeternity/node/ae_mdw/log
+RUN rm -rf /home/aeternity/ae_mdw/log
+RUN mkdir -p /home/aeternity/ae_mdw/log
 
 HEALTHCHECK --start-period=10s --start-interval=2s --timeout=2s CMD /home/aeternity/healthcheck.sh
-CMD ["/home/aeternity/node/bin/server"]
+CMD ["/home/aeternity/ae_mdw/bin/server"]
