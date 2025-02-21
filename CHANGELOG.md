@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v2.0.0) (2025-02-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
+
+### Features
+
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086)) ([249791d](https://github.com/aeternity/ae_mdw/commit/249791d65798927ea9b42e15879b069ee176173a))
+
 ## [1.100.0](https://github.com/aeternity/ae_mdw/compare/v1.99.0...v1.100.0) (2025-02-20)
 
 
