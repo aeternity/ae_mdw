@@ -64,47 +64,6 @@ defmodule AeMdwWeb.Aex9ControllerTest do
     {:ok, conn: with_store(build_conn(), store)}
   end
 
-  describe "by_name" do
-    test "gets aex9 tokens by name", %{conn: conn} do
-      assert aex9_tokens = conn |> get("/aex9/by_name") |> json_response(200)
-      assert length(aex9_tokens) > 0
-
-      aex9_names = aex9_tokens |> Enum.map(fn %{"name" => name} -> name end)
-      assert ^aex9_names = Enum.sort(aex9_names)
-
-      assert Enum.all?(aex9_tokens, fn %{
-                                         "name" => name,
-                                         "symbol" => symbol,
-                                         "decimals" => decimals,
-                                         "contract_txi" => txi,
-                                         "contract_id" => contract_id,
-                                         "initial_supply" => initial_supply,
-                                         "event_supply" => event_supply
-                                       } ->
-               assert is_binary(name) and is_binary(symbol) and is_integer(decimals) and
-                        is_integer(txi)
-
-               assert initial_supply == txi + 10
-               assert event_supply == txi + 20
-
-               assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
-             end)
-    end
-
-    test "gets aex9 tokens filtered by name prefix", %{conn: conn} do
-      prefix = "some-AEX"
-
-      assert aex9_tokens = conn |> get("/aex9/by_name", prefix: prefix) |> json_response(200)
-      assert length(aex9_tokens) > 0
-      assert Enum.all?(aex9_tokens, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
-    end
-
-    test "when invalid filters, it returns an error", %{conn: conn} do
-      assert %{"error" => _error_msg} =
-               conn |> get("/v2/aex9/by_name", all: "") |> json_response(400)
-    end
-  end
-
   describe "balance" do
     test "returns 400 when contract is unknown", %{conn: conn} do
       contract_id = encode_contract(:crypto.strong_rand_bytes(32))

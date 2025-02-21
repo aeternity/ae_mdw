@@ -7,7 +7,6 @@ defmodule AeMdwWeb.Aex9Controller do
 
   alias AeMdw.Aex9
   alias AeMdw.AexnContracts
-  alias AeMdw.AexnTokens
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -25,16 +24,6 @@ defmodule AeMdwWeb.Aex9Controller do
 
   plug(PaginatedPlug)
   action_fallback(FallbackController)
-
-  @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def by_names(%Conn{assigns: %{state: state}} = conn, params) do
-    pagination = {:forward, false, 32_000, false}
-
-    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
-           AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil, false) do
-      format_json(conn, aex9_tokens)
-    end
-  end
 
   @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_for_hash(%Conn{assigns: %{state: state}} = conn, %{
