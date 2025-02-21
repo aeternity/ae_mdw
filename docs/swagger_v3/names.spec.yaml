@@ -58,13 +58,13 @@ schemas:
       signatures:
         - sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
       tx:
-        account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao,
-        fee: 16660000000000,
-        name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain,
-        name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff,
-        nonce: 4,
-        ttl: 2762,
-        type: NameRevokeTx,
+        account_id: ak_X8uq6yXsG9kKrFUChYDrkkxWgNcPnuSsosx7dB1Qt4uC4A4Ao
+        fee: 16660000000000
+        name: olcobaxn0tkizccs4k4z3dzqxbbt1o.chain
+        name_id: nm_6oHMk21c4chkF2A7WQ4bx1HhfaoAEQgXZFgofNTLw4yX7b2ff
+        nonce: 4
+        ttl: 2762
+        type: NameRevokeTx
         version: 1
   Name:
     description: Name
@@ -102,8 +102,9 @@ schemas:
         type: integer
         example: 362026
       pointers:
-        type: object
-        additionalProperties: true
+        type: array
+        items:
+          $ref: "#/components/schemas/NamePointer"
       auction:
         $ref: '#/components/schemas/Auction'
         nullable: true
@@ -334,7 +335,8 @@ schemas:
       name:
         $ref: '#/components/schemas/NameString'
       key:
-        $ref: '#/components/schemas/AccountAddress'
+        type: string
+        example: account_pubkey
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:

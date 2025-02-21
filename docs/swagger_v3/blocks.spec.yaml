@@ -1,10 +1,9 @@
 schemas:
-  BlockStateHash:
-    description: Blocks state hash
+  ByteArray:
     type: string
-    example: bs_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz
-    pattern: ^bs_\w{38,50}$
-  KeyBlock:
+    example: ba_wAAAAKv2ZV4=
+    pattern: ^ba_\w+$
+  KeyBlockExtended:
     example:
       beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
       beneficiary_reward: 5000000
@@ -22,74 +21,28 @@ schemas:
       time: 1565548832164
       transactions_count: 2
       version: 3
-    required:
-      - beneficiary
-      - hash
-      - height
-      - info
-      - miner
-      - prev_hash
-      - prev_key_hash
-      - state_hash
-      - target
-      - time
-      - version
-      - micro_blocks_count
-      - transactions_count
-    properties:
-      beneficiary:
-        description: The beneficiary
-        $ref: '#/components/schemas/AccountAddress'
-      beneficiary_reward:
-        description: The beneficiary reward
-        type: integer
-      hash:
-        $ref: '#/components/schemas/KeyBlockHash'
-      height:
-        description: The block height
-        type: integer
-      info:
-        description: The info
-        $ref: '#/components/schemas/ContractBytearray'
-      miner:
-        description: The miner public key
-        $ref: '#/components/schemas/AccountAddress'
-      nonce:
-        description: The nonce
-        type: integer
-      pow:
-        description: The proof of work
-        type: array
-        items:
-          type: integer
-      prev_hash:
-        description: The previous block hash
-        oneOf:
-          - $ref: '#/components/schemas/KeyBlockHash'
-          - $ref: '#/components/schemas/MicroBlockHash'
-      prev_key_hash:
-        description: The previous key block hash
-        $ref: '#/components/schemas/KeyBlockHash'
-      state_hash:
-        $ref: '#/components/schemas/BlockStateHash'
-      target:
-        description: The target
-        type: integer
-      time:
-        description: The time
-        type: integer
-      micro_blocks_count:
-        description: The number of micro blocks
-        type: integer
-      transactions_count:
-        description: The number of transactions
-        type: integer
-      version:
-        description: The version
-        type: integer
-    title: Key Block
-    type: object
-  MicroBlock:
+    title: Key Block Extended
+    allOf:
+      - $ref: '#/components/schemas/KeyBlock'
+      - type: object
+        required:
+          - beneficiary_reward
+          - flags
+          - micro_blocks_count
+          - transactions_count
+        properties:
+          beneficiary_reward:
+            description: The beneficiary reward
+            type: integer
+          flags:
+            $ref: '#/components/schemas/ByteArray'
+          micro_blocks_count:
+            description: The number of micro blocks
+            type: integer
+          transactions_count:
+            description: The number of transactions
+            type: integer
+  MicroBlockExtended:
     example:
       micro_block_index: 64
       transactions_count: 1
@@ -104,67 +57,28 @@ schemas:
       time: 1668435898477
       txs_hash: "bx_2TAosDwRW2CwxbNiucN8hRfUHQcnJn2u3quDLPE9jAmgX26Qya"
       version: 5
-    required:
-      - micro_block_index
-      - transactions_count
-      - hash
-      - height
-      - pof_hash
-      - prev_hash
-      - prev_key_hash
-      - state_hash
-      - txs_hash
-      - signature
-      - time
-      - version
-      - gas
-    properties:
-      micro_block_index:
-        description: The index of the micro-block on the micro-block height, starting from 0
-        type: integer
-      transactions_count:
-        description: The number of transactions
-        type: integer
-      hash:
-        description: The micro block hash
-        $ref: '#/components/schemas/MicroBlockHash'
-      height:
-        description: The block height
-        type: integer
-      gas:
-        description: The gas used by the microblock
-        type: integer
-      pof_hash:
-        description: \"no_fraud\" or api encoded Proof of Fraud hash
-        type: string
-        pattern: ^no_fraud|bf_\w{38,50}$
-        example: no_fraud
-      prev_hash:
-        description: The previous block hash
-        oneOf:
-          - $ref: '#/components/schemas/KeyBlockHash'
-          - $ref: '#/components/schemas/MicroBlockHash'
-      prev_key_hash:
-        description: The previous key block hash
-        $ref: '#/components/schemas/KeyBlockHash'
-      state_hash:
-        $ref: '#/components/schemas/BlockStateHash'
-      txs_hash:
-        description: Transactions hash
-        type: string
-        example: "bx_2TAosDwRW2CwxbNiucN8hRfUHQcnJn2u3quDLPE9jAmgX26Qya"
-        pattern: ^bx_\w{38,50}$
-      signature:
-        description: Micro block signature
-        $ref: '#/components/schemas/Signature'
-      time:
-        description: The time
-        type: integer
-      version:
-        description: The version
-        type: integer
-    title: MicroBlock
-    type: object
+    title: Micro Block Extended
+    allOf:
+      - $ref: '#/components/schemas/MicroBlockHeader'
+      - type: object
+        required:
+          - micro_block_index
+          - transactions_count
+          - gas
+          - flags
+        properties:
+          micro_block_index:
+            description: The index of the micro-block on the micro-block height, starting from 0
+            type: integer
+          transactions_count:
+            description: The number of transactions
+            type: integer
+          gas:
+            description: The gas used by the microblock
+            type: integer
+          flags:
+            $ref: '#/components/schemas/ByteArray'
+
 paths:
   /key-blocks:
     get:
@@ -189,7 +103,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/KeyBlock'
+                          $ref: '#/components/schemas/KeyBlockExtended'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -218,7 +132,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KeyBlock'
+                $ref: '#/components/schemas/KeyBlockExtended'
         '400':
           description: Bad request
           content:
@@ -263,7 +177,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/MicroBlock'
+                          $ref: '#/components/schemas/MicroBlockExtended'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -289,7 +203,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MicroBlock'
+                $ref: '#/components/schemas/MicroBlockExtended'
         '400':
           description: Bad request
           content:

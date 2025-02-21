@@ -23,10 +23,6 @@ schemas:
         type: integer
       hash:
         $ref: '#/components/schemas/TransactionHash'
-      tx_hash:
-        deprecated: true
-        description: use `hash` instead
-        $ref: '#/components/schemas/TransactionHash'
       micro_index:
         type: integer
       micro_time:
@@ -57,6 +53,8 @@ schemas:
           nonce:
             type: integer
           oracle_id:
+            deprecated: true
+            description: use `account_id` instead (the same value with a different prefix)
             $ref: '#/components/schemas/OracleAddress'
           oracle_ttl:
             description: Expiration of the oracle
@@ -110,7 +108,7 @@ schemas:
           - sg_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
         tx:
             abi_version: 0
-            account_id: ak_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
+            account_id: ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
             fee: 20000
             nonce: 1
             oracle_id: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
@@ -221,7 +219,7 @@ schemas:
       ttl: 289505
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         description: The time of the block
@@ -321,7 +319,7 @@ schemas:
       ttl: 289505
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       block_time:
         description: The time of the block
@@ -332,7 +330,7 @@ schemas:
       query_id:
         $ref: '#/components/schemas/OracleQueryId'
       query:
-        $ref: '#/components/schemas/OracleResponse'
+        $ref: '#/components/schemas/OracleQuery'
       source_tx_hash:
         description: The hash of the transaction in which the response was created
         $ref: '#/components/schemas/TransactionHash'
@@ -388,7 +386,7 @@ schemas:
       source_tx_type: "OracleExtendTx"
     properties:
       block_hash:
-        description: The hash of the block in which it ocurred
+        description: The hash of the block in which it occurred
         $ref: '#/components/schemas/MicroBlockHash'
       height:
         description: The block height
