@@ -181,18 +181,9 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            $ref: '#/components/schemas/Tx'
-            example:
-              account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
-              fee: 16540000000000
-              name: 1996.chain
-              name_fee: 134626900000000000000
-              name_id: nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c
-              name_salt: 7095609104934055
-              nonce: 225
-              ttl: 818002
-              type: NameClaimTx
-              version: 2
+            oneOf:
+              - $ref: '#/components/schemas/NameClaimTx'
+              - $ref: '#/components/schemas/ContractCallTx'
       name:
         $ref: '#/components/schemas/NameString'
       name_fee:
