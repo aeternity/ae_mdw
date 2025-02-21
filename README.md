@@ -103,6 +103,10 @@ An example of `accounts_test.json` is:
 }
 ```
 
+### Docker
+
+Starting the middleware with docker is described [here](docs/middleware_setup.md), to start the middleware as a hyperchain you can follow [this](docs/hyperchains_setup.md) guide.
+
 ### Docker setup for local dev
 
 The project comes with a two docker compose files:
