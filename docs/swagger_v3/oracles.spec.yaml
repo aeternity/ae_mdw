@@ -34,45 +34,28 @@ schemas:
       encoded_tx:
         $ref: '#/components/schemas/TransactionEncoded'
       tx:
-        anyOf:
-          - allOf:
-            - title: OracleRegisterTx
-            - $ref: '#/components/schemas/OracleRegisterTx'
-            - properties:
-                type:
-                  type: string
-                  example: OracleRegisterTx
-                  enum:
-                    - OracleRegisterTx
-                version:
-                  type: integer
-          - allOf:
-            - title: ContractCallTx
+        allOf:
+          - properties:
+              version: 
+                type: integer
+              type:
+                type: string
+          - oneOf:
+            - allOf:
+              - $ref: '#/components/schemas/OracleRegisterTx'
+              - properties:
+                  oracle_id:
+                    deprecated: true
+                    description: use `account_id` instead (the same value with a different prefix)
+                    $ref: '#/components/schemas/OracleAddress'
             - $ref: '#/components/schemas/ContractCallTx'
-            - properties:
-                type:
-                  type: string
-                  example: ContractCallTx
-                  enum:
-                    - ContractCallTx
-                version:
-                  type: integer
-          - allOf:
-            - title: ContractCreateTx
             - $ref: '#/components/schemas/ContractCreateTx'
-            - properties:
-                type:
-                  type: string
-                  example: ContractCreateTx
-                  enum:
-                    - ContractCreateTx
-                version:
-                  type: integer
-        properties:
-          oracle_id:
-            deprecated: true
-            description: use `account_id` instead (the same value with a different prefix)
-            $ref: '#/components/schemas/OracleAddress'
+            discriminator:
+              propertyName: type
+              mapping:
+                OracleRegisterTx: '#/components/schemas/OracleRegisterTx'
+                ContractCallTx: '#/components/schemas/ContractCallTx'
+                ContractCreateTx: '#/components/schemas/ContractCreateTx'
   Oracle:
     example:
       active: false
