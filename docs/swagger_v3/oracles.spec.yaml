@@ -35,7 +35,11 @@ schemas:
         $ref: '#/components/schemas/TransactionEncoded'
       tx:
         allOf:
-          - properties:
+          - type: object
+            required:
+              - version
+              - type 
+            properties:
               version: 
                 type: integer
               type:
@@ -44,7 +48,10 @@ schemas:
             - title: OracleRegisterTx
               allOf:
                 - $ref: '#/components/schemas/OracleRegisterTx'
-                - properties:
+                - type: object
+                  required:
+                    - oracle_id
+                  properties:
                     oracle_id:
                       deprecated: true
                       description: use `account_id` instead (the same value with a different prefix)
@@ -90,7 +97,7 @@ schemas:
             query_format: "query"
             response_format: "response"
             ttl: 1587577871376
-            type: "OracleTx"
+            type: "OracleRegisterTx"
             version: 1
         tx_hash: th_2JZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN
       register_time: 1587577771376
@@ -164,7 +171,7 @@ schemas:
         height: 289044
         query_id: "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
         source_tx_hash: "th_GfXNatujAA2Uj73Cys39z9GzKXGHRiRFK1FCoKfDvhkJNWjpr"
-        source_tx_type: "OracleQueryTx"
+        source_tx_type: "OracleResponseTx"
         fee: 16939000000000
         nonce: 2
         oracle_id: "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"

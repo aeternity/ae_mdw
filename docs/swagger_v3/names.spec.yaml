@@ -209,6 +209,7 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
+        type: string
         enum:
           - NameClaimTx
           - ContractCallTx

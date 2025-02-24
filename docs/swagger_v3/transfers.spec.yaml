@@ -1,10 +1,13 @@
 schemas:
   TransferRefTxType:
     type: string
+    nullable: true
+    example: OracleQueryTx
     enum:
       - ContractCallTx
       - NameClaimTx
       - OracleQueryTx
+      - null
   Transfer:
     type: object
     required:
@@ -37,8 +40,6 @@ schemas:
         $ref: '#/components/schemas/TransactionHash'
       ref_tx_type:
         $ref: '#/components/schemas/TransferRefTxType'
-        nullable: true
-        example: OracleQueryTx
 paths:
   /transfers:
     get:
