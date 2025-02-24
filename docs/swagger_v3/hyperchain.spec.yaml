@@ -1,4 +1,59 @@
 schemas:
+  Config:
+    description: The hyperchains config file (aeternity.yaml)
+    type: object
+    properties:
+      consensus: 
+        type: array
+        items:
+          type: object
+          description: This is the consensus part of the configuration
+      fork_management:
+        type: object
+        properties:
+          network_id: 
+            type: string
+      hard_forks:
+        type: object
+        properties:
+          protocol_number: 
+            type: object
+            properties:
+              height:
+                type: integer
+              accounts_file: 
+                type: string
+                nullable: true
+              contracts_file:
+                type: string
+                nullable: true
+    example:
+      consensus:
+        child_block_time: 3000
+        child_epoch_length: 600
+        consensus_key: "0"
+        contract_owner: "ak_11111111111111111111111111111115rHyByZ"
+        default_pinning_behavior: true
+        election_contract: "ct_LRbi65kmLtE7YMkG6mvG5TxAXTsPJDZjAtsPuaXtRyPA7gnfJ"
+        fixed_coinbase: 100
+        parent_chain: 
+          consensus: 
+            network_id: "devnet"
+            type: "AE2AE"
+          parent_epoch_length: 10,
+          polling: 
+            fetch_interval: 500
+            nodes: 
+              - "http://localhost:13013"
+          start_height: 10
+        pinning_reward_value: 1000
+        rewards_contract: "ct_KJgjAXMtRF68AbT5A2aC9fTk8PA4WFv26cFSY27fXs6FtYQHK"
+        staking_contract: "ct_KJgjAXMtRF68AbT5A2aC9fTk8PA4WFv26cFSY27fXs6FtYQHK"
+      fork_management: 
+        network_id: "hc_devnet"
+      hard_forks: 
+        "6": 0
+
   Schedule:
     description: Schedule information
     type: object

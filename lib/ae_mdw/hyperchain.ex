@@ -24,6 +24,30 @@ defmodule AeMdw.Hyperchain do
           epoch: Blocks.height()
         }
 
+  @spec get_config() :: {:ok, map()} | :error
+  def get_config() do
+    with {:ok, consensus} <- :aeu_env.user_config(["chain", "consensus"]),
+         {:ok, hard_forks} <- :aeu_env.user_config(["chain", "hard_forks"]),
+         {:ok, fork_management} <- :aeu_env.user_config(["fork_management"]) do
+      cleaned_consensus =
+        consensus
+        |> Enum.map(fn {k, %{"config" => v}} ->
+          v |> Map.drop(["pinners", "stakers"]) |> Map.put("consensus_key", k)
+        end)
+
+      config = %{
+        consensus: cleaned_consensus,
+        hard_forks: hard_forks,
+        fork_management: fork_management
+      }
+
+      {:ok, config}
+    else
+      _otherwise ->
+        :error
+    end
+  end
+
   @spec fetch_epochs(
           State.t(),
           Collection.pagination(),
