@@ -33,10 +33,9 @@ Once you have the necessary configuration files, you can run the middleware usin
 docker run -it --rm \
   -p 3013:3013 \
   -p 4000:4000 \
-  -e AETERNITY_CONFIG=/home/aeternity/aeternity.yaml \
-  -v ${PWD}/${NAME}/nodeConfig/aeternity.yaml:/home/aeternity/aeternity.yaml \
-  -v ${PWD}/${NAME}/nodeConfig/${NAME}_accounts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/${NAME}_accounts.json \
-  -v ${PWD}/${NAME}/nodeConfig/${NAME}_contracts.json:/home/aeternity/node/local/rel/aeternity/data/aecore/${NAME}_contracts.json \
+  -v ${PWD}/${NAME}/nodeConfig/aeternity.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml \
+  -v ${PWD}/${NAME}/nodeConfig/${NAME}_accounts.json:/home/aeternity/node/data/aecore/${NAME}_accounts.json \
+  -v ${PWD}/${NAME}/nodeConfig/${NAME}_contracts.json:/home/aeternity/node/data/aecore/${NAME}_contracts.json \
   aeternity/ae_mdw
 ```
 
@@ -65,17 +64,16 @@ To ensure data persistence across container restarts:
 docker run -it --rm \
   -p 3013:3013 \
   -p 4000:4000 \
-  -e AETERNITY_CONFIG=/home/aeternity/aeternity.yaml \
-  -v ${PWD}/${NAME}/nodeConfig/aeternity.yaml:/home/aeternity/aeternity.yaml \
-  -v ${PWD}/${NAME}/nodeConfig/${NAME}_accounts.json:/home/aeternity/node/local/rel/aeternity/data/mnesia/${NAME}_accounts.json \
-  -v ${PWD}/${NAME}/nodeConfig/${NAME}_contracts.json:/home/aeternity/node/local/rel/aeternity/data/mnesia/${NAME}_contracts.json \
-  -v ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia \
-  -v ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db \
+  -v ${PWD}/${NAME}/nodeConfig/aeternity.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml \
+  -v ${PWD}/${NAME}/nodeConfig/${NAME}_accounts.json:/home/aeternity/node/data/mnesia/${NAME}_accounts.json \
+  -v ${PWD}/${NAME}/nodeConfig/${NAME}_contracts.json:/home/aeternity/node/data/mnesia/${NAME}_contracts.json \
+  -v ${PWD}/data/mnesia:/home/aeternity/node/data/mnesia \
+  -v ${PWD}/data/mdw.db:/home/aeternity/node/data/mdw.db \
   aeternity/ae_mdw
 ```
 
-- `-v ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia`: Persists the node database.
-- `-v ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db`: Persists the middleware database.
+- `-v ${PWD}/data/mnesia:/home/aeternity/node/data/mnesia`: Persists the node database.
+- `-v ${PWD}/data/mdw.db:/home/aeternity/node/data/mdw.db`: Persists the middleware database.
 
 With this setup, the middleware will retain its state even after the container is stopped or restarted.
 

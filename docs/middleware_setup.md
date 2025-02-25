@@ -73,16 +73,16 @@ If you want to use a database snapshot:
 Start the container with the following command:
 
 ```
-docker run -d \
+docker run -it --rm \
   -p 4000:4000 \
   -p 4001:4001 \
   -p 3113:3113 \
   -p 3013:3013 \
   -p 3014:3014 \
-  -v ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia \
-  -v ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db \
-  -v ${PWD}/log:/home/aeternity/node/ae_mdw/log \
-  -e AETERNITY_CONFIG=/home/aeternity/aeternity.yaml \
+  -v ${PWD}/data/mnesia:/home/aeternity/node/data/mnesia \
+  -v ${PWD}/data/mdw.db:/home/aeternity/node/data/mdw.db \
+  -v ${PWD}/log:/home/aeternity/ae_mdw/log \
+  -v ${PWD}/docker/aeternity.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml \
   aeternity/ae_mdw:latest
 ```
 
