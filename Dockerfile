@@ -13,9 +13,9 @@
 #   - Ex: hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-bullseye-20210902-slim
 #
 ARG ELIXIR_VERSION=1.17.3
-ARG OTP_VERSION=26.2.5.3
+ARG OTP_VERSION=26.2.5.6
 ARG NODE_VERSION=7.3.0-rc3
-ARG DEBIAN_VERSION=bullseye-20240926-slim
+ARG DEBIAN_VERSION=bullseye-20241223-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
@@ -119,9 +119,9 @@ RUN apt-get update -y && apt-get install -y git curl libstdc++6 openssl libncurs
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 ENV NODEROOT=/home/aeternity/node/
 
 # set runner ENV
