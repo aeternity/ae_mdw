@@ -8,4 +8,4 @@ runs:
       shell: bash
       run: |
         curl -L https://github.com/aeternity/aeternity/releases/download/v7.3.0-rc3/aeternity-v7.3.0-rc3-ubuntu-x86_64.tar.gz -o aeternity.tgz\
-        && mkdir -p ${NODEROOT} && tar xf aeternity.tgz -C ${NODEROOT} 
+        && mkdir -p ${NODEROOT} && tar xf aeternity.tgz -C ${NODEROOT} && cp -rf ${NODEROOT}/lib/ ${NODEROOT}

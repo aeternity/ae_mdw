@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - revert-test
     tags:
       - v*
 
