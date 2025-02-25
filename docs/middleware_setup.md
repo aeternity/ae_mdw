@@ -2,7 +2,7 @@
 
 ## Overview
 
-AeMdw is a middleware that acts as a caching and reporting layer for the [Ã¦ternity blockchain](https://github.com/aeternity/aeternity). It responds to queries more efficiently than the node and supports additional queries.
+AeMdw is a middleware that acts as a caching and reporting layer for the [æternity blockchain](https://github.com/aeternity/aeternity). It responds to queries more efficiently than the node and supports additional queries.
 
 The middleware runs an Aeternity Node alongside it in the same Docker container and BEAM VM instance. This node can be configured using the `aeternity.yaml` file or by passing environment variables, just like configuring the node directly.
 
