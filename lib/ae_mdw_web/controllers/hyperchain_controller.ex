@@ -13,6 +13,17 @@ defmodule AeMdwWeb.HyperchainController do
   plug(PaginatedPlug, order_by: ~w(expiration activation deactivation name)a)
   action_fallback(FallbackController)
 
+  @spec config(Conn.t(), map()) :: Conn.t()
+  def config(conn, _params) do
+    case Hyperchain.get_config() do
+      {:ok, config} ->
+        json(conn, config)
+
+      :error ->
+        format_json(conn, %{error: "Unable to parse aeternity.yaml config file"}, 422)
+    end
+  end
+
   @spec epochs(Conn.t(), map()) :: Conn.t()
   def epochs(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} =

@@ -112,6 +112,7 @@ defmodule AeMdwWeb.Router do
       get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
+      get "/hyperchain/config", HyperchainController, :config
       get "/hyperchain/schedule", HyperchainController, :schedule
       get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
       get "/hyperchain/epochs", HyperchainController, :epochs
