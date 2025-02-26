@@ -28,7 +28,7 @@ FROM ${BUILDER_IMAGE} AS builder
 RUN rm /var/lib/dpkg/info/libc-bin.*
 RUN apt-get clean
 RUN apt-get update
-RUN apt-get install libc-bin
+RUN apt-get install -y qemu-user-static
 
 RUN apt-get install -y build-essential
 RUN apt-get install -y git 
@@ -129,7 +129,7 @@ FROM ${RUNNER_IMAGE}
 RUN rm /var/lib/dpkg/info/libc-bin.*
 RUN apt-get clean
 RUN apt-get update
-RUN apt-get install libc-bin
+RUN apt-get install -y qemu-user-static
 
 RUN apt-get install -y git 
 RUN apt-get install -y curl
