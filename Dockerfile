@@ -111,7 +111,11 @@ RUN mix release
 # start a new build stage so that the final image will only contain
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
-RUN apt-get update -y && apt-get install -y libc-bin git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 libsnappy-dev libgflags2.2 \
+RUN rm /var/lib/dpkg/info/libc-bin.*
+RUN apt-get clean
+RUN apt-get update
+RUN apt-get install libc-bin
+RUN apt-get install -y git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 libsnappy-dev libgflags2.2 \
   && ldconfig \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
