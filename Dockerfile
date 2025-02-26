@@ -13,9 +13,9 @@
 #   - Ex: hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-bullseye-20210902-slim
 #
 ARG ELIXIR_VERSION=1.17.3
-ARG OTP_VERSION=26.2.5.9
-ARG NODE_VERSION=7.3.0-rc2
-ARG DEBIAN_VERSION=bullseye-20250224-slim
+ARG OTP_VERSION=26.2.5.3
+ARG NODE_VERSION=7.3.0-rc3
+ARG DEBIAN_VERSION=bullseye-20240926-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
@@ -25,25 +25,10 @@ FROM ${NODE_IMAGE} AS aeternity
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
-RUN rm /var/lib/dpkg/info/libc-bin.*
-RUN apt-get clean
-RUN apt-get update
-RUN apt-get install -y qemu-user-static
-
-RUN apt-get install -y build-essential
-RUN apt-get install -y git 
-RUN apt-get install -y sed 
-RUN apt-get install -y curl 
-RUN apt-get install -y libncurses5 
-RUN apt-get install -y libsodium-dev 
-RUN apt-get install -y jq 
-RUN apt-get install -y libgmp10
-RUN apt-get install -y python3 
-RUN apt-get install -y python3-yaml 
-
-RUN ldconfig
-RUN apt-get clean 
-RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y build-essential git sed curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
+    && ldconfig \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Prepare working folder
 RUN mkdir -p /home/aeternity/node
@@ -126,26 +111,10 @@ RUN mix release
 # start a new build stage so that the final image will only contain
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
-RUN rm /var/lib/dpkg/info/libc-bin.*
-RUN apt-get clean
-RUN apt-get update
-RUN apt-get install -y qemu-user-static
 
-RUN apt-get install -y git 
-RUN apt-get install -y curl
-RUN apt-get install -y libstdc++6
-RUN apt-get install -y openssl
-RUN apt-get install -y libncurses5
-RUN apt-get install -y locales
-RUN apt-get install -y libncurses5 
-RUN apt-get install -y libsodium-dev
-RUN apt-get install -y libgmp10
-RUN apt-get install -y libsnappy-dev
-RUN apt-get install -y libgflags2.2 
-
-RUN ldconfig 
-RUN apt-get clean 
-RUN rm -f /var/lib/apt/lists/*_*
+RUN apt-get update -y && apt-get install -y git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 libsnappy-dev libgflags2.2 \
+  && ldconfig \
+  && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
