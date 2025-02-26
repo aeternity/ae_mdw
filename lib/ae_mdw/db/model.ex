@@ -1208,7 +1208,8 @@ defmodule AeMdw.Db.Model do
     burned_in_auctions: 0,
     channels_opened: 0,
     channels_closed: 0,
-    locked_in_channels: 0
+    locked_in_channels: 0,
+    accounts: 0
   ]
   defrecord :delta_stat, @delta_stat_defaults
 
@@ -1229,7 +1230,8 @@ defmodule AeMdw.Db.Model do
             burned_in_auctions: integer(),
             channels_opened: non_neg_integer(),
             channels_closed: non_neg_integer(),
-            locked_in_channels: integer()
+            locked_in_channels: integer(),
+            accounts: non_neg_integer()
           )
 
   # summarized statistics
@@ -1248,7 +1250,8 @@ defmodule AeMdw.Db.Model do
     locked_in_auctions: 0,
     burned_in_auctions: 0,
     locked_in_channels: 0,
-    open_channels: 0
+    open_channels: 0,
+    accounts: 0
   ]
   defrecord :total_stat, @total_stat_defaults
 
@@ -1268,7 +1271,8 @@ defmodule AeMdw.Db.Model do
             locked_in_auctions: non_neg_integer(),
             burned_in_auctions: non_neg_integer(),
             locked_in_channels: non_neg_integer(),
-            open_channels: non_neg_integer()
+            open_channels: non_neg_integer(),
+            accounts: non_neg_integer()
           )
 
   @stat_defaults [:index, :payload]
