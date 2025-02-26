@@ -115,8 +115,20 @@ RUN rm /var/lib/dpkg/info/libc-bin.*
 RUN apt-get clean
 RUN apt-get update
 RUN apt-get install libc-bin
-RUN apt-get install -y git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 libsnappy-dev libgflags2.2 \
-  && ldconfig \
+
+RUN apt-get install -y git 
+RUN apt-get install -y curl
+RUN apt-get install -y libstdc++6
+RUN apt-get install -y openssl
+RUN apt-get install -y libncurses5
+RUN apt-get install -y locales
+RUN apt-get install -y libncurses5 
+RUN apt-get install -y libsodium-dev
+RUN apt-get install -y libgmp10
+RUN apt-get install -y libsnappy-dev
+RUN apt-get install -y libgflags2.2 
+
+RUN ldconfig \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
