@@ -15,11 +15,12 @@
 ARG ELIXIR_VERSION=1.17.3
 ARG OTP_VERSION=26.2.5.3
 ARG NODE_VERSION=7.3.0-rc3
-ARG DEBIAN_VERSION=bullseye-20240926-slim
 
-ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
-ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
+ARG UBUNTU_VERSION=focal-20240918
+
+ARG RUNNER_IMAGE="ubuntu:${UBUNTU_VERSION}"
+ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-ubuntu-${UBUNTU_VERSION}"
 
 FROM ${NODE_IMAGE} AS aeternity
 FROM ${BUILDER_IMAGE} AS builder
@@ -44,7 +45,7 @@ WORKDIR /home/aeternity/node
 # Download, and unzip latest aeternity release archive
 ARG DEV_MODE="false"
 ENV DEV_MODE=${DEV_MODE}
-ENV NODEROOT=/home/aeternity/node/
+ENV NODEROOT=/home/aeternity/node
 
 COPY --from=aeternity /home/aeternity/node ./
 RUN chmod +x ${NODEROOT}/bin/aeternity
@@ -122,7 +123,7 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
-ENV NODEROOT=/home/aeternity/node/
+ENV NODEROOT=/home/aeternity/node
 
 # set runner ENV
 ARG MIX_ENV="prod"
