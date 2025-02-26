@@ -41,9 +41,9 @@ RUN apt-get install -y libgmp10
 RUN apt-get install -y python3 
 RUN apt-get install -y python3-yaml 
 
-RUN ldconfig \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN ldconfig
+RUN apt-get clean 
+RUN rm -rf /var/lib/apt/lists/*
 
 # Prepare working folder
 RUN mkdir -p /home/aeternity/node
@@ -143,8 +143,9 @@ RUN apt-get install -y libgmp10
 RUN apt-get install -y libsnappy-dev
 RUN apt-get install -y libgflags2.2 
 
-RUN ldconfig \
-  && apt-get clean && rm -f /var/lib/apt/lists/*_*
+RUN ldconfig 
+RUN apt-get clean 
+RUN rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
