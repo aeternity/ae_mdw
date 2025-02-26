@@ -40,13 +40,15 @@ jobs:
         # Workaround for a memory allocation layout bug in QEMU,
         # triggered by a kernel update to Linux machine images.
         # Note that this is not an actual fix.
+        # suggested in:
+        # https://hub.docker.com/r/tonistiigi/binfmt
+        # https://github.com/tonistiigi/binfmt/issues/240#issuecomment-2669052837
+        # https://github.com/docker/buildx/issues/1170
         with:
           image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          install: true
 
       - name: Login to Dockerhub
         uses: docker/login-action@v2
