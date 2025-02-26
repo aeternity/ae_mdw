@@ -25,6 +25,12 @@ FROM ${NODE_IMAGE} AS aeternity
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
+RUN rm /var/lib/dpkg/info/libc-bin.*
+
+RUN apt-get clean
+RUN apt-get update
+RUN apt-get install libc-bin
+
 RUN apt-get update -y && apt-get install -y build-essential git sed curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
     && ldconfig \
     && apt-get clean \
