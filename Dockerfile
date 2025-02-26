@@ -26,13 +26,22 @@ FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
 RUN rm /var/lib/dpkg/info/libc-bin.*
-
 RUN apt-get clean
 RUN apt-get update
 RUN apt-get install libc-bin
 
-RUN apt-get update -y && apt-get install -y build-essential git sed curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
-    && ldconfig \
+RUN apt-get install -y build-essential
+RUN apt-get install -y git 
+RUN apt-get install -y sed 
+RUN apt-get install -y curl 
+RUN apt-get install -y libncurses5 
+RUN apt-get install -y libsodium-dev 
+RUN apt-get install -y jq 
+RUN apt-get install -y libgmp10
+RUN apt-get install -y python3 
+RUN apt-get install -y python3-yaml 
+
+RUN ldconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
