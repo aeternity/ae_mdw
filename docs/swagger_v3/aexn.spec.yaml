@@ -336,7 +336,10 @@ schemas:
         type: integer
       tx_type:
         description: Transaction type, indicating a state of a balance for that block height
-        $ref: '#/components/schemas/TransactionType'
+        type: string
+        enum:
+          - ContractCreateTx
+          - ContractCallTx
     required:
       - amount
       - block_hash

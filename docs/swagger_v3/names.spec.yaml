@@ -255,12 +255,13 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
+        type: string
         enum:
           - NameTransferTx
           - ContractCallTx
         example: NameTransferTx
       tx:
-        anyOf:
+        oneOf:
           - $ref: '#/components/schemas/NameTransferTx'
           - $ref: '#/components/schemas/ContractCallTx'
         example:
@@ -294,12 +295,13 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
+        type: string
         enum:
           - NameUpdateTx
           - ContractCallTx
         example: NameUpdateTx
       tx:
-        anyOf:
+        oneOf:
           - $ref: '#/components/schemas/NameUpdateTx'
           - $ref: '#/components/schemas/ContractCallTx'
         example:
@@ -340,7 +342,7 @@ schemas:
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
-        anyOf:
+        oneOf:
           - $ref: '#/components/schemas/NameUpdateTx'
           - $ref: '#/components/schemas/ContractCallTx'
         example:
@@ -355,6 +357,7 @@ schemas:
               key: "account_pubkey"
           ttl: 60000
       source_tx_type:
+        type: string
         enum:
           - NameUpdateTx
           - ContractCallTx

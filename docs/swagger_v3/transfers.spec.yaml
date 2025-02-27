@@ -43,7 +43,7 @@ schemas:
 paths:
   /transfers:
     get:
-      deprecated: false 
+      deprecated: false
       description: Get multiple transfers.
       operationId: GetTransfers
       parameters:

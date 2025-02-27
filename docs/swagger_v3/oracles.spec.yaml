@@ -38,9 +38,9 @@ schemas:
           - type: object
             required:
               - version
-              - type 
+              - type
             properties:
-              version: 
+              version:
                 type: integer
               type:
                 type: string
@@ -345,14 +345,9 @@ schemas:
           - ContractCallTx
           - OracleExtendTx
       tx:
-        anyOf:
+        oneOf:
           - $ref: "#/components/schemas/OracleExtendTx"
           - $ref: "#/components/schemas/ContractCallTx"
-        required:
-          - fee
-          - nonce
-          - oracle_id
-          - oracle_ttl
     required:
       - block_hash
       - height
