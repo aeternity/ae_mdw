@@ -51,10 +51,7 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
     delta_count = 0
 
     Model.Block
-    |> RocksDbCF.stream(
-      direction: :forward,
-      key_boundary: Collection.generate_key_boundary()
-    )
+    |> RocksDbCF.stream(direction: :forward)
     |> Stream.filter(fn Model.block(index: {_height, mbi}) ->
       mbi == -1
     end)
