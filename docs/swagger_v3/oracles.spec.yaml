@@ -171,7 +171,7 @@ schemas:
         height: 289044
         query_id: "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
         source_tx_hash: "th_GfXNatujAA2Uj73Cys39z9GzKXGHRiRFK1FCoKfDvhkJNWjpr"
-        source_tx_type: "OracleResponseTx"
+        source_tx_type: "OracleRespondTx"
         fee: 16939000000000
         nonce: 2
         oracle_id: "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
@@ -385,14 +385,9 @@ schemas:
           - ContractCallTx
           - OracleExtendTx
       tx:
-        anyOf:
+        oneOf:
           - $ref: "#/components/schemas/OracleExtendTx"
           - $ref: "#/components/schemas/ContractCallTx"
-        required:
-          - fee
-          - nonce
-          - oracle_id
-          - oracle_ttl
     required:
       - block_hash
       - height

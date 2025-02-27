@@ -2,7 +2,7 @@ schemas:
   ContractInternalTx:
     description: Contract internal transaction
     type: object
-    anyOf:
+    oneOf:
       - $ref: '#/components/schemas/ContractCreateTx'
       - $ref: '#/components/schemas/NameClaimTx'
       - $ref: '#/components/schemas/NamePreclaimTx'
@@ -44,7 +44,7 @@ schemas:
           - PayingForTx
       create_tx:
         type: object
-        anyOf:
+        oneOf:
           - $ref: '#/components/schemas/ContractCreateTx'
           - $ref: '#/components/schemas/GAAttachTx'
         example:
