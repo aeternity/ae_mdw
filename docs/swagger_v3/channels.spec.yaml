@@ -56,6 +56,18 @@ schemas:
         example: 141956
       last_updated_tx_type:
         type: string
+        enum:
+          - ChannelCloseSoloTx
+          - ChannelCloseMutualTx
+          - ChannelCreateTx
+          - ChannelDepositTx
+          - ChannelForceProgressTx
+          - ChannelSetDelegatesTx
+          - ChannelSettleTx
+          - ChannelSlashTx
+          - ChannelSnapshotSoloTx
+          - ChannelWithdrawTx
+          - ChannelOffChainTx
         description: The transaction type of the last transaction that updated the channel
         example: ChannelDepositTx
       last_updated_time:

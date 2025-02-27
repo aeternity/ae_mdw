@@ -1,4 +1,18 @@
 schemas:
+  ContractInternalTx:
+    description: Contract internal transaction
+    type: object
+    oneOf:
+      - $ref: '#/components/schemas/ContractCreateTx'
+      - $ref: '#/components/schemas/NameClaimTx'
+      - $ref: '#/components/schemas/NamePreclaimTx'
+      - $ref: '#/components/schemas/NameUpdateTx'
+      - $ref: '#/components/schemas/NameTransferTx'
+      - $ref: '#/components/schemas/OracleExtendTx'
+      - $ref: '#/components/schemas/OracleQueryTx'
+      - $ref: '#/components/schemas/OracleRegisterTx'
+      - $ref: '#/components/schemas/OracleRespondTx'
+      - $ref: '#/components/schemas/SpendTx'
   Contract:
     description: Contract creation info
     type: object
@@ -21,13 +35,20 @@ schemas:
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
-        type: string
+        description: Contract source transaction type
         example: ContractCreateTx
+        type: string
+        enum:
+          - ContractCreateTx
+          - GaAttachTx
+          - PayingForTx
       create_tx:
         type: object
+        oneOf:
+          - $ref: '#/components/schemas/ContractCreateTx'
+          - $ref: '#/components/schemas/GAAttachTx'
         example:
           abi_version: 3
-          amount: 25123
           call_data: "cb_+Q=="
           code: "cb_+QrfRgOgbAwsRHU"
           deposit: 0
@@ -68,6 +89,7 @@ schemas:
         example: 608269
       internal_tx:
         type: object
+        $ref: '#/components/schemas/ContractInternalTx'
         example:
           fee: 0
           nonce: 0
