@@ -73,7 +73,7 @@ If you want to use a database snapshot:
 Start the container with the following command:
 
 ```
-docker run -it --rm \
+docker run -it --name ae_mdw \
   -p 4000:4000 \
   -p 4001:4001 \
   -p 3113:3113 \
@@ -84,6 +84,38 @@ docker run -it --rm \
   -v ${PWD}/log:/home/aeternity/ae_mdw/log \
   -v ${PWD}/docker/aeternity.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml \
   aeternity/ae_mdw:latest
+```
+
+This command starts the middleware in a docker container. The middleware will be available at `http://localhost:4000`. Note that you can pass the -d flag to run the container in detached mode.
+
+### Step 4: Check the Status
+
+To check if the middleware is running properly, visit the `/status` endpoint and ensure that `node_height` is higher than `0`.
+
+### Step 5: Managing the Container
+
+To check the logs, run the following command:
+
+```
+docker logs ae_mdw
+```
+
+To check the status of the container, run the following command:
+
+```
+docker ps -a
+```
+
+To stop the container, run the following command:
+
+```
+docker stop ae_mdw
+```
+
+To restart the container, run the following command:
+
+```
+docker start ae_mdw
 ```
 
 ## Customizing Configuration
