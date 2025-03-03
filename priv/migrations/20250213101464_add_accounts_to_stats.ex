@@ -181,6 +181,9 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
 
           {:ok, _delta_stat} ->
             nil
+
+          :not_found when height >= top ->
+            nil
         end
       end,
       timeout: :infinity
