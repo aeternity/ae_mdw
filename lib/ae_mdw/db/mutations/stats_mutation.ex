@@ -14,6 +14,7 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Stats, as: SyncStats
+  alias AeMdw.Sync.Transaction
   alias AeMdw.Node
   alias AeMdw.Stats
   alias AeMdw.Txs
@@ -163,11 +164,34 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
     current_accounts =
-      case State.prev(state, Model.Statistic, {:total_accounts, :day, Util.max_int()}) do
-        {:ok, {:total_accounts, :day, count}} -> count
-        {:ok, _otherwise} -> 0
-        :none -> 0
-      end
+      state
+      |> Collection.stream(Model.Tx, {from_txi, next_txi})
+      |> Stream.take_while(&match?(txi when txi < next_txi, &1))
+      |> Enum.reduce(0, fn txi, acc ->
+        Model.tx(id: tx_hash) = State.fetch!(state, Model.Txi, txi)
+
+        new_count =
+          tx_hash
+          |> :aec_db.get_signed_tx()
+          |> Transaction.get_ids_from_tx()
+          |> Enum.reduce(%{}, fn
+            {:id, :account, pubkey}, acc ->
+              state
+              |> State.get(Model.AccountCreation, pubkey)
+              |> case do
+                {:ok, _account_creation} ->
+                  acc
+
+                :not_found ->
+                  acc + 1
+              end
+
+            _other, acc ->
+              acc
+          end)
+
+        acc + new_count
+      end)
 
     Model.delta_stat(
       index: height,
