@@ -30,6 +30,7 @@ defmodule AeMdw.Blocks do
 
   @type block :: map()
   @type cursor :: binary()
+  @type miner :: map()
 
   @typep state() :: State.t()
   @typep direction :: Database.direction()
@@ -38,6 +39,8 @@ defmodule AeMdw.Blocks do
   @typep page_cursor() :: Collection.pagination_cursor()
 
   @table Model.Block
+
+  @seconds_per_day 86_400
 
   @spec fetch_key_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
           {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
@@ -195,6 +198,28 @@ defmodule AeMdw.Blocks do
     Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
 
     hash
+  end
+
+  @spec fetch_top_miners_24hs(State.t()) :: {:ok, [miner()]} | {:error, Error.t()}
+  def fetch_top_miners_24hs(state) do
+    now = :aeu_time.now_in_msecs()
+    time_24h_ago = now - @seconds_per_day * 1_000
+    kb = {time_24h_ago, now}
+    IO.inspect(kb, label: "kb")
+
+    state
+    |> Collection.stream(Model.KeyBlockTime, :backward, kb, nil)
+    |> Enum.reduce(%{}, fn index, acc ->
+      Model.key_block_time(miner: miner) = State.fetch!(state, Model.KeyBlockTime, index)
+      Map.update(acc, miner, 1, &(&1 + 1))
+    end)
+    |> Enum.map(&IO.inspect/1)
+    |> Enum.map(&render_miner/1)
+    |> then(&{:ok, &1})
+  end
+
+  defp render_miner({miner, count}) do
+    %{miner: :aeapi.format_account_pubkey(miner), blocks_mined: count}
   end
 
   defp render_key_blocks(state, range), do: Enum.map(range, &render_key_block(state, &1))
