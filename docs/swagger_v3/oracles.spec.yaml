@@ -187,21 +187,6 @@ schemas:
       block_time: 1595571314482
       height: 289005
       query_id": "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
-      response:
-        block_hash: "mh_GWc3YBsoeCtsKW2FScDPAMz4jmK47Zdba4pPstJFJzREpWr9o"
-        block_time: 1595577843373
-        height: 289044
-        query_id: "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
-        source_tx_hash: "th_GfXNatujAA2Uj73Cys39z9GzKXGHRiRFK1FCoKfDvhkJNWjpr"
-        source_tx_type: "OracleRespondTx"
-        fee: 16939000000000
-        nonce: 2
-        oracle_id: "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
-        response: "5oiQ5Yqf5LqGIQ"
-        response_ttl:
-          type: "delta"
-          value: 100
-        ttl: 289541
       source_tx_hash: "th_gsaRRLnysE4pFH1DqY731F6LBEjhdDwnzoDyBnZjBUygoSvpJ"
       source_tx_type: "OracleQueryTx"
       fee: 17199000000000
@@ -229,8 +214,6 @@ schemas:
         type: integer
       query_id:
         $ref: '#/components/schemas/OracleQueryId'
-      response:
-        $ref: '#/components/schemas/OracleResponse'
       source_tx_hash:
         description: The hash of the transaction in which the query was created
         $ref: '#/components/schemas/TransactionHash'
@@ -287,26 +270,6 @@ schemas:
       block_time: 1595571314482
       height: 289005
       query_id: "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
-      query:
-        block_hash: "mh_211yFeU3yxKgqXAaRyyxrALMDPxxTyYkrs6TwN9hWnxMHQk8Nc"
-        block_time: 1595571314482
-        height: 289005
-        query_id: "oq_su6wv4MZsnJfopjAhd1Sx7HuBBtqhdHhahkoTPWk7bg24UWNR"
-        source_tx_hash: "th_gsaRRLnysE4pFH1DqY731F6LBEjhdDwnzoDyBnZjBUygoSvpJ"
-        source_tx_type: "OracleQueryTx"
-        fee: 17199000000000
-        nonce: 57
-        oracle_id: "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN"
-        query: "YmFpeGluIHF1ZXJ5"
-        query_fee: 2000000000000000
-        query_ttl":
-          type: "delta"
-          value: 100
-        response_ttl":
-          type: "delta"
-          value: 100
-        sender_id: "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4"
-        ttl: 289505
       source_tx_hash: "th_gsaRRLnysE4pFH1DqY731F6LBEjhdDwnzoDyBnZjBUygoSvpJ"
       source_tx_type: "OracleRespondTx"
       fee: 17199000000000
@@ -329,8 +292,6 @@ schemas:
         type: integer
       query_id:
         $ref: '#/components/schemas/OracleQueryId'
-      query:
-        $ref: '#/components/schemas/OracleQuery'
       source_tx_hash:
         description: The hash of the transaction in which the response was created
         $ref: '#/components/schemas/TransactionHash'
@@ -360,7 +321,6 @@ schemas:
       - block_time
       - height
       - query_id
-      - query
       - source_tx_hash
       - source_tx_type
       - fee
@@ -534,7 +494,12 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/OracleQuery'
+                          allOf:
+                            - $ref: '#/components/schemas/OracleQuery'
+                            - type: object
+                              properties:
+                                response:
+                                  $ref: '#/components/schemas/OracleResponse'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -574,7 +539,14 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/OracleResponse'
+                          allOf:
+                            - $ref: '#/components/schemas/OracleResponse'
+                            - type: object
+                              properties:
+                                query:
+                                  $ref: '#/components/schemas/OracleQuery'
+                              required:
+                                - query
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
