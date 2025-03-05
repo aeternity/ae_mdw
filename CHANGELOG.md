@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.101.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v1.101.0) (2025-03-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
+
+### Features
+
+* add hyperchain/config endpoint to read aeternity.yaml settings ([#2106](https://github.com/aeternity/ae_mdw/issues/2106)) ([205fb1a](https://github.com/aeternity/ae_mdw/commit/205fb1a398fa2d4801b94e972e2c0e93f94c6bf3))
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086)) ([249791d](https://github.com/aeternity/ae_mdw/commit/249791d65798927ea9b42e15879b069ee176173a))
+
+
+### Miscellaneous
+
+* bump node to 7.3.0-rc5 ([#2110](https://github.com/aeternity/ae_mdw/issues/2110)) ([6c48030](https://github.com/aeternity/ae_mdw/commit/6c4803060da8a4b6e552545f7ecf7fab8bc95ca2))
+* remove deprecated poorly performant /by_names endpoint ([#2103](https://github.com/aeternity/ae_mdw/issues/2103)) ([87a26fc](https://github.com/aeternity/ae_mdw/commit/87a26fc5e4086c875c2d32462cdb33e35c3d28c6))
+* update docker OS versions to fix docker multiarch pipeline build ([#2108](https://github.com/aeternity/ae_mdw/issues/2108)) ([9bda7ab](https://github.com/aeternity/ae_mdw/commit/9bda7ab1cce791d11661e09d02cf3cf99db2843d))
+
 ## [1.100.0](https://github.com/aeternity/ae_mdw/compare/v1.99.0...v1.100.0) (2025-02-20)
 
 
