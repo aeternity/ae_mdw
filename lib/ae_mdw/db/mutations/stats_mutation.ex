@@ -209,7 +209,7 @@ defmodule AeMdw.Db.StatsMutation do
       channels_opened: channels_opened,
       channels_closed: channels_closed,
       locked_in_channels: locked_in_channels,
-      accounts: max(0, prev_accounts - current_accounts)
+      accounts: max(0, current_accounts - prev_accounts)
     )
   end
 
