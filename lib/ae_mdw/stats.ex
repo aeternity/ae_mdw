@@ -37,6 +37,7 @@ defmodule AeMdw.Stats do
   @typep pagination() :: Collection.direction_limit()
   @typep pagination_cursor() :: Collection.pagination_cursor()
   @typep reason() :: Error.t()
+  @type miner :: map()
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
@@ -870,10 +871,30 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_top_miners_24hs(State.t()) :: {:ok, [miner()]} | {:error, Error.t()}
+  def fetch_top_miners_24hs(state) do
+    now = :aeu_time.now_in_msecs()
+    time_24h_ago = now - @seconds_per_day * 1_000
+    kb = {time_24h_ago, now}
+
+    state
+    |> Collection.stream(Model.KeyBlockTime, :backward, kb, nil)
+    |> Enum.reduce(%{}, fn index, acc ->
+      Model.key_block_time(miner: miner) = State.fetch!(state, Model.KeyBlockTime, index)
+      Map.update(acc, miner, 1, &(&1 + 1))
+    end)
+    |> Enum.map(&render_miner/1)
+    |> then(&{:ok, &1})
+  end
+
   defp get_last_key_block(gen) do
     case :aec_chain.get_key_block_by_height(gen) do
       {:ok, block} -> {:ok, block}
       {:error, :chain_too_short} -> :aec_chain.get_key_block_by_height(gen - 1)
     end
+  end
+
+  defp render_miner({miner, count}) do
+    %{miner: :aeapi.format_account_pubkey(miner), blocks_mined: count}
   end
 end

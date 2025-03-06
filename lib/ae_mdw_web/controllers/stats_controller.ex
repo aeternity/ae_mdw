@@ -173,4 +173,14 @@ defmodule AeMdwWeb.StatsController do
       Util.render(conn, paginated_stats)
     end
   end
+
+  @doc """
+  Endpoint for the top miners for the last 24 hours.
+  """
+  @spec top_miners_24hs(Conn.t(), map()) :: Conn.t()
+  def top_miners_24hs(%Conn{assigns: %{state: state}} = conn, _params) do
+    with {:ok, top_miners} <- Stats.fetch_top_miners_24hs(state) do
+      format_json(conn, top_miners)
+    end
+  end
 end

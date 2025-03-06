@@ -152,6 +152,7 @@ defmodule AeMdwWeb.Router do
         get "/delta", StatsController, :delta_stats
         get "/miners", StatsController, :miners_stats
         get "/miners/top", StatsController, :top_miners_stats
+        get "/miners/top-24h", StatsController, :top_miners_24hs
         get "/contracts", StatsController, :contracts_stats
         get "/aex9-transfers", StatsController, :aex9_transfers_stats
         get "/", StatsController, :stats
