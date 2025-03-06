@@ -11,13 +11,25 @@ defmodule AeMdwWeb.Plugs.HyperchainPlug do
   def init(opts), do: opts
 
   @spec call(Conn.t(), Plug.opts()) :: Conn.t()
+
+  def call(conn, %{reverse?: true}) do
+    if not Hyperchain.hyperchain?() do
+      conn
+    else
+      conn
+      |> Conn.put_status(:bad_request)
+      |> Controller.json(%{"error" => "This endpoint is not available on a hyperchain node"})
+      |> Conn.halt()
+    end
+  end
+
   def call(conn, _opts) do
     if Hyperchain.hyperchain?() do
       conn
     else
       conn
       |> Conn.put_status(:bad_request)
-      |> Controller.json(%{"error" => "Not on a hyperchain node"})
+      |> Controller.json(%{"error" => "This endpoint is only available on a hyperchain node"})
       |> Conn.halt()
     end
   end

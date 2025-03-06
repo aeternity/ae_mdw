@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Router do
   alias AeMdwWeb.Plugs.DeprecationLoggerPlug
   alias AeMdwWeb.Plugs.JSONFormatterPlug
   alias AeMdwWeb.Plugs.RequestSpan
+  alias AeMdwWeb.Plugs.HyperchainPlug
   alias AeMdwWeb.Util
 
   pipeline :api do
@@ -25,6 +26,10 @@ defmodule AeMdwWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+  end
+
+  pipeline :not_hyperchain do
+    plug HyperchainPlug, %{reverse?: true}
   end
 
   scope "/", AeMdwWeb do
@@ -141,12 +146,17 @@ defmodule AeMdwWeb.Router do
         get "/names", StatsController, :names_stats
         get "/total", StatsController, :total_stats
         get "/delta", StatsController, :delta_stats
-        get "/miners", StatsController, :miners_stats
-        get "/miners/top", StatsController, :top_miners_stats
-        get "/miners/top-24h", StatsController, :top_miners_24hs
         get "/contracts", StatsController, :contracts_stats
         get "/aex9-transfers", StatsController, :aex9_transfers_stats
         get "/", StatsController, :stats
+
+        scope "/miners" do
+          pipe_through :not_hyperchain
+
+          get "/top", StatsController, :top_miners_stats
+          get "/top-24h", StatsController, :top_miners_24hs
+          get "/", StatsController, :miners_stats
+        end
       end
 
       get "/api", UtilController, :static_file,
