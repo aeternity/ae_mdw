@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Router do
   alias AeMdwWeb.Plugs.DeprecationLoggerPlug
   alias AeMdwWeb.Plugs.JSONFormatterPlug
   alias AeMdwWeb.Plugs.RequestSpan
+  alias AeMdwWeb.Plugs.HyperchainPlug
   alias AeMdwWeb.Util
 
   pipeline :api do
@@ -25,6 +26,10 @@ defmodule AeMdwWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+  end
+
+  pipeline :hyperchain do
+    plug HyperchainPlug
   end
 
   scope "/", AeMdwWeb do
@@ -112,23 +117,27 @@ defmodule AeMdwWeb.Router do
       get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
-      get "/hyperchain/config", HyperchainController, :config
-      get "/hyperchain/schedule", HyperchainController, :schedule
-      get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
-      get "/hyperchain/epochs", HyperchainController, :epochs
-      get "/hyperchain/epochs/top", HyperchainController, :epochs_top
-      get "/hyperchain/validators", HyperchainController, :validators
-      get "/hyperchain/validators/top", HyperchainController, :validators_top
+      scope "/hyperchain" do
+        pipe_through :hyperchain
 
-      get "/hyperchain/validators/:validator_id/delegates",
-          HyperchainController,
-          :validator_delegates
+        get "/config", HyperchainController, :config
+        get "/schedule", HyperchainController, :schedule
+        get "/schedule/height/:height", HyperchainController, :schedule_at_height
+        get "/epochs", HyperchainController, :epochs
+        get "/epochs/top", HyperchainController, :epochs_top
+        get "/validators", HyperchainController, :validators
+        get "/validators/top", HyperchainController, :validators_top
 
-      get "/hyperchain/validators/:validator_id/delegates/top",
-          HyperchainController,
-          :validator_delegates_top
+        get "/validators/:validator_id/delegates",
+            HyperchainController,
+            :validator_delegates
 
-      get "/hyperchain/validators/:validator_id", HyperchainController, :validator
+        get "/validators/:validator_id/delegates/top",
+            HyperchainController,
+            :validator_delegates_top
+
+        get "/validators/:validator_id", HyperchainController, :validator
+      end
 
       scope "/stats" do
         get "/transactions", StatsController, :transactions_stats
