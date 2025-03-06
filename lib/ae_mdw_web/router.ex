@@ -32,6 +32,10 @@ defmodule AeMdwWeb.Router do
     plug HyperchainPlug
   end
 
+  pipeline :not_hyperchain do
+    plug HyperchainPlug, %{reverse?: true}
+  end
+
   scope "/", AeMdwWeb do
     pipe_through :api
 
@@ -150,12 +154,17 @@ defmodule AeMdwWeb.Router do
         get "/names", StatsController, :names_stats
         get "/total", StatsController, :total_stats
         get "/delta", StatsController, :delta_stats
-        get "/miners", StatsController, :miners_stats
-        get "/miners/top", StatsController, :top_miners_stats
-        get "/miners/top-24h", StatsController, :top_miners_24hs
         get "/contracts", StatsController, :contracts_stats
         get "/aex9-transfers", StatsController, :aex9_transfers_stats
         get "/", StatsController, :stats
+
+        scope "/miners" do
+          pipe_through :not_hyperchain
+
+          get "/top", StatsController, :top_miners_stats
+          get "/top-24h", StatsController, :top_miners_24hs
+          get "/", StatsController, :miners_stats
+        end
       end
 
       get "/api", UtilController, :static_file,
