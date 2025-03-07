@@ -47,6 +47,7 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
     locked_in_channels: 0,
     open_channels: 0
 
+  @dialyzer [{:no_match, run: 2}]
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
     top = State.height(state)
@@ -156,7 +157,7 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
             {:ok, _delta_stat} ->
               nil
 
-            :not_found when height >= top ->
+            :not_found ->
               nil
           end
         end,
@@ -165,9 +166,9 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
       |> Stream.map(fn {:ok, mutation} -> mutation end)
       |> Stream.chunk_every(1000)
       |> Enum.reduce(0, fn mutations, counter ->
-        _acc_state = State.commit_db(state, mutations)
+        _state = State.commit_db(state, mutations)
 
-        counter + length(mutations)
+        length(mutations) + counter
       end)
 
     total_stat_count =
