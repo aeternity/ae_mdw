@@ -167,14 +167,14 @@ defmodule AeMdw.Db.StatsMutation do
       state
       |> Collection.stream(Model.Tx, {from_txi, next_txi})
       |> Stream.take_while(&match?(txi when txi < next_txi, &1))
-      |> Enum.reduce(0, fn txi, acc ->
-        Model.tx(id: tx_hash) = State.fetch!(state, Model.Txi, txi)
+      |> Enum.reduce(0, fn txi, accounts ->
+        Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
 
         new_count =
           tx_hash
           |> :aec_db.get_signed_tx()
           |> Transaction.get_ids_from_tx()
-          |> Enum.reduce(%{}, fn
+          |> Enum.reduce(0, fn
             {:id, :account, pubkey}, acc ->
               state
               |> State.get(Model.AccountCreation, pubkey)
@@ -190,7 +190,7 @@ defmodule AeMdw.Db.StatsMutation do
               acc
           end)
 
-        acc + new_count
+        accounts + new_count
       end)
 
     Model.delta_stat(
