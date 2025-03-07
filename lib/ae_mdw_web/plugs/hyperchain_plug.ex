@@ -31,4 +31,3 @@ defmodule AeMdwWeb.Plugs.HyperchainPlug do
     end
   end
 end
-
