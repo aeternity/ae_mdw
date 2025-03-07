@@ -179,8 +179,8 @@ defmodule AeMdwWeb.StatsController do
   """
   @spec top_miners_24hs(Conn.t(), map()) :: Conn.t()
   def top_miners_24hs(%Conn{assigns: %{state: state}} = conn, _params) do
-    with {:ok, top_miners} <- Stats.fetch_top_miners_24hs(state) do
-      format_json(conn, top_miners)
-    end
+    state
+    |> Stats.fetch_top_miners_24hs()
+    |> then(&format_json(conn, &1))
   end
 end
