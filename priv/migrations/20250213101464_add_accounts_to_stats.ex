@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.AddAccountsToStats do
+  @moduledoc """
+  Add the total number of accounts to the delta and total stats table.
+  """
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Collection
   alias AeMdw.Db.RocksDbCF
@@ -48,155 +51,124 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
   def run(state, _from_start?) do
     top = State.height(state)
 
-    delta_count = 0
+    delta_count =
+      Model.Block
+      |> RocksDbCF.stream(direction: :forward)
+      |> Stream.filter(fn Model.block(index: {_height, mbi}) ->
+        mbi == -1
+      end)
+      |> Task.async_stream(
+        fn Model.block(index: {height, _mbi}) ->
+          kb =
+            Collection.generate_key_boundary({height, Collection.integer()})
 
-    Model.Block
-    |> RocksDbCF.stream(direction: :forward)
-    |> Stream.filter(fn Model.block(index: {_height, mbi}) ->
-      mbi == -1
-    end)
-    |> Task.async_stream(
-      fn Model.block(index: {height, _mbi}) ->
-        kb =
-          Collection.generate_key_boundary({height, Collection.integer()})
+          accounts_count =
+            Model.Block
+            |> RocksDbCF.stream(key_boundary: kb)
+            |> Stream.filter(fn Model.block(index: {^height, mbi}) ->
+              mbi != -1
+            end)
+            |> Enum.reduce(MapSet.new(), fn Model.block(index: {^height, _mbi}, hash: hash),
+                                            accounts_acc ->
+              state
+              |> State.get(Model.DeltaStat, height)
+              |> case do
+                {:ok, _delta_stat} ->
+                  {:value, mb} =
+                    :aec_db.find_block(hash)
 
-        accounts_count =
-          Model.Block
-          |> RocksDbCF.stream(key_boundary: kb)
-          |> Stream.filter(fn Model.block(index: {^height, mbi}) ->
-            mbi != -1
-          end)
-          |> Enum.reduce(MapSet.new(), fn Model.block(index: {^height, mbi}, hash: hash),
-                                          accounts_acc ->
-            state
-            |> State.get(Model.DeltaStat, height)
-            |> case do
-              {:ok, _delta_stat} ->
-                IO.inspect({height, mbi}, label: "height, mbi")
-
-                {:value, mb} =
-                  :aec_db.find_block(hash)
-
-                txs_accounts =
-                  mb
-                  |> :aec_blocks.txs()
-                  |> Enum.flat_map(fn signed_tx ->
-                    signed_tx
-                    |> Transaction.get_ids_from_tx()
-                    |> Enum.flat_map(fn
-                      {:id, :account, pubkey} -> [pubkey]
-                      _other -> []
-                    end)
-                  end)
-                  |> MapSet.new()
-
-                int_contract_calls_accounts =
-                  state
-                  |> Blocks.fetch_txis_from_gen(height)
-                  |> Enum.map(fn txi ->
-                    ["Chain.spend", "Call.amount"]
-                    |> Enum.map(fn fname ->
-                      kb = Collection.generate_key_boundary({fname, txi, Collection.integer()})
-                      RocksDbCF.stream(Model.FnameIntContractCall, key_boundary: kb)
-                    end)
-                    |> Stream.concat()
-                    |> Enum.map(fn Model.fname_int_contract_call(
-                                     index: {_fname, call_txi, local_id}
-                                   ) ->
-                      Model.int_contract_call(tx: aetx) =
-                        State.fetch!(state, Model.IntContractCall, {call_txi, local_id})
-
-                      {tx_type, tx_rec} = :aetx.specialize_type(aetx)
-
-                      tx_type
-                      |> AeMdw.Node.tx_ids_positions()
-                      |> Enum.map(&elem(tx_rec, &1))
+                  txs_accounts =
+                    mb
+                    |> :aec_blocks.txs()
+                    |> Enum.flat_map(fn signed_tx ->
+                      signed_tx
+                      |> Transaction.get_ids_from_tx()
                       |> Enum.flat_map(fn
                         {:id, :account, pubkey} -> [pubkey]
                         _other -> []
                       end)
                     end)
-                  end)
-                  |> MapSet.new()
+                    |> MapSet.new()
 
-                accounts_acc
-                |> MapSet.union(txs_accounts)
-                |> MapSet.union(int_contract_calls_accounts)
-            end
-          end)
-          |> Enum.reduce(0, fn pubkey, acc ->
-            state
-            |> State.get(Model.AccountCreation, pubkey)
-            |> case do
-              :not_found ->
-                acc + 1
+                  int_contract_calls_accounts =
+                    get_int_contract_calls_accounts(state, height)
 
-              _account_creation ->
-                acc
-            end
-          end)
+                  accounts_acc
+                  |> MapSet.union(txs_accounts)
+                  |> MapSet.union(int_contract_calls_accounts)
+              end
+            end)
+            |> Enum.reduce(0, fn pubkey, acc ->
+              state
+              |> State.get(Model.AccountCreation, pubkey)
+              |> case do
+                :not_found ->
+                  acc + 1
 
-        state
-        |> State.get(Model.DeltaStat, height)
-        |> case do
-          {:ok,
-           delta_stat(
-             index: index,
-             auctions_started: auctions_started,
-             names_activated: names_activated,
-             names_expired: names_expired,
-             names_revoked: names_revoked,
-             oracles_registered: oracle_registered,
-             oracles_expired: oracles_expired,
-             contracts_created: contracts_created,
-             block_reward: block_reward,
-             dev_reward: dev_reward,
-             locked_in_auctions: locked_in_auctions,
-             burned_in_auctions: burned_in_auctions,
-             channels_opened: channels_opened,
-             channels_closed: channels_closed,
-             locked_in_channels: locked_in_channels
-           )} ->
-            new_delta_stat =
-              Model.delta_stat(
-                index: index,
-                auctions_started: auctions_started,
-                names_activated: names_activated,
-                names_expired: names_expired,
-                names_revoked: names_revoked,
-                oracles_registered: oracle_registered,
-                oracles_expired: oracles_expired,
-                contracts_created: contracts_created,
-                block_reward: block_reward,
-                dev_reward: dev_reward,
-                locked_in_auctions: locked_in_auctions,
-                burned_in_auctions: burned_in_auctions,
-                channels_opened: channels_opened,
-                channels_closed: channels_closed,
-                locked_in_channels: locked_in_channels,
-                accounts: accounts_count
-              )
+                _account_creation ->
+                  acc
+              end
+            end)
 
-            WriteMutation.new(Model.DeltaStat, new_delta_stat)
+          state
+          |> State.get(Model.DeltaStat, height)
+          |> case do
+            {:ok,
+             delta_stat(
+               index: index,
+               auctions_started: auctions_started,
+               names_activated: names_activated,
+               names_expired: names_expired,
+               names_revoked: names_revoked,
+               oracles_registered: oracle_registered,
+               oracles_expired: oracles_expired,
+               contracts_created: contracts_created,
+               block_reward: block_reward,
+               dev_reward: dev_reward,
+               locked_in_auctions: locked_in_auctions,
+               burned_in_auctions: burned_in_auctions,
+               channels_opened: channels_opened,
+               channels_closed: channels_closed,
+               locked_in_channels: locked_in_channels
+             )} ->
+              new_delta_stat =
+                Model.delta_stat(
+                  index: index,
+                  auctions_started: auctions_started,
+                  names_activated: names_activated,
+                  names_expired: names_expired,
+                  names_revoked: names_revoked,
+                  oracles_registered: oracle_registered,
+                  oracles_expired: oracles_expired,
+                  contracts_created: contracts_created,
+                  block_reward: block_reward,
+                  dev_reward: dev_reward,
+                  locked_in_auctions: locked_in_auctions,
+                  burned_in_auctions: burned_in_auctions,
+                  channels_opened: channels_opened,
+                  channels_closed: channels_closed,
+                  locked_in_channels: locked_in_channels,
+                  accounts: accounts_count
+                )
 
-          {:ok, _delta_stat} ->
-            nil
+              WriteMutation.new(Model.DeltaStat, new_delta_stat)
 
-          :not_found when height >= top ->
-            nil
-        end
-      end,
-      timeout: :infinity
-    )
-    |> Stream.map(fn {:ok, mutation} -> mutation end)
-    |> Stream.chunk_every(1000)
-    |> Enum.reduce(0, fn mutations, counter ->
-      _acc_state = State.commit_db(state, mutations)
+            {:ok, _delta_stat} ->
+              nil
 
-      counter + length(mutations)
-    end)
+            :not_found when height >= top ->
+              nil
+          end
+        end,
+        timeout: :infinity
+      )
+      |> Stream.map(fn {:ok, mutation} -> mutation end)
+      |> Stream.chunk_every(1000)
+      |> Enum.reduce(0, fn mutations, counter ->
+        _acc_state = State.commit_db(state, mutations)
 
-    IO.inspect(delta_count, label: "delta_count")
+        counter + length(mutations)
+      end)
 
     total_stat_count =
       Model.TotalStat
@@ -262,8 +234,34 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
         |> Enum.sum()
       end)
 
-    IO.inspect(total_stat_count, label: "total_stat_count")
+    {:ok, delta_count + total_stat_count}
+  end
 
-    IO.inspect({:ok, delta_count + total_stat_count})
+  defp get_int_contract_calls_accounts(state, height) do
+    state
+    |> Blocks.fetch_txis_from_gen(height)
+    |> Enum.map(fn txi ->
+      ["Chain.spend", "Call.amount"]
+      |> Enum.map(fn fname ->
+        kb = Collection.generate_key_boundary({fname, txi, Collection.integer()})
+        RocksDbCF.stream(Model.FnameIntContractCall, key_boundary: kb)
+      end)
+      |> Stream.concat()
+      |> Enum.map(fn Model.fname_int_contract_call(index: {_fname, call_txi, local_id}) ->
+        Model.int_contract_call(tx: aetx) =
+          State.fetch!(state, Model.IntContractCall, {call_txi, local_id})
+
+        {tx_type, tx_rec} = :aetx.specialize_type(aetx)
+
+        tx_type
+        |> AeMdw.Node.tx_ids_positions()
+        |> Enum.map(&elem(tx_rec, &1))
+        |> Enum.flat_map(fn
+          {:id, :account, pubkey} -> [pubkey]
+          _other -> []
+        end)
+      end)
+    end)
+    |> MapSet.new()
   end
 end
