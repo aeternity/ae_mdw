@@ -871,7 +871,7 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_top_miners_24hs(State.t()) :: {:ok, [miner()]} | {:error, Error.t()}
+  @spec fetch_top_miners_24hs(State.t()) :: [miner()]
   def fetch_top_miners_24hs(state) do
     now = :aeu_time.now_in_msecs()
     time_24h_ago = now - @seconds_per_day * 1_000
@@ -884,7 +884,6 @@ defmodule AeMdw.Stats do
       Map.update(acc, miner, 1, &(&1 + 1))
     end)
     |> Enum.map(&render_miner/1)
-    |> then(&{:ok, &1})
   end
 
   defp get_last_key_block(gen) do
