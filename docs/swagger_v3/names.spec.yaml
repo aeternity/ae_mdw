@@ -181,19 +181,9 @@ schemas:
             items:
               $ref: '#/components/schemas/Signature'
           tx:
-            type: object
-            # TODO: define properties
-            example:
-              account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
-              fee: 16540000000000
-              name: 1996.chain
-              name_fee: 134626900000000000000
-              name_id: nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c
-              name_salt: 7095609104934055
-              nonce: 225
-              ttl: 818002
-              type: NameClaimTx
-              version: 2
+            oneOf:
+              - $ref: '#/components/schemas/NameClaimTx'
+              - $ref: '#/components/schemas/ContractCallTx'
       name:
         $ref: '#/components/schemas/NameString'
       name_fee:
@@ -220,6 +210,9 @@ schemas:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
+        enum:
+          - NameClaimTx
+          - ContractCallTx
         example: NameClaimTx
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
@@ -227,8 +220,9 @@ schemas:
         type: integer
         example: 45784
       tx:
-        type: object
-        # TODO: define properties
+        oneOf:
+          - $ref: '#/components/schemas/NameClaimTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r"
           fee: 16540000000000
@@ -262,10 +256,14 @@ schemas:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
+        enum:
+          - NameTransferTx
+          - ContractCallTx
         example: NameTransferTx
       tx:
-        type: object
-        # TODO: define properties
+        oneOf:
+          - $ref: '#/components/schemas/NameTransferTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           fee: 30000
@@ -298,10 +296,14 @@ schemas:
         $ref: '#/components/schemas/TransactionHash'
       source_tx_type:
         type: string
+        enum:
+          - NameUpdateTx
+          - ContractCallTx
         example: NameUpdateTx
       tx:
-        type: object
-        # TODO: define properties
+        oneOf:
+          - $ref: '#/components/schemas/NameUpdateTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -340,8 +342,9 @@ schemas:
       block_hash:
         $ref: '#/components/schemas/MicroBlockHash'
       tx:
-        type: object
-        # TODO: define properties
+        oneOf:
+          - $ref: '#/components/schemas/NameUpdateTx'
+          - $ref: '#/components/schemas/ContractCallTx'
         example:
           account_id: "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM"
           client_ttl: 36000
@@ -355,6 +358,9 @@ schemas:
           ttl: 60000
       source_tx_type:
         type: string
+        enum:
+          - NameUpdateTx
+          - ContractCallTx
         example: NameUpdateTx
       source_tx_hash:
         $ref: '#/components/schemas/TransactionHash'
