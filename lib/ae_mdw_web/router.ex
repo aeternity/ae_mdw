@@ -31,7 +31,7 @@ defmodule AeMdwWeb.Router do
   pipeline :not_hyperchain do
     plug HyperchainPlug, %{reverse?: true}
   end
-  
+
   pipeline :hyperchain do
     plug HyperchainPlug
   end
