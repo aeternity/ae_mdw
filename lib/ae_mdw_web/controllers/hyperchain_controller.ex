@@ -5,11 +5,9 @@ defmodule AeMdwWeb.HyperchainController do
   alias AeMdw.Validate
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Util, as: WebUtil
-  alias AeMdwWeb.Plugs.HyperchainPlug
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
 
-  plug(HyperchainPlug)
   plug(PaginatedPlug, order_by: ~w(expiration activation deactivation name)a)
   action_fallback(FallbackController)
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-AeMdw is a middleware that acts as a caching and reporting layer for the [Ã¦ternity blockchain](https://github.com/aeternity/aeternity). It responds to queries more efficiently than the node and supports additional queries.
+AeMdw is a middleware that acts as a caching and reporting layer for the [æternity blockchain](https://github.com/aeternity/aeternity). It responds to queries more efficiently than the node and supports additional queries.
 
 The middleware runs an Aeternity Node alongside it in the same Docker container and BEAM VM instance. This node can be configured using the `aeternity.yaml` file or by passing environment variables, just like configuring the node directly.
 
@@ -73,17 +73,49 @@ If you want to use a database snapshot:
 Start the container with the following command:
 
 ```
-docker run -d \
+docker run -it --name ae_mdw \
   -p 4000:4000 \
   -p 4001:4001 \
   -p 3113:3113 \
   -p 3013:3013 \
   -p 3014:3014 \
-  -v ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia \
-  -v ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db \
-  -v ${PWD}/log:/home/aeternity/node/ae_mdw/log \
-  -e AETERNITY_CONFIG=/home/aeternity/aeternity.yaml \
+  -v ${PWD}/data/mnesia:/home/aeternity/node/data/mnesia \
+  -v ${PWD}/data/mdw.db:/home/aeternity/node/data/mdw.db \
+  -v ${PWD}/log:/home/aeternity/ae_mdw/log \
+  -v ${PWD}/docker/aeternity.yaml:/home/aeternity/.aeternity/aeternity/aeternity.yaml \
   aeternity/ae_mdw:latest
+```
+
+This command starts the middleware in a docker container. The middleware will be available at `http://localhost:4000`. Note that you can pass the -d flag to run the container in detached mode.
+
+### Step 4: Check the Status
+
+To check if the middleware is running properly, visit the `/status` endpoint and ensure that `node_height` is higher than `0`.
+
+### Step 5: Managing the Container
+
+To check the logs, run the following command:
+
+```
+docker logs ae_mdw
+```
+
+To check the status of the container, run the following command:
+
+```
+docker ps -a
+```
+
+To stop the container, run the following command:
+
+```
+docker stop ae_mdw
+```
+
+To restart the container, run the following command:
+
+```
+docker start ae_mdw
 ```
 
 ## Customizing Configuration

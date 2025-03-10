@@ -337,6 +337,9 @@ schemas:
       tx_type:
         description: Transaction type, indicating a state of a balance for that block height
         type: string
+        enum:
+          - ContractCreateTx
+          - ContractCallTx
     required:
       - amount
       - block_hash
