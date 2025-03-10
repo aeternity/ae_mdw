@@ -64,6 +64,7 @@ defmodule AeMdw.Db.Sync.Block do
       height = :aec_blocks.height(key_block)
       kb_header = :aec_blocks.to_key_header(key_block)
       {:ok, kb_hash} = :aec_headers.hash_header(kb_header)
+      kb_time = :aec_headers.time_in_msecs(kb_header)
       starting_from_mb0? = from_height != height or from_mbi == 0
 
       if rem(height, @log_freq) == 0, do: Log.info("creating mutations for block at #{height}")
@@ -111,6 +112,16 @@ defmodule AeMdw.Db.Sync.Block do
           IntTransfer.block_rewards_mutations(key_block)
         end
 
+      key_block_time_mutation =
+        WriteMutation.new(
+          Model.KeyBlockTime,
+          Model.key_block_time(
+            index: kb_time,
+            height: height,
+            miner: :aec_headers.beneficiary(kb_header)
+          )
+        )
+
       gen_mutations =
         [
           kb0_mutation,
@@ -126,6 +137,7 @@ defmodule AeMdw.Db.Sync.Block do
             txi,
             starting_from_mb0?
           ),
+          key_block_time_mutation,
           next_kb_mutation
           | hyperchain_mutations([
               EpochMutation.new(height),
