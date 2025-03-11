@@ -12,6 +12,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
+  alias AeMdw.Db.Util, as: DbUtil
 
   import Mock
 
@@ -2172,6 +2173,93 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                    "decimals" => 10
                  }
                } = activity2
+      end
+    end
+
+    test "when passing name instead of an account_id, but the name claim was made from contract call",
+         %{conn: conn} do
+      name = "asd.chain"
+      name_hash = :aens_hash.name_hash(name)
+      encoded_name_hash = Enc.encode(:name, name_hash)
+      account_id = :aeser_id.create(:account, TS.address(0))
+      encoded_account_id = Enc.encode(:account_pubkey, TS.address(0))
+      height = 398
+      txi = 123
+      tx_hash = TS.tx_hash(0)
+      encoded_tx_hash = Enc.encode(:tx_hash, tx_hash)
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, aetx} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name: name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 11_111_111
+        })
+
+      {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+
+      store =
+        empty_store()
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
+        |> Store.put(Model.ActiveName, Model.name(index: name, active: height))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi, block_index: {height, 0}, id: tx_hash, time: 0)
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {name, height, {txi, -1}}))
+
+      with_mocks [
+        {DbUtil, [],
+         [
+           read_node_tx_details: fn
+             _state, {^txi, _idx} ->
+               {tx, :name_claim_tx, tx_hash, :contract_call_tx, <<0::256>>}
+           end
+         ]},
+        {Db, [],
+         [
+           get_block_time: fn
+             ^mb_hash -> 456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{encoded_name_hash}/activities")
+                 |> json_response(200)
+
+        encoded_mb = Enc.encode(:micro_block_hash, mb_hash)
+
+        assert %{
+                 "height" => ^height,
+                 "type" => "NameClaimEvent",
+                 "block_hash" => ^encoded_mb,
+                 "block_time" => 456,
+                 "payload" => %{
+                   "source_tx_hash" => ^encoded_tx_hash,
+                   "source_tx_type" => "NameClaimTx",
+                   "micro_time" => 0,
+                   "tx" => %{
+                     "account_id" => ^encoded_account_id,
+                     "fee" => 111_111,
+                     "name" => ^name,
+                     "name_fee" => 11_111,
+                     "name_salt" => 1_111,
+                     "nonce" => 111,
+                     "ttl" => 11_111_111
+                   }
+                 }
+               } = activity
+
+        refute is_nil(activity)
       end
     end
   end
