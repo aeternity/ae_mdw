@@ -718,16 +718,16 @@ defmodule AeMdw.Activities do
 
   defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
     Model.tx(time: micro_time) = State.fetch!(state, Model.Tx, txi)
-    tx_type = :name_claim_tx
+    inner_tx_type = :name_claim_tx
 
-    {claim_aetx, ^tx_type, tx_hash, tx_type, _block_hash} =
+    {claim_aetx, ^inner_tx_type, tx_hash, _tx_type, _block_hash} =
       DbUtil.read_node_tx_details(state, {txi, local_idx})
 
     payload = %{
       micro_time: micro_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Node.tx_name(tx_type),
-      tx: Node.tx_mod(tx_type).for_client(claim_aetx)
+      source_tx_type: Node.tx_name(inner_tx_type),
+      tx: Node.tx_mod(inner_tx_type).for_client(claim_aetx)
     }
 
     {"NameClaimEvent", payload}

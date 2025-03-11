@@ -219,7 +219,7 @@ paths:
       parameters:
         - name: accountId
           in: path
-          description: The account address
+          description: The account address (can also be a name hash)
           required: true
           schema:
             $ref: '#/components/schemas/AccountAddress'
