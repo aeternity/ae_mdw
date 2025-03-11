@@ -164,34 +164,7 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
     current_accounts =
-      state
-      |> Collection.stream(Model.Tx, {from_txi, next_txi})
-      |> Stream.take_while(&match?(txi when txi < next_txi, &1))
-      |> Enum.reduce(0, fn txi, accounts ->
-        Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-
-        new_count =
-          tx_hash
-          |> :aec_db.get_signed_tx()
-          |> Transaction.get_ids_from_tx()
-          |> Enum.reduce(0, fn
-            {:id, :account, pubkey}, acc ->
-              state
-              |> State.get(Model.AccountCreation, pubkey)
-              |> case do
-                {:ok, _account_creation} ->
-                  acc
-
-                :not_found ->
-                  acc + 1
-              end
-
-            _other, acc ->
-              acc
-          end)
-
-        accounts + new_count
-      end)
+      get_accounts(state, from_txi, next_txi)
 
     Model.delta_stat(
       index: height,
@@ -287,6 +260,37 @@ defmodule AeMdw.Db.StatsMutation do
     |> Stream.map(&State.fetch!(state, Model.IntTransferTx, &1))
     |> Enum.reduce(0, fn Model.int_transfer_tx(amount: amount), amount_acc ->
       amount_acc + amount
+    end)
+  end
+
+  def get_accounts(state, from_txi, next_txi) do
+    state
+    |> Collection.stream(Model.Tx, {from_txi, next_txi})
+    |> Stream.take_while(&match?(txi when txi < next_txi, &1))
+    |> Enum.reduce(0, fn txi, accounts ->
+      Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+
+      new_count =
+        tx_hash
+        |> :aec_db.get_signed_tx()
+        |> Transaction.get_ids_from_tx()
+        |> Enum.reduce(0, fn
+          {:id, :account, pubkey}, acc ->
+            state
+            |> State.get(Model.AccountCreation, pubkey)
+            |> case do
+              {:ok, _account_creation} ->
+                acc
+
+              :not_found ->
+                acc + 1
+            end
+
+          _other, acc ->
+            acc
+        end)
+
+      accounts + new_count
     end)
   end
 end
