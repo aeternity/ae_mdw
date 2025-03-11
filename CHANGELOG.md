@@ -1,11 +1,17 @@
 # Changelog
 
+## [1.102.0](https://github.com/aeternity/ae_mdw/compare/v1.101.0...v1.102.0) (2025-03-11)
+
+### Bug Fixes
+
+* activities crashing when there is a name created by a contract call ([#2116](https://github.com/aeternity/ae_mdw/issues/2116)) ([092ab54](https://github.com/aeternity/ae_mdw/commit/092ab5491767e81ba9aeb741e8f8d6777f8beb69))
+
+
+### Miscellaneous
+
+* move the hyperchains into their own scope and fix message ([#2112](https://github.com/aeternity/ae_mdw/issues/2112)) ([0dd63dc](https://github.com/aeternity/ae_mdw/commit/0dd63dca35ea098e824bfea00c4f25699f4fb1af))
+
 ## [1.101.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v1.101.0) (2025-03-05)
-
-
-### ⚠ BREAKING CHANGES
-
-* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
 
 ### Features
 
@@ -15,6 +21,7 @@
 
 ### Miscellaneous
 
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
 * bump node to 7.3.0-rc5 ([#2110](https://github.com/aeternity/ae_mdw/issues/2110)) ([6c48030](https://github.com/aeternity/ae_mdw/commit/6c4803060da8a4b6e552545f7ecf7fab8bc95ca2))
 * remove deprecated poorly performant /by_names endpoint ([#2103](https://github.com/aeternity/ae_mdw/issues/2103)) ([87a26fc](https://github.com/aeternity/ae_mdw/commit/87a26fc5e4086c875c2d32462cdb33e35c3d28c6))
 * update docker OS versions to fix docker multiarch pipeline build ([#2108](https://github.com/aeternity/ae_mdw/issues/2108)) ([9bda7ab](https://github.com/aeternity/ae_mdw/commit/9bda7ab1cce791d11661e09d02cf3cf99db2843d))
