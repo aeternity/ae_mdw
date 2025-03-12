@@ -263,7 +263,7 @@ defmodule AeMdw.Db.StatsMutation do
     end)
   end
 
-  def get_accounts(state, from_txi, next_txi) do
+  defp get_accounts(state, from_txi, next_txi) do
     state
     |> Collection.stream(Model.Tx, {from_txi, next_txi})
     |> Stream.take_while(&match?(txi when txi < next_txi, &1))
