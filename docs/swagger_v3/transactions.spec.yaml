@@ -34,7 +34,7 @@ schemas:
           $ref: '#/components/schemas/Signature'
       tx:
         description: The transaction
-        $ref: '#/components/schemas/Tx' 
+        $ref: '#/components/schemas/Tx'
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
@@ -66,10 +66,10 @@ schemas:
       - signatures
       - tx
     properties:
-      block_hash: 
+      block_hash:
         type: string
         description: The block hash, but since it's pending it's always "none"
-      block_height: 
+      block_height:
         type: integer
         description: The block height, but since it's pending it's always -1
       encoded_tx:
