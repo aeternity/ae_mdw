@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.1](https://github.com/aeternity/ae_mdw/compare/v2.0.0...v2.0.1) (2025-03-11)
+
+
+### Bug Fixes
+
+* activities crashing when there is a name created by a contract call ([#2116](https://github.com/aeternity/ae_mdw/issues/2116)) ([092ab54](https://github.com/aeternity/ae_mdw/commit/092ab5491767e81ba9aeb741e8f8d6777f8beb69))
+
+
+### Miscellaneous
+
+* move the hyperchains into their own scope and fix message ([#2112](https://github.com/aeternity/ae_mdw/issues/2112)) ([0dd63dc](https://github.com/aeternity/ae_mdw/commit/0dd63dca35ea098e824bfea00c4f25699f4fb1af))
+
 ## [2.0.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v2.0.0) (2025-03-05)
 
 
