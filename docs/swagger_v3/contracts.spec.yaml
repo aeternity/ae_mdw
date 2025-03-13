@@ -1,4 +1,132 @@
 schemas:
+  MdwContractCallExtras:
+    type: object
+    required:
+      - aexn_type
+      - arguments
+      - function
+      - gas_used
+      - log
+      - result
+      - return
+      - return_type
+      - ttl
+    properties:
+      aexn_type:
+        type: string
+        example: aex9
+      arguments:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            value:
+              type: string
+        example:
+          - type: int
+            value: 1
+          - type: string
+            value: "hello"
+      function:
+        type: string
+        example: "main"
+      gas_used:
+        type: integer
+        example: 1000
+      log:
+        type: array
+        items:
+          type: object
+          properties:
+            address:
+              type: string
+            data:
+              type: string
+            topics:
+              type: array
+              items:
+                type: string
+        example:
+          - address: "ct_2U1usf3A8ZNUcZLkZe5rEoBTxk7eJvk9fcbRDNqmRiwXCHAYN"
+            data: cb_+Jg==
+            topics:
+              - "topic1"
+              - "topic2"
+      result:
+        type: string
+        example: "ok"
+      return:
+        type: object
+        properties:
+          type:
+            type: string
+          value:
+            type: string
+        example:
+          type: int
+          value: 1
+      return_type:
+        type: string
+        example: "int"
+      ttl:
+        type: integer
+        example: 1000
+  MdwContractCreateExtras:
+    type: object
+    required:
+      - aexn_type
+      - args
+      - caller_id
+      - compiler_version
+      - contract_id
+      - gas_used
+      - return_type
+      - return_value
+      - source_hash
+      - ttl
+    properties:
+      aexn_type:
+        type: string
+        example: aex9
+      args:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            value:
+              type: string
+        example:
+          - type: int
+            value: 1
+          - type: string
+            value: "hello"
+      caller_id:
+        $ref: '#/components/schemas/AccountAddress'
+      compiler_version:
+        type: string
+        example: "8.0.0"
+      contract_id:
+        $ref: '#/components/schemas/ContractAddress'
+      gas_used:
+        type: integer
+        example: 1000
+      return_type:
+        type: string
+        example: "int"
+      return_value:
+        type: string
+        example: "cb_Xfbg4g=="
+      source_hash:
+        type: string
+        example: "cb_Xfbg4gasdasdasdasdadasdasd=="
+      ttl:
+        type: integer
+        example: 1000
+
   ContractInternalTx:
     description: Contract internal transaction
     type: object
@@ -56,7 +184,7 @@ schemas:
           gas: 200000
           gas_price: 1000000000
           nonce: 66
-          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4 
+          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4
           ttl: 0
           vm_version: 5
   ContractCall:

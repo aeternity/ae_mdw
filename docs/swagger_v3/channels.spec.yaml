@@ -1,4 +1,30 @@
 schemas:
+  ChannelId:
+    type: string
+    example: ch_2VfzXmCRZepB3ichPf3WTt2uf8zMqsyY3cZWg8k1vt3xcu8L8V
+  ChannelResponderInitiator:
+    type: object
+    required:
+      - responder_id
+      - initiator_id
+    properties:
+      initiator_id:
+        $ref: '#/components/schemas/AccountAddress'
+      responder_id:
+        $ref: '#/components/schemas/AccountAddress'
+  ChannelResponderInitiatorRound:
+    type: object
+    required:
+      - responder_id
+      - initiator_id
+      - round
+    properties:
+      initiator_id:
+        $ref: '#/components/schemas/AccountAddress'
+      responder_id:
+        $ref: '#/components/schemas/AccountAddress'
+      round:
+        type: integer
   Channel:
     type: object
     required:
