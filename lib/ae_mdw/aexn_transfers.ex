@@ -13,6 +13,7 @@ defmodule AeMdw.AexnTransfers do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
+  alias AeMdw.Validate
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
@@ -43,6 +44,54 @@ defmodule AeMdw.AexnTransfers do
           {page_cursor(), [contract_transfer_key()], page_cursor()}
   @typep pagination() :: Collection.direction_limit()
   @typep pubkey() :: Db.pubkey()
+
+  @spec fetch_aex141_transfers(State.t(), pagination(), cursor() | nil, map()) ::
+          {:ok, pair_paginated_transfers()} | {:error, Error.t()}
+  def fetch_aex141_transfers(state, pagination, cursor, query) do
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, {from, to}} <- resolve_from_to_filters(query) do
+      key_boundary = {
+        {:aex141, from || <<>>, to || <<>>, Util.min_int(), 0, 0},
+        {:aex141, from || Util.max_256bit_bin(), to || Util.max_256bit_bin(), Util.max_int(), nil,
+         nil}
+      }
+
+      state
+      |> build_streamer(Model.AexnPairTransfer, cursor, key_boundary)
+      |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
+      |> then(&{:ok, &1})
+    end
+  end
+
+  defp resolve_from_to_filters(query) do
+    filters =
+      query
+      |> Map.take(~w(from to))
+      |> Enum.reduce_while({:ok, %{}}, fn {key, account_id}, {:ok, filters} ->
+        case Validate.id(account_id) do
+          {:ok, account_pk} -> {:cont, {:ok, Map.put(filters, key, account_pk)}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end)
+
+    with {:ok, filters} <- filters do
+      filters
+      |> Map.new()
+      |> case do
+        %{"from" => from, "to" => to} ->
+          {:ok, {from, to}}
+
+        %{"to" => _to} ->
+          {:error, ErrInput.Query.exception(value: "need to provide both `from` and `to`")}
+
+        %{"from" => from} ->
+          {:ok, {from, nil}}
+
+        _filters ->
+          {:ok, {nil, nil}}
+      end
+    end
+  end
 
   @spec fetch_contract_transfers(
           State.t(),

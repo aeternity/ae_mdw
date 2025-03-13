@@ -85,24 +85,31 @@ defmodule AeMdwWeb.AexnTransferController do
   end
 
   @spec aex141_transfers(Conn.t(), map()) :: Conn.t()
-  def aex141_transfers(
+  def aex141_transfers(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, query: query} = assigns
+
+    with {:ok, paginated_transfers} <-
+           AexnTransfers.fetch_aex141_transfers(state, pagination, cursor, query) do
+      Util.render(conn, paginated_transfers, &pair_transfer_to_map(state, &1))
+    end
+  end
+
+  @spec aex141_contract_transfers(Conn.t(), map()) :: Conn.t()
+  def aex141_contract_transfers(
         %{assigns: %{query: query}} = conn,
-        params
+        %{"contract_id" => contract_id}
       ) do
-    contract_id = params["contract_id"]
+    with {:ok, _contract_pk} <- Validate.id(contract_id) do
+      case query do
+        %{"from" => sender_id} ->
+          contract_transfers_reply(conn, contract_id, {:from, sender_id})
 
-    case query do
-      %{"from" => sender_id, "to" => recipient_id} ->
-        transfers_pair_reply(conn, :aex141, sender_id, recipient_id)
+        %{"to" => recipient_id} ->
+          contract_transfers_reply(conn, contract_id, {:to, recipient_id})
 
-      %{"from" => sender_id} ->
-        contract_transfers_reply(conn, contract_id, {:from, sender_id})
-
-      %{"to" => recipient_id} ->
-        contract_transfers_reply(conn, contract_id, {:to, recipient_id})
-
-      %{} ->
-        contract_transfers_reply(conn, contract_id, {:from, nil})
+        %{} ->
+          contract_transfers_reply(conn, contract_id, {:from, nil})
+      end
     end
   end
 
