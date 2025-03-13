@@ -103,7 +103,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       conn = get(conn, "/v3/stats/delta", scope: "gen:#{range}")
-      error_msg = "invalid range: #{range}"
+      error_msg = "invalid scope: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
@@ -124,7 +124,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
                    "names_expired" => 0,
                    "names_revoked" => 0,
                    "oracles_expired" => 1,
-                   "oracles_registered" => 0
+                   "oracles_registered" => 0,
+                   "accounts" => 1
                  }
                ]
              } =
@@ -160,11 +161,13 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
              |> Enum.each(fn {%{
                                 "height" => height,
                                 "sum_block_reward" => sum_block_reward,
-                                "sum_dev_reward" => sum_dev_reward
+                                "sum_dev_reward" => sum_dev_reward,
+                                "accounts" => accounts
                               }, index} ->
                assert height == index
                assert sum_block_reward > 0
                assert sum_dev_reward > 0
+               assert accounts > 0
              end)
 
       conn_next = get(conn, response["next"])
@@ -246,7 +249,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       conn = get(conn, "/v3/stats/total", scope: "gen:#{range}")
-      error_msg = "invalid range: #{range}"
+      error_msg = "invalid scope: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
@@ -273,7 +276,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
               "open_channels" => 102,
               "sum_block_reward" => 106_403_172_824_736_927_928_811_744,
               "sum_dev_reward" => 8_453_404_352_599_072_614_268_863,
-              "total_token_supply" => 390_989_171_992_825_584_568_749_640
+              "total_token_supply" => 390_989_171_992_825_584_568_749_640,
+              "accounts" => 362_798
             }
           ],
           "next" => nil,
