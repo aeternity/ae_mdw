@@ -206,7 +206,9 @@ defmodule AeMdw.Db.Format do
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
     |> update_in(["tx"], fn tx ->
-      custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
+      state
+      |> custom_encode(type, tx, tx_rec, signed_tx, index, block_hash)
+      |> put_ttl(signed_tx)
     end)
   end
 
@@ -667,5 +669,18 @@ defmodule AeMdw.Db.Format do
     |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
     |> Stream.map(&State.fetch!(state, Model.PreviousName, &1))
     |> Enum.map(fn Model.previous_name(name: name) -> name_info_to_raw_map(state, name) end)
+  end
+
+  defp put_ttl(tx, tx_rec) do
+    ttl =
+      tx_rec
+      |> :aetx_sign.tx()
+      |> :aetx.ttl()
+      |> case do
+        :max_ttl -> nil
+        ttl -> ttl
+      end
+
+    Map.put(tx, "ttl", ttl)
   end
 end
