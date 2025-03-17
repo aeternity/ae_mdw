@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.0.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v2.0.0) (2025-03-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
+
+### Features
+
+* add hyperchain/config endpoint to read aeternity.yaml settings ([#2106](https://github.com/aeternity/ae_mdw/issues/2106)) ([205fb1a](https://github.com/aeternity/ae_mdw/commit/205fb1a398fa2d4801b94e972e2c0e93f94c6bf3))
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086)) ([249791d](https://github.com/aeternity/ae_mdw/commit/249791d65798927ea9b42e15879b069ee176173a))
+
+
+### Bug Fixes
+
+* implement standalone /aex141/transfers for when there is no contract ([#2117](https://github.com/aeternity/ae_mdw/issues/2117)) ([9ebdf6d](https://github.com/aeternity/ae_mdw/commit/9ebdf6d26d697db6c52e0455ed56de28b99d8efa))
+
+
+### Miscellaneous
+
+* bump node to 7.3.0-rc5 ([#2110](https://github.com/aeternity/ae_mdw/issues/2110)) ([6c48030](https://github.com/aeternity/ae_mdw/commit/6c4803060da8a4b6e552545f7ecf7fab8bc95ca2))
+* move the hyperchains into their own scope and fix message ([#2112](https://github.com/aeternity/ae_mdw/issues/2112)) ([e7846b9](https://github.com/aeternity/ae_mdw/commit/e7846b903eec690164637b41dc723957e7c8c367))
+* release 1.101.0 ([6a2074d](https://github.com/aeternity/ae_mdw/commit/6a2074d2efbd2d5e1e74ee7745d66c8132669008))
+* release 1.102.0 ([5b0ab08](https://github.com/aeternity/ae_mdw/commit/5b0ab0860db1ae6797198989ef8df53ea41f9653))
+* remove deprecated poorly performant /by_names endpoint ([#2103](https://github.com/aeternity/ae_mdw/issues/2103)) ([87a26fc](https://github.com/aeternity/ae_mdw/commit/87a26fc5e4086c875c2d32462cdb33e35c3d28c6))
+* update docker OS versions to fix docker multiarch pipeline build ([#2108](https://github.com/aeternity/ae_mdw/issues/2108)) ([9bda7ab](https://github.com/aeternity/ae_mdw/commit/9bda7ab1cce791d11661e09d02cf3cf99db2843d))
+
 ## [1.102.0](https://github.com/aeternity/ae_mdw/compare/v1.101.0...v1.102.0) (2025-03-11)
 
 ### Bug Fixes
