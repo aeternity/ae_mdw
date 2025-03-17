@@ -1,4 +1,10 @@
 schemas:
+  GAReturnType:
+    type: string
+    example: ok
+    enum:
+      - ok
+      - error
   MdwTx:
     description: The node transaction with the fields added by the mdw
     allOf:
@@ -50,10 +56,12 @@ schemas:
         - title: ContractCallTx
           allOf:
           - $ref: '#/components/schemas/ContractCallTx'
+          - $ref: '#/components/schemas/MdwContractCommonExtras'
           - $ref: '#/components/schemas/MdwContractCallExtras'
         - title: ContractCreateTx
           allOf:
           - $ref: '#/components/schemas/ContractCreateTx'
+          - $ref: '#/components/schemas/MdwContractCommonExtras'
           - $ref: '#/components/schemas/MdwContractCreateExtras'
         - title: GAAttachTx
           allOf:
@@ -77,7 +85,7 @@ schemas:
               gas_used:
                 type: integer
               return_type:
-                type: string
+                $ref: '#/components/schemas/GAReturnType'
         - title: GAMetaTx
           allOf:
           - $ref: '#/components/schemas/GAMetaTx'
@@ -89,7 +97,7 @@ schemas:
               gas_used:
                 type: integer
               return_type:
-                type: string
+                $ref: '#/components/schemas/GAReturnType'
         - title: NameClaimTx
           allOf:
           - $ref: '#/components/schemas/NameClaimTx'
@@ -137,32 +145,30 @@ schemas:
     discriminator:
       propertyName: type
       mapping:
-        channel_close_mutual: '#/components/schemas/ChannelCloseMutualTx'
-        channel_close_solo: '#/components/schemas/ChannelCloseSoloTx'
-        channel_create: '#/components/schemas/ChannelCreateTx'
-        channel_deposit: '#/components/schemas/ChannelDepositTx'
-        channel_force_progress: '#/components/schemas/ChannelForceProgressTx'
-        channel_settle: '#/components/schemas/ChannelSettleTx'
-        channel_slash: '#/components/schemas/ChannelSlashTx'
-        channel_snapshot_solo: '#/components/schemas/ChannelSnapshotSoloTx'
-        channel_withdraw: '#/components/schemas/ChannelWithdrawTx'
-        contract_call: '#/components/schemas/ContractCallTx'
-        contract_create: '#/components/schemas/ContractCreateTx'
-        ga_attach: '#/components/schemas/GAAttachTx'
-        ga_meta: '#/components/schemas/GAMetaTx'
-        name_claim: '#/components/schemas/NameClaimTx'
-        name_preclaim: '#/components/schemas/NamePreclaimTx'
-        name_revoke: '#/components/schemas/NameRevokeTx'
-        name_transfer: '#/components/schemas/NameTransferTx'
-        name_update: '#/components/schemas/NameUpdateTx'
-        oracle_extend: '#/components/schemas/OracleExtendTx'
-        oracle_query: '#/components/schemas/OracleQueryTx'
-        oracle_register: '#/components/schemas/OracleRegisterTx'
-        oracle_response: '#/components/schemas/OracleRespondTx'
-        paying_for: '#/components/schemas/PayingForTx'
-        spend: '#/components/schemas/SpendTx'
-    required:
-      - type
+        ChannelCloseMutualTx: '#/components/schemas/ChannelCloseMutualTx'
+        ChannelCloseSoloTx: '#/components/schemas/ChannelCloseSoloTx'
+        ChannelCreateTx: '#/components/schemas/ChannelCreateTx'
+        ChannelDepositTx: '#/components/schemas/ChannelDepositTx'
+        ChannelForceProgressTx: '#/components/schemas/ChannelForceProgressTx'
+        ChannelSettleTx: '#/components/schemas/ChannelSettleTx'
+        ChannelSlashTx: '#/components/schemas/ChannelSlashTx'
+        ChannelSnapshotSoloTx: '#/components/schemas/ChannelSnapshotSoloTx'
+        ChannelWithdrawTx: '#/components/schemas/ChannelWithdrawTx'
+        ContractCallTx: '#/components/schemas/ContractCallTx'
+        ContractCreateTx: '#/components/schemas/ContractCreateTx'
+        GAAttachTx: '#/components/schemas/GAAttachTx'
+        GAMetaTx: '#/components/schemas/GAMetaTx'
+        NameClaimTx: '#/components/schemas/NameClaimTx'
+        NamePreclaimTx: '#/components/schemas/NamePreclaimTx'
+        NameRevokeTx: '#/components/schemas/NameRevokeTx'
+        NameTransferTx: '#/components/schemas/NameTransferTx'
+        NameUpdateTx: '#/components/schemas/NameUpdateTx'
+        OracleExtendTx: '#/components/schemas/OracleExtendTx'
+        OracleQueryTx: '#/components/schemas/OracleQueryTx'
+        OracleRegisterTx: '#/components/schemas/OracleRegisterTx'
+        OracleRespondTx: '#/components/schemas/OracleRespondTx'
+        PayingForTx: '#/components/schemas/PayingForTx'
+        SpendTx: '#/components/schemas/SpendTx'
     type: object
 
   Transaction:
@@ -252,7 +258,7 @@ schemas:
           $ref: '#/components/schemas/Signature'
       tx:
         description: The transaction
-        $ref: '#/components/schemas/MdwTx'
+        $ref: '#/components/schemas/Tx'
     example:
       block_hash: "none"
       block_height: -1
