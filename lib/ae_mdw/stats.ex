@@ -109,7 +109,7 @@ defmodule AeMdw.Stats do
     cursor = deserialize_cursor(cursor)
 
     with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
-         scope <- deserialize_scope(range, last_gen),
+         {:ok, scope} <- deserialize_scope(range, last_gen),
          {:ok, prev_cursor, range, next_cursor} <-
            Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
       {serialize_cursor(prev_cursor), render_delta_stats(state, range),
@@ -126,7 +126,7 @@ defmodule AeMdw.Stats do
     cursor = deserialize_cursor(cursor)
 
     with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
-         scope <- deserialize_scope(range, last_gen),
+         {:ok, scope} <- deserialize_scope(range, last_gen),
          {:ok, prev_cursor, range, next_cursor} <-
            Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
       {serialize_cursor(prev_cursor), render_total_stats(state, range),
@@ -417,17 +417,15 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp generate_key_boundary(state, tag, filters, range) do
+  defp generate_key_boundary(state, tag, filters, scope) do
     interval_by = Map.get(filters, :interval_by, :day)
     {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
     min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
     max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
 
     {min_date, max_date} =
-      if range do
-        {:gen, first_gen..last_gen//_step} = range
-        first_txi = DbUtil.first_gen_to_txi(state, first_gen)
-        last_txi = DbUtil.last_gen_to_txi(state, last_gen)
+      if scope do
+        {first_txi, last_txi} = scope_to_txi(state, scope)
 
         min_date =
           state
@@ -753,8 +751,11 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp deserialize_scope(nil, last_gen), do: {1, last_gen}
-  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {max(first, 1), last}
+  defp deserialize_scope(nil, last_gen), do: {:ok, {1, last_gen}}
+  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {:ok, {max(first, 1), last}}
+
+  defp deserialize_scope({:txi, _range}, _last_gen),
+    do: {:error, ErrInput.Scope.exception(value: "can't use txi scope on gen-based resource")}
 
   defp fetch_last_tx_hash!(state, height) do
     case State.get(state, Model.Block, {height + 1, -1}) do
@@ -895,5 +896,13 @@ defmodule AeMdw.Stats do
 
   defp render_miner({miner, count}) do
     %{miner: :aeapi.format_account_pubkey(miner), blocks_mined: count}
+  end
+
+  defp scope_to_txi(state, {:gen, first_gen..last_gen//_step}) do
+    {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
+  end
+
+  defp scope_to_txi(_state, {:txi, first_txi..last_txi//_step}) do
+    {first_txi, last_txi}
   end
 end
