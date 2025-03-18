@@ -265,8 +265,8 @@ defmodule AeMdw.Db.StatsMutation do
 
   defp get_accounts(state, from_txi, next_txi) do
     state
-    |> Collection.stream(Model.Tx, {from_txi, next_txi})
-    |> Stream.take_while(&match?(txi when txi < next_txi, &1))
+    |> Collection.stream(Model.Tx, :forward, {from_txi, next_txi}, nil)
+    |> Stream.take_while(&(&1 < next_txi))
     |> Enum.reduce(0, fn txi, accounts ->
       Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
 
