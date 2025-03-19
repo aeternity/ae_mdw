@@ -81,7 +81,7 @@ defmodule AeMdw.Db.Name do
     with {:ok, name_hash} <- Validate.id(name_id),
          {:ok, Model.plain_name(value: plain_name)} <-
            State.get(state, Model.PlainName, name_hash),
-         {m_name, _source} <- locate(state, plain_name) do
+         {m_name, _source} <- locate_name_or_auction(state, plain_name) do
       state
       |> pointers(m_name)
       |> case do
@@ -125,19 +125,27 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec locate(state(), Names.plain_name()) ::
+  @spec locate_name(state(), Names.plain_name()) ::
           {Model.name(), Model.ActiveName | Model.InactiveName}
-          | {Model.auction_bid(), Model.AuctionBid}
           | nil
-  def locate(state, plain_name) do
+  def locate_name(state, plain_name) do
     with {:active, :not_found} <- {:active, State.get(state, Model.ActiveName, plain_name)},
-         {:inactive, :not_found} <- {:inactive, State.get(state, Model.InactiveName, plain_name)},
-         {:auction_bid, nil} <- {:auction_bid, locate_bid(state, plain_name)} do
+         {:inactive, :not_found} <- {:inactive, State.get(state, Model.InactiveName, plain_name)} do
       nil
     else
       {:active, {:ok, active_name}} -> {active_name, Model.ActiveName}
       {:inactive, {:ok, inactive_name}} -> {inactive_name, Model.InactiveName}
-      {:auction_bid, auction} -> {auction, Model.AuctionBid}
+    end
+  end
+
+  @spec locate_name_or_auction(state(), Names.plain_name()) ::
+          {Model.name() | Model.auction_bid(),
+           Model.ActiveName | Model.InactiveName | Model.AuctionBid}
+          | nil
+  def locate_name_or_auction(state, plain_name) do
+    with nil <- locate_name(state, plain_name),
+         Model.auction_bid() = auction_bid <- locate_bid(state, plain_name) do
+      {auction_bid, Model.AuctionBid}
     end
   end
 
@@ -241,7 +249,7 @@ defmodule AeMdw.Db.Name do
   @spec account_pointer_at(state(), Names.plain_name(), AeMdw.Txs.txi()) ::
           {:error, :name_not_found | {:pointee_not_found, any, any}} | {:ok, any}
   def account_pointer_at(state, plain_name, time_reference_txi) do
-    case locate(state, plain_name) do
+    case locate_name_or_auction(state, plain_name) do
       nil ->
         {:error, :name_not_found}
 
@@ -292,7 +300,7 @@ defmodule AeMdw.Db.Name do
         name_hash = :aens_update_tx.name_hash(name_update_tx)
         plain_name = plain_name!(state, name_hash)
 
-        case locate(state, plain_name) do
+        case locate_name_or_auction(state, plain_name) do
           {_bid_key, Model.AuctionBid} ->
             {active, inactive}
 
