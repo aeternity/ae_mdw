@@ -207,16 +207,6 @@ defmodule AeMdw.Names do
         end
         |> Collection.paginate(pagination, & &1, &serialize_name_claims_cursor/1)
 
-      # paginate_nested_resource(
-      #   state,
-      #   nested_table,
-      #   plain_name,
-      #   height,
-      #   scope,
-      #   cursor,
-      #   pagination
-      # )
-
       {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
     end
   end
