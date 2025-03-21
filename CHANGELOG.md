@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.103.0](https://github.com/aeternity/ae_mdw/compare/v1.102.0...v1.103.0) (2025-03-21)
+
+
+### Features
+
+* add top miners for the last actual 24hs ([#2111](https://github.com/aeternity/ae_mdw/issues/2111)) ([eecace6](https://github.com/aeternity/ae_mdw/commit/eecace68a5152b0341a8d64dcf6576d91a0f645f))
+
+
+### Bug Fixes
+
+* implement standalone /aex141/transfers for when there is no contract ([#2117](https://github.com/aeternity/ae_mdw/issues/2117)) ([9ebdf6d](https://github.com/aeternity/ae_mdw/commit/9ebdf6d26d697db6c52e0455ed56de28b99d8efa))
+* make the claims endpoint return all claims instead of just from last auction ([#2120](https://github.com/aeternity/ae_mdw/issues/2120)) ([4c6667c](https://github.com/aeternity/ae_mdw/commit/4c6667ccf5c6ff2c86109f834b66ceadae0f8bde))
+
 ## [1.102.0](https://github.com/aeternity/ae_mdw/compare/v1.101.0...v1.102.0) (2025-03-11)
 
 ### Bug Fixes
