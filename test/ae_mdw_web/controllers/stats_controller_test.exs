@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.StatsControllerTest do
+  alias AeMdw.Stats
   use AeMdwWeb.ConnCase, async: false
   import Mock
 
@@ -1104,6 +1105,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> add_transactions_every_5_hours(1, last_txi, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1126,7 +1128,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => -0.25,
                  "fees_trend" => 0.21,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
@@ -1147,6 +1150,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> add_transactions_every_5_hours(1, 1, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1167,7 +1171,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => 1.0,
                  "fees_trend" => +0.0,
                  "last_24hs_average_transaction_fees" => 1.0,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
@@ -1187,6 +1192,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         store
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1207,7 +1213,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => 0,
                  "fees_trend" => 0,
                  "last_24hs_average_transaction_fees" => 0,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
