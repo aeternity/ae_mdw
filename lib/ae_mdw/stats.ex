@@ -678,7 +678,8 @@ defmodule AeMdw.Stats do
            burned_in_auctions: burned_in_auctions,
            channels_opened: channels_opened,
            channels_closed: channels_closed,
-           locked_in_channels: locked_in_channels
+           locked_in_channels: locked_in_channels,
+           accounts: accounts
          )
        ) do
     %{
@@ -697,7 +698,8 @@ defmodule AeMdw.Stats do
       channels_opened: channels_opened,
       channels_closed: channels_closed,
       locked_in_channels: locked_in_channels,
-      last_tx_hash: fetch_last_tx_hash!(state, height)
+      last_tx_hash: fetch_last_tx_hash!(state, height),
+      accounts: accounts
     }
   end
 
@@ -717,7 +719,8 @@ defmodule AeMdw.Stats do
            locked_in_auctions: locked_in_auctions,
            burned_in_auctions: burned_in_auctions,
            open_channels: open_channels,
-           locked_in_channels: locked_in_channels
+           locked_in_channels: locked_in_channels,
+           accounts: accounts
          )
        ) do
     %{
@@ -735,7 +738,8 @@ defmodule AeMdw.Stats do
       burned_in_auctions: burned_in_auctions,
       open_channels: open_channels,
       locked_in_channels: locked_in_channels,
-      last_tx_hash: fetch_last_tx_hash!(state, height)
+      last_tx_hash: fetch_last_tx_hash!(state, height),
+      accounts: accounts
     }
   end
 
