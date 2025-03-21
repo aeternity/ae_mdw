@@ -6,8 +6,11 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
+  alias AeMdw.Stats
   alias AeMdw.TestUtil
   require Model
+
+  @holders_count_key Stats.holders_count_key()
 
   setup do
     global_state_ref = :persistent_term.get(:global_state, nil)
@@ -29,7 +32,9 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
     state = DbStore.new() |> State.new()
 
     state =
-      TestUtil.update_balances(state, [
+      state
+      |> State.put(Model.Stat, Model.stat(index: @holders_count_key, payload: 0))
+      |> TestUtil.update_balances([
         {account_pk1, amount11},
         {account_pk2, amount21}
       ])
@@ -77,6 +82,9 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
     assert {:ok, Model.account_balance(index: ^account_pk3, balance: ^amount31)} =
              State.get(state, Model.AccountBalance, account_pk3)
 
+    assert {:ok, Model.stat(index: @holders_count_key, payload: 3)} =
+             State.get(state, Model.Stat, @holders_count_key)
+
     delete_mutation =
       DeleteKeysMutation.new(%{
         Model.AccountBalance => [account_pk1, account_pk2, account_pk3],
@@ -84,7 +92,8 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
           {amount12, account_pk1},
           {amount21, account_pk2},
           {amount31, account_pk3}
-        ]
+        ],
+        Model.Stat => [@holders_count_key]
       })
 
     Mutation.execute(delete_mutation, state)
@@ -97,7 +106,10 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
 
     state = DbStore.new() |> State.new()
 
-    state = TestUtil.update_balances(state, account_amounts)
+    state =
+      state
+      |> State.put(Model.Stat, Model.stat(index: @holders_count_key, payload: 0))
+      |> TestUtil.update_balances(account_amounts)
 
     assert state
            |> Collection.stream(Model.BalanceAccount, :backward, {nil, nil}, nil)
@@ -156,13 +168,17 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
 
     assert Enum.count(account_balances) == 100
 
+    assert {:ok, Model.stat(index: @holders_count_key, payload: 99)} =
+             State.get(state, Model.Stat, @holders_count_key)
+
     delete_mutation =
       DeleteKeysMutation.new(%{
         Model.AccountBalance => account_pks,
         Model.BalanceAccount =>
           Enum.map(balance_accounts, fn {balance, account_pk} ->
             {balance, account_pk}
-          end)
+          end),
+        Model.Stat => [@holders_count_key]
       })
 
     Mutation.execute(delete_mutation, state)

@@ -3,6 +3,7 @@ defmodule AeMdw.Db.UpdateBalanceAccountMutation do
     Update the balance of an account.
   """
 
+  alias AeMdw.Stats
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Node.Db
@@ -41,20 +42,32 @@ defmodule AeMdw.Db.UpdateBalanceAccountMutation do
         state
         |> State.delete(Model.BalanceAccount, {old_balance, account_pk})
         |> State.delete(Model.AccountBalance, account_pk)
+        |> insert(account_pk, balance, old_balance)
 
       _balance ->
-        state
+        insert(state, account_pk, balance, 0)
     end
-    |> insert(account_pk, balance)
   end
 
-  defp insert(state, pubkey, balance) do
+  defp insert(state, pubkey, balance, old_balance) do
     balance_account_record = Model.balance_account(index: {balance, pubkey})
     account_balance_record = Model.account_balance(index: pubkey, balance: balance)
 
     state
     |> State.put(Model.BalanceAccount, balance_account_record)
     |> State.put(Model.AccountBalance, account_balance_record)
+    |> then(fn state ->
+      cond do
+        old_balance > 0 and balance == 0 ->
+          update_holders_stat(state, -1)
+
+        old_balance == 0 and balance > 0 ->
+          update_holders_stat(state, 1)
+
+        true ->
+          state
+      end
+    end)
   end
 
   defp get_balance(state, pubkey) do
@@ -63,6 +76,22 @@ defmodule AeMdw.Db.UpdateBalanceAccountMutation do
     |> case do
       {:ok, Model.account_balance(balance: balance)} -> balance
       :not_found -> nil
+    end
+  end
+
+  defp update_holders_stat(state, delta) do
+    state
+    |> State.get(Model.Stat, Stats.holders_count_key())
+    |> case do
+      {:ok, Model.stat(payload: holders_count)} ->
+        state
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.holders_count_key(), payload: holders_count + delta)
+        )
+
+      :not_found ->
+        state
     end
   end
 end
