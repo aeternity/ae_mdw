@@ -170,25 +170,42 @@ defmodule AeMdw.Names do
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {plain_name, nested_table, height} =
+      {plain_name, table} =
         case name_or_auction do
-          Model.name(index: plain_name, active: active) ->
-            {plain_name, Model.NameClaim, active}
+          Model.name(index: plain_name) ->
+            {plain_name, Model.NameClaim}
 
-          Model.auction_bid(index: plain_name, start_height: start_height) ->
-            {plain_name, Model.AuctionBidClaim, start_height}
+          Model.auction_bid(index: plain_name) ->
+            {plain_name, Model.AuctionBidClaim}
+        end
+
+      key_boundary =
+        case scope do
+          nil ->
+            Collection.generate_key_boundary(
+              {plain_name, Collection.integer(), {Collection.integer(), Collection.integer()}}
+            )
+
+          {:gen, first_gen..last_gen//_step} ->
+            {
+              {plain_name, first_gen, {DbUtil.first_gen_to_txi(state, first_gen), @min_int}},
+              {plain_name, last_gen, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}}
+            }
+        end
+
+      cursor =
+        case deserialize_name_claims_cursor(cursor) do
+          nil -> nil
+          {height, txi_idx} -> {plain_name, height, txi_idx}
         end
 
       {prev_cursor, claims, next_cursor} =
-        paginate_nested_resource(
-          state,
-          nested_table,
-          plain_name,
-          height,
-          scope,
-          cursor,
-          pagination
-        )
+        fn direction ->
+          state
+          |> Collection.stream(table, direction, key_boundary, cursor)
+          |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+        end
+        |> Collection.paginate(pagination, & &1, &serialize_name_claims_cursor/1)
 
       {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
     end
@@ -1046,6 +1063,23 @@ defmodule AeMdw.Names do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
+  defp serialize_name_claims_cursor({height, {txi, idx}, _table}) do
+    {height, {txi, idx}}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
+  end
+
+  defp deserialize_name_claims_cursor(nil), do: nil
+
+  defp deserialize_name_claims_cursor(cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
+         {_height, {_txi, _idx}} = cursor <- :erlang.binary_to_term(cursor_bin) do
+      cursor
+    else
+      _invalid -> nil
     end
   end
 
