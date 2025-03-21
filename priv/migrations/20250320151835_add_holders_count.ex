@@ -19,10 +19,14 @@ defmodule AeMdw.Migrations.AddHoldersCount do
       |> Stream.filter(fn Model.balance_account(index: {balance, _account}) -> balance > 0 end)
       |> Enum.count()
 
+    mutation =
+      WriteMutation.new(
+        Model.Stat,
+        Model.stat(index: Stats.holders_count_key(), payload: holders_count)
+      )
+
     _state =
-      Model.Stat
-      |> WriteMutation.new(Model.stat(index: Stats.holders_count_key(), payload: holders_count))
-      |> then(fn mutation -> State.commit_db(state, mutation) end)
+      State.commit_db(state, [mutation])
 
     {:ok, holders_count}
   end
