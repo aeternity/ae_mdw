@@ -1,4 +1,5 @@
 defmodule AeMdw.Migrations.AddHoldersCount do
+  @moduledoc false
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
