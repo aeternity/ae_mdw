@@ -44,15 +44,12 @@ defmodule AeMdw.Channels do
           | {:error, Error.t()}
   def fetch_channels(state, pagination, range, query, cursor) do
     with {:ok, cursor} <- deserialize_cursor(cursor),
-         {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      scope = deserialize_scope(range)
-
-      paginated_channels =
-        filters
-        |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination, &render_exp_channel(state, &1), &serialize_cursor/1)
-
-      {:ok, paginated_channels}
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         {:ok, scope} <- deserialize_scope(range) do
+      filters
+      |> build_streamer(state, scope, cursor)
+      |> Collection.paginate(pagination, &render_exp_channel(state, &1), &serialize_cursor/1)
+      |> then(&{:ok, &1})
     end
   end
 
@@ -278,10 +275,13 @@ defmodule AeMdw.Channels do
     do: "#{height}-#{Enc.encode(:channel, channel_pk)}"
 
   defp deserialize_scope({:gen, first_gen..last_gen//_step}) do
-    {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
+    {:ok, {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}}
   end
 
-  defp deserialize_scope(_nil_or_txis_scope), do: nil
+  defp deserialize_scope(nil), do: {:ok, nil}
+
+  defp deserialize_scope(invalid_scope),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
 
   # Gets from the oldest block state tree since some channels might be absent from newer blocks
   defp get_oldest_block_hash(_state, nil, update_block_hash, _update_block_index),

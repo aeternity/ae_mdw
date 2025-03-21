@@ -34,23 +34,18 @@ defmodule AeMdw.Blocks do
   @typep state() :: State.t()
   @typep direction :: Database.direction()
   @typep limit :: Database.limit()
-  @typep range :: {:gen, Range.t()} | nil
+  @typep scope() :: {:gen, Range.t()} | nil
   @typep page_cursor() :: Collection.pagination_cursor()
 
   @table Model.Block
 
-  @spec fetch_key_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
+  @spec fetch_key_blocks(State.t(), direction(), scope(), cursor() | nil, limit()) ::
           {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
-  def fetch_key_blocks(state, direction, range, cursor, limit) do
+  def fetch_key_blocks(state, direction, scope, cursor, limit) do
     with {:ok, cursor} <- deserialize_cursor(cursor),
-         {:ok, last_gen} <- DbUtil.last_gen(state) do
-      range =
-        case range do
-          nil -> {0, last_gen}
-          {:gen, first..last//_step} -> {first, last}
-        end
-
-      case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
+         {:ok, last_gen} <- DbUtil.last_gen(state),
+         {:ok, scope} <- deserialize_scope(scope, last_gen) do
+      case Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
         {:ok, prev_cursor, range, next_cursor} ->
           {:ok,
            {serialize_cursor(prev_cursor), render_key_blocks(state, range),
@@ -116,18 +111,13 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
+  @spec fetch_blocks(State.t(), direction(), scope(), cursor() | nil, limit()) ::
           {:ok, {cursor() | nil, [block()], cursor() | nil}} | {:error, Error.t()}
-  def fetch_blocks(state, direction, range, cursor, limit) do
+  def fetch_blocks(state, direction, scope, cursor, limit) do
     with {:ok, cursor} <- deserialize_cursor(cursor),
-         {:ok, last_gen} <- DbUtil.last_gen(state) do
-      range =
-        case range do
-          nil -> {0, last_gen}
-          {:gen, first..last//_step} -> {first, last}
-        end
-
-      case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
+         {:ok, last_gen} <- DbUtil.last_gen(state),
+         {:ok, scope} <- deserialize_scope(scope, last_gen) do
+      case Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
         {:ok, prev_cursor, range, next_cursor} ->
           {:ok,
            {serialize_cursor(prev_cursor), render_blocks(state, range),
@@ -318,6 +308,13 @@ defmodule AeMdw.Blocks do
       {mb_hash, micro_block}
     end)
   end
+
+  defp deserialize_scope(nil, last_gen), do: {:ok, {0, last_gen}}
+
+  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {:ok, {first, last}}
+
+  defp deserialize_scope(invalid_scope, _last_gen),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
 
   defp serialize_micro_cursor(mbi), do: Integer.to_string(mbi)
 
