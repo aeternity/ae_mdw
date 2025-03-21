@@ -1480,7 +1480,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   defp get_name(name) do
     state = State.new()
 
-    case Name.locate(state, name) do
+    case Name.locate_name(state, name) do
       {info, source} ->
         Format.to_map(state, info, source)
 

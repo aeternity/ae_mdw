@@ -85,7 +85,8 @@ defmodule AeMdwWeb.NameController do
   @spec name_v2(Conn.t(), map()) :: Conn.t()
   def name_v2(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}) do
     with {:ok, plain_name} <- Validate.plain_name(state, ident),
-         {{info, source}, _plain_name} <- {Name.locate(state, plain_name), plain_name} do
+         {{info, source}, _plain_name} <-
+           {Name.locate_name_or_auction(state, plain_name), plain_name} do
       format_json(conn, Format.to_map(state, info, source, Util.expand?(opts)))
     else
       {nil, plain_name} -> {:error, ErrInput.NotFound.exception(value: plain_name)}
