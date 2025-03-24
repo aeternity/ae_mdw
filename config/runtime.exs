@@ -25,13 +25,27 @@ log_level =
     "notice" -> :notice
     "info" -> :info
     "debug" -> :debug
-    _level -> nil
+    _level -> :debug
   end
 
 enable_json_log = System.get_env("ENABLE_JSON_LOG", "false") in ["true", "1"]
 enable_console_log = System.get_env("ENABLE_CONSOLE_LOG", "false") in ["true", "1"]
 
-base_logger_backends = Application.get_env(:logger, :backends, [])
+log_file_path =
+  (System.get_env("LOG_FILE_PATH") ||
+     Path.join(File.cwd!(), "log/info.log"))
+  |> Path.expand()
+  |> IO.inspect(label: "log_file_path")
+
+config :logger, :info,
+  path: log_file_path,
+  metadata: [:request_id],
+  format: "$date $time $metadata[$level] $message\n"
+
+base_logger_backends =
+  :logger
+  |> Application.get_env(:backends, [])
+  |> Kernel.++([{LoggerFileBackend, :info}])
 
 logger_backends =
   if enable_console_log,
@@ -72,7 +86,7 @@ if env != :test do
     ]
 
   config :logger,
-    level: log_level || :info,
+    level: log_level,
     backends: logger_backends
 end
 
@@ -99,7 +113,7 @@ if env in [:test, :prod] do
     logger_backends = [LoggerJSON | logger_backends]
 
     config :logger,
-      level: log_level || :info,
+      level: log_level,
       backends: logger_backends
 
     formatter = System.get_env("JSON_LOG_FORMAT", "datadog")
