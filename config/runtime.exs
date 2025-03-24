@@ -35,7 +35,6 @@ log_file_path =
   (System.get_env("LOG_FILE_PATH") ||
      Path.join(File.cwd!(), "log/info.log"))
   |> Path.expand()
-  |> IO.inspect(label: "log_file_path")
 
 config :logger, :info,
   path: log_file_path,
