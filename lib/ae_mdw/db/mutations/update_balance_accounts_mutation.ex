@@ -92,6 +92,10 @@ defmodule AeMdw.Db.UpdateBalanceAccountMutation do
 
       :not_found ->
         state
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.holders_count_key(), payload: delta)
+        )
     end
   end
 end
