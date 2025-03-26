@@ -1032,7 +1032,7 @@ defmodule AeMdw.Names do
         _no_hash -> plain_name_or_hash
       end
 
-    case Name.locate(state, plain_name) do
+    case Name.locate_name_or_auction(state, plain_name) do
       {name_or_auction, source} -> {:ok, name_or_auction, source}
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
     end

@@ -303,7 +303,7 @@ defmodule AeMdw.Activities do
   defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
     with {:ok, Model.plain_name(value: plain_name)} <-
            State.get(state, Model.PlainName, name_hash),
-         {_record, source} <- Name.locate(state, plain_name) do
+         {_record, source} <- Name.locate_name_or_auction(state, plain_name) do
       claims =
         case source do
           Model.AuctionBid ->

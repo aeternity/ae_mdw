@@ -2095,7 +2095,7 @@ defmodule AeMdwWeb.NameControllerTest do
       name = "no--such--name--in--the--chain.chain"
       error = "not found: #{name}"
 
-      with_mocks [{Name, [], [locate: fn _state, ^name -> nil end]}] do
+      with_mocks [{Name, [], [locate_name_or_auction: fn _state, ^name -> nil end]}] do
         assert %{"error" => ^error} = conn |> get("/v3/names/#{name}") |> json_response(404)
       end
     end
