@@ -8,7 +8,7 @@ defmodule AeMdwWeb.OracleController do
   alias AeMdwWeb.Util
   alias Plug.Conn
 
-  plug(PaginatedPlug)
+  plug(PaginatedPlug, txi_scope?: false)
   action_fallback(FallbackController)
 
   ##########
