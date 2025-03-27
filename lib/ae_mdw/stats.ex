@@ -65,6 +65,7 @@ defmodule AeMdw.Stats do
   @aex9_holder_count_stat :aex9_holder_count
   @aex9_logs_count_stat :aex9_logs_count
   @aex141_count_stat :aex141_count
+  @holders_count_stat_key :holders_count
 
   @seconds_per_day 24 * 3_600
   @days_per_week 7
@@ -102,6 +103,9 @@ defmodule AeMdw.Stats do
 
   @spec nft_owners_count_key(pubkey()) :: {atom(), pubkey()}
   def nft_owners_count_key(contract_pk), do: {@nft_owners_count_stat, contract_pk}
+
+  @spec holders_count_key() :: atom()
+  def holders_count_key, do: @holders_count_stat_key
 
   @spec fetch_delta_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
@@ -141,7 +145,9 @@ defmodule AeMdw.Stats do
   def fetch_stats(state) do
     with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
            State.get(state, Model.Stat, @tps_stat_key),
-         {:ok, milliseconds_per_block} <- milliseconds_per_block(state) do
+         {:ok, milliseconds_per_block} <- milliseconds_per_block(state),
+         {:ok, Model.stat(index: @holders_count_stat_key, payload: holders_count)} <-
+           State.get(state, Model.Stat, @holders_count_stat_key) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
@@ -153,7 +159,8 @@ defmodule AeMdw.Stats do
           transactions_trend: trend,
           last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
           fees_trend: fees_trend,
-          milliseconds_per_block: milliseconds_per_block
+          milliseconds_per_block: milliseconds_per_block,
+          holders_count: holders_count
         }
 
       stats =
