@@ -12,10 +12,6 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   debug_errors: true,
   live_view: [signing_salt: "btmQfEtjXdzpKeXzQ1kfVAJmc0gPU/pX"]
 
-# Logging
-config :logger,
-  backends: [{LoggerFileBackend, :info}]
-
 # Phoenix
 config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime

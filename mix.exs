@@ -99,6 +99,7 @@ defmodule AeMdw.MixProject do
           :aetx_sign,
           :aeu_env,
           :aeu_info,
+          :aeu_logging_env,
           :aeu_mtrees,
           :aeu_time,
           :app_ctrl,

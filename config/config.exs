@@ -59,16 +59,6 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 
 config :ae_mdw, AeMdwWeb.Websocket.Subscriptions, max_subs_per_conn: 10_000
 
-# Logging
-config :logger,
-  backends: [:console, {LoggerFileBackend, :info}]
-
-config :logger, :info,
-  path: "#{Path.join(File.cwd!(), "log/info.log")}",
-  metadata: [:request_id],
-  format: "$date $time $metadata[$level] $message\n",
-  sync_threshold: 100
-
 config :logger_json, :backend, json_encoder: Jason
 
 # API
