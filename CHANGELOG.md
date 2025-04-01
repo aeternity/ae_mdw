@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.0](https://github.com/aeternity/ae_mdw/compare/v1.103.0...v1.104.0) (2025-04-01)
+
+
+### Features
+
+* add holders count to stats endpoint ([#2126](https://github.com/aeternity/ae_mdw/issues/2126)) ([a9b65f2](https://github.com/aeternity/ae_mdw/commit/a9b65f24b3bc19b9d03e6b3a462d28b301e8905c))
+
 ## [1.103.0](https://github.com/aeternity/ae_mdw/compare/v1.102.0...v1.103.0) (2025-03-27)
 
 
