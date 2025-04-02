@@ -20,7 +20,7 @@ jobs:
 
   test-coverage:
     name: Test coverage
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     env:
       MIX_ENV: test
@@ -46,7 +46,7 @@ jobs:
 
   lint:
     name: Automated linting
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     env:
       NODEROOT: ./node/local
@@ -75,7 +75,7 @@ jobs:
 
   dialyzer:
     name: Dialyzer
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v3
