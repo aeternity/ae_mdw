@@ -6,6 +6,8 @@ defmodule AeMdwWeb.StatsControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.Db.RocksDbCF
+  alias AeMdw.Collection
 
   require Model
 
@@ -1121,6 +1123,17 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
+         end},
+        {RocksDbCF, [],
+         stream: fn
+           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
+             store
+             |> State.new()
+             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
+             |> Stream.map(fn index ->
+               {:ok, tx} = Store.get(store, Model.Tx, index)
+               tx
+             end)
          end}
       ]) do
         assert %{
@@ -1164,6 +1177,17 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
+         end},
+        {RocksDbCF, [],
+         stream: fn
+           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
+             store
+             |> State.new()
+             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
+             |> Stream.map(fn index ->
+               {:ok, tx} = Store.get(store, Model.Tx, index)
+               tx
+             end)
          end}
       ]) do
         assert %{
