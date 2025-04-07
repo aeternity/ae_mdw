@@ -3,6 +3,7 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
+  alias AeMdw.Db.RocksDbCF
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -797,8 +798,8 @@ defmodule AeMdw.Stats do
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
          trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
          average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
-           average_tx_fees(state, tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago),
+           average_tx_fees(tx_index_24hs_ago, last_tx_index),
+         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago),
          fee_trend <-
            Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
       {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
@@ -846,14 +847,13 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp average_tx_fees(state, start_txi, end_txi) do
+  defp average_tx_fees(start_txi, end_txi) do
     txs_count = end_txi - start_txi + 1
 
     if txs_count != 0 do
-      start_txi..end_txi
-      |> Enum.reduce(0, fn tx_index, acc ->
-        Model.tx(fee: fee) = State.fetch!(state, Model.Tx, tx_index)
-
+      Model.Tx
+      |> RocksDbCF.stream(key_boundary: {start_txi, end_txi})
+      |> Enum.reduce(0, fn Model.tx(fee: fee), acc ->
         acc + fee
       end)
       |> then(&(&1 / txs_count))
