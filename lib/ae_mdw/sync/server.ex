@@ -531,7 +531,6 @@ defmodule AeMdw.Sync.Server do
   @spec add_tx_fees_job(State.t()) :: State.t()
   defp add_tx_fees_job(state) do
     now = :aeu_time.now_in_msecs()
-    state = State.enqueue(state, :update_tx_stats, [now], [])
-    state
+    State.enqueue(state, :update_tx_stats, [now], [])
   end
 end
