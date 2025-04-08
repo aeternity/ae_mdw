@@ -461,8 +461,8 @@ defmodule AeMdw.Contract do
 
       prev_key_hash =
         if Hyperchain.hyperchain?() do
-          [{hash, _key_block_header}] =
-            :aec_db.find_key_headers_and_hash_at_height(height)
+          {:ok, hash} =
+            :aec_chain_state.get_key_block_hash_at_height(height)
 
           hash
         else
