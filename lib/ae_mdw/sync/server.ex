@@ -276,7 +276,9 @@ defmodule AeMdw.Sync.Server do
       gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, to_height, false)
 
       {exec_time, new_state} =
-        :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)
+        :timer.tc(fn ->
+          gens_mutations |> exec_db_mutations(db_state, clear_mem?) |> add_tx_fees_job()
+        end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / exec_time
       Status.set_gens_per_min(gens_per_min)
@@ -309,7 +311,11 @@ defmodule AeMdw.Sync.Server do
         end
 
       gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash, true)
-      new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
+
+      new_state =
+        mem_state
+        |> exec_mem_mutations(gens_mutations, from_height)
+        |> add_tx_fees_job()
 
       :ok = MemStoreCreator.commit(new_state.store)
 
@@ -318,8 +324,6 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
-    state = add_tx_fees_job(initial_state)
-
     new_state =
       gens_mutations
       |> Enum.reduce(state, fn {height, blocks_mutations}, state ->
