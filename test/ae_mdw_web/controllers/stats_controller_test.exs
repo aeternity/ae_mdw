@@ -1232,9 +1232,9 @@ defmodule AeMdwWeb.StatsControllerTest do
       ]) do
         assert %{
                  "last_24hs_transactions" => 0,
-                 "transactions_trend" => 0,
-                 "fees_trend" => 0,
-                 "last_24hs_average_transaction_fees" => 0,
+                 "transactions_trend" => +0.0,
+                 "fees_trend" => +0.0,
+                 "last_24hs_average_transaction_fees" => +0.0,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
                } =
