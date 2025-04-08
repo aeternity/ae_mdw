@@ -51,7 +51,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
             Model.Stat,
             Model.stat(index: :tx_stats, payload: {started_at, encoded_tx_stats})
           )
-          |> IO.inspect(label: "test")
 
         AsyncStoreServer.write_mutations(
           [write_mutation],
