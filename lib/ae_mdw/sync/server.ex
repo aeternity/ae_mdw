@@ -527,7 +527,6 @@ defmodule AeMdw.Sync.Server do
     :ok
   end
 
-  @spec add_tx_fees_job(State.t()) :: State.t()
   defp add_tx_fees_job(state) do
     now = :aeu_time.now_in_msecs()
     State.enqueue(state, :update_tx_stats, [now], [])
