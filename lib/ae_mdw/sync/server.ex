@@ -340,11 +340,6 @@ defmodule AeMdw.Sync.Server do
     new_state
   end
 
-  defp add_tx_fees_job(state) do
-    now = :aeu_time.now_in_msecs()
-    State.enqueue(state, :update_tx_stats, [now])
-  end
-
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
     Enum.reduce(blocks_mutations, state, fn {_bi, _block, block_mutations}, state ->
       State.commit_db(state, block_mutations, clear_mem?)
@@ -530,5 +525,10 @@ defmodule AeMdw.Sync.Server do
       end
 
     :ok
+  end
+
+  defp add_tx_fees_job(state) do
+    now = :aeu_time.now_in_msecs()
+    State.enqueue(state, :update_tx_stats, [now])
   end
 end
