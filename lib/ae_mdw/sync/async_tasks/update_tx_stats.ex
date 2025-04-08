@@ -45,6 +45,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
 
         write_mutation =
           WriteMutation.new(Model.Stat, Model.stat(index: :tx_stats, payload: tx_stats))
+          |> IO.inspect(label: "test")
 
         AsyncStoreServer.write_mutations(
           [write_mutation],
