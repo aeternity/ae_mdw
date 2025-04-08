@@ -40,16 +40,13 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
   defp update_stats(state, started_at, done_fn) do
     {time_delta, :ok} =
       :timer.tc(fn ->
-        {started_at, tx_stats} =
+        tx_stats =
           calculate_fees(state, started_at)
-
-        encoded_tx_stats =
-          :erlang.term_to_binary(tx_stats)
 
         write_mutation =
           WriteMutation.new(
             Model.Stat,
-            Model.stat(index: :tx_stats, payload: {started_at, encoded_tx_stats})
+            Model.stat(index: :tx_stats, payload: tx_stats)
           )
 
         AsyncStoreServer.write_mutations(
@@ -72,13 +69,11 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
          {:ok, {_time, tx_index_48hs_ago}} <- State.next(state, Model.Time, {time_48hs_ago, -1}),
          txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago + 1,
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
-         trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
          average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
            average_tx_fees(tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago),
-         fee_trend <-
-           Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
-      {started_at, {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}}
+         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago) do
+      {started_at,
+       {{txs_count_24hs, txs_count_48hs}, {average_tx_fees_24hs, average_tx_fees_48hs}}}
     else
       _error ->
         {started_at, {{0, 0}, {0, 0}}}

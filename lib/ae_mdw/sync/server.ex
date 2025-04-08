@@ -48,7 +48,6 @@ defmodule AeMdw.Sync.Server do
   alias AeMdwWeb.Websocket.BroadcasterCache
 
   require Logger
-  @dialyzer {:nowarn_function, add_tx_fees_job: 1}
 
   defstruct [:chain_height, :chain_hash, :db_state, :mem_hash, :restarts, :rollback?]
 

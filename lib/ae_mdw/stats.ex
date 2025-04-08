@@ -790,8 +790,20 @@ defmodule AeMdw.Stats do
     state
     |> State.get(Model.Stat, :tx_stats)
     |> case do
-      {:ok, Model.stat(payload: {_started_at, stats})} ->
-        :erlang.binary_to_term(stats)
+      {:ok,
+       Model.stat(
+         payload:
+           {_started_at,
+            {{txs_count_24hs, txs_count_48hs}, {average_tx_fees_24hs, average_tx_fees_48hs}}}
+       )} ->
+        with trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
+             fee_trend <-
+               Float.round(
+                 (average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs,
+                 2
+               ) do
+          {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
+        end
 
       :not_found ->
         {{0, 0}, {0, 0}}
