@@ -69,18 +69,16 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
          {:ok, {_time, tx_index_48hs_ago}} <- State.next(state, Model.Time, {time_48hs_ago, -1}),
          txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago + 1,
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
-         average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
-           average_tx_fees(tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago) do
-      {started_at,
-       {{txs_count_24hs, txs_count_48hs}, {average_tx_fees_24hs, average_tx_fees_48hs}}}
+         {:ok, tx_fees_sum_24hs} <- sum_fees(tx_index_24hs_ago, last_tx_index),
+         {:ok, tx_fees_sum_48hs} <- sum_fees(tx_index_48hs_ago, tx_index_24hs_ago) do
+      {started_at, {{txs_count_24hs, txs_count_48hs}, {tx_fees_sum_24hs, tx_fees_sum_48hs}}}
     else
       _error ->
         {started_at, {{0, 0}, {0, 0}}}
     end
   end
 
-  defp average_tx_fees(start_txi, end_txi) do
+  defp sum_fees(start_txi, end_txi) do
     txs_count = end_txi - start_txi + 1
 
     if txs_count != 0 do
@@ -89,7 +87,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
       |> Enum.reduce(0, fn Model.tx(fee: fee), acc ->
         acc + fee
       end)
-      |> then(&(&1 / txs_count))
     else
       0
     end
