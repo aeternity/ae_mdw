@@ -318,9 +318,11 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
+    state = add_tx_fees_job(initial_state)
+
     new_state =
       gens_mutations
-      |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+      |> Enum.reduce(state, fn {height, blocks_mutations}, state ->
         blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
@@ -332,6 +334,11 @@ defmodule AeMdw.Sync.Server do
     broadcast_blocks(gens_mutations)
 
     new_state
+  end
+
+  defp add_tx_fees_job(state) do
+    now = :aeu_time.now_in_msecs()
+    State.enqueue(state, :update_tx_stats, [now])
   end
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
