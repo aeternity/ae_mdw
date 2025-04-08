@@ -790,7 +790,7 @@ defmodule AeMdw.Stats do
     state
     |> State.get(Model.Stat, :tx_stats)
     |> case do
-      {:ok, {_started_at, stats}} ->
+      {:ok, Model.stat(payload: {_started_at, stats})} ->
         stats
 
       :not_found ->

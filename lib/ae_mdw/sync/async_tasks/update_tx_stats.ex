@@ -74,8 +74,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
            Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
       {started_at, {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}}
     else
-      error ->
-        Log.error("[update_tx_stats] error calculating tx stats: #{inspect(error)}")
+      _error ->
         {started_at, {{0, 0}, {0, 0}}}
     end
   end
