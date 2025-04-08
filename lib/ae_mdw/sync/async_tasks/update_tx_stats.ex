@@ -72,6 +72,10 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
          {:ok, tx_fees_sum_24hs} <- sum_fees(tx_index_24hs_ago, last_tx_index),
          {:ok, tx_fees_sum_48hs} <- sum_fees(tx_index_48hs_ago, tx_index_24hs_ago) do
       {started_at, {{txs_count_24hs, txs_count_48hs}, {tx_fees_sum_24hs, tx_fees_sum_48hs}}}
+      |> IO.inspect(
+        label:
+          "[update_tx_stats] txs_count_24hs, txs_count_48hs, tx_fees_sum_24hs, tx_fees_sum_48hs"
+      )
     else
       _error ->
         {started_at, {{0, 0}, {0, 0}}}
