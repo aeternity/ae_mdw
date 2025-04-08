@@ -25,33 +25,34 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
     state
     |> State.get(Model.Stat, :tx_stats)
     |> case do
-      :not_found ->
-        done_fn.()
-        :ok
-
       {:ok, Model.stat(payload: {old_started_at, _old_stats})} when old_started_at > started_at ->
         done_fn.()
         :ok
 
       {:ok, _old_stats} ->
-        {time_delta, :ok} =
-          :timer.tc(fn ->
-            tx_stats =
-              calculate_fees(state, started_at)
+        update_stats(state, started_at, done_fn)
 
-            write_mutation =
-              WriteMutation.new(Model.Stat, Model.stat(index: :tx_stats, payload: tx_stats))
-
-            AsyncStoreServer.write_mutations(
-              [write_mutation],
-              done_fn
-            )
-          end)
-
-        Log.info("[update_tx_stats] after #{time_delta / @microsecs}s")
-
-        :ok
+      :not_found ->
+        update_stats(state, started_at, done_fn)
     end
+  end
+
+  defp update_stats(state, started_at, done_fn) do
+    {time_delta, :ok} =
+      :timer.tc(fn ->
+        tx_stats =
+          calculate_fees(state, started_at)
+
+        write_mutation =
+          WriteMutation.new(Model.Stat, Model.stat(index: :tx_stats, payload: tx_stats))
+
+        AsyncStoreServer.write_mutations(
+          [write_mutation],
+          done_fn
+        )
+      end)
+
+    Log.info("[update_tx_stats] after #{time_delta / @microsecs}s")
 
     :ok
   end
