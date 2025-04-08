@@ -791,7 +791,7 @@ defmodule AeMdw.Stats do
     |> State.get(Model.Stat, :tx_stats)
     |> case do
       {:ok, Model.stat(payload: {_started_at, stats})} ->
-        stats
+        :erlang.binary_to_term(stats)
 
       :not_found ->
         {{0, 0}, {0, 0}}

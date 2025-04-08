@@ -40,11 +40,17 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
   defp update_stats(state, started_at, done_fn) do
     {time_delta, :ok} =
       :timer.tc(fn ->
-        tx_stats =
+        {started_at, tx_stats} =
           calculate_fees(state, started_at)
 
+        encoded_tx_stats =
+          :erlang.term_to_binary(tx_stats)
+
         write_mutation =
-          WriteMutation.new(Model.Stat, Model.stat(index: :tx_stats, payload: tx_stats))
+          WriteMutation.new(
+            Model.Stat,
+            Model.stat(index: :tx_stats, payload: {started_at, encoded_tx_stats})
+          )
           |> IO.inspect(label: "test")
 
         AsyncStoreServer.write_mutations(
