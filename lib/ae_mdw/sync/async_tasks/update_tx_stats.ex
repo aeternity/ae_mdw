@@ -25,10 +25,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
     state
     |> State.get(Model.Stat, :tx_stats)
     |> case do
-      {:ok, {old_started_at, _old_stats}} when old_started_at > started_at ->
+      :not_found ->
+        done_fn.()
         :ok
 
-      :not_found ->
+      {:ok, Model.stat(payload: {old_started_at, _old_stats})} when old_started_at > started_at ->
+        done_fn.()
         :ok
 
       {:ok, _old_stats} ->
@@ -71,7 +73,9 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
            Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
       {started_at, {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}}
     else
-      _error -> {started_at, {{0, 0}, {0, 0}}}
+      error ->
+        Log.error("[update_tx_stats] error calculating tx stats: #{inspect(error)}")
+        {started_at, {{0, 0}, {0, 0}}}
     end
   end
 
