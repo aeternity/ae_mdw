@@ -78,7 +78,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
       {started_at,
        {{txs_count_24hs, Float.to_string(trend)},
         {Float.to_string(average_tx_fees_24hs), Float.to_string(fee_trend)}}}
-      |> IO.inspect(label: "[update_tx_stats]")
     else
       _error ->
         {started_at, {{0, "0.0"}, {"0.0", "0.0"}}}

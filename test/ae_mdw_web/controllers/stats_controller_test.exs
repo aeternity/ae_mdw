@@ -1102,16 +1102,11 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       last_txi = 21
 
-      fee_sum = Enum.sum((last_txi - 3)..last_txi)
-      fee_avg = fee_sum / 4
-
-      last_48_fee_sum =
-        Enum.sum((last_txi - 8)..(last_txi - 4))
-
+      fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
       txs_count = 4
 
       encoded_txs_stats =
-        {{txs_count, 5}, {fee_sum, last_48_fee_sum}}
+        {{txs_count, "-0.25"}, {"#{fee_avg}", "0.21"}}
 
       store =
         store
@@ -1138,7 +1133,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         assert %{
                  "last_24hs_transactions" => 4,
                  "transactions_trend" => -0.25,
-                 "fees_trend" => 0.23,
+                 "fees_trend" => 0.21,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
@@ -1157,8 +1152,8 @@ defmodule AeMdwWeb.StatsControllerTest do
       now = :aeu_time.now_in_msecs()
       three_minutes = 3 * 60 * 1_000
 
-      txs_stats =
-        {{1, 0}, {1.0, 0}}
+      endcoded_txs_stats =
+        {{1, "1.0"}, {"1.0", "0.0"}}
 
       store =
         store
@@ -1166,7 +1161,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
-        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, txs_stats}))
+        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, endcoded_txs_stats}))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1196,7 +1191,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         assert %{
                  "last_24hs_transactions" => 1,
                  "transactions_trend" => 1.0,
-                 "fees_trend" => 1.0,
+                 "fees_trend" => +0.0,
                  "last_24hs_average_transaction_fees" => 1.0,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
