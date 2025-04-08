@@ -793,33 +793,16 @@ defmodule AeMdw.Stats do
       {:ok,
        Model.stat(
          payload:
-           {_started_at, {{txs_count_24hs, txs_count_48hs}, {tx_fees_sum_24hs, tx_fees_sum_48hs}}}
+           {_started_at, {{txs_count_24hs, trend_str}, {average_tx_fees_24hs_str, fee_trend_str}}}
        )} ->
-        average_tx_fees_24hs =
-          if txs_count_24hs > 0 do
-            Float.round(tx_fees_sum_24hs / txs_count_24hs, 2)
-          else
-            0
-          end
+        trend = String.to_float(trend_str)
+        fees_trend = String.to_float(fee_trend_str)
+        average_tx_fees_24hs = String.to_float(average_tx_fees_24hs_str)
 
-        average_tx_fees_48hs =
-          if txs_count_48hs > 0 do
-            Float.round(tx_fees_sum_48hs / txs_count_48hs, 2)
-          else
-            0
-          end
-
-        with trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
-             fee_trend <-
-               Float.round(
-                 (average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs,
-                 2
-               ) do
-          {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
-        end
+        {{txs_count_24hs, trend}, {average_tx_fees_24hs, fees_trend}}
 
       :not_found ->
-        {{0, 0}, {0, 0}}
+        {{0, 0.0}, {0.0, 0.0}}
     end
   end
 
