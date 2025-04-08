@@ -1102,15 +1102,16 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       last_txi = 21
 
-      fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
+      fee_sum = Enum.sum((last_txi - 3)..last_txi)
+      fee_avg = fee_sum / 4
 
-      last_48_fee_avg =
-        Enum.sum((last_txi - 7)..(last_txi - 4)) / Enum.count((last_txi - 7)..(last_txi - 4))
+      last_48_fee_sum =
+        Enum.sum((last_txi - 8)..(last_txi - 4))
 
       txs_count = 4
 
       encoded_txs_stats =
-        {{txs_count, 5}, {fee_avg, last_48_fee_avg}}
+        {{txs_count, 5}, {fee_sum, last_48_fee_sum}}
 
       store =
         store
@@ -1137,7 +1138,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         assert %{
                  "last_24hs_transactions" => 4,
                  "transactions_trend" => -0.25,
-                 "fees_trend" => 0.21,
+                 "fees_trend" => 0.23,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
