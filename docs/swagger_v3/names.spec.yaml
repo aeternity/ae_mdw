@@ -1,4 +1,12 @@
 schemas:
+  MdwName:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        example: "test.chain"
   NameTx:
     nullable: true
     type: object
