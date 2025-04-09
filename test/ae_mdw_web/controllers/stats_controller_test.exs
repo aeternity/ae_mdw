@@ -1102,16 +1102,21 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       last_txi = 21
 
+      fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
+      txs_count = 4
+
+      encoded_txs_stats =
+        {{txs_count, "-0.25"}, {"#{fee_avg}", "0.21"}}
+
       store =
         store
         |> add_transactions_every_5_hours(1, last_txi, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
+        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, encoded_txs_stats}))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
-
-      fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
 
       with_mocks([
         {:aec_chain, [],
@@ -1123,17 +1128,6 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
-         end},
-        {RocksDbCF, [],
-         stream: fn
-           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
-             store
-             |> State.new()
-             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
-             |> Stream.map(fn index ->
-               {:ok, tx} = Store.get(store, Model.Tx, index)
-               tx
-             end)
          end}
       ]) do
         assert %{
@@ -1158,12 +1152,16 @@ defmodule AeMdwWeb.StatsControllerTest do
       now = :aeu_time.now_in_msecs()
       three_minutes = 3 * 60 * 1_000
 
+      endcoded_txs_stats =
+        {{1, "1.0"}, {"1.0", "0.0"}}
+
       store =
         store
         |> add_transactions_every_5_hours(1, 1, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
+        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, endcoded_txs_stats}))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1234,9 +1232,9 @@ defmodule AeMdwWeb.StatsControllerTest do
       ]) do
         assert %{
                  "last_24hs_transactions" => 0,
-                 "transactions_trend" => 0,
-                 "fees_trend" => 0,
-                 "last_24hs_average_transaction_fees" => 0,
+                 "transactions_trend" => +0.0,
+                 "fees_trend" => +0.0,
+                 "last_24hs_average_transaction_fees" => +0.0,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
                } =

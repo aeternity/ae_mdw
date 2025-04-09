@@ -10,6 +10,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
+  alias AeMdw.Sync.AsyncTasks.UpdateTxStats
   alias AeMdw.Sync.AsyncTasks.StoreAccountBalance
   alias AeMdw.Sync.AsyncTasks.Migrate
 
@@ -21,7 +22,8 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @type_mod %{
     update_aex9_state: UpdateAex9State,
     store_acc_balance: StoreAccountBalance,
-    migrate: Migrate
+    migrate: Migrate,
+    update_tx_stats: UpdateTxStats
   }
 
   @type task_type() :: Model.async_task_type()

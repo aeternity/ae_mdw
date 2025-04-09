@@ -3,7 +3,6 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
-  alias AeMdw.Db.RocksDbCF
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -788,23 +787,22 @@ defmodule AeMdw.Stats do
   end
 
   defp last_24hs_txs_count_and_fee_with_trend(state) do
-    time_24hs_ago = :aeu_time.now_in_msecs() - @seconds_per_day * 1_000
+    state
+    |> State.get(Model.Stat, :tx_stats)
+    |> case do
+      {:ok,
+       Model.stat(
+         payload:
+           {_started_at, {{txs_count_24hs, trend_str}, {average_tx_fees_24hs_str, fee_trend_str}}}
+       )} ->
+        trend = String.to_float(trend_str)
+        fees_trend = String.to_float(fee_trend_str)
+        average_tx_fees_24hs = String.to_float(average_tx_fees_24hs_str)
 
-    with {:ok, {_time, tx_index_24hs_ago}} <- State.next(state, Model.Time, {time_24hs_ago, -1}),
-         {:ok, last_tx_index} <- State.prev(state, Model.Tx, nil),
-         time_48hs_ago <- time_24hs_ago - @seconds_per_day * 1_000,
-         {:ok, {_time, tx_index_48hs_ago}} <- State.next(state, Model.Time, {time_48hs_ago, -1}),
-         txs_count_24hs when txs_count_24hs > 0 <- last_tx_index - tx_index_24hs_ago + 1,
-         txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
-         trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
-         average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
-           average_tx_fees(tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago),
-         fee_trend <-
-           Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
-      {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
-    else
-      _error -> {{0, 0}, {0, 0}}
+        {{txs_count_24hs, trend}, {average_tx_fees_24hs, fees_trend}}
+
+      :not_found ->
+        {{0, 0.0}, {0.0, 0.0}}
     end
   end
 
@@ -844,21 +842,6 @@ defmodule AeMdw.Stats do
       :month ->
         %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
         (year - @start_unix) * 12 + month - 1
-    end
-  end
-
-  defp average_tx_fees(start_txi, end_txi) do
-    txs_count = end_txi - start_txi + 1
-
-    if txs_count != 0 do
-      Model.Tx
-      |> RocksDbCF.stream(key_boundary: {start_txi, end_txi})
-      |> Enum.reduce(0, fn Model.tx(fee: fee), acc ->
-        acc + fee
-      end)
-      |> then(&(&1 / txs_count))
-    else
-      0
     end
   end
 
