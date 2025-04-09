@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.104.1](https://github.com/aeternity/ae_mdw/compare/v1.104.0...v1.104.1) (2025-04-09)
+
+
+### Bug Fixes
+
+* fix hc error when there is a fork and no total_stats records ([#2128](https://github.com/aeternity/ae_mdw/issues/2128)) ([b1ffeaf](https://github.com/aeternity/ae_mdw/commit/b1ffeafd2f5d941d31f35e3a686c6a72bc9075f7))
+* make tx stats async ([#2133](https://github.com/aeternity/ae_mdw/issues/2133)) ([e2d0b93](https://github.com/aeternity/ae_mdw/commit/e2d0b93e44232bbe36633daaa4c6367cd4a86f9c))
+
+
+### Miscellaneous
+
+* update ubuntu in actions due to deprecation ([#2131](https://github.com/aeternity/ae_mdw/issues/2131)) ([051168e](https://github.com/aeternity/ae_mdw/commit/051168ef382bc689da7a91989852e3aea7dcc0c0))
+
 ## [1.104.0](https://github.com/aeternity/ae_mdw/compare/v1.103.0...v1.104.0) (2025-04-07)
 
 
