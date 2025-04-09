@@ -150,3 +150,5 @@ components:
       required:
         - next
         - prev
+    TransactionType:
+      $ref: '#/components/schemas/Tx/allOf/0/properties/type'

@@ -26,6 +26,7 @@ defmodule AeMdw.StatsTest do
         |> State.new()
         |> State.put(Model.Stat, Model.stat(index: :max_tps, payload: {16.05, key_block_hash}))
         |> State.put(Model.Stat, Model.stat(index: :miners_count, payload: 20))
+        |> State.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 20))
         |> State.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> State.put(Model.Block, Model.block(index: {10, -1}, hash: key_block_hash))
 
@@ -47,7 +48,8 @@ defmodule AeMdw.StatsTest do
                   max_transactions_per_second: 16.05,
                   max_transactions_per_second_block_hash: ^enc_hash,
                   miners_count: 20,
-                  milliseconds_per_block: ^three_minutes
+                  milliseconds_per_block: ^three_minutes,
+                  holders_count: 20
                 }} = Stats.fetch_stats(state)
       end
     end

@@ -1104,7 +1104,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
   end
 
-  describe "aex141_transfers" do
+  describe "aex141_contract_transfers" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
       contract_id = encode_contract(@aex141_pk1)
 
@@ -1194,6 +1194,49 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> with_store(store)
                |> get("/v3/aex141/#{contract_id}/transfers", cursor: invalid_cursor)
                |> json_response(400)
+    end
+  end
+
+  describe "aex141_transfers" do
+    test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
+      assert %{"data" => aex141_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex141/transfers")
+               |> json_response(200)
+
+      assert @default_limit = length(aex141_transfers)
+
+      assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_aex141_transfers)
+
+      assert %{"data" => ^aex141_transfers} =
+               conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
+    end
+
+    test "when filtering by from/to, it gets aex141 transfers sorted by desc txi", %{
+      conn: conn,
+      store: store
+    } do
+      from_id = Enc.encode(:account_pubkey, @from_pk1)
+
+      assert %{"data" => aex141_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex141/transfers", from: from_id)
+               |> json_response(200)
+
+      assert @default_limit = length(aex141_transfers)
+
+      assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_aex141_transfers)
+
+      assert %{"data" => ^aex141_transfers} =
+               conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
     end
   end
 

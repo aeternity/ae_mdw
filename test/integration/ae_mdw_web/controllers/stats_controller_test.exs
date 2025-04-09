@@ -23,7 +23,9 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
       assert response["data"]
              |> Enum.zip(last_gen..0)
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+             |> Enum.all?(fn {%{"height" => height}, index} ->
+               height == index
+             end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)

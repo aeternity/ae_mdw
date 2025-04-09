@@ -13,7 +13,6 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
   alias AeMdw.Validate
-  alias AeMdw.Db.Util, as: DbUtil
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
   import AeMdw.Db.ModelFixtures, only: [new_name: 0]
@@ -2096,7 +2095,7 @@ defmodule AeMdwWeb.NameControllerTest do
       name = "no--such--name--in--the--chain.chain"
       error = "not found: #{name}"
 
-      with_mocks [{Name, [], [locate: fn _state, ^name -> nil end]}] do
+      with_mocks [{Name, [], [locate_name_or_auction: fn _state, ^name -> nil end]}] do
         assert %{"error" => ^error} = conn |> get("/v3/names/#{name}") |> json_response(404)
       end
     end
@@ -4026,11 +4025,11 @@ defmodule AeMdwWeb.NameControllerTest do
     |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: "mb2-hash"))
     |> Store.put(
       Model.NameClaim,
-      Model.name_claim(index: {plain_name, active_height, claim_txi_idx1})
+      Model.name_claim(index: {plain_name, active_height - 10, claim_txi_idx1})
     )
     |> Store.put(
       Model.NameClaim,
-      Model.name_claim(index: {plain_name, active_height, claim_txi_idx2})
+      Model.name_claim(index: {plain_name, active_height - 10, claim_txi_idx2})
     )
     |> Store.put(
       Model.NameClaim,

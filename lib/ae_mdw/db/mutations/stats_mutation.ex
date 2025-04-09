@@ -126,7 +126,16 @@ defmodule AeMdw.Db.StatsMutation do
       active_oracles: prev_active_oracles,
       contracts: prev_contracts,
       accounts: prev_accounts
-    ) = State.fetch!(state, Model.TotalStat, height)
+    ) =
+      state
+      |> State.get(Model.TotalStat, height)
+      |> case do
+        {:ok, total_stat} ->
+          total_stat
+
+        :not_found ->
+          Model.total_stat(active_auctions: 0, active_names: 0, active_oracles: 0, contracts: 0)
+      end
 
     current_active_names = State.count_keys(state, Model.ActiveName)
     current_active_auctions = State.count_keys(state, Model.AuctionExpiration)

@@ -53,9 +53,8 @@ defmodule AeMdw.Oracles do
   @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
           {:ok, {cursor() | nil, [oracle()], cursor() | nil}} | {:error, Error.t()}
   def fetch_oracles(state, pagination, range, query, cursor, opts) do
-    scope = deserialize_scope(range)
-
-    with {:ok, cursor} <- deserialize_cursor(cursor),
+    with {:ok, scope} <- deserialize_scope(range),
+         {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          {:ok, last_gen_time} <- DbUtil.last_gen_and_time(state) do
       filters
@@ -432,10 +431,13 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp deserialize_scope(nil), do: nil
+  defp deserialize_scope(nil), do: {:ok, nil}
 
   defp deserialize_scope({:gen, first_gen..last_gen//_step}),
-    do: {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
+    do: {:ok, {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}}
+
+  defp deserialize_scope(invalid_scope),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
 
   defp serialize_nested_cursor({{height, mbi}, {txi, idx}}),
     do: "#{height}-#{mbi}-#{txi}-#{idx + 1}"

@@ -3,6 +3,7 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
+  alias AeMdw.Db.RocksDbCF
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
@@ -37,6 +38,7 @@ defmodule AeMdw.Stats do
   @typep pagination() :: Collection.direction_limit()
   @typep pagination_cursor() :: Collection.pagination_cursor()
   @typep reason() :: Error.t()
+  @type miner :: map()
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
@@ -64,6 +66,7 @@ defmodule AeMdw.Stats do
   @aex9_holder_count_stat :aex9_holder_count
   @aex9_logs_count_stat :aex9_logs_count
   @aex141_count_stat :aex141_count
+  @holders_count_stat_key :holders_count
 
   @seconds_per_day 24 * 3_600
   @days_per_week 7
@@ -102,13 +105,16 @@ defmodule AeMdw.Stats do
   @spec nft_owners_count_key(pubkey()) :: {atom(), pubkey()}
   def nft_owners_count_key(contract_pk), do: {@nft_owners_count_stat, contract_pk}
 
+  @spec holders_count_key() :: atom()
+  def holders_count_key, do: @holders_count_stat_key
+
   @spec fetch_delta_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
   def fetch_delta_stats(state, direction, range, cursor, limit) do
     cursor = deserialize_cursor(cursor)
 
     with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
-         scope <- deserialize_scope(range, last_gen),
+         {:ok, scope} <- deserialize_scope(range, last_gen),
          {:ok, prev_cursor, range, next_cursor} <-
            Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
       {serialize_cursor(prev_cursor), render_delta_stats(state, range),
@@ -125,7 +131,7 @@ defmodule AeMdw.Stats do
     cursor = deserialize_cursor(cursor)
 
     with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
-         scope <- deserialize_scope(range, last_gen),
+         {:ok, scope} <- deserialize_scope(range, last_gen),
          {:ok, prev_cursor, range, next_cursor} <-
            Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
       {serialize_cursor(prev_cursor), render_total_stats(state, range),
@@ -140,7 +146,9 @@ defmodule AeMdw.Stats do
   def fetch_stats(state) do
     with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
            State.get(state, Model.Stat, @tps_stat_key),
-         {:ok, milliseconds_per_block} <- milliseconds_per_block(state) do
+         {:ok, milliseconds_per_block} <- milliseconds_per_block(state),
+         {:ok, Model.stat(index: @holders_count_stat_key, payload: holders_count)} <-
+           State.get(state, Model.Stat, @holders_count_stat_key) do
       {{last_24hs_txs_count, trend}, {last_24hs_tx_fees_average, fees_trend}} =
         last_24hs_txs_count_and_fee_with_trend(state)
 
@@ -152,7 +160,8 @@ defmodule AeMdw.Stats do
           transactions_trend: trend,
           last_24hs_average_transaction_fees: last_24hs_tx_fees_average,
           fees_trend: fees_trend,
-          milliseconds_per_block: milliseconds_per_block
+          milliseconds_per_block: milliseconds_per_block,
+          holders_count: holders_count
         }
 
       stats =
@@ -416,17 +425,15 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp generate_key_boundary(state, tag, filters, range) do
+  defp generate_key_boundary(state, tag, filters, scope) do
     interval_by = Map.get(filters, :interval_by, :day)
     {start_network_date, end_network_date} = DbUtil.network_date_interval(state)
     min_date = filters |> Map.get(:min_start_date, start_network_date) |> to_interval(interval_by)
     max_date = filters |> Map.get(:max_start_date, end_network_date) |> to_interval(interval_by)
 
     {min_date, max_date} =
-      if range do
-        {:gen, first_gen..last_gen//_step} = range
-        first_txi = DbUtil.first_gen_to_txi(state, first_gen)
-        last_txi = DbUtil.last_gen_to_txi(state, last_gen)
+      if scope do
+        {first_txi, last_txi} = scope_to_txi(state, scope)
 
         min_date =
           state
@@ -756,8 +763,11 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp deserialize_scope(nil, last_gen), do: {1, last_gen}
-  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {max(first, 1), last}
+  defp deserialize_scope(nil, last_gen), do: {:ok, {1, last_gen}}
+  defp deserialize_scope({:gen, first..last//_step}, _last_gen), do: {:ok, {max(first, 1), last}}
+
+  defp deserialize_scope({:txi, _range}, _last_gen),
+    do: {:error, ErrInput.Scope.exception(value: "can't use txi scope on gen-based resource")}
 
   defp fetch_last_tx_hash!(state, height) do
     case State.get(state, Model.Block, {height + 1, -1}) do
@@ -792,8 +802,8 @@ defmodule AeMdw.Stats do
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
          trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
          average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
-           average_tx_fees(state, tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago),
+           average_tx_fees(tx_index_24hs_ago, last_tx_index),
+         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago),
          fee_trend <-
            Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
       {{txs_count_24hs, trend}, {average_tx_fees_24hs, fee_trend}}
@@ -841,14 +851,13 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp average_tx_fees(state, start_txi, end_txi) do
+  defp average_tx_fees(start_txi, end_txi) do
     txs_count = end_txi - start_txi + 1
 
     if txs_count != 0 do
-      start_txi..end_txi
-      |> Enum.reduce(0, fn tx_index, acc ->
-        Model.tx(fee: fee) = State.fetch!(state, Model.Tx, tx_index)
-
+      Model.Tx
+      |> RocksDbCF.stream(key_boundary: {start_txi, end_txi})
+      |> Enum.reduce(0, fn Model.tx(fee: fee), acc ->
         acc + fee
       end)
       |> then(&(&1 / txs_count))
@@ -874,10 +883,37 @@ defmodule AeMdw.Stats do
     end
   end
 
+  @spec fetch_top_miners_24hs(State.t()) :: [miner()]
+  def fetch_top_miners_24hs(state) do
+    now = :aeu_time.now_in_msecs()
+    time_24h_ago = now - @seconds_per_day * 1_000
+    kb = {time_24h_ago, now}
+
+    state
+    |> Collection.stream(Model.KeyBlockTime, :backward, kb, nil)
+    |> Enum.reduce(%{}, fn index, acc ->
+      Model.key_block_time(miner: miner) = State.fetch!(state, Model.KeyBlockTime, index)
+      Map.update(acc, miner, 1, &(&1 + 1))
+    end)
+    |> Enum.map(&render_miner/1)
+  end
+
   defp get_last_key_block(gen) do
     case :aec_chain.get_key_block_by_height(gen) do
       {:ok, block} -> {:ok, block}
       {:error, :chain_too_short} -> :aec_chain.get_key_block_by_height(gen - 1)
     end
+  end
+
+  defp render_miner({miner, count}) do
+    %{miner: :aeapi.format_account_pubkey(miner), blocks_mined: count}
+  end
+
+  defp scope_to_txi(state, {:gen, first_gen..last_gen//_step}) do
+    {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
+  end
+
+  defp scope_to_txi(_state, {:txi, first_txi..last_txi//_step}) do
+    {first_txi, last_txi}
   end
 end

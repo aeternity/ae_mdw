@@ -31,7 +31,7 @@ defmodule AeMdw.Activities do
 
   @typep state() :: State.t()
   @typep pagination() :: Collection.direction_limit()
-  @typep range() :: {:gen, Range.t()} | nil
+  @typep scope() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep query() :: map()
   @typep cursor() :: binary() | nil
   @typep height() :: Blocks.height()
@@ -94,33 +94,16 @@ defmodule AeMdw.Activities do
   * `{{20, 14, 30}, {:aexn, type, <<address-1>>, <<address-2>>, value, index}}` - Where a aexn token of type `type` was send from address-1 to address-2 with the given `value` and `index`.
   * `{{30, -1, 2}, {:int_transfer, address, kind, ref_txi}}` - Where an internal transfer of kind `kind` occurred to the given `address`.
   """
-  @spec fetch_account_activities(state(), binary(), pagination(), range(), query(), cursor()) ::
+  @spec fetch_account_activities(state(), binary(), pagination(), scope(), query(), cursor()) ::
           {:ok, {activity() | nil, [activity()], activity() | nil}} | {:error, Error.t()}
-  def fetch_account_activities(state, account, pagination, range, query, cursor) do
+  def fetch_account_activities(state, account, pagination, scope, query, cursor) do
     with {:ok, account_pk} <- Validate.id(account),
          {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      {gen_scope, txi_scope} = deserialize_scope(state, scope)
+
       {prev_cursor, activities_locators_data, next_cursor} =
         fn direction ->
-          {gen_scope, txi_scope} =
-            case range do
-              {:gen, first_gen..last_gen//_step} ->
-                {
-                  {first_gen, last_gen},
-                  {DbUtil.first_gen_to_txi(state, first_gen),
-                   DbUtil.last_gen_to_txi(state, last_gen)}
-                }
-
-              {:txi, first_txi..last_txi//_step} ->
-                {
-                  {DbUtil.txi_to_gen(state, first_txi), DbUtil.txi_to_gen(state, last_txi)},
-                  {first_txi, last_txi}
-                }
-
-              nil ->
-                {nil, nil}
-            end
-
           {gen_cursor, txi_cursor, local_idx_cursor} =
             case cursor do
               {height, txi, local_idx} -> {height, txi, local_idx}
@@ -303,7 +286,7 @@ defmodule AeMdw.Activities do
   defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
     with {:ok, Model.plain_name(value: plain_name)} <-
            State.get(state, Model.PlainName, name_hash),
-         {_record, source} <- Name.locate(state, plain_name) do
+         {_record, source} <- Name.locate_name_or_auction(state, plain_name) do
       claims =
         case source do
           Model.AuctionBid ->
@@ -718,16 +701,16 @@ defmodule AeMdw.Activities do
 
   defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
     Model.tx(time: micro_time) = State.fetch!(state, Model.Tx, txi)
-    tx_type = :name_claim_tx
+    inner_tx_type = :name_claim_tx
 
-    {claim_aetx, ^tx_type, tx_hash, tx_type, _block_hash} =
+    {claim_aetx, ^inner_tx_type, tx_hash, _tx_type, _block_hash} =
       DbUtil.read_node_tx_details(state, {txi, local_idx})
 
     payload = %{
       micro_time: micro_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Node.tx_name(tx_type),
-      tx: Node.tx_mod(tx_type).for_client(claim_aetx)
+      source_tx_type: Node.tx_name(inner_tx_type),
+      tx: Node.tx_mod(inner_tx_type).for_client(claim_aetx)
     }
 
     {"NameClaimEvent", payload}
@@ -875,4 +858,20 @@ defmodule AeMdw.Activities do
   end
 
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
+
+  defp deserialize_scope(state, {:gen, first_gen..last_gen//_step}) do
+    {
+      {first_gen, last_gen},
+      {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
+    }
+  end
+
+  defp deserialize_scope(state, {:txi, first_txi..last_txi//_step}) do
+    {
+      {DbUtil.txi_to_gen(state, first_txi), DbUtil.txi_to_gen(state, last_txi)},
+      {first_txi, last_txi}
+    }
+  end
+
+  defp deserialize_scope(_state, nil), do: {nil, nil}
 end

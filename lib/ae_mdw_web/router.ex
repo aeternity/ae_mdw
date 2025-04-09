@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Router do
   alias AeMdwWeb.Plugs.DeprecationLoggerPlug
   alias AeMdwWeb.Plugs.JSONFormatterPlug
   alias AeMdwWeb.Plugs.RequestSpan
+  alias AeMdwWeb.Plugs.HyperchainPlug
   alias AeMdwWeb.Util
 
   pipeline :api do
@@ -25,6 +26,14 @@ defmodule AeMdwWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+  end
+
+  pipeline :hyperchain do
+    plug HyperchainPlug
+  end
+
+  pipeline :not_hyperchain do
+    plug HyperchainPlug, %{reverse?: true}
   end
 
   scope "/", AeMdwWeb do
@@ -101,7 +110,7 @@ defmodule AeMdwWeb.Router do
       get "/aex141/:contract_id/tokens/:token_id", Aex141Controller, :nft_owner
       get "/aex141/:contract_id/tokens", Aex141Controller, :collection_owners
       get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
-      get "/aex141/:contract_id/transfers", AexnTransferController, :aex141_transfers
+      get "/aex141/:contract_id/transfers", AexnTransferController, :aex141_contract_transfers
 
       get "/aex141/:contract_id/templates/:template_id/tokens",
           Aex141Controller,
@@ -112,23 +121,27 @@ defmodule AeMdwWeb.Router do
       get "/debug/dex/:contract_id/swaps", DexController, :debug_contract_swaps
       get "/wealth", WealthController, :wealth
 
-      get "/hyperchain/config", HyperchainController, :config
-      get "/hyperchain/schedule", HyperchainController, :schedule
-      get "/hyperchain/schedule/height/:height", HyperchainController, :schedule_at_height
-      get "/hyperchain/epochs", HyperchainController, :epochs
-      get "/hyperchain/epochs/top", HyperchainController, :epochs_top
-      get "/hyperchain/validators", HyperchainController, :validators
-      get "/hyperchain/validators/top", HyperchainController, :validators_top
+      scope "/hyperchain" do
+        pipe_through :hyperchain
 
-      get "/hyperchain/validators/:validator_id/delegates",
-          HyperchainController,
-          :validator_delegates
+        get "/config", HyperchainController, :config
+        get "/schedule", HyperchainController, :schedule
+        get "/schedule/height/:height", HyperchainController, :schedule_at_height
+        get "/epochs", HyperchainController, :epochs
+        get "/epochs/top", HyperchainController, :epochs_top
+        get "/validators", HyperchainController, :validators
+        get "/validators/top", HyperchainController, :validators_top
 
-      get "/hyperchain/validators/:validator_id/delegates/top",
-          HyperchainController,
-          :validator_delegates_top
+        get "/validators/:validator_id/delegates",
+            HyperchainController,
+            :validator_delegates
 
-      get "/hyperchain/validators/:validator_id", HyperchainController, :validator
+        get "/validators/:validator_id/delegates/top",
+            HyperchainController,
+            :validator_delegates_top
+
+        get "/validators/:validator_id", HyperchainController, :validator
+      end
 
       scope "/stats" do
         get "/transactions", StatsController, :transactions_stats
@@ -141,11 +154,17 @@ defmodule AeMdwWeb.Router do
         get "/names", StatsController, :names_stats
         get "/total", StatsController, :total_stats
         get "/delta", StatsController, :delta_stats
-        get "/miners", StatsController, :miners_stats
-        get "/miners/top", StatsController, :top_miners_stats
         get "/contracts", StatsController, :contracts_stats
         get "/aex9-transfers", StatsController, :aex9_transfers_stats
         get "/", StatsController, :stats
+
+        scope "/miners" do
+          pipe_through :not_hyperchain
+
+          get "/top", StatsController, :top_miners_stats
+          get "/top-24h", StatsController, :top_miners_24hs
+          get "/", StatsController, :miners_stats
+        end
       end
 
       get "/api", UtilController, :static_file,

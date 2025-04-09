@@ -1,10 +1,13 @@
 defmodule AeMdwWeb.StatsControllerTest do
+  alias AeMdw.Stats
   use AeMdwWeb.ConnCase, async: false
   import Mock
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.Db.RocksDbCF
+  alias AeMdw.Collection
 
   require Model
 
@@ -1104,6 +1107,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> add_transactions_every_5_hours(1, last_txi, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1119,6 +1123,17 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
+         end},
+        {RocksDbCF, [],
+         stream: fn
+           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
+             store
+             |> State.new()
+             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
+             |> Stream.map(fn index ->
+               {:ok, tx} = Store.get(store, Model.Tx, index)
+               tx
+             end)
          end}
       ]) do
         assert %{
@@ -1126,7 +1141,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => -0.25,
                  "fees_trend" => 0.21,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
@@ -1147,6 +1163,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> add_transactions_every_5_hours(1, 1, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1160,6 +1177,17 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
+         end},
+        {RocksDbCF, [],
+         stream: fn
+           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
+             store
+             |> State.new()
+             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
+             |> Stream.map(fn index ->
+               {:ok, tx} = Store.get(store, Model.Tx, index)
+               tx
+             end)
          end}
       ]) do
         assert %{
@@ -1167,7 +1195,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => 1.0,
                  "fees_trend" => +0.0,
                  "last_24hs_average_transaction_fees" => 1.0,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
@@ -1187,6 +1216,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         store
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
+        |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1207,7 +1237,8 @@ defmodule AeMdwWeb.StatsControllerTest do
                  "transactions_trend" => 0,
                  "fees_trend" => 0,
                  "last_24hs_average_transaction_fees" => 0,
-                 "milliseconds_per_block" => ^three_minutes
+                 "milliseconds_per_block" => ^three_minutes,
+                 "holders_count" => 3
                } =
                  conn
                  |> with_store(store)
@@ -1421,6 +1452,94 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+    end
+  end
+
+  describe "top miners for the last 24hs" do
+    setup %{conn: conn, store: store} do
+      now = :aeu_time.now_in_msecs()
+      second = 1_000
+      minute = 60 * second
+      hour = 60 * minute
+      day = 24 * hour
+      miner_ids = [<<1::256>>, <<2::256>>, <<3::256>>]
+      miner_pks = Enum.map(miner_ids, &:aeapi.format_account_pubkey/1)
+
+      miners = [
+        {now - second, Enum.at(miner_ids, 0)},
+        {now - minute, Enum.at(miner_ids, 1)},
+        {now - 30 * minute, Enum.at(miner_ids, 2)},
+        {now - hour, Enum.at(miner_ids, 0)},
+        {now - 2 * hour, Enum.at(miner_ids, 1)},
+        {now - 12 * hour, Enum.at(miner_ids, 2)},
+        {now - day, Enum.at(miner_ids, 0)},
+        {now - day + minute, Enum.at(miner_ids, 1)},
+        {now - day - minute, Enum.at(miner_ids, 2)},
+        {now - 2 * day + minute, Enum.at(miner_ids, 0)},
+        {now - 2 * day + hour, Enum.at(miner_ids, 1)},
+        {now - 2 * day + second, Enum.at(miner_ids, 2)},
+        {now - 3 * day, Enum.at(miner_ids, 1)}
+      ]
+
+      store =
+        Enum.reduce(miners, store, fn {time, miner}, store ->
+          store
+          |> Store.put(
+            Model.KeyBlockTime,
+            Model.key_block_time(index: time, miner: miner)
+          )
+        end)
+
+      conn = with_store(conn, store)
+
+      {:ok, %{store: store, conn: conn, now: now, miner_pks: miner_pks, day: day}}
+    end
+
+    test "it returns top miners for the last 24hs", %{conn: conn, now: now, miner_pks: miner_pks} do
+      with_mocks([{:aeu_time, [], now_in_msecs: fn -> now end}]) do
+        assert [st1, st2, st3] =
+                 conn
+                 |> get("/v3/stats/miners/top-24h")
+                 |> json_response(200)
+
+        [miner1, miner2, miner3] = miner_pks
+        assert %{"miner" => ^miner1, "blocks_mined" => 3} = st1
+        assert %{"miner" => ^miner2, "blocks_mined" => 3} = st2
+        assert %{"miner" => ^miner3, "blocks_mined" => 2} = st3
+      end
+    end
+
+    test "it returns top miners for the last 24hs when no mined blocks (mdw out of sync)", %{
+      conn: conn,
+      now: now,
+      day: day
+    } do
+      with_mocks([{:aeu_time, [], now_in_msecs: fn -> now + day end}]) do
+        assert [] =
+                 conn
+                 |> get("/v3/stats/miners/top-24h")
+                 |> json_response(200)
+      end
+    end
+
+    test "it returns top miners for the last 24hs, but there are blocks in the future", %{
+      conn: conn,
+      now: now,
+      miner_pks: miner_pks,
+      day: day
+    } do
+      with_mocks([{:aeu_time, [], now_in_msecs: fn -> now - day end}]) do
+        assert [st1, st2, st3] =
+                 conn
+                 |> get("/v3/stats/miners/top-24h")
+                 |> json_response(200)
+
+        [miner1, miner2, miner3] = miner_pks
+
+        assert %{"miner" => ^miner1, "blocks_mined" => 2} = st1
+        assert %{"miner" => ^miner2, "blocks_mined" => 1} = st2
+        assert %{"miner" => ^miner3, "blocks_mined" => 2} = st3
+      end
     end
   end
 

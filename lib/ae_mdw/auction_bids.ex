@@ -55,12 +55,9 @@ defmodule AeMdw.AuctionBids do
 
   @spec fetch_auction(state(), binary(), opts()) :: {:ok, Names.claim()} | {:error, Error.t()}
   def fetch_auction(state, plain_name, opts) do
-    case Name.locate(state, plain_name) do
-      {Model.auction_bid(index: plain_name, start_height: _start_height), Model.AuctionBid} ->
+    case Name.locate_bid(state, plain_name) do
+      Model.auction_bid(index: plain_name, start_height: _start_height) ->
         AuctionBids.fetch(state, plain_name, opts)
-
-      {Model.name(), _active_or_inactive} ->
-        {:error, ErrInput.NotFound.exception(value: plain_name)}
 
       nil ->
         {:error, ErrInput.NotFound.exception(value: plain_name)}

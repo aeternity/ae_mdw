@@ -5,7 +5,7 @@ defmodule AeMdw.MixProject do
   def project() do
     [
       app: :ae_mdw,
-      version: "1.100.0",
+      version: "1.104.0",
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -99,6 +99,7 @@ defmodule AeMdw.MixProject do
           :aetx_sign,
           :aeu_env,
           :aeu_info,
+          :aeu_logging_env,
           :aeu_mtrees,
           :aeu_time,
           :app_ctrl,

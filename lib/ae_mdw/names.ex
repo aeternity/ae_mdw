@@ -46,7 +46,7 @@ defmodule AeMdw.Names do
   @typep state() :: State.t()
   @typep order_by :: :expiration | :name
   @typep pagination :: Collection.direction_limit()
-  @typep range :: {:gen, Range.t()} | nil
+  @typep scope() :: {:gen, Range.t()} | nil | {:txi, Range.t()}
   @typep lifecycle() :: :active | :inactive | :auction
   @typep prefix() :: plain_name()
   @typep opts() :: Util.opts()
@@ -78,19 +78,19 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
+  @spec fetch_names(state(), pagination(), scope(), order_by(), query(), cursor() | nil, opts()) ::
           {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
-  def fetch_names(state, pagination, range, order_by, query, cursor, opts)
+  def fetch_names(state, pagination, scope, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
-    scope = deserialize_scope(range)
 
-    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+    with {:ok, key_boundary} <- deserialize_scope(scope),
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          :ok <- validate_height_filters(filters, order_by),
          {:ok, last_micro_time} <- DbUtil.last_gen_and_time(state) do
       paginated_names =
         filters
-        |> build_height_streamer(state, order_by, scope, cursor)
+        |> build_height_streamer(state, order_by, key_boundary, cursor)
         |> Collection.paginate(
           pagination,
           &render_exp_height_name(state, &1, last_micro_time, opts),
@@ -166,35 +166,52 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
+  @spec fetch_name_claims(state(), binary(), pagination(), scope(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {plain_name, nested_table, height} =
+      {plain_name, table} =
         case name_or_auction do
-          Model.name(index: plain_name, active: active) ->
-            {plain_name, Model.NameClaim, active}
+          Model.name(index: plain_name) ->
+            {plain_name, Model.NameClaim}
 
-          Model.auction_bid(index: plain_name, start_height: start_height) ->
-            {plain_name, Model.AuctionBidClaim, start_height}
+          Model.auction_bid(index: plain_name) ->
+            {plain_name, Model.AuctionBidClaim}
+        end
+
+      key_boundary =
+        case scope do
+          nil ->
+            Collection.generate_key_boundary(
+              {plain_name, Collection.integer(), {Collection.integer(), Collection.integer()}}
+            )
+
+          {:gen, first_gen..last_gen//_step} ->
+            {
+              {plain_name, first_gen, {DbUtil.first_gen_to_txi(state, first_gen), @min_int}},
+              {plain_name, last_gen, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}}
+            }
+        end
+
+      cursor =
+        case deserialize_name_claims_cursor(cursor) do
+          nil -> nil
+          {height, txi_idx} -> {plain_name, height, txi_idx}
         end
 
       {prev_cursor, claims, next_cursor} =
-        paginate_nested_resource(
-          state,
-          nested_table,
-          plain_name,
-          height,
-          scope,
-          cursor,
-          pagination
-        )
+        fn direction ->
+          state
+          |> Collection.stream(table, direction, key_boundary, cursor)
+          |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+        end
+        |> Collection.paginate(pagination, & &1, &serialize_name_claims_cursor/1)
 
       {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
     end
   end
 
-  @spec fetch_auction_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
+  @spec fetch_auction_claims(state(), binary(), pagination(), scope(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     case locate_name_or_auction(state, plain_name_or_hash) do
@@ -220,7 +237,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_updates(state(), binary(), pagination(), range(), cursor()) ::
+  @spec fetch_name_updates(state(), binary(), pagination(), scope(), cursor()) ::
           {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_updates(state, plain_name_or_hash, pagination, scope, cursor) do
     case locate_name_or_auction(state, plain_name_or_hash) do
@@ -246,7 +263,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_transfers(state(), binary(), pagination(), range(), cursor() | nil) ::
+  @spec fetch_name_transfers(state(), binary(), pagination(), scope(), cursor() | nil) ::
           {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_transfers(state, plain_name_or_hash, pagination, scope, cursor) do
     case locate_name_or_auction(state, plain_name_or_hash) do
@@ -272,26 +289,12 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_pointees(state(), binary(), pagination(), range(), cursor()) ::
+  @spec fetch_pointees(state(), binary(), pagination(), scope(), cursor()) ::
           {:ok, {page_cursor(), [pointee()], page_cursor()}} | {:error, reason()}
   def fetch_pointees(state, account_id, pagination, scope, cursor) do
     with {:ok, account_pk} <- Validate.id(account_id),
-         {:ok, cursor} <- deserialize_pointees_cursor(account_pk, cursor) do
-      scope =
-        case scope do
-          nil ->
-            {
-              {account_pk, {{@min_int, -1}, {-1, -1}}, <<>>},
-              {account_pk, {{@max_int, -1}, {-1, -1}}, <<>>}
-            }
-
-          {:gen, gen_start..gen_end//_step} ->
-            {
-              {account_pk, {{gen_start, @min_int}, {-1, -1}}, <<>>},
-              {account_pk, {{gen_end, @max_int}, {-1, -1}}, <<>>}
-            }
-        end
-
+         {:ok, cursor} <- deserialize_pointees_cursor(account_pk, cursor),
+         {:ok, scope} <- deserialize_pointees_scope(account_pk, scope) do
       paginated_pointees =
         (&Collection.stream(state, @table_pointees, &1, scope, cursor))
         |> Collection.paginate(
@@ -342,7 +345,7 @@ defmodule AeMdw.Names do
     )
   end
 
-  @spec fetch_account_claims(state(), Db.pubkey(), pagination(), range(), cursor()) ::
+  @spec fetch_account_claims(state(), Db.pubkey(), pagination(), scope(), cursor()) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, reason()}
   def fetch_account_claims(state, owner_pk, pagination, scope, cursor) do
     with {:ok, account_id} <- Validate.id(owner_pk),
@@ -868,20 +871,7 @@ defmodule AeMdw.Names do
          cursor,
          pagination
        ) do
-    key_boundary =
-      case scope do
-        nil ->
-          {
-            {plain_name, nested_height, {@min_int, @min_int}},
-            {plain_name, nested_height, {@max_int, @max_int}}
-          }
-
-        {:gen, first_gen..last_gen//_step} ->
-          {
-            {plain_name, nested_height, {DbUtil.first_gen_to_txi(state, first_gen), @min_int}},
-            {plain_name, nested_height, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}}
-          }
-      end
+    key_boundary = deserialize_nested_scope(state, plain_name, nested_height, scope)
 
     cursor =
       case deserialize_nested_cursor(cursor) do
@@ -977,10 +967,51 @@ defmodule AeMdw.Names do
   defp serialize_owner_deactivation_cursor(owner_pk, {gen, name}), do: {owner_pk, gen, name}
 
   defp deserialize_scope({:gen, first_gen..last_gen//_step}) do
-    {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
+    {:ok, {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}}
   end
 
-  defp deserialize_scope(_nil_or_txis_scope), do: nil
+  defp deserialize_scope(nil), do: {:ok, nil}
+
+  defp deserialize_scope(invalid_scope),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
+
+  defp deserialize_pointees_scope(account_pk, {:gen, first_gen..last_gen//_step}) do
+    {:ok,
+     {
+       {account_pk, {{first_gen, @min_int}, {-1, -1}}, <<>>},
+       {account_pk, {{last_gen, @max_int}, {-1, -1}}, <<>>}
+     }}
+  end
+
+  defp deserialize_pointees_scope(account_pk, nil),
+    do:
+      {:ok,
+       {
+         {account_pk, {{@min_int, -1}, {-1, -1}}, <<>>},
+         {account_pk, {{@max_int, -1}, {-1, -1}}, <<>>}
+       }}
+
+  defp deserialize_pointees_scope(_account_pk, invalid_scope),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
+
+  defp deserialize_nested_scope(
+         state,
+         plain_name,
+         nested_height,
+         {:gen, first_gen..last_gen//_step}
+       ) do
+    {
+      {plain_name, nested_height, {DbUtil.first_gen_to_txi(state, first_gen), @min_int}},
+      {plain_name, nested_height, {DbUtil.last_gen_to_txi(state, last_gen), @max_int}}
+    }
+  end
+
+  defp deserialize_nested_scope(_state, plain_name, nested_height, _scope) do
+    {
+      {plain_name, nested_height, {@min_int, @min_int}},
+      {plain_name, nested_height, {@max_int, @max_int}}
+    }
+  end
 
   defp convert_param({"owned_by", account_id}) when is_binary(account_id) do
     with {:ok, pubkey} <- Validate.id(account_id, [:account_pubkey]) do
@@ -1015,7 +1046,7 @@ defmodule AeMdw.Names do
         _no_hash -> plain_name_or_hash
       end
 
-    case Name.locate(state, plain_name) do
+    case Name.locate_name_or_auction(state, plain_name) do
       {name_or_auction, source} -> {:ok, name_or_auction, source}
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
     end
@@ -1046,6 +1077,23 @@ defmodule AeMdw.Names do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
+  defp serialize_name_claims_cursor({height, {txi, idx}, _table}) do
+    {height, {txi, idx}}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
+  end
+
+  defp deserialize_name_claims_cursor(nil), do: nil
+
+  defp deserialize_name_claims_cursor(cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
+         {_height, {_txi, _idx}} = cursor <- :erlang.binary_to_term(cursor_bin) do
+      cursor
+    else
+      _invalid -> nil
     end
   end
 
@@ -1147,11 +1195,6 @@ defmodule AeMdw.Names do
 
     key_boundary =
       case scope do
-        nil ->
-          Collection.generate_key_boundary(
-            {account_id, "AENS.claim", tx_field_pos, Collection.integer(), Collection.integer()}
-          )
-
         {:gen, first_gen..last_gen//_step} ->
           Collection.generate_key_boundary(
             {account_id, "AENS.claim", tx_field_pos,
@@ -1159,6 +1202,11 @@ defmodule AeMdw.Names do
                DbUtil.first_gen_to_txi(state, first_gen),
                DbUtil.last_gen_to_txi(state, last_gen)
              ), Collection.integer()}
+          )
+
+        _other_scope ->
+          Collection.generate_key_boundary(
+            {account_id, "AENS.claim", tx_field_pos, Collection.integer(), Collection.integer()}
           )
       end
 
@@ -1181,11 +1229,6 @@ defmodule AeMdw.Names do
 
     key_boundary =
       case scope do
-        nil ->
-          Collection.generate_key_boundary(
-            {:name_claim_tx, tx_field_pos, account_id, Collection.integer()}
-          )
-
         {:gen, first_gen..last_gen//_step} ->
           Collection.generate_key_boundary(
             {:name_claim_tx, tx_field_pos, account_id,
@@ -1193,6 +1236,11 @@ defmodule AeMdw.Names do
                DbUtil.first_gen_to_txi(state, first_gen),
                DbUtil.last_gen_to_txi(state, last_gen)
              )}
+          )
+
+        _other_scope ->
+          Collection.generate_key_boundary(
+            {:name_claim_tx, tx_field_pos, account_id, Collection.integer()}
           )
       end
 

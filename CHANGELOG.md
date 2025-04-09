@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.104.0](https://github.com/aeternity/ae_mdw/compare/v1.103.0...v1.104.0) (2025-04-07)
+
+
+### Features
+
+* add holders count to stats endpoint ([#2126](https://github.com/aeternity/ae_mdw/issues/2126)) ([a9b65f2](https://github.com/aeternity/ae_mdw/commit/a9b65f24b3bc19b9d03e6b3a462d28b301e8905c))
+
+
+### Bug Fixes
+
+* stream txs instead of fetching each in stats endpoint ([#2132](https://github.com/aeternity/ae_mdw/issues/2132)) ([6ff7961](https://github.com/aeternity/ae_mdw/commit/6ff796114cde3a816ac87d6a0bcccbb518d9243d))
+
+## [1.103.0](https://github.com/aeternity/ae_mdw/compare/v1.102.0...v1.103.0) (2025-03-27)
+
+
+### Features
+
+* add ENV var to configure log file path ([#2127](https://github.com/aeternity/ae_mdw/issues/2127)) ([1112d7c](https://github.com/aeternity/ae_mdw/commit/1112d7c5f4a594e2a4803da6f3bc99a0d59da5d2))
+* add top miners for the last actual 24hs ([#2111](https://github.com/aeternity/ae_mdw/issues/2111)) ([eecace6](https://github.com/aeternity/ae_mdw/commit/eecace68a5152b0341a8d64dcf6576d91a0f645f))
+* validate or handle scope parameter on all endpoints ([#2122](https://github.com/aeternity/ae_mdw/issues/2122)) ([256e873](https://github.com/aeternity/ae_mdw/commit/256e873043584e3bc75ceb457faeb7285a41a511))
+
+
+### Bug Fixes
+
+* handle names that are both inactive and in auction on names endpoint ([#2123](https://github.com/aeternity/ae_mdw/issues/2123)) ([ded2de7](https://github.com/aeternity/ae_mdw/commit/ded2de7db62d94876d46ea4f324ad48c52ff5d51))
+* implement standalone /aex141/transfers for when there is no contract ([#2117](https://github.com/aeternity/ae_mdw/issues/2117)) ([9ebdf6d](https://github.com/aeternity/ae_mdw/commit/9ebdf6d26d697db6c52e0455ed56de28b99d8efa))
+* make the claims endpoint return all claims instead of just from last auction ([#2120](https://github.com/aeternity/ae_mdw/issues/2120)) ([4c6667c](https://github.com/aeternity/ae_mdw/commit/4c6667ccf5c6ff2c86109f834b66ceadae0f8bde))
+
+## [1.102.0](https://github.com/aeternity/ae_mdw/compare/v1.101.0...v1.102.0) (2025-03-11)
+
+### Bug Fixes
+
+* activities crashing when there is a name created by a contract call ([#2116](https://github.com/aeternity/ae_mdw/issues/2116)) ([092ab54](https://github.com/aeternity/ae_mdw/commit/092ab5491767e81ba9aeb741e8f8d6777f8beb69))
+
+
+### Miscellaneous
+
+* move the hyperchains into their own scope and fix message ([#2112](https://github.com/aeternity/ae_mdw/issues/2112)) ([0dd63dc](https://github.com/aeternity/ae_mdw/commit/0dd63dca35ea098e824bfea00c4f25699f4fb1af))
+
+## [1.101.0](https://github.com/aeternity/ae_mdw/compare/v1.100.0...v1.101.0) (2025-03-05)
+
+### Features
+
+* add hyperchain/config endpoint to read aeternity.yaml settings ([#2106](https://github.com/aeternity/ae_mdw/issues/2106)) ([205fb1a](https://github.com/aeternity/ae_mdw/commit/205fb1a398fa2d4801b94e972e2c0e93f94c6bf3))
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086)) ([249791d](https://github.com/aeternity/ae_mdw/commit/249791d65798927ea9b42e15879b069ee176173a))
+
+
+### Miscellaneous
+
+* make docker paths the same as in the node images ([#2086](https://github.com/aeternity/ae_mdw/issues/2086))
+* bump node to 7.3.0-rc5 ([#2110](https://github.com/aeternity/ae_mdw/issues/2110)) ([6c48030](https://github.com/aeternity/ae_mdw/commit/6c4803060da8a4b6e552545f7ecf7fab8bc95ca2))
+* remove deprecated poorly performant /by_names endpoint ([#2103](https://github.com/aeternity/ae_mdw/issues/2103)) ([87a26fc](https://github.com/aeternity/ae_mdw/commit/87a26fc5e4086c875c2d32462cdb33e35c3d28c6))
+* update docker OS versions to fix docker multiarch pipeline build ([#2108](https://github.com/aeternity/ae_mdw/issues/2108)) ([9bda7ab](https://github.com/aeternity/ae_mdw/commit/9bda7ab1cce791d11661e09d02cf3cf99db2843d))
+
 ## [1.100.0](https://github.com/aeternity/ae_mdw/compare/v1.99.0...v1.100.0) (2025-02-20)
 
 

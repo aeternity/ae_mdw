@@ -141,6 +141,21 @@ defmodule AeMdw.Db.Model do
             hash: Blocks.block_hash()
           )
 
+  # key block time index :
+  #     index = kb_time_msecs (0..)
+  #     height = kb_height
+  #     miner = miner pubkey
+  @key_block_time_defaults [index: -1, height: -1, miner: nil]
+  defrecord :key_block_time, @key_block_time_defaults
+
+  @type key_block_time_index() :: non_neg_integer()
+  @type key_block_time() ::
+          record(:key_block_time,
+            index: key_block_time_index(),
+            height: Blocks.height(),
+            miner: pubkey()
+          )
+
   # txs table :
   #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi} time = time, fee = fee
   @tx_defaults [index: nil, id: nil, block_index: nil, time: nil, fee: nil]
@@ -1416,6 +1431,7 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.Tx,
       AeMdw.Db.Model.Block,
+      AeMdw.Db.Model.KeyBlockTime,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
       AeMdw.Db.Model.InnerType,
@@ -1574,6 +1590,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
   def record(AeMdw.Db.Model.Block), do: :block
+  def record(AeMdw.Db.Model.KeyBlockTime), do: :key_block_time
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
   def record(AeMdw.Db.Model.InnerType), do: :type
