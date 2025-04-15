@@ -112,6 +112,29 @@ defmodule AeMdw.Db.Model do
             count: non_neg_integer()
           )
 
+  @account_counter_defaults [
+    index: nil,
+    txs: 0,
+    activities: 0,
+    names: 0,
+    tokens: 0,
+    aex9: 0,
+    aex141: 0
+  ]
+  defrecord :account_counter, @account_counter_defaults
+
+  @type account_counter_index() :: pubkey()
+  @type account_counter() ::
+          record(:account_counter,
+            index: account_counter_index(),
+            txs: non_neg_integer(),
+            activities: non_neg_integer(),
+            names: non_neg_integer(),
+            tokens: non_neg_integer(),
+            aex9: non_neg_integer(),
+            aex141: non_neg_integer()
+          )
+
   @account_creation_defaults [index: nil, creation_time: 0]
   defrecord :account_creation, @account_creation_defaults
 
@@ -1440,7 +1463,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IntTransferTx,
       AeMdw.Db.Model.KindIntTransferTx,
       AeMdw.Db.Model.TargetKindIntTransferTx,
-      AeMdw.Db.Model.Miner
+      AeMdw.Db.Model.Miner,
+      AeMdw.Db.Model.AccountCounter
     ]
   end
 
@@ -1681,6 +1705,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
+  def record(AeMdw.Db.Model.AccountCounter), do: :account_counter
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair
   def record(AeMdw.Db.Model.DexTokenSymbol), do: :dex_token_symbol

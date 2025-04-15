@@ -44,29 +44,44 @@ defmodule AeMdw.Db.WriteFieldsMutation do
         %__MODULE__{type: tx_type, tx: tx, block_index: block_index, txi: txi, wrap_tx: wrap_tx},
         state
       ) do
-    tx_type
-    |> Node.tx_ids()
-    |> Enum.map(fn {field, pos} ->
-      pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
-      field_pos = Fields.field_pos_mask(wrap_tx, pos)
-      {tx_type, pos} = if wrap_tx, do: {wrap_tx, field_pos}, else: {tx_type, pos}
+    pk_pos_tx_types =
+      tx_type
+      |> Node.tx_ids()
+      |> Enum.map(fn {field, pos} ->
+        pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
+        field_pos = Fields.field_pos_mask(wrap_tx, pos)
+        {tx_type, pos} = if wrap_tx, do: {wrap_tx, field_pos}, else: {tx_type, pos}
 
-      {tx_type, pos, pk}
-    end)
-    |> Enum.group_by(fn {_tx_type, _pos, pk} -> pk end)
-    |> Enum.flat_map(fn {pk, field_indexes} ->
-      is_repeated? = length(field_indexes) > 1
-
-      Enum.map(field_indexes, fn {tx_type, pos, ^pk} ->
-        {tx_type, pos, pk, is_repeated?}
+        {tx_type, pos, pk}
       end)
-    end)
-    |> Enum.reduce(state, fn {tx_type, pos, pk, is_repeated?}, state ->
-      m_field = Model.field(index: {tx_type, pos, pk, txi})
+      |> Enum.group_by(fn {_tx_type, _pos, pk} -> pk end)
 
-      state
-      |> State.put(Model.Field, m_field)
-      |> IdCounter.incr_count(tx_type, pos, pk, is_repeated?)
+    state =
+      pk_pos_tx_types
+      |> Enum.flat_map(fn {pk, field_indexes} ->
+        is_repeated? = length(field_indexes) > 1
+
+        Enum.map(field_indexes, fn {tx_type, pos, ^pk} ->
+          {tx_type, pos, pk, is_repeated?}
+        end)
+      end)
+      |> Enum.reduce(state, fn {tx_type, pos, pk, is_repeated?}, state ->
+        m_field = Model.field(index: {tx_type, pos, pk, txi})
+
+        state
+        |> State.put(Model.Field, m_field)
+        |> IdCounter.incr_count(tx_type, pos, pk, is_repeated?)
+      end)
+
+    pk_pos_tx_types
+    |> Enum.map(fn {pk, _tx_type_pos} ->
+      pk
+    end)
+    |> Enum.uniq()
+    |> Enum.reduce(state, fn pk, acc_state ->
+      acc_state
+      |> IdCounter.incr_account_tx_count(pk)
+      |> IdCounter.incr_account_activities_count(pk)
     end)
   end
 

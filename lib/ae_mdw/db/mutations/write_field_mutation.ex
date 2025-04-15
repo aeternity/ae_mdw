@@ -37,5 +37,7 @@ defmodule AeMdw.Db.WriteFieldMutation do
     state
     |> State.put(Model.Field, m_field)
     |> IdCounter.incr_count(tx_type, pos, pubkey, false)
+    |> IdCounter.incr_account_tx_count(pubkey)
+    |> IdCounter.incr_account_activities_count(pubkey)
   end
 end

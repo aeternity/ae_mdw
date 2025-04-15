@@ -3,6 +3,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   Processes name_claim_tx.
   """
 
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Blocks
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
@@ -88,7 +89,10 @@ defmodule AeMdw.Db.NameClaimMutation do
       ) do
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
 
-    state2 = State.put(state, Model.PlainName, m_plain_name)
+    state2 =
+      state
+      |> State.put(Model.PlainName, m_plain_name)
+      |> IdCounter.incr_account_activities_count(owner_pk)
 
     timeout = :aec_governance.name_claim_bid_timeout(plain_name, protocol_version)
 
