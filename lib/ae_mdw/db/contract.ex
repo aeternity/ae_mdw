@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Contract do
   Data access to read and write Contract related models.
   """
 
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Aex9
   alias AeMdw.AexnContracts
   alias AeMdw.Collection
@@ -115,7 +116,10 @@ defmodule AeMdw.Db.Contract do
   def aex9_write_presence(state, contract_pk, txi, account_pk) do
     m_acc_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
 
-    State.put(state, Model.Aex9AccountPresence, m_acc_presence)
+    state
+    |> State.put(Model.Aex9AccountPresence, m_acc_presence)
+    |> IdCounter.incr_account_aex9_count(account_pk)
+    |> IdCounter.incr_account_activities_count(account_pk)
   end
 
   @spec aex9_burn_update_holders(state(), pubkey(), integer(), txi()) :: state()
@@ -168,7 +172,9 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
   def aex9_delete_presence(state, account_pk, contract_pk) do
     if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
-      State.delete(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
+      state
+      |> State.delete(Model.Aex9AccountPresence, {account_pk, contract_pk})
+      |> IdCounter.decr_account_aex9_count(account_pk)
     else
       state
     end
@@ -483,6 +489,8 @@ defmodule AeMdw.Db.Contract do
               amounts: amounts
             )
           )
+          |> IdCounter.incr_account_activities_count(from)
+          |> IdCounter.incr_account_activities_count(to)
           |> State.put(
             Model.DexContractSwapTokens,
             Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
@@ -671,6 +679,8 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.NftOwnership, m_ownership)
     |> State.put(Model.NftOwnerToken, m_owner_token)
     |> State.put(Model.NftTokenOwner, m_token_owner)
+    |> IdCounter.incr_account_aex141_count(to_pk)
+    |> IdCounter.incr_account_activities_count(to_pk)
   end
 
   defp write_aex9_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args) do
@@ -799,6 +809,7 @@ defmodule AeMdw.Db.Contract do
       |> State.delete(Model.NftOwnership, {prev_owner_pk, contract_pk, token_id})
       |> State.delete(Model.NftOwnerToken, {contract_pk, prev_owner_pk, token_id})
       |> State.delete(Model.NftTokenOwner, {contract_pk, token_id})
+      |> IdCounter.decr_account_aex141_count(prev_owner_pk)
     else
       state
     end
@@ -875,6 +886,10 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> IdCounter.incr_account_activities_count(to_pk)
+    |> IdCounter.incr_account_activities_count(from_pk)
+    |> IdCounter.decr_account_aex9_count(from_pk)
+    |> IdCounter.incr_account_aex9_count(to_pk)
     |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
     |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
   end
@@ -921,6 +936,8 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> IdCounter.incr_account_activities_count(from_pk)
+    |> IdCounter.decr_account_aex9_count(from_pk)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
     |> aex9_burn_update_holders(contract_pk, new_amount, txi)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
@@ -955,6 +972,8 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9EventBalance, m_to)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
+    |> IdCounter.incr_account_activities_count(to_pk)
+    |> IdCounter.incr_account_aex9_count(to_pk)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)

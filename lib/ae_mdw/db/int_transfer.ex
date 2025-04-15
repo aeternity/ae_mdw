@@ -3,6 +3,7 @@ defmodule AeMdw.Db.IntTransfer do
   Writes internal transfers to the database.
   """
 
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Blocks
   alias AeMdw.Txs
   alias AeMdw.Db.Model
@@ -129,6 +130,7 @@ defmodule AeMdw.Db.IntTransfer do
     |> State.put(Model.IntTransferTx, int_tx)
     |> State.put(Model.KindIntTransferTx, kind_tx)
     |> State.put(Model.TargetKindIntTransferTx, target_kind_tx)
+    |> IdCounter.incr_account_activities_count(target_pk)
   end
 
   @spec read_block_reward(State.t(), Blocks.height()) :: pos_integer()
