@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.2](https://github.com/aeternity/ae_mdw/compare/v1.104.1...v1.104.2) (2025-04-16)
+
+
+### Bug Fixes
+
+* make invalid aexn tokens display with invalid flag instead of just error ([#2135](https://github.com/aeternity/ae_mdw/issues/2135)) ([0dee0e6](https://github.com/aeternity/ae_mdw/commit/0dee0e6cd10773173e051f822594f22706c9ffb9))
+
 ## [1.104.1](https://github.com/aeternity/ae_mdw/compare/v1.104.0...v1.104.1) (2025-04-09)
 
 
