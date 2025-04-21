@@ -13,7 +13,7 @@ defmodule AeMdw.Migrations.AddAccountCounts do
   require Logger
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
-  def run(_state, _from_start?) do
+  def run(state, _from_start?) do
     account_int_transfers =
       Model.TargetKindIntTransferTx
       |> RocksDbCF.stream()
@@ -169,7 +169,7 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         end)
       end)
       |> Stream.dedup_by(fn {txi, _account_pk} -> txi end)
-      |> Enum.reduce(%{}, fn {txi, account_pk}, acc ->
+      |> Enum.reduce(%{}, fn {_txi, account_pk}, acc ->
         Map.update(acc, account_pk, 1, &(&1 + 1))
       end)
 
