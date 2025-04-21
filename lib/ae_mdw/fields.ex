@@ -75,7 +75,8 @@ defmodule AeMdw.Fields do
   @spec mdw_field_pos(String.t()) :: pos()
   def mdw_field_pos("entrypoint"), do: @base_mdw_field_pos
 
-  defp tx_types_pos do
+  @spec tx_types_pos() :: [{Node.tx_type(), pos()}]
+  def tx_types_pos do
     Node.tx_types()
     |> Enum.flat_map(fn tx_type ->
       types_pos =
@@ -89,5 +90,10 @@ defmodule AeMdw.Fields do
         types_pos
       end
     end)
+  end
+
+  @spec non_owner_fields() :: [{Node.tx_type(), pos()}]
+  def non_owner_fields do
+    @non_owner_fields
   end
 end
