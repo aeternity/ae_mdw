@@ -2,7 +2,7 @@ defmodule AeMdw.Migrations.AddAccountCounts do
   @moduledoc false
   alias AeMdw.Collection
   alias AeMdw.Validate
-  # alias AeMdw.Db.Sync.IdCounter
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Collection
   alias AeMdw.Fields
   alias AeMdw.Db.Model
@@ -14,19 +14,19 @@ defmodule AeMdw.Migrations.AddAccountCounts do
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    account_int_transfers =
+    {account_int_transfers_count, state1} =
       Model.TargetKindIntTransferTx
       |> RocksDbCF.stream()
-      |> Enum.reduce(%{}, fn Model.target_kind_int_transfer_tx(
-                               index: {account_id, _kind, _block_index, _opt_ref_txi}
-                             ),
-                             acc ->
-        Map.update(acc, account_id, 1, &(&1 + 1))
+      |> Enum.reduce({0, state}, fn Model.target_kind_int_transfer_tx(
+                                      index: {account_id, _kind, _block_index, _opt_ref_txi}
+                                    ),
+                                    {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, account_id)}
       end)
 
-    Logger.info("Accounts with int transfers: #{map_size(account_int_transfers)}")
+    Logger.info("Accounts with int transfers: #{account_int_transfers_count}")
 
-    account_int_contract_calls =
+    {account_int_contract_calls_count, state2} =
       Model.IdIntContractCall
       |> RocksDbCF.stream()
       |> Stream.filter(fn Model.id_int_contract_call(
@@ -48,11 +48,11 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         {{call_txi, local_idx}, account_pk}
       end)
       |> Stream.dedup_by(fn {{txi, local_idx}, _account_pk} -> {txi, local_idx} end)
-      |> Enum.reduce(%{}, fn {{_txi, _local_idx}, account_pk}, acc ->
-        Map.update(acc, account_pk, 1, &(&1 + 1))
+      |> Enum.reduce({0, state1}, fn {{_txi, _local_idx}, account_pk}, {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, account_pk)}
       end)
 
-    Logger.info("Accounts with int contract calls: #{map_size(account_int_contract_calls)}")
+    Logger.info("Accounts with int contract calls: #{account_int_contract_calls_count}")
 
     aexn_transfers_activity_stream =
       Model.AexnTransfer
@@ -72,17 +72,17 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         [{call_txi, from_pk}, {call_txi, to_pk}]
       end)
 
-    aexn_transfers_activity =
+    {aexn_transfers_activity_count, state3} =
       [aexn_transfers_activity_stream, rev_aexn_transfers_activity_stream]
       |> Collection.merge(:forward)
       |> Stream.dedup_by(fn {txi, _account_pk} -> txi end)
-      |> Enum.reduce(%{}, fn {_txi, account_pk}, acc ->
-        Map.update(acc, account_pk, 1, &(&1 + 1))
+      |> Enum.reduce({0, state2}, fn {_txi, account_pk}, {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, account_pk)}
       end)
 
-    Logger.info("Accounts with AEX9 transfers: #{map_size(aexn_transfers_activity)}")
+    Logger.info("Accounts with AEX9 transfers: #{aexn_transfers_activity_count}")
 
-    int_transfer_activity =
+    {int_transfer_activity_count, state4} =
       Model.TargetKindIntTransferTx
       |> RocksDbCF.stream()
       |> Stream.reject(
@@ -98,14 +98,16 @@ defmodule AeMdw.Migrations.AddAccountCounts do
                             ) ->
         txi_idx
       end)
-      |> Enum.reduce(%{}, fn Model.target_kind_int_transfer_tx(
-                               index: {account_pk, _kind, {_height, _txi_idx}, _opt_ref_txi_idx}
-                             ),
-                             acc ->
-        Map.update(acc, account_pk, 1, &(&1 + 1))
+      |> Enum.reduce({0, state3}, fn Model.target_kind_int_transfer_tx(
+                                       index:
+                                         {account_pk, _kind, {_height, _txi_idx},
+                                          _opt_ref_txi_idx}
+                                     ),
+                                     {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, account_pk)}
       end)
 
-    Logger.info("Accounts with int transfers: #{map_size(int_transfer_activity)}")
+    Logger.info("Accounts with int transfers: #{int_transfer_activity_count}")
 
     name_claims_stream =
       Model.NameClaim
@@ -121,17 +123,17 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         {txi_idx, name}
       end)
 
-    claims_activity =
+    {claims_activity_count, state5} =
       [name_claims_stream, auction_bid_claims_stream]
       |> Collection.merge(:forward)
       |> Stream.dedup_by(fn {txi_idx, _name} -> txi_idx end)
-      |> Enum.reduce(%{}, fn {_txi_idx, name}, acc ->
-        Map.update(acc, name, 1, &(&1 + 1))
+      |> Enum.reduce({0, state4}, fn {_txi_idx, name}, {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, name)}
       end)
 
-    Logger.info("Accounts with name claims: #{map_size(claims_activity)}")
+    Logger.info("Accounts with name claims: #{claims_activity_count}")
 
-    swaps_activity =
+    {swaps_activity_count, state6} =
       Model.DexAccountSwapTokens
       |> RocksDbCF.stream()
       |> Stream.dedup_by(fn Model.dex_account_swap_tokens(
@@ -139,16 +141,16 @@ defmodule AeMdw.Migrations.AddAccountCounts do
                             ) ->
         txi
       end)
-      |> Enum.reduce(%{}, fn Model.dex_account_swap_tokens(
-                               index: {account_pk, _create_txi, _txi, _log_idx}
-                             ),
-                             acc ->
-        Map.update(acc, account_pk, 1, &(&1 + 1))
+      |> Enum.reduce({0, state5}, fn Model.dex_account_swap_tokens(
+                                       index: {account_pk, _create_txi, _txi, _log_idx}
+                                     ),
+                                     {c, acc} ->
+        {c + 1, IdCounter.incr_account_activities_count(acc, account_pk)}
       end)
 
-    Logger.info("Accounts with swaps: #{map_size(swaps_activity)}")
+    Logger.info("Accounts with swaps: #{swaps_activity_count}")
 
-    tx_activity =
+    {tx_activity_count, _state7} =
       Fields.tx_types_pos()
       |> Stream.flat_map(fn {tx_type, tx_field_pos} ->
         scope =
@@ -169,15 +171,21 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         end)
       end)
       |> Stream.dedup_by(fn {txi, _account_pk} -> txi end)
-      |> Enum.reduce(%{}, fn {_txi, account_pk}, acc ->
-        Map.update(acc, account_pk, 1, &(&1 + 1))
+      |> Enum.reduce(state6, fn {_txi, account_pk}, acc ->
+        acc
+        |> IdCounter.incr_account_tx_count(account_pk)
+        |> IdCounter.incr_account_activities_count(account_pk)
       end)
 
-    # |> Enum.reduce(state, fn {_txi, account_pk}, acc_state ->
-    #   IdCounter.incr_account_tx_count(acc_state, account_pk)
-    # end)
+    Logger.info("Accounts with tx counts: #{tx_activity_count}")
 
-    Logger.info("Accounts with tx counts: #{map_size(tx_activity)}")
-    raise "TODO: implement"
+    {:ok,
+     account_int_transfers_count +
+       account_int_contract_calls_count +
+       aexn_transfers_activity_count +
+       int_transfer_activity_count +
+       claims_activity_count +
+       swaps_activity_count +
+       tx_activity_count}
   end
 end

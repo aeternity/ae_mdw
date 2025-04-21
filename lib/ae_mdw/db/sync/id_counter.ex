@@ -51,7 +51,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
   def incr_account_activities_count(state, account_pk) do
     State.update(
       state,
-      Model.AccountActivitiesCounter,
+      Model.AccountCounter,
       account_pk,
       fn
         Model.account_counter(activities: activities) = account_counter ->
