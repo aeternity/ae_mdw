@@ -2,7 +2,7 @@ defmodule AeMdw.Migrations.AddAccountCounts do
   @moduledoc false
   alias AeMdw.Collection
   alias AeMdw.Validate
-  alias AeMdw.Db.Sync.IdCounter
+  # alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Collection
   alias AeMdw.Fields
   alias AeMdw.Db.Model
