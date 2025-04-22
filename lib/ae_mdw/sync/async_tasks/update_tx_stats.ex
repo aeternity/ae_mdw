@@ -55,8 +55,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
         )
       end)
 
-    Log.info("[update_tx_stats] after #{time_delta / @microsecs}s")
-
     :ok
   end
 
