@@ -171,10 +171,13 @@ defmodule AeMdw.Migrations.AddAccountCounts do
         end)
       end)
       |> Stream.dedup_by(fn {txi, _account_pk} -> txi end)
-      |> Enum.reduce(state6, fn {_txi, account_pk}, acc ->
+      |> Enum.reduce({0, state6}, fn {_txi, account_pk}, {c, acc} ->
         acc
         |> IdCounter.incr_account_tx_count(account_pk)
         |> IdCounter.incr_account_activities_count(account_pk)
+        |> then(fn acc ->
+          {c + 1, acc}
+        end)
       end)
 
     Logger.info("Accounts with tx counts: #{tx_activity_count}")
