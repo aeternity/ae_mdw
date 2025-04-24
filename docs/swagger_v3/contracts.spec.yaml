@@ -5,7 +5,6 @@ schemas:
       - aexn_type
       - gas_used
       - return_type
-      - ttl
     properties:
       aexn_type:
         nullable: true
@@ -23,7 +22,6 @@ schemas:
         enum:
           - ok
           - error
-          - revert
       ttl:
         type: integer
         example: 1000
@@ -83,6 +81,10 @@ schemas:
         result:
           type: string
           example: ok
+          enum:
+            - ok
+            - error
+            - revert
         return:
           type: object
           required:

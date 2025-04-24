@@ -16,7 +16,7 @@ schemas:
   ChannelResponderInitiatorRound:
     type: object
     allOf:
-      - '#/components/schemas/ChannelResponderInitiator'
+      - $ref: '#/components/schemas/ChannelResponderInitiator'
       - type: object
         required:
           - round
