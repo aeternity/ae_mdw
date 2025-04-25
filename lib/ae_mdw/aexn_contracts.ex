@@ -77,7 +77,8 @@ defmodule AeMdw.AexnContracts do
 
   def has_valid_aex141_extensions?(_extensions, _no_fcode), do: false
 
-  @spec call_meta_info(Model.aexn_type(), pubkey(), block_hash()) :: {:ok, Model.aexn_meta_info()}
+  @spec call_meta_info(Model.aexn_type(), pubkey(), block_hash()) ::
+          {:ok, Model.aexn_meta_info()} | :error
   def call_meta_info(aexn_type, contract_pk, mb_hash) do
     case call_contract(contract_pk, "meta_info", [], mb_hash) do
       {:ok, {:tuple, meta_info_tuple}} ->
@@ -167,72 +168,67 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
-  defp decode_meta_info(:aex9, {name, symbol, decimals} = meta_info)
-       when name > symbol and is_integer(decimals),
-       do: meta_info
-
-  defp decode_meta_info(:aex9, {symbol, name, decimals}) when is_integer(decimals),
-    do: {name, symbol, decimals}
+  defp decode_meta_info(:aex9, {_name, _symbol, decimals} = meta_info)
+       when is_integer(decimals),
+       do: order_meta_info(meta_info)
 
   defp decode_meta_info(:aex9, {name, decimals, symbol})
-       when name > symbol and is_integer(decimals),
-       do: {name, symbol, decimals}
-
-  defp decode_meta_info(:aex9, {symbol, decimals, name}) when is_integer(decimals),
-    do: {name, symbol, decimals}
+       when is_integer(decimals),
+       do: order_meta_info({name, symbol, decimals})
 
   defp decode_meta_info(:aex9, {decimals, name, symbol})
-       when name > symbol and is_integer(decimals),
-       do: {name, symbol, decimals}
-
-  defp decode_meta_info(:aex9, {decimals, symbol, name}) when is_integer(decimals),
-    do: {name, symbol, decimals}
+       when is_integer(decimals),
+       do: order_meta_info({name, symbol, decimals})
 
   defp decode_meta_info(:aex141, {name, symbol, variant1, variant2})
-       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: order_meta_info({name, symbol, variant1, variant2})
 
   defp decode_meta_info(:aex141, {name, variant1, symbol, variant2})
-       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: order_meta_info({name, symbol, variant1, variant2})
 
   defp decode_meta_info(:aex141, {name, variant1, variant2, symbol})
-       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: order_meta_info({name, symbol, variant1, variant2})
 
   defp decode_meta_info(:aex141, {variant1, name, variant2, symbol})
-       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: order_meta_info({name, symbol, variant1, variant2})
 
   defp decode_meta_info(:aex141, {variant1, variant2, name, symbol})
-       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {symbol, name, variant1, variant2})
        when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {symbol, variant1, name, variant2})
-       when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {symbol, variant1, variant2, name})
-       when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {variant1, symbol, name, variant2})
-       when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {variant1, symbol, variant2, name})
-       when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
-
-  defp decode_meta_info(:aex141, {variant1, variant2, symbol, name})
-       when is_tuple(variant1) and is_tuple(variant2),
-       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+       do: order_meta_info({name, symbol, variant1, variant2})
 
   defp decode_meta_info(aexn_type, _unknown), do: format_error_meta_info(aexn_type)
+
+  defp order_meta_info({name, symbol, decimals}) do
+    {name, symbol} = order_name_and_symbol(name, symbol)
+
+    {name, symbol, decimals}
+  end
+
+  defp order_meta_info({name, symbol, variant1, variant2}) do
+    {name, symbol} = order_name_and_symbol(name, symbol)
+
+    decode_aex141_meta_info(name, symbol, variant1, variant2)
+  end
+
+  defp order_name_and_symbol(name, symbol) do
+    cond do
+      String.length(name) > String.length(symbol) ->
+        {name, symbol}
+
+      String.length(name) < String.length(symbol) ->
+        {symbol, name}
+
+      name > symbol ->
+        {name, symbol}
+
+      true ->
+        {symbol, name}
+    end
+  end
 
   defp decode_metadata_type(variant_type) do
     case variant_type do
