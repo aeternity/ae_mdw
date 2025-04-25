@@ -21,12 +21,12 @@ defmodule AeMdw.AexnContractsTest do
         {AeMdw.DryRun.Runner, [:passthrough],
          [
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
-             meta_info_tuple = {"name", "SYMBOL", 18}
+             meta_info_tuple = {"name", "SYM", 18}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", 18}} =
+        assert {:ok, {"name", "SYM", 18}} =
                  AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
@@ -156,12 +156,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 1, base_url}
              variant_type = {:variant, [0, 0, 0, 0], 0, {}}
-             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             meta_info_tuple = {"name", "SYM", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", ^base_url, :url}} =
+        assert {:ok, {"name", "SYM", ^base_url, :url}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -180,12 +180,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, {}}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             meta_info_tuple = {"name", "SYM", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+        assert {:ok, {"name", "SYM", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -204,12 +204,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 1, "http://baseurl"}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             meta_info_tuple = {"name", "SYM", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", "http://baseurl", :map}} =
+        assert {:ok, {"name", "SYM", "http://baseurl", :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -228,12 +228,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"name", variant_url, "SYMBOL", variant_type}
+             meta_info_tuple = {"name", variant_url, "SYM", variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+        assert {:ok, {"name", "SYM", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -252,12 +252,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"name", variant_url, variant_type, "SYMBOL"}
+             meta_info_tuple = {"name", variant_url, variant_type, "SYM"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+        assert {:ok, {"name", "SYM", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -276,12 +276,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"SYMBOL", "name", variant_url, variant_type}
+             meta_info_tuple = {"SYM", "name", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+        assert {:ok, {"name", "SYM", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -300,12 +300,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"SYMBOL", variant_url, variant_type, "name"}
+             meta_info_tuple = {"SYM", variant_url, variant_type, "name"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+        assert {:ok, {"name", "SYM", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
@@ -324,12 +324,12 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0], 0, {}}
-             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             meta_info_tuple = {"name", "SYM", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", nil, :unknown}} =
+        assert {:ok, {"name", "SYM", nil, :unknown}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
