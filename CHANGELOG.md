@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.3](https://github.com/aeternity/ae_mdw/compare/v1.104.2...v1.104.3) (2025-04-25)
+
+
+### Bug Fixes
+
+* fix swapped name and symbol in aexn_contracts ([#2142](https://github.com/aeternity/ae_mdw/issues/2142)) ([2d10fe5](https://github.com/aeternity/ae_mdw/commit/2d10fe575fc392f2b76ae48123c7a6ce2d9a8f5f))
+
 ## [1.104.2](https://github.com/aeternity/ae_mdw/compare/v1.104.1...v1.104.2) (2025-04-16)
 
 
