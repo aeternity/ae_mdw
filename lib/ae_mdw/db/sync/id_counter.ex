@@ -64,7 +64,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
   def incr_account_aex9_count(state, account_pk) do
     State.update(
       state,
-      Model.AccountAex9Counter,
+      Model.AccountCounter,
       account_pk,
       fn
         Model.account_counter(aex9: aex9, tokens: tokens) = account_counter ->
@@ -77,7 +77,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
   def decr_account_aex9_count(state, account_pk) do
     State.update(
       state,
-      Model.AccountAex9Counter,
+      Model.AccountCounter,
       account_pk,
       fn
         Model.account_counter(aex9: aex9, tokens: tokens) = account_counter ->
@@ -90,7 +90,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
   def incr_account_aex141_count(state, account_pk) do
     State.update(
       state,
-      Model.AccountAex141Counter,
+      Model.AccountCounter,
       account_pk,
       fn
         Model.account_counter(aex141: aex141, tokens: tokens) = account_counter ->
@@ -103,7 +103,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
   def decr_account_aex141_count(state, account_pk) do
     State.update(
       state,
-      Model.AccountAex141Counter,
+      Model.AccountCounter,
       account_pk,
       fn
         Model.account_counter(aex141: aex141, tokens: tokens) = account_counter ->
