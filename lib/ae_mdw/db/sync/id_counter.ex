@@ -57,7 +57,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
         Model.account_counter(activities: activities) = account_counter ->
           Model.account_counter(account_counter, activities: activities + 1)
       end,
-      Model.account_counter(index: account_pk, activities: 0)
+      Model.account_counter(index: account_pk)
     )
   end
 
@@ -67,8 +67,12 @@ defmodule AeMdw.Db.Sync.IdCounter do
       Model.AccountCounter,
       account_pk,
       fn
-        Model.account_counter(aex9: aex9, tokens: tokens) = account_counter ->
-          Model.account_counter(account_counter, aex9: aex9 + 1, tokens: tokens + 1)
+        Model.account_counter(aex9: aex9, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex9: aex9 + 1,
+            tokens: tokens + 1
+          )
       end,
       Model.account_counter(index: account_pk)
     )
@@ -80,34 +84,118 @@ defmodule AeMdw.Db.Sync.IdCounter do
       Model.AccountCounter,
       account_pk,
       fn
-        Model.account_counter(aex9: aex9, tokens: tokens) = account_counter ->
-          Model.account_counter(account_counter, aex9: aex9 - 1, tokens: tokens - 1)
+        Model.account_counter(aex9: aex9, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex9: aex9 - 1,
+            tokens: tokens - 1
+          )
       end,
       Model.account_counter(index: account_pk)
     )
   end
 
-  def incr_account_aex141_count(state, account_pk) do
+  def incr_account_aex9_with_activities_count(state, account_pk) do
     State.update(
       state,
       Model.AccountCounter,
       account_pk,
       fn
-        Model.account_counter(aex141: aex141, tokens: tokens) = account_counter ->
-          Model.account_counter(account_counter, aex141: aex141 + 1, tokens: tokens + 1)
+        Model.account_counter(aex9: aex9, activities: activities, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex9: aex9 + 1,
+            activities: activities + 1,
+            tokens: tokens + 1
+          )
       end,
       Model.account_counter(index: account_pk)
     )
   end
 
-  def decr_account_aex141_count(state, account_pk) do
+  def decr_account_aex9_with_activities_count(state, account_pk) do
     State.update(
       state,
       Model.AccountCounter,
       account_pk,
       fn
-        Model.account_counter(aex141: aex141, tokens: tokens) = account_counter ->
-          Model.account_counter(account_counter, aex141: aex141 - 1, tokens: tokens - 1)
+        Model.account_counter(aex9: aex9, activities: activities, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex9: aex9 - 1,
+            tokens: tokens - 1,
+            activities: activities + 1
+          )
+      end,
+      Model.account_counter(index: account_pk)
+    )
+  end
+
+  # def incr_account_aex141_count(state, account_pk) do
+  #   State.update(
+  #     state,
+  #     Model.AccountCounter,
+  #     account_pk,
+  #     fn
+  #       Model.account_counter(aex141: aex141, tokens: tokens) =
+  #           account_counter ->
+  #         Model.account_counter(account_counter,
+  #           aex141: aex141 + 1,
+  #           tokens: tokens + 1
+  #         )
+  #     end,
+  #     Model.account_counter(index: account_pk)
+  #   )
+  # end
+
+  # def decr_account_aex141_count(state, account_pk) do
+  #   State.update(
+  #     state,
+  #     Model.AccountCounter,
+  #     account_pk,
+  #     fn
+  #       Model.account_counter(aex141: aex141, tokens: tokens) =
+  #           account_counter ->
+  #         Model.account_counter(account_counter,
+  #           aex141: aex141 - 1,
+  #           tokens: tokens - 1
+  #         )
+  #     end,
+  #     Model.account_counter(index: account_pk)
+  #   )
+  # end
+
+  def incr_account_aex141_with_activities_count(state, account_pk) do
+    State.update(
+      state,
+      Model.AccountCounter,
+      account_pk,
+      fn
+        Model.account_counter(aex141: aex141, activities: activities, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex141: aex141 + 1,
+            activities: activities + 1,
+            tokens: tokens + 1
+          )
+      end,
+      Model.account_counter(index: account_pk)
+    )
+  end
+
+  def decr_account_aex141_with_activities_count(state, account_pk) do
+    State.update(
+      state,
+      Model.AccountCounter,
+      account_pk,
+      fn
+        Model.account_counter(aex141: aex141, activities: activities, tokens: tokens) =
+            account_counter ->
+          Model.account_counter(account_counter,
+            aex141: aex141 - 1,
+            tokens: tokens - 1,
+            activities: activities + 1
+          )
       end,
       Model.account_counter(index: account_pk)
     )

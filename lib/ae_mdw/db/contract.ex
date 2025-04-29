@@ -118,19 +118,19 @@ defmodule AeMdw.Db.Contract do
 
     state
     |> State.put(Model.Aex9AccountPresence, m_acc_presence)
-    |> IdCounter.incr_account_aex9_count(account_pk)
-    |> IdCounter.incr_account_activities_count(account_pk)
   end
 
-  @spec aex9_burn_update_holders(state(), pubkey(), integer(), txi()) :: state()
-  def aex9_burn_update_holders(state, contract_pk, balance, txi) do
+  @spec aex9_burn_update_holders(state(), pubkey(), integer(), txi(), pubkey()) :: state()
+  def aex9_burn_update_holders(state, contract_pk, balance, txi, from_pk) do
     case balance do
       0 ->
-        SyncStats.decrement_aex9_holders(state, contract_pk, txi)
+        state
+        |> SyncStats.decrement_aex9_holders(contract_pk, txi)
+        |> IdCounter.decr_account_aex9_count(from_pk)
 
       balance when balance < 0 ->
-        State.put(
-          state,
+        state
+        |> State.put(
           Model.AexnInvalidContract,
           Model.aexn_invalid_contract(
             index: {:aex9, contract_pk},
@@ -138,6 +138,7 @@ defmodule AeMdw.Db.Contract do
             description: "Invalid balance of #{balance} at tx #{txi}"
           )
         )
+        |> IdCounter.decr_account_aex9_count(from_pk)
 
       _larger_than_zero ->
         state
@@ -152,14 +153,23 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  defp aex9_transfer_update_holders(state, contract_pk, from_balance, to_prev_amount, txi) do
+  defp aex9_transfer_update_holders(
+         state,
+         contract_pk,
+         from_balance,
+         to_prev_amount,
+         txi,
+         from_account
+       ) do
     cond do
       from_balance <= 0 and to_prev_amount > 0 ->
-        SyncStats.decrement_aex9_holders(state, contract_pk, txi)
+        state
+        |> SyncStats.decrement_aex9_holders(contract_pk, txi)
+        |> IdCounter.decr_account_aex9_count(from_account)
 
       from_balance <= 0 ->
         # decrement and increment
-        state
+        IdCounter.decr_account_aex9_count(state, from_account)
 
       to_prev_amount == 0 ->
         SyncStats.increment_aex9_holders(state, contract_pk)
@@ -679,8 +689,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.NftOwnership, m_ownership)
     |> State.put(Model.NftOwnerToken, m_owner_token)
     |> State.put(Model.NftTokenOwner, m_token_owner)
-    |> IdCounter.incr_account_aex141_count(to_pk)
-    |> IdCounter.incr_account_activities_count(to_pk)
+    |> IdCounter.incr_account_aex141_with_activities_count(to_pk)
   end
 
   defp write_aex9_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args) do
@@ -809,7 +818,7 @@ defmodule AeMdw.Db.Contract do
       |> State.delete(Model.NftOwnership, {prev_owner_pk, contract_pk, token_id})
       |> State.delete(Model.NftOwnerToken, {contract_pk, prev_owner_pk, token_id})
       |> State.delete(Model.NftTokenOwner, {contract_pk, token_id})
-      |> IdCounter.decr_account_aex141_count(prev_owner_pk)
+      |> IdCounter.decr_account_aex141_with_activities_count(prev_owner_pk)
     else
       state
     end
@@ -886,12 +895,19 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
-    |> IdCounter.incr_account_activities_count(to_pk)
-    |> IdCounter.incr_account_activities_count(from_pk)
-    |> IdCounter.decr_account_aex9_count(from_pk)
-    |> IdCounter.incr_account_aex9_count(to_pk)
     |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
     |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
+    |> then(fn st ->
+      case aexn_type do
+        :aex9 ->
+          st
+          |> IdCounter.incr_account_activities_count(from_pk)
+          |> IdCounter.incr_account_aex9_with_activities_count(to_pk)
+
+        :aex141 ->
+          st
+      end
+    end)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
@@ -932,14 +948,15 @@ defmodule AeMdw.Db.Contract do
         contract_pk: contract_pk
       )
 
+    IO.inspect(new_amount, label: "new_amount")
+
     state
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> IdCounter.incr_account_activities_count(from_pk)
-    |> IdCounter.decr_account_aex9_count(from_pk)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
-    |> aex9_burn_update_holders(contract_pk, new_amount, txi)
+    |> aex9_burn_update_holders(contract_pk, new_amount, txi, from_pk)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
   end
@@ -972,8 +989,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9EventBalance, m_to)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
-    |> IdCounter.incr_account_activities_count(to_pk)
-    |> IdCounter.incr_account_aex9_count(to_pk)
+    |> IdCounter.incr_account_aex9_with_activities_count(to_pk)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)
@@ -1016,8 +1032,10 @@ defmodule AeMdw.Db.Contract do
         amount: new_from_amount
       )
 
+    IO.inspect(new_from_amount, label: "new_from_amount")
+
     state
-    |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount, txi)
+    |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount, txi, from_pk)
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.Aex9EventBalance, m_to)
     |> aex9_update_balance_account(

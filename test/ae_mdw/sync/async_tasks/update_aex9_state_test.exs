@@ -70,6 +70,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
 
         assert Model.aex9_account_presence(txi: ^call_txi) =
                  State.fetch!(state, Model.Aex9AccountPresence, {@account_pk2, contract_pk})
+
+        assert Model.account_counter(aex9: 1, tokens: 1, aex141: 0) =
+                 State.fetch!(state, Model.AccountCounter, @account_pk1)
+
+        assert Model.account_counter(aex9: 1, tokens: 1, aex141: 0) =
+                 State.fetch!(state, Model.AccountCounter, @account_pk2)
       end
     end
 
@@ -145,6 +151,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
                  State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
 
         refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, <<>>})
+
+        assert Model.account_counter(aex9: 1, tokens: 1, aex141: 0) =
+                 State.fetch!(state, Model.AccountCounter, account_pk1)
+
+        assert Model.account_counter(aex9: 1, tokens: 1, aex141: 0) =
+                 State.fetch!(state, Model.AccountCounter, account_pk2)
       end
     end
 

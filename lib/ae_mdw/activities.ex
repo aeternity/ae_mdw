@@ -111,6 +111,13 @@ defmodule AeMdw.Activities do
     end
   end
 
+  @spec activities_stream(
+          state(),
+          Db.pubkey(),
+          map(),
+          scope(),
+          cursor()
+        ) :: (Collection.direction() -> Enumerable.t())
   def activities_stream(state, account_pk, filters, scope, cursor) do
     {gen_scope, txi_scope} = deserialize_scope(state, scope)
 
