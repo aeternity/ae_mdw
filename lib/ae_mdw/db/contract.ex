@@ -116,8 +116,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_write_presence(state, contract_pk, txi, account_pk) do
     m_acc_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
 
-    state
-    |> State.put(Model.Aex9AccountPresence, m_acc_presence)
+    State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
   @spec aex9_burn_update_holders(state(), pubkey(), integer(), txi(), pubkey()) :: state()
