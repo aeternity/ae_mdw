@@ -1733,12 +1733,12 @@ defmodule AeMdwWeb.NameControllerTest do
         store
         |> Store.put(Model.TotalStat, Model.total_stat(index: 1, active_names: 27))
         |> Store.put(
-          Model.AccountNamesCount,
-          Model.account_names_count(index: first_owner_pk, count: 13)
+          Model.AccountCounter,
+          Model.account_counter(index: first_owner_pk, names: 13)
         )
         |> Store.put(
-          Model.AccountNamesCount,
-          Model.account_names_count(index: second_owner_pk, count: 14)
+          Model.AccountCounter,
+          Model.account_counter(index: second_owner_pk, names: 14)
         )
 
       assert 27 =

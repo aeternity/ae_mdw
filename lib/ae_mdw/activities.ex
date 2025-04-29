@@ -700,6 +700,45 @@ defmodule AeMdw.Activities do
     Collection.stream(state, table, direction, key_boundary, cursor)
   end
 
+  @spec fetch_account_counters(state(), Db.pubkey()) :: {:ok, map()} | {:error, term()}
+  def fetch_account_counters(state, account_pk) do
+    with {:ok, account_pk} <- Validate.id(account_pk),
+         {:ok,
+          Model.account_counter(
+            txs: txs,
+            activities: activities,
+            aex9: aex9,
+            aex141: aex141,
+            tokens: tokens,
+            names: names
+          )} <-
+           State.get(state, Model.AccountCounter, account_pk) do
+      {:ok,
+       %{
+         transactions: txs,
+         activities: activities,
+         aex9_tokens: aex9,
+         aex141_tokens: aex141,
+         tokens: tokens,
+         active_names: names
+       }}
+    else
+      :not_found ->
+        {:ok,
+         %{
+           transactions: 0,
+           activities: 0,
+           aex9_tokens: 0,
+           aex141_tokens: 0,
+           tokens: 0,
+           active_names: 0
+         }}
+
+      {:error, _error} = error ->
+        error
+    end
+  end
+
   @spec render_payload(state(), Db.pubkey(), height(), txi(), activity_value()) ::
           {activity_type(), map()}
   defp render_payload(state, _account_pk, _height, txi, {:field, tx_type, _tx_pos}) do

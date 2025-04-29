@@ -1,4 +1,7 @@
 defmodule AeMdw.Migrations.MoveAccountNamesCountToNewTable do
+  @moduledoc """
+  Move account names count to a new table.
+  """
   alias AeMdw.Db.Model
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.WriteMutation

@@ -35,6 +35,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec incr_account_tx_count(State.t(), pubkey()) :: State.t()
   def incr_account_tx_count(state, account_pk) do
     State.update(
       state,
@@ -48,6 +49,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec incr_account_activities_count(State.t(), pubkey()) :: State.t()
   def incr_account_activities_count(state, account_pk) do
     State.update(
       state,
@@ -61,6 +63,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec incr_account_aex9_count(State.t(), pubkey()) :: State.t()
   def incr_account_aex9_count(state, account_pk) do
     State.update(
       state,
@@ -78,6 +81,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec decr_account_aex9_count(State.t(), pubkey()) :: State.t()
   def decr_account_aex9_count(state, account_pk) do
     State.update(
       state,
@@ -95,6 +99,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec incr_account_aex9_with_activities_count(State.t(), pubkey()) :: State.t()
   def incr_account_aex9_with_activities_count(state, account_pk) do
     State.update(
       state,
@@ -113,6 +118,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec decr_account_aex9_with_activities_count(State.t(), pubkey()) :: State.t()
   def decr_account_aex9_with_activities_count(state, account_pk) do
     State.update(
       state,
@@ -131,40 +137,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
-  # def incr_account_aex141_count(state, account_pk) do
-  #   State.update(
-  #     state,
-  #     Model.AccountCounter,
-  #     account_pk,
-  #     fn
-  #       Model.account_counter(aex141: aex141, tokens: tokens) =
-  #           account_counter ->
-  #         Model.account_counter(account_counter,
-  #           aex141: aex141 + 1,
-  #           tokens: tokens + 1
-  #         )
-  #     end,
-  #     Model.account_counter(index: account_pk)
-  #   )
-  # end
-
-  # def decr_account_aex141_count(state, account_pk) do
-  #   State.update(
-  #     state,
-  #     Model.AccountCounter,
-  #     account_pk,
-  #     fn
-  #       Model.account_counter(aex141: aex141, tokens: tokens) =
-  #           account_counter ->
-  #         Model.account_counter(account_counter,
-  #           aex141: aex141 - 1,
-  #           tokens: tokens - 1
-  #         )
-  #     end,
-  #     Model.account_counter(index: account_pk)
-  #   )
-  # end
-
+  @spec incr_account_aex141_with_activities_count(State.t(), pubkey()) :: State.t()
   def incr_account_aex141_with_activities_count(state, account_pk) do
     State.update(
       state,
@@ -183,6 +156,7 @@ defmodule AeMdw.Db.Sync.IdCounter do
     )
   end
 
+  @spec decr_account_aex141_with_activities_count(State.t(), pubkey()) :: State.t()
   def decr_account_aex141_with_activities_count(state, account_pk) do
     State.update(
       state,

@@ -948,8 +948,6 @@ defmodule AeMdw.Db.Contract do
         contract_pk: contract_pk
       )
 
-    IO.inspect(new_amount, label: "new_amount")
-
     state
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
@@ -1031,8 +1029,6 @@ defmodule AeMdw.Db.Contract do
         log_idx: log_idx,
         amount: new_from_amount
       )
-
-    IO.inspect(new_from_amount, label: "new_from_amount")
 
     state
     |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount, txi, from_pk)

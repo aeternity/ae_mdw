@@ -70,6 +70,7 @@ defmodule AeMdwWeb.Router do
       get "/contracts/:contract_id/calls", ContractController, :contract_calls
 
       get "/accounts/:id/activities", ActivityController, :account_activities
+      get "/accounts/:id/counters", ActivityController, :account_counters
       get "/accounts/:account_id/aex9/balances", AexnTokenController, :aex9_account_balances
       get "/accounts/:account_id/aex141/tokens", Aex141Controller, :owned_nfts
       get "/accounts/:account_id/names/pointees", NameController, :pointees
