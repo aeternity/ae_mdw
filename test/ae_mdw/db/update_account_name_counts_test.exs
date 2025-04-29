@@ -41,14 +41,14 @@ defmodule AeMdw.Db.UpdateAccountNameCountsTest do
 
     all_active_names_owners =
       state
-      |> Collection.stream(Model.AccountNamesCount, :forward, nil, nil)
+      |> Collection.stream(Model.AccountCounter, :forward, nil, nil)
 
     assert 3 = Enum.count(all_active_names_owners)
 
     assert 30 =
              Enum.reduce(all_active_names_owners, 0, fn index, acc ->
-               {:ok, Model.account_names_count(count: count)} =
-                 State.get(state, Model.AccountNamesCount, index)
+               {:ok, Model.account_counter(names: count)} =
+                 State.get(state, Model.AccountCounter, index)
 
                acc + count
              end)
@@ -69,8 +69,8 @@ defmodule AeMdw.Db.UpdateAccountNameCountsTest do
 
     assert 20 =
              Enum.reduce(all_active_names_owners, 0, fn index, acc ->
-               {:ok, Model.account_names_count(count: count)} =
-                 State.get(state, Model.AccountNamesCount, index)
+               {:ok, Model.account_counter(names: count)} =
+                 State.get(state, Model.AccountCounter, index)
 
                acc + count
              end)

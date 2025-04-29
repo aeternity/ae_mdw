@@ -73,6 +73,12 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
 
         assert {:ok, Model.field(index: ^field_index2)} =
                  Store.get(store2, Model.Field, field_index2)
+
+        assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+                 Store.get(store2, Model.AccountCounter, account_pk)
+
+        assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+                 Store.get(store2, Model.AccountCounter, account_pk2)
       end
     end
 
@@ -105,6 +111,12 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
 
       refute :not_found == Store.get(store, Model.Field, field_index1)
       refute :not_found == Store.get(store, Model.Field, field_index2)
+
+      assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+               Store.get(store, Model.AccountCounter, sender_pk)
+
+      assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+               Store.get(store, Model.AccountCounter, recipient_pk)
     end
 
     test "indexes inner transaction fields with paying_for type" do
@@ -137,6 +149,12 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
 
       refute :not_found == Store.get(store, Model.Field, field_index1)
       refute :not_found == Store.get(store, Model.Field, field_index2)
+
+      assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+               Store.get(store, Model.AccountCounter, sender_pk)
+
+      assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+               Store.get(store, Model.AccountCounter, recipient_pk)
     end
 
     test "increments counters for each field, including dups" do
@@ -192,6 +210,12 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.DupIdCount, id_count_index1)
       assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.IdCount, id_count_index2)
       assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.DupIdCount, id_count_index2)
+
+      assert {:ok, Model.account_counter(txs: 2, activities: 2)} =
+               State.get(state, Model.AccountCounter, sender_pk)
+
+      assert {:ok, Model.account_counter(txs: 1, activities: 1)} =
+               State.get(state, Model.AccountCounter, recipient_pk)
     end
   end
 end

@@ -8,6 +8,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.EtsCache
   alias AeMdw.Stats
   alias AeMdw.Validate
@@ -86,6 +87,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> change_store([mutation])
 
+      assert {:ok, Model.account_counter(activities: 1, aex9: 1, tokens: 1)} =
+               Store.get(store, Model.AccountCounter, account_pk)
+
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
                Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
@@ -114,6 +118,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
                Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
+
+      assert {:ok, Model.account_counter(activities: 1, aex9: 1, tokens: 1)} =
+               Store.get(store, Model.AccountCounter, account_pk)
     end
 
     test "add aex9 presence after a burn (balance is 0)", %{store: store} do
@@ -134,11 +141,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
         |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> Store.put(
+          Model.AccountCounter,
+          Model.account_counter(index: account_pk, aex9: 1, tokens: 1, activities: 1)
+        )
         |> change_store([mutation])
 
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
                Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
+
+      assert {:ok, Model.account_counter(aex9: 0, tokens: 0, activities: 2)} =
+               Store.get(store, Model.AccountCounter, account_pk)
     end
   end
 
@@ -260,6 +274,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
+
+      assert {:ok, Model.account_counter(aex9: 1, tokens: 1, activities: 1)} =
+               Store.get(store, Model.AccountCounter, account_pk)
     end
   end
 
@@ -339,6 +356,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
+        |> Store.put(
+          Model.AccountCounter,
+          Model.account_counter(index: account_pk, aex9: 1, tokens: 1, activities: 1)
+        )
         |> change_store([mutation])
 
       m_new_balance =
@@ -376,6 +397,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+
+      assert {:ok, Model.account_counter(aex9: 1, tokens: 1, activities: 2)} =
+               Store.get(store, Model.AccountCounter, account_pk)
     end
 
     test "decrement aex9 holder count after a call with full burn log", %{store: store} do
@@ -444,6 +468,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
+        |> Store.put(
+          Model.AccountCounter,
+          Model.account_counter(index: account_pk, aex9: 1, tokens: 1, activities: 1)
+        )
         |> change_store([mutation])
 
       m_new_balance =
@@ -457,6 +485,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+
+      assert {:ok, Model.account_counter(aex9: 0, tokens: 0, activities: 2)} =
+               Store.get(store, Model.AccountCounter, account_pk)
     end
   end
 
@@ -522,6 +553,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.put(Model.Aex9EventBalance, m_balance)
         |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.put(
+          Model.AccountCounter,
+          Model.account_counter(index: account_pk, aex9: 1, tokens: 1, activities: 1)
+        )
         |> State.commit_mem([mutation])
 
       m_new_balance =
@@ -533,6 +568,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert {:ok, ^m_new_balance} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert Model.account_counter(aex9: 1, tokens: 1, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, account_pk)
     end
   end
 
@@ -591,6 +629,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.new()
         |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.put(
+          Model.AccountCounter,
+          Model.account_counter(index: from_pk, aex9: 1, tokens: 1, activities: 1)
+        )
         |> State.commit_mem([mutation])
 
       assert State.exists?(
@@ -604,6 +646,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Model.RevAexnTransfer,
                {:aex9, to_pk, call_txi, 0, from_pk, amount}
              )
+
+      assert Model.account_counter(aex9: 0, tokens: 0, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk)
+
+      assert Model.account_counter(aex9: 1, tokens: 1, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk)
     end
 
     test "puts multiple aex9 transfers after a call with transfer logs" do
@@ -689,6 +737,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
+        |> State.put(
+          Model.AccountCounter,
+          Model.account_counter(index: from_pk1, aex9: 1, tokens: 1, activities: 1)
+        )
+        |> State.put(
+          Model.AccountCounter,
+          Model.account_counter(index: from_pk2, aex9: 1, tokens: 1, activities: 1)
+        )
 
       state = ContractCallMutation.execute(mutation, state)
 
@@ -744,6 +800,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Model.RevAexnTransfer,
                {:aex9, to_pk2, call_txi, 1, from_pk2, amount2}
              )
+
+      assert Model.account_counter(aex9: 1, tokens: 1, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk1)
+
+      assert Model.account_counter(aex9: 0, tokens: 0, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk2)
+
+      assert Model.account_counter(aex9: 1, tokens: 1, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk1)
+
+      assert Model.account_counter(aex9: 1, tokens: 1, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk2)
     end
   end
 
@@ -808,6 +876,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                State.get(state, Model.NftTokenOwner, {remote_pk, token_id})
 
       assert State.exists?(state, Model.NftOwnerToken, {remote_pk, to_pk, token_id})
+
+      assert Model.account_counter(aex9: 0, tokens: 1, activities: 1, aex141: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk)
     end
   end
 
@@ -895,6 +966,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  Model.Stat,
                  Stats.nft_template_tokens_key(contract_pk, template_id)
                )
+
+      assert Model.account_counter(
+               aex9: 0,
+               tokens: 1,
+               activities: 1,
+               aex141: 1
+             ) =
+               State.fetch!(state, Model.AccountCounter, to_pk)
     end
   end
 
@@ -1349,6 +1428,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> put_existing_nft(contract_pk, from_pk, token_id)
         |> put_stats(contract_pk, 1, 1)
+        |> State.put(
+          Model.AccountCounter,
+          Model.account_counter(index: from_pk, aex9: 0, tokens: 1, activities: 1, aex141: 1)
+        )
         |> State.commit_mem([mutation])
 
       assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
@@ -1382,6 +1465,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Model.AexnPairTransfer,
                {:aex141, from_pk, to_pk, call_txi, 0, token_id}
              )
+
+      assert Model.account_counter(aex141: 0, tokens: 0, aex9: 0, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk)
+
+      assert Model.account_counter(aex141: 1, tokens: 1, aex9: 0, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk)
     end
 
     test "puts multiple aex141 transfers after a call with transfer logs" do
@@ -1507,6 +1596,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Model.AexnPairTransfer,
                {:aex141, from_pk2, to_pk2, call_txi, 1, token_id2}
              )
+
+      assert Model.account_counter(aex141: 0, tokens: 0, aex9: 0, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk1)
+
+      assert Model.account_counter(aex141: 0, tokens: 0, aex9: 0, activities: 2) =
+               State.fetch!(state, Model.AccountCounter, from_pk2)
+
+      assert Model.account_counter(aex141: 1, tokens: 1, aex9: 0, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk1)
+
+      assert Model.account_counter(aex141: 1, tokens: 1, aex9: 0, activities: 1) =
+               State.fetch!(state, Model.AccountCounter, to_pk2)
     end
   end
 
@@ -1593,6 +1694,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       refute State.exists?(state, Model.NftTokenTemplate, {contract_pk, token_id1})
       refute State.exists?(state, Model.NftTemplateToken, {contract_pk, template_id, token_id1})
       assert {:ok, Model.stat(payload: 0)} = State.get(state, Model.Stat, nft_template_tokens_key)
+
+      assert Model.account_counter(activities: 3, aex141: 1, tokens: 1, aex9: 0) =
+               State.fetch!(state, Model.AccountCounter, owner_pk)
     end
   end
 
@@ -1709,6 +1813,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       Model.NftTokenOwner,
       Model.nft_token_owner(index: {contract_pk, token_id}, owner: owner_pk)
     )
+    |> IdCounter.incr_account_aex141_with_activities_count(owner_pk)
   end
 
   defp put_stats(state, contract_pk, nfts_count, owners_count) do

@@ -2277,4 +2277,73 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
   end
+
+  describe "account_counters" do
+    test "it returns counter information for an account", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.AccountCounter,
+          Model.account_counter(
+            index: account_pk,
+            txs: 50,
+            activities: 75,
+            aex9: 3,
+            aex141: 2,
+            tokens: 5,
+            names: 4
+          )
+        )
+
+      result =
+        conn
+        |> with_store(store)
+        |> get("/v3/accounts/#{account}/counters")
+        |> json_response(200)
+
+      assert result == %{
+               "transactions" => 50,
+               "activities" => 75,
+               "aex9_tokens" => 3,
+               "aex141_tokens" => 2,
+               "tokens" => 5,
+               "active_names" => 4
+             }
+    end
+
+    test "it returns 400 when the account is invalid", %{conn: conn} do
+      invalid_account = "ak_foo"
+      error_msg = "invalid id: #{invalid_account}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v3/accounts/#{invalid_account}/counters")
+               |> json_response(400)
+    end
+
+    test "it still returns 200 when the account doesn't have counters", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+
+      store = empty_store()
+
+      result =
+        conn
+        |> with_store(store)
+        |> get("/v3/accounts/#{account}/counters")
+        |> json_response(200)
+
+      assert result == %{
+               "transactions" => 0,
+               "activities" => 0,
+               "aex9_tokens" => 0,
+               "aex141_tokens" => 0,
+               "tokens" => 0,
+               "active_names" => 0
+             }
+    end
+  end
 end

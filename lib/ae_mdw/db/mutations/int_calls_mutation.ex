@@ -3,6 +3,7 @@ defmodule AeMdw.Db.IntCallsMutation do
   Given a list of internal calls, creates the appropriate indexes.
   """
 
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -40,6 +41,8 @@ defmodule AeMdw.Db.IntCallsMutation do
         state
       ) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+    state = IdCounter.incr_account_activities_count(state, contract_pk)
 
     int_calls
     |> Enum.reduce(state, fn {local_idx, fname, tx_type, aetx, tx}, state ->
@@ -86,6 +89,7 @@ defmodule AeMdw.Db.IntCallsMutation do
         |> State.put(Model.GrpIdIntContractCall, m_grp_id_call)
         |> State.put(Model.IdFnameIntContractCall, m_id_fname_call)
         |> State.put(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
+        |> IdCounter.incr_account_activities_count(pk)
       end)
     end)
   end

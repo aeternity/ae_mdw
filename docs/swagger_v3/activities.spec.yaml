@@ -210,6 +210,41 @@ schemas:
       - height
       - type
       - payload
+  AccountCounters:
+    description: Account activity counters
+    type: object
+    properties:
+      transactions:
+        type: integer
+        description: Number of transactions related to this account
+        example: 42
+      activities:
+        type: integer
+        description: Total number of activities related to this account
+        example: 75
+      aex9_tokens:
+        type: integer
+        description: Number of AEX9 tokens associated with this account
+        example: 3
+      aex141_tokens:
+        type: integer
+        description: Number of AEX141 tokens associated with this account
+        example: 2
+      tokens:
+        type: integer
+        description: Total number of tokens associated with this account
+        example: 5
+      active_names:
+        type: integer
+        description: Number of active names owned by this account
+        example: 4
+    required:
+      - transactions
+      - activities
+      - aex9_tokens
+      - aex141_tokens
+      - tokens
+      - active_names
 paths:
   /accounts/{accountId}/activities:
     get:
@@ -265,6 +300,31 @@ paths:
                         items:
                           $ref: '#/components/schemas/Activity'
                   - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /accounts/{accountId}/counters:
+    get:
+      deprecated: false
+      description: Get account activity counters.
+      operationId: GetAccountCounters
+      parameters:
+        - name: accountId
+          in: path
+          description: The account address
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+      responses:
+        '200':
+          description: Returns account activity counters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountCounters'
         '400':
           description: Bad request
           content:

@@ -100,131 +100,143 @@ defmodule AeMdw.Activities do
     with {:ok, account_pk} <- Validate.id(account),
          {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      {gen_scope, txi_scope} = deserialize_scope(state, scope)
-
       {prev_cursor, activities_locators_data, next_cursor} =
-        fn direction ->
-          {gen_cursor, txi_cursor, local_idx_cursor} =
-            case cursor do
-              {height, txi, local_idx} -> {height, txi, local_idx}
-              nil -> {nil, nil, nil}
-            end
-
-          txi_idx_cursor = if txi_cursor, do: {txi_cursor, local_idx_cursor}, else: nil
-
-          ownership_only? = Map.get(filters, :ownership_only?, false)
-          stream_types = Map.get(filters, :stream_types)
-
-          gens_stream =
-            %{
-              :int_transfers =>
-                build_gens_int_transfers_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  gen_scope,
-                  gen_cursor,
-                  ownership_only?
-                )
-            }
-            |> filter_by_stream_types(stream_types)
-            |> Collection.merge(direction)
-            |> Stream.chunk_by(fn {gen, _data} -> gen end)
-            |> build_gens_stream(state)
-
-          txi_stream =
-            %{
-              :transactions =>
-                build_txs_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  txi_scope,
-                  txi_cursor,
-                  ownership_only?
-                ),
-              :int_calls =>
-                build_int_contract_calls_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  txi_scope,
-                  txi_idx_cursor
-                ),
-              :ext_calls =>
-                build_ext_contract_calls_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  txi_scope,
-                  txi_idx_cursor,
-                  ownership_only?
-                ),
-              :aex9 =>
-                build_aexn_transfers_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  :aex9,
-                  txi_scope,
-                  txi_cursor,
-                  ownership_only?
-                ),
-              :aex141 =>
-                build_aexn_transfers_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  :aex141,
-                  txi_scope,
-                  txi_cursor,
-                  ownership_only?
-                ),
-              :int_transfers =>
-                build_txs_int_transfers_stream(
-                  state,
-                  direction,
-                  account_pk,
-                  gen_scope,
-                  gen_cursor,
-                  ownership_only?
-                ),
-              :claims =>
-                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor),
-              :swaps => build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor)
-            }
-            |> filter_by_stream_types(stream_types)
-            |> Collection.merge(direction)
-            |> Stream.chunk_by(fn {txi, _data} -> txi end)
-            |> build_txi_stream(state)
-
-          stream =
-            [gens_stream, txi_stream]
-            |> Collection.merge(direction)
-            |> Stream.chunk_by(fn {{height, txi, _block_type}, _data} -> {height, txi} end)
-            |> build_combined_stream(direction)
-
-          if local_idx_cursor do
-            Stream.drop_while(stream, fn
-              {{^gen_cursor, txi, local_idx, _block_type}, _data}
-              when direction == :forward and
-                     {gen_cursor, txi, local_idx} < {gen_cursor, txi_cursor, local_idx_cursor}
-              when direction == :backward and
-                     {gen_cursor, txi, local_idx} > {gen_cursor, txi_cursor, local_idx_cursor} ->
-                true
-
-              {_index, _data} ->
-                false
-            end)
-          else
-            stream
-          end
-        end
+        state
+        |> activities_stream(account_pk, filters, scope, cursor)
         |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
 
       events = render_activities(state, account_pk, activities_locators_data)
 
       {:ok, {prev_cursor, events, next_cursor}}
+    end
+  end
+
+  @spec activities_stream(
+          state(),
+          Db.pubkey(),
+          map(),
+          scope(),
+          cursor()
+        ) :: (Collection.direction() -> Enumerable.t())
+  def activities_stream(state, account_pk, filters, scope, cursor) do
+    {gen_scope, txi_scope} = deserialize_scope(state, scope)
+
+    fn direction ->
+      {gen_cursor, txi_cursor, local_idx_cursor} =
+        case cursor do
+          {height, txi, local_idx} -> {height, txi, local_idx}
+          nil -> {nil, nil, nil}
+        end
+
+      txi_idx_cursor = if txi_cursor, do: {txi_cursor, local_idx_cursor}, else: nil
+
+      ownership_only? = Map.get(filters, :ownership_only?, false)
+      stream_types = Map.get(filters, :stream_types)
+
+      gens_stream =
+        %{
+          :int_transfers =>
+            build_gens_int_transfers_stream(
+              state,
+              direction,
+              account_pk,
+              gen_scope,
+              gen_cursor,
+              ownership_only?
+            )
+        }
+        |> filter_by_stream_types(stream_types)
+        |> Collection.merge(direction)
+        |> Stream.chunk_by(fn {gen, _data} -> gen end)
+        |> build_gens_stream(state)
+
+      txi_stream =
+        %{
+          :transactions =>
+            build_txs_stream(
+              state,
+              direction,
+              account_pk,
+              txi_scope,
+              txi_cursor,
+              ownership_only?
+            ),
+          :int_calls =>
+            build_int_contract_calls_stream(
+              state,
+              direction,
+              account_pk,
+              txi_scope,
+              txi_idx_cursor
+            ),
+          :ext_calls =>
+            build_ext_contract_calls_stream(
+              state,
+              direction,
+              account_pk,
+              txi_scope,
+              txi_idx_cursor,
+              ownership_only?
+            ),
+          :aex9 =>
+            build_aexn_transfers_stream(
+              state,
+              direction,
+              account_pk,
+              :aex9,
+              txi_scope,
+              txi_cursor,
+              ownership_only?
+            ),
+          :aex141 =>
+            build_aexn_transfers_stream(
+              state,
+              direction,
+              account_pk,
+              :aex141,
+              txi_scope,
+              txi_cursor,
+              ownership_only?
+            ),
+          :int_transfers =>
+            build_txs_int_transfers_stream(
+              state,
+              direction,
+              account_pk,
+              gen_scope,
+              gen_cursor,
+              ownership_only?
+            ),
+          :claims =>
+            build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor),
+          :swaps => build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor)
+        }
+        |> filter_by_stream_types(stream_types)
+        |> Collection.merge(direction)
+        |> Stream.chunk_by(fn {txi, _data} -> txi end)
+        |> build_txi_stream(state)
+
+      stream =
+        [gens_stream, txi_stream]
+        |> Collection.merge(direction)
+        |> Stream.chunk_by(fn {{height, txi, _block_type}, _data} -> {height, txi} end)
+        |> build_combined_stream(direction)
+
+      if local_idx_cursor do
+        Stream.drop_while(stream, fn
+          {{^gen_cursor, txi, local_idx, _block_type}, _data}
+          when direction == :forward and
+                 {gen_cursor, txi, local_idx} < {gen_cursor, txi_cursor, local_idx_cursor}
+          when direction == :backward and
+                 {gen_cursor, txi, local_idx} > {gen_cursor, txi_cursor, local_idx_cursor} ->
+            true
+
+          {_index, _data} ->
+            false
+        end)
+      else
+        stream
+      end
     end
   end
 
@@ -686,6 +698,45 @@ defmodule AeMdw.Activities do
       end
 
     Collection.stream(state, table, direction, key_boundary, cursor)
+  end
+
+  @spec fetch_account_counters(state(), Db.pubkey()) :: {:ok, map()} | {:error, term()}
+  def fetch_account_counters(state, account_pk) do
+    with {:ok, account_pk} <- Validate.id(account_pk),
+         {:ok,
+          Model.account_counter(
+            txs: txs,
+            activities: activities,
+            aex9: aex9,
+            aex141: aex141,
+            tokens: tokens,
+            names: names
+          )} <-
+           State.get(state, Model.AccountCounter, account_pk) do
+      {:ok,
+       %{
+         transactions: txs,
+         activities: activities,
+         aex9_tokens: aex9,
+         aex141_tokens: aex141,
+         tokens: tokens,
+         active_names: names
+       }}
+    else
+      :not_found ->
+        {:ok,
+         %{
+           transactions: 0,
+           activities: 0,
+           aex9_tokens: 0,
+           aex141_tokens: 0,
+           tokens: 0,
+           active_names: 0
+         }}
+
+      {:error, _error} = error ->
+        error
+    end
   end
 
   @spec render_payload(state(), Db.pubkey(), height(), txi(), activity_value()) ::

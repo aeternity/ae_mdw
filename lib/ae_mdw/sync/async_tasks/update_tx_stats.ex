@@ -6,7 +6,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Log
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
 
@@ -15,7 +14,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
   require Model
   require Logger
 
-  @microsecs 1_000_000
   @seconds_per_day 24 * 3_600
 
   @spec process(args :: list(), done_fn :: fun()) :: :ok
@@ -38,24 +36,19 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
   end
 
   defp update_stats(state, started_at, done_fn) do
-    {time_delta, :ok} =
-      :timer.tc(fn ->
-        tx_stats =
-          calculate_fees(state, started_at)
+    tx_stats =
+      calculate_fees(state, started_at)
 
-        write_mutation =
-          WriteMutation.new(
-            Model.Stat,
-            Model.stat(index: :tx_stats, payload: tx_stats)
-          )
+    write_mutation =
+      WriteMutation.new(
+        Model.Stat,
+        Model.stat(index: :tx_stats, payload: tx_stats)
+      )
 
-        AsyncStoreServer.write_mutations(
-          [write_mutation],
-          done_fn
-        )
-      end)
-
-    Log.info("[update_tx_stats] after #{time_delta / @microsecs}s")
+    AsyncStoreServer.write_mutations(
+      [write_mutation],
+      done_fn
+    )
 
     :ok
   end

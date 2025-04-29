@@ -21,6 +21,7 @@ defmodule AeMdw.Names do
   alias AeMdw.Validate
 
   require Model
+  require Logger
 
   @type cursor() :: binary() | nil
   @type page_cursor() :: Collection.pagination_cursor()
@@ -316,14 +317,14 @@ defmodule AeMdw.Names do
   def increment_names_count(state, owner_pk) do
     State.update(
       state,
-      Model.AccountNamesCount,
+      Model.AccountCounter,
       owner_pk,
       fn
         nil ->
-          Model.account_names_count(index: owner_pk, count: 1)
+          Model.account_counter(index: owner_pk, names: 1)
 
-        Model.account_names_count(index: owner_pk, count: count) ->
-          Model.account_names_count(index: owner_pk, count: count + 1)
+        Model.account_counter(names: count) = old_counts ->
+          Model.account_counter(old_counts, names: count + 1)
       end
     )
   end
@@ -332,16 +333,20 @@ defmodule AeMdw.Names do
   def decrement_names_count(state, owner_pk) do
     State.update(
       state,
-      Model.AccountNamesCount,
+      Model.AccountCounter,
       owner_pk,
       fn
-        Model.account_names_count(index: owner_pk, count: 0) ->
-          Model.account_names_count(index: owner_pk, count: 0)
+        Model.account_counter(index: owner_pk, names: 0) = old_counter ->
+          Logger.warning(
+            "Decrementing names count for #{owner_pk} when it is already 0. Counter: #{inspect(old_counter)}"
+          )
 
-        Model.account_names_count(index: owner_pk, count: count) ->
-          Model.account_names_count(index: owner_pk, count: count - 1)
+          old_counter
+
+        Model.account_counter(names: count) = old_counter ->
+          Model.account_counter(old_counter, names: count - 1)
       end,
-      Model.account_names_count(index: owner_pk, count: 0)
+      Model.account_counter(index: owner_pk)
     )
   end
 
@@ -1183,9 +1188,9 @@ defmodule AeMdw.Names do
 
   defp count_active_names(state, owned_by) do
     state
-    |> State.get(Model.AccountNamesCount, owned_by)
+    |> State.get(Model.AccountCounter, owned_by)
     |> case do
-      {:ok, Model.account_names_count(count: count)} -> count
+      {:ok, Model.account_counter(names: count)} -> count
       :not_found -> 0
     end
   end
