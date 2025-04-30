@@ -1,4 +1,5 @@
 defmodule AeMdw.Migrations.IndexMinersByReward do
+  @moduledoc false
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.Model
