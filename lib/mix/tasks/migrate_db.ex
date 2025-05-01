@@ -33,10 +33,14 @@ defmodule Mix.Tasks.MigrateDb do
 
     Log.info("================================================================================")
 
+    :ok = Code.put_compiler_option(:ignore_module_conflict, true)
+
     applied_count =
       list_new_migrations()
       |> Enum.map(&apply_migration!(&1, from_startup?))
       |> length()
+
+    :ok = Code.put_compiler_option(:ignore_module_conflict, false)
 
     if applied_count <= 0 do
       Log.info("migrations are up to date")
@@ -67,7 +71,7 @@ defmodule Mix.Tasks.MigrateDb do
   defp apply_migration!({version, path}, from_startup?) do
     {module, _bytecode} =
       path
-      |> Code.compile_file()
+      |> Code.require_file()
       |> List.last()
 
     state = State.new()
