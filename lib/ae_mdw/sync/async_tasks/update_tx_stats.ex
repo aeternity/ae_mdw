@@ -6,7 +6,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Log
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
 
@@ -55,7 +54,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
         )
       end)
 
-    Log.info("[update_tx_stats] after #{time_delta / @microsecs}s")
+    Logger.debug("[update_tx_stats] after #{time_delta / @microsecs}s")
 
     :ok
   end
