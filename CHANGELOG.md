@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.104.4](https://github.com/aeternity/ae_mdw/compare/v1.104.3...v1.104.4) (2025-06-16)
+
+
+### Bug Fixes
+
+* change level for update_tx_stats in order to avoid flooding the logs ([#2140](https://github.com/aeternity/ae_mdw/issues/2140)) ([d3df371](https://github.com/aeternity/ae_mdw/commit/d3df3717460833047a16330b25777485cb933b2e))
+
+
+### Miscellaneous
+
+* remove unneded warnings for compiling migrations at app start ([#2130](https://github.com/aeternity/ae_mdw/issues/2130)) ([0c3e676](https://github.com/aeternity/ae_mdw/commit/0c3e676472d42d2f0f04527e81be750f798b748a))
+
 ## [1.104.3](https://github.com/aeternity/ae_mdw/compare/v1.104.2...v1.104.3) (2025-04-25)
 
 
