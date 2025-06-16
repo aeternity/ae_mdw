@@ -1541,6 +1541,97 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
   end
 
+  describe "stats/miners returns sorted miners by total_reward" do
+    setup %{conn: conn, store: store} do
+      miner1 = <<1::256>>
+      miner2 = <<2::256>>
+      miner3 = <<3::256>>
+
+      miner1_pk = :aeapi.format_account_pubkey(miner1)
+      miner2_pk = :aeapi.format_account_pubkey(miner2)
+      miner3_pk = :aeapi.format_account_pubkey(miner3)
+
+      store =
+        store
+        |> Store.put(Model.Miner, Model.miner(index: miner1, total_reward: 10))
+        |> Store.put(Model.Miner, Model.miner(index: miner2, total_reward: 20))
+        |> Store.put(Model.Miner, Model.miner(index: miner3, total_reward: 30))
+        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {10, miner1}))
+        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {20, miner2}))
+        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {30, miner3}))
+
+      conn = with_store(conn, store)
+
+      {:ok, %{store: store, conn: conn, miner_pks: [miner1_pk, miner2_pk, miner3_pk]}}
+    end
+
+    test "it returns the miners sorted by total_reward", %{
+      conn: conn,
+      miner_pks: [miner1_pk, miner2_pk, miner3_pk]
+    } do
+      assert %{"prev" => nil, "data" => [st1, st2, st3], "next" => nil} =
+               conn
+               |> get("/v3/stats/miners")
+               |> json_response(200)
+
+      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st1
+      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
+      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st3
+    end
+
+    test "it returns the miners sorted by total_reward with limit", %{
+      conn: conn,
+      miner_pks: [miner1_pk, miner2_pk, miner3_pk]
+    } do
+      assert statistics =
+               %{"prev" => nil, "data" => [st1, st2], "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners", limit: 2)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st1
+      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st3
+
+      assert ^statistics =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+
+    test "it returns the miners sorted by asc total_reward", %{
+      conn: conn,
+      miner_pks: [miner1_pk, miner2_pk, miner3_pk]
+    } do
+      assert statistics =
+               %{"prev" => nil, "data" => [st1, st2], "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners", limit: 2, direction: "forward")
+               |> json_response(200)
+
+      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st1
+      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3], "next" => nil} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st3
+
+      assert ^statistics =
+               conn
+               |> get(prev_url)
+               |> json_response(200)
+    end
+  end
+
   defp add_transactions_every_5_hours(store, start_txi, end_txi, now) do
     end_txi..start_txi
     |> Enum.reduce({store, 1}, fn txi, {store, i} ->

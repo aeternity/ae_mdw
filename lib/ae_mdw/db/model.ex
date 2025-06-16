@@ -1311,6 +1311,12 @@ defmodule AeMdw.Db.Model do
   @type miner_index() :: pubkey()
   @type miner() :: record(:miner, index: miner_index(), total_reward: non_neg_integer())
 
+  @reward_miner_defaults [:index]
+  defrecord :reward_miner, @reward_miner_defaults
+
+  @type reward_miner_index() :: {non_neg_integer(), pubkey()}
+  @type reward_miner() :: record(:reward_miner, index: reward_miner_index())
+
   ### Node tables
   defrecord(:mempool_tx, :tx, hash: nil, signed_tx: nil, failures: nil)
 
@@ -1440,7 +1446,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IntTransferTx,
       AeMdw.Db.Model.KindIntTransferTx,
       AeMdw.Db.Model.TargetKindIntTransferTx,
-      AeMdw.Db.Model.Miner
+      AeMdw.Db.Model.Miner,
+      AeMdw.Db.Model.RewardMiner
     ]
   end
 
@@ -1680,6 +1687,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
+  def record(AeMdw.Db.Model.RewardMiner), do: :reward_miner
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair
