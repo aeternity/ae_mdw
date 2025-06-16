@@ -329,7 +329,7 @@ defmodule AeMdw.Sync.Server do
 
         :ok = profile_sync("sync_db", height, ts, blocks_mutations)
 
-        add_tx_fees_job(new_state)
+        new_state
       end)
 
     broadcast_blocks(gens_mutations)
@@ -421,9 +421,7 @@ defmodule AeMdw.Sync.Server do
                 block_mutations
               end)
 
-            state
-            |> State.commit_mem(mutations)
-            |> add_tx_fees_job()
+            State.commit_mem(state, mutations)
           end)
 
         :ok = profile_sync("sync_mem", height, ts, gen_mutations)
@@ -524,10 +522,5 @@ defmodule AeMdw.Sync.Server do
       end
 
     :ok
-  end
-
-  defp add_tx_fees_job(state) do
-    now = :aeu_time.now_in_msecs()
-    State.enqueue(state, :update_tx_stats, [now], [])
   end
 end
