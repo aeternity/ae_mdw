@@ -62,7 +62,7 @@ defmodule AeMdw.Db.Sync.Stats do
             Model.aexn_invalid_contract(
               index: {:aex9, contract_pk},
               reason: Aex9.invalid_number_of_holders_reason(),
-              description: "Invalid amount of holders on txi #{txi}"
+              description: "Invalid number of holders (#{new_count}) on txi #{txi}"
             )
           )
         end
