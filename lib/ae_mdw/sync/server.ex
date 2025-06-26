@@ -12,8 +12,8 @@ defmodule AeMdw.Sync.Server do
                          ├──────────────────────────────┐
                          │                              │
                          │                ┌───────────┐ │done_db(new_state)
-                         ▼             ┌► │syncing_db ├─┤
-   -new_height(h)┌──► ┌──┴─┐check_sync()│ └───────────┘ │
+                         ▼              ┌►│syncing_db ├─┤
+   -new_height(h)┌──► ┌────┐check_sync()│ └───────────┘ │
                  │    │idle├────────────┤               │
                  └─── └────┘            │ ┌───────────┐ │done_mem(new_state)
                         ▲               └►│syncing_mem├─┘
@@ -185,16 +185,21 @@ defmodule AeMdw.Sync.Server do
         to_height = min(from_height + @max_sync_gens - 1, max_db_height)
         clear_mem? = to_height != max_db_height
 
+        Log.info("[sync_db] started from height #{from_height} to #{to_height}")
+
         ref = spawn_db_sync(db_state, from_height, to_height, clear_mem?)
 
         {:next_state, {:syncing_db, ref}, state_data}
 
       db_height >= max_db_height and mem_hash != chain_hash ->
+        Log.info("[sync_mem] started from height #{db_height}")
+
         ref = spawn_mem_sync(db_height, chain_hash)
 
         {:next_state, {:syncing_mem, ref}, state_data}
 
       true ->
+        Log.info("Sync completed at height #{db_height}")
         :keep_state_and_data
     end
   end
@@ -219,6 +224,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   def handle_event(:cast, :restart_sync, :stopped, state_data) do
+    Log.info("Node sync restarted - Resuming sync after stop")
     {:next_state, :idle, %__MODULE__{state_data | restarts: 0}, @internal_check_sync}
   end
 
