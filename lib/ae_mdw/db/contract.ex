@@ -117,8 +117,7 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
-  @spec aex9_update_holders_to_balance_change(state(), pubkey(), integer(), integer(), txi()) ::
-          state()
+  @spec aex9_update_holders_to_balance_change(state(), pubkey(), integer(), integer(), txi()) :: state()
   def aex9_update_holders_to_balance_change(state, contract_pk, 0, new_balance, _txi)
       when new_balance != 0 do
     SyncStats.increment_aex9_holders(state, contract_pk)
@@ -131,30 +130,6 @@ defmodule AeMdw.Db.Contract do
 
   def aex9_update_holders_to_balance_change(state, _contract_pk, _old_balance, _new_balance, _txi) do
     state
-  end
-
-  @spec aex9_burn_update_holders(state(), pubkey(), integer(), integer(), txi()) :: state()
-  def aex9_burn_update_holders(state, contract_pk, old_balance, new_balance, txi) do
-    aex9_update_holders_to_balance_change(state, contract_pk, old_balance, new_balance, txi)
-  end
-
-  @spec aex9_mint_update_holders(state(), pubkey(), integer(), integer(), txi()) :: state()
-  defp aex9_mint_update_holders(state, contract_pk, old_balance, new_balance, txi) do
-    aex9_update_holders_to_balance_change(state, contract_pk, old_balance, new_balance, txi)
-  end
-
-  defp aex9_transfer_update_holders(
-         state,
-         contract_pk,
-         old_from_balance,
-         new_from_balance,
-         old_to_balance,
-         new_to_balance,
-         txi
-       ) do
-    state
-    |> aex9_update_holders_to_balance_change(contract_pk, old_from_balance, new_from_balance, txi)
-    |> aex9_update_holders_to_balance_change(contract_pk, old_to_balance, new_to_balance, txi)
   end
 
   @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
@@ -666,6 +641,44 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp write_aex9_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args) do
+    state = write_aex9_event_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args)
+
+    affected = case event_type do
+      :burn -> case args do [pk, _] -> [pk] end
+      :mint -> case args do [pk, _] -> [pk] end
+      :swap -> case args do [pk, _] -> [pk] end
+      :transfer -> case args do [pk_from, pk_to, _] when pk_from != pk_to -> [pk_from, pk_to] end
+      _ -> []
+    end
+
+    affected = Enum.uniq(affected)
+
+    with {:ok, balances} <- Node.Db.aex9_balances(contract_pk, State.height(state)) do
+
+          Enum.reduce(affected, state, fn pk, state ->
+            new_balance = Map.get(balances, pk, 0)
+
+            Model.aex9_event_balance(amount: old_balance) =
+              m_pk = get_aex9_event_balance(state, contract_pk, pk)
+
+            m_pk = Model.aex9_event_balance(m_pk,
+                txi: txi,
+                log_idx: log_idx,
+                amount: new_balance
+              )
+
+            state
+            |> State.put(Model.Aex9EventBalance, m_pk)
+            |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+            |> aex9_update_balance_account(contract_pk, old_balance, new_balance, pk, txi, log_idx)
+            |> aex9_update_holders_to_balance_change(contract_pk, old_balance, new_balance, txi)
+            |> aex9_update_contract_balance(contract_pk, new_balance - old_balance)
+            |> aex9_write_presence(contract_pk, txi, pk)
+          end)
+    end
+  end
+
+  defp write_aex9_event_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args) do
     case event_type do
       :burn when update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
@@ -681,8 +694,8 @@ defmodule AeMdw.Db.Contract do
 
       _other ->
         state
+      end
     end
-  end
 
   defp write_aex141_records(state, :burn, contract_pk, _txi, _log_idx, [
          _owner_pk,
@@ -841,7 +854,7 @@ defmodule AeMdw.Db.Contract do
   defp write_aexn_transfer(
          state,
          aexn_type,
-         {contract_pk, update_balance?},
+         contract_pk,
          txi,
          log_idx,
          [
@@ -866,9 +879,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
-    |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
     |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
-    |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
@@ -891,18 +902,6 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp burn_aex9_balance(state, contract_pk, txi, log_idx, [from_pk, <<burn_value::256>>]) do
-    Model.aex9_event_balance(amount: from_amount) =
-      m_from = get_aex9_event_balance(state, contract_pk, from_pk)
-
-    new_amount = from_amount - burn_value
-
-    m_from =
-      Model.aex9_event_balance(m_from,
-        txi: txi,
-        log_idx: log_idx,
-        amount: new_amount
-      )
-
     m_transfer =
       Model.aexn_transfer(
         index: {:aex9, from_pk, txi, log_idx, nil, burn_value},
@@ -910,30 +909,13 @@ defmodule AeMdw.Db.Contract do
       )
 
     state
-    |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
-    |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
-    |> aex9_burn_update_holders(contract_pk, from_amount, new_amount, txi)
-    |> aex9_update_contract_balance(contract_pk, -burn_value)
-    |> aex9_write_presence(contract_pk, txi, from_pk)
   end
 
   defp burn_aex9_balance(state, _pk, _txi, _idx, _args), do: state
 
   defp mint_aex9_balance(state, contract_pk, txi, log_idx, [to_pk, <<mint_value::256>>]) do
-    Model.aex9_event_balance(amount: to_amount) =
-      m_to = get_aex9_event_balance(state, contract_pk, to_pk)
-
-    new_amount = to_amount + mint_value
-
-    m_to =
-      Model.aex9_event_balance(m_to,
-        txi: txi,
-        log_idx: log_idx,
-        amount: new_amount
-      )
-
     m_transfer =
       Model.aexn_transfer(
         index: {:aex9, contract_pk, txi, log_idx, to_pk, mint_value},
@@ -944,75 +926,11 @@ defmodule AeMdw.Db.Contract do
       Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, log_idx, contract_pk, mint_value})
 
     state
-    |> State.put(Model.Aex9EventBalance, m_to)
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
-    |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
-    |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
-    |> aex9_mint_update_holders(contract_pk, to_amount, new_amount, txi)
-    |> aex9_update_contract_balance(contract_pk, mint_value)
-    |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
   defp mint_aex9_balance(state, _pk, _txi, _idx, _args), do: state
-
-  defp update_transfer_balance(state, :aex141, _pk, _txi, _i, _transfer), do: state
-
-  defp update_transfer_balance(state, :aex9, _pk, _txi, _i, [same_pk, same_pk, _value]), do: state
-
-  defp update_transfer_balance(state, :aex9, {contract_pk, true}, txi, log_idx, [
-         from_pk,
-         to_pk,
-         <<transfered_value::256>>
-       ]) do
-    Model.aex9_event_balance(amount: from_amount) =
-      m_from = get_aex9_event_balance(state, contract_pk, from_pk)
-
-    Model.aex9_event_balance(amount: to_amount) =
-      m_to = get_aex9_event_balance(state, contract_pk, to_pk)
-
-    new_to_amount = to_amount + transfered_value
-
-    m_to =
-      Model.aex9_event_balance(m_to,
-        txi: txi,
-        log_idx: log_idx,
-        amount: new_to_amount
-      )
-
-    new_from_amount = from_amount - transfered_value
-
-    m_from =
-      Model.aex9_event_balance(m_from,
-        txi: txi,
-        log_idx: log_idx,
-        amount: new_from_amount
-      )
-
-    state
-    |> aex9_transfer_update_holders(
-      contract_pk,
-      from_amount,
-      new_from_amount,
-      to_amount,
-      new_to_amount,
-      txi
-    )
-    |> State.put(Model.Aex9EventBalance, m_from)
-    |> State.put(Model.Aex9EventBalance, m_to)
-    |> aex9_update_balance_account(
-      contract_pk,
-      from_amount,
-      new_from_amount,
-      from_pk,
-      txi,
-      log_idx
-    )
-    |> aex9_update_balance_account(contract_pk, to_amount, new_to_amount, to_pk, txi, log_idx)
-    |> aex9_write_presence(contract_pk, txi, to_pk)
-  end
-
-  defp update_transfer_balance(state, _type, _pk, _txi, _idx, _args), do: state
 
   defp aex9_update_contract_balance(state, contract_pk, delta_amount) do
     State.update(
