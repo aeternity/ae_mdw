@@ -117,15 +117,18 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
-  @spec aex9_update_holders_to_balance_change(state(), pubkey(), integer(), integer(), txi()) :: state()
+  @spec aex9_update_holders_to_balance_change(state(), pubkey(), integer(), integer(), txi()) ::
+          state()
   def aex9_update_holders_to_balance_change(state, contract_pk, 0, new_balance, _txi)
-  when new_balance != 0 do
+      when new_balance != 0 do
     SyncStats.increment_aex9_holders(state, contract_pk)
   end
+
   def aex9_update_holders_to_balance_change(state, contract_pk, old_balance, 0, txi)
-  when old_balance != 0 do
+      when old_balance != 0 do
     SyncStats.decrement_aex9_holders(state, contract_pk, txi)
   end
+
   def aex9_update_holders_to_balance_change(state, _contract_pk, _old_balance, _new_balance, _txi) do
     state
   end
@@ -140,7 +143,15 @@ defmodule AeMdw.Db.Contract do
     aex9_update_holders_to_balance_change(state, contract_pk, old_balance, new_balance, txi)
   end
 
-  defp aex9_transfer_update_holders(state, contract_pk, old_from_balance, new_from_balance, old_to_balance, new_to_balance, txi) do
+  defp aex9_transfer_update_holders(
+         state,
+         contract_pk,
+         old_from_balance,
+         new_from_balance,
+         old_to_balance,
+         new_to_balance,
+         txi
+       ) do
     state
     |> aex9_update_holders_to_balance_change(contract_pk, old_from_balance, new_from_balance, txi)
     |> aex9_update_holders_to_balance_change(contract_pk, old_to_balance, new_to_balance, txi)
@@ -979,7 +990,14 @@ defmodule AeMdw.Db.Contract do
       )
 
     state
-    |> aex9_transfer_update_holders(contract_pk, from_amount, new_from_amount, to_amount, new_to_amount, txi)
+    |> aex9_transfer_update_holders(
+      contract_pk,
+      from_amount,
+      new_from_amount,
+      to_amount,
+      new_to_amount,
+      txi
+    )
     |> State.put(Model.Aex9EventBalance, m_from)
     |> State.put(Model.Aex9EventBalance, m_to)
     |> aex9_update_balance_account(
