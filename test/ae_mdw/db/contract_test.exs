@@ -462,7 +462,7 @@ defmodule AeMdw.Db.ContractTest do
       assert 3 = Stats.fetch_aex9_logs_count(state, contract_pk)
     end
 
-    test "marks aex9 contract as invalid when holder balance is less than 0" do
+    test "handles burn operations that result in negative balance" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
@@ -504,14 +504,16 @@ defmodule AeMdw.Db.ContractTest do
         )
         |> Contract.logs_write(txi, txi + 1, call_rec, false)
 
+      # Check that the contract balance reflects the net burn amount
       assert Model.aex9_contract_balance(amount: -1000) =
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
 
-      reason = Aex9.invalid_holder_balance_reason()
-      description = "Invalid balance of -1000 at tx #{txi + 1}"
+      # Check that the account's event balance is updated correctly
+      assert {:ok, Model.aex9_event_balance(amount: -1000)} =
+               State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
 
-      assert {:ok, Model.aexn_invalid_contract(reason: ^reason, description: ^description)} =
-               State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk})
+      # Verify that no invalid contract record is created (new behavior)
+      assert :not_found = State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk})
     end
 
     test "writes mint and transfer balance when adding liquidity" do
