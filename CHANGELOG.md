@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.104.4](https://github.com/aeternity/ae_mdw/compare/v1.104.3...v1.104.4) (2025-08-04)
+
+
+### Bug Fixes
+
+* change level for update_tx_stats in order to avoid flooding the logs ([#2140](https://github.com/aeternity/ae_mdw/issues/2140)) ([d3df371](https://github.com/aeternity/ae_mdw/commit/d3df3717460833047a16330b25777485cb933b2e))
+* test for negative balance ([8b8d21a](https://github.com/aeternity/ae_mdw/commit/8b8d21adc06f9c63be2afc2fa2d499f4213c20ab))
+* update AEX9 holders according to actual balance changes ([68f035b](https://github.com/aeternity/ae_mdw/commit/68f035be8b28d50a2c6aeaba96f80566019a6516))
+
+
+### Miscellaneous
+
+* better error messages on invalid holders in AEX9 ([b11fdb4](https://github.com/aeternity/ae_mdw/commit/b11fdb4a08240934997e4074be50c9b7e127901c))
+* format ([92296e0](https://github.com/aeternity/ae_mdw/commit/92296e0d543fc2152203a2b751b620bd7972537f))
+* remove unneded warnings for compiling migrations at app start ([#2130](https://github.com/aeternity/ae_mdw/issues/2130)) ([0c3e676](https://github.com/aeternity/ae_mdw/commit/0c3e676472d42d2f0f04527e81be750f798b748a))
+
 ## [1.104.3](https://github.com/aeternity/ae_mdw/compare/v1.104.2...v1.104.3) (2025-04-25)
 
 
