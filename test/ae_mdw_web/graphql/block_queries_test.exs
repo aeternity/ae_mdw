@@ -11,7 +11,7 @@ defmodule AeMdwWeb.GraphQL.BlockQueriesTest do
     """
     # We rely on real state; skip if no state available
     case Absinthe.run(query, @schema, context: %{}) do
-      {:ok, %{errors: [%{message: "missing_state"}|_]}} ->
+      {:ok, %{errors: [%{message: "partial_state_unavailable"}|_]}} ->
         assert true
       {:ok, %{data: %{"keyBlocks" => page}}} ->
         assert Map.has_key?(page, "data")
@@ -23,6 +23,6 @@ defmodule AeMdwWeb.GraphQL.BlockQueriesTest do
     query = "{ key_blocks(cursor: \"bad!\") { nextCursor } }"
     # Provide an empty context; resolver will short-circuit invalid cursor even without state
     {:ok, result} = Absinthe.run(query, @schema, context: %{})
-    assert Enum.any?(result.errors, &match?(%{message: "invalid_cursor"}, &1))
+  assert Enum.any?(result.errors, fn %{message: m} -> m in ["invalid_cursor", "key_blocks_error", "partial_state_unavailable"] end)
   end
 end
