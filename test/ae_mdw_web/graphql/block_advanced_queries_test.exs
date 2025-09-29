@@ -67,13 +67,13 @@ defmodule AeMdwWeb.GraphQL.BlockAdvancedQueriesTest do
   describe "micro_block & error cases" do
     test "micro_block not found returns micro_block_not_found" do
       {:ok, res} = run("{ micro_block(hash: \"mh_invalid\") { hash } }")
-  if res[:errors], do: assert Enum.any?(res.errors, &(&1.message in ["micro_block_not_found", "missing_state", "micro_block_error"]))
+  if res[:errors], do: assert Enum.any?(res.errors, &(&1.message in ["micro_block_not_found", "partial_state_unavailable", "micro_block_error"]))
     end
 
     test "key_block not found large height" do
       very_high = 9_999_999
       {:ok, res} = run("{ key_block(id: \"#{very_high}\") { hash } }")
-  if res[:errors], do: assert Enum.any?(res.errors, &(&1.message in ["key_block_not_found", "missing_state", "key_block_error"]))
+  if res[:errors], do: assert Enum.any?(res.errors, &(&1.message in ["key_block_not_found", "partial_state_unavailable", "key_block_error"]))
     end
   end
 end
