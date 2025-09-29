@@ -1,4 +1,3 @@
-Enum.each(Path.wildcard(Path.expand("support/**/*.exs", __DIR__)), &Code.require_file/1)
 ExUnit.start()
 
 # Optional heavy reset only when explicitly requested to avoid races with running sync processes.
