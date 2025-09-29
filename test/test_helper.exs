@@ -1,21 +1,33 @@
-config = ExUnit.configuration()
-included_tests = Keyword.fetch!(config, :include)
+ExUnit.start()
 
-if Enum.all?(~w(integration iteration devmode)a, &(&1 not in included_tests)) do
-  IO.puts("Stopping :aecore..")
-  Application.stop(:aecore)
+# Optional heavy reset only when explicitly requested to avoid races with running sync processes.
+if System.get_env("AE_MDW_FORCE_DB_RESET") == "1" do
+  IO.puts("[test_helper] Forcing DB reset (AE_MDW_FORCE_DB_RESET=1)")
+  # Best effort shutdown to reduce lingering processes; ignore errors.
+  _ = try do
+    Application.stop(:aecore)
+  rescue
+    _ -> :ok
+  end
 
-  :ets.new(:counters, [:named_table, :set, :public])
-  :ets.insert(:counters, {:txi, 0})
-  :ets.insert(:counters, {:kbi, 0})
+  # Create counters table if not present
+  unless :ets.whereis(:counters) != :undefined do
+    :ets.new(:counters, [:named_table, :set, :public])
+  end
+  for kv <- [{:txi, 0}, {:kbi, 0}] do
+    :ets.insert(:counters, kv)
+  end
 
-  # reset database
-  :ok = AeMdw.Db.RocksDb.close()
-  :ok = AeMdw.Db.RocksDb.open(true)
-
-  # init for tests without sync
-  :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+  # Close & reopen RocksDB defensively
+  _ = try do
+    AeMdw.Db.RocksDb.close()
+  rescue
+    _ -> :ok
+  end
+  case AeMdw.Db.RocksDb.open(true) do
+    :ok -> :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+    other -> IO.puts("[test_helper] Skipping persistent_term init, open returned: #{inspect(other)}")
+  end
 end
 
-ExUnit.start()
 Mneme.start()

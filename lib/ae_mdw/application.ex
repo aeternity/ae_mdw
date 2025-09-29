@@ -36,8 +36,13 @@ defmodule AeMdw.Application do
 
     init_public(:contract_cache)
     init(:app_ctrl_server)
-    init(:aecore_services)
-    init(:aesync)
+
+    if Application.get_env(:ae_mdw, :start_node_services, true) do
+      init(:aecore_services)
+      init(:aesync)
+    else
+      Logger.info("[AeMdw] Skipping aecore/aesync services in test mode")
+    end
     init(:tables)
     init(:formatters)
 
