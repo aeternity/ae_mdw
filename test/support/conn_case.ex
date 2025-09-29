@@ -30,7 +30,7 @@ defmodule AeMdwWeb.ConnCase do
 
       alias AeMdwWeb.Router.Helpers, as: Routes
       alias AeMdw.Db.State
-      alias AeMdw.Validate
+  # Removed unused alias AeMdw.Validate to avoid warnings_as_errors failing compilation
 
       import AeMdw.Util.Encoding
 
