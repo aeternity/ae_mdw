@@ -8,7 +8,7 @@ defmodule AeMdw.Db.HardforkPresets do
   alias AeMdw.Db.State
   alias AeMdw.Node
 
-  @type hardfork :: :genesis | :minerva | :fortuna | :lima
+  @type hardfork :: :roma | :minerva | :fortuna | :lima | :iris | :ceres
 
   @doc """
   Imports hardfork migrated accounts.
@@ -27,7 +27,7 @@ defmodule AeMdw.Db.HardforkPresets do
   end
 
   @spec hardfork_height(hardfork()) :: AeMdw.Blocks.height()
-  def hardfork_height(:genesis), do: 0
+  def hardfork_height(:roma), do: 0
 
   def hardfork_height(hardfork) do
     hf_vsn = :aec_hard_forks.protocol_vsn(hardfork)
@@ -45,10 +45,9 @@ defmodule AeMdw.Db.HardforkPresets do
     |> Enum.sum()
   end
 
-  defp accounts(:genesis), do: :aec_fork_block_settings.genesis_accounts()
+  defp accounts(:roma), do: :aec_fork_block_settings.genesis_accounts()
   defp accounts(:minerva), do: :aec_fork_block_settings.minerva_accounts()
   defp accounts(:fortuna), do: :aec_fork_block_settings.fortuna_accounts()
-
   defp accounts(:lima) do
     contract_account =
       Node.lima_contracts()
@@ -60,15 +59,15 @@ defmodule AeMdw.Db.HardforkPresets do
       Node.lima_accounts() ++
       Node.lima_extra_accounts()
   end
-
-  defp accounts(_hf), do: %{}
+  defp accounts(:iris), do: %{}
+  defp accounts(:ceres), do: %{}
 
   defp do_import_account_presets() do
     if :aec_governance.get_network_id() in ["ae_uat", "ae_mainnet"] do
       State.commit(
         State.new(),
         [
-          hardfork_mutation(:genesis, &:aec_fork_block_settings.genesis_accounts/0),
+          hardfork_mutation(:roma, &:aec_fork_block_settings.genesis_accounts/0),
           hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0),
           hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0),
           hardfork_mutation(:lima, &Node.lima_accounts/0),
