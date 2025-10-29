@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.5](https://github.com/aeternity/ae_mdw/compare/v1.104.4...v1.104.5) (2025-10-29)
+
+
+### Bug Fixes
+
+* change the name of the genesis hardfork to roma ([#2163](https://github.com/aeternity/ae_mdw/issues/2163)) ([465557a](https://github.com/aeternity/ae_mdw/commit/465557a65f1d105f2830278a45dbe5f444312eaa))
+
 ## [1.104.4](https://github.com/aeternity/ae_mdw/compare/v1.104.3...v1.104.4) (2025-08-04)
 
 
