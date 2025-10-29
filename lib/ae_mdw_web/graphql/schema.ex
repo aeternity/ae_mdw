@@ -4,6 +4,10 @@ defmodule AeMdwWeb.GraphQL.Schema do
   """
   use Absinthe.Schema
 
+  alias AeMdwWeb.GraphQL.Macros
+
+  require Macros
+
   # Simple scalar mapping for IDs is fine for now
   import_types(Absinthe.Type.Custom)
 
@@ -238,6 +242,53 @@ defmodule AeMdwWeb.GraphQL.Schema do
       resolve(&AeMdwWeb.GraphQL.Resolvers.AccountResolver.account_aex9_balances/3)
     end
 
+    @desc "Statistics for generations from tip of the chain"
+    field :total_stats, :total_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.total/3)
+    end
+
+    @desc "Aggregated statistics for generations from tip of the chain"
+    field :delta_stats, :delta_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.delta/3)
+    end
+
+    @desc "Total rewards for each miner"
+    field :miners_stats, :miners_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.miners/3)
+    end
+
+    @desc "Statistics over time of transactions count"
+    field :transactions_stats, :transactions_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.transactions/3)
+    end
+
+    @desc "Statistics over time of blocks count"
+    field :blocks_stats, :blocks_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.blocks/3)
+    end
+
+    @desc "Statistics over time of names count"
+    field :names_stats, :blocks_stats_page do
+      arg(:cursor, :string)
+      arg(:limit, :integer, default_value: 10)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.names/3)
+    end
+
+    @desc "Global statistics"
+    field :stats, :stats do
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.stats/3)
+    end
+
     @desc "Richer sync / chain status"
     field :status, :status do
       resolve(fn _, _, %{context: ctx} ->
@@ -301,6 +352,23 @@ defmodule AeMdwWeb.GraphQL.Schema do
     end
   end
 
+  Macros.page(:key_block)
+  Macros.page(:micro_block)
+  Macros.page(:transaction)
+  Macros.page(:account)
+  Macros.page(:name)
+  Macros.page(:name_history_page, :name_history_item)
+  Macros.page(:auction)
+  Macros.page(:search_name_page, :search_name_entry)
+  Macros.page(:pointee)
+  Macros.page(:aex9_balance)
+  Macros.page(:total_stats)
+  Macros.page(:delta_stats)
+  Macros.page(:miners_stats)
+  Macros.page(:transactions_stats)
+  Macros.page(:blocks_stats)
+  Macros.page(:names_stats)
+
   object :key_block do
     field(:hash, non_null(:string))
     field(:height, non_null(:integer))
@@ -341,30 +409,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:miner, :string)
   end
 
-  object :key_block_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:key_block))
-  end
-
-  object :micro_block_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:micro_block))
-  end
-
-  object :transaction_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:transaction))
-  end
-
-  object :account_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:account))
-  end
-
   object :name do
     field(:name, :string)
     field(:active, :boolean)
@@ -386,12 +430,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:auction, :string, description: "Auction data (JSON string) if still in auction")
   end
 
-  object :name_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:name))
-  end
-
   object :name_history_item do
     field(:active_from, :integer)
     field(:expired_at, :integer)
@@ -401,12 +439,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:source_tx_type, :string)
     field(:internal_source, :boolean)
     field(:tx, :string, description: "Source chain transaction (JSON)")
-  end
-
-  object :name_history_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:name_history_item))
   end
 
   object :auction do
@@ -419,23 +451,11 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:last_bid, :string, description: "JSON with last bid tx")
   end
 
-  object :auction_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:auction))
-  end
-
   object :search_name_entry do
     field(:type, :string)
     field(:name, :string)
     field(:active, :boolean)
     field(:auction, :auction)
-  end
-
-  object :search_name_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:search_name_entry))
   end
 
   object :pointee do
@@ -448,12 +468,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:source_tx_hash, :string)
     field(:source_tx_type, :string)
     field(:tx, :string)
-  end
-
-  object :pointee_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:pointee))
   end
 
   object :name_pointees do
@@ -476,11 +490,63 @@ defmodule AeMdwWeb.GraphQL.Schema do
     field(:amount, :big_int)
   end
 
-  object :aex9_balance_page do
-    field(:prev_cursor, :string)
-    field(:next_cursor, :string)
-    field(:data, list_of(:aex9_balance))
+  object :total_stats do
+    field(:height, :integer)
+    field(:contracts, :integer)
+    field(:locked_in_auctions, :big_int)
+    field(:burned_in_auctions, :big_int)
+    field(:locked_in_channels, :big_int)
+    field(:active_auctions, :integer)
+    field(:active_names, :integer)
+    field(:inactive_names, :integer)
+    field(:active_oracles, :integer)
+    field(:inactive_oracles, :integer)
+    field(:open_channels, :integer)
+    field(:last_tx_hash, :string)
+    field(:sum_block_reward, :big_int)
+    field(:sum_dev_reward, :big_int)
+    field(:total_token_supply, :big_int)
   end
+
+  object :delta_stats do
+    field(:height, :integer)
+    field(:auctions_started, :integer)
+    field(:names_activated, :integer)
+    field(:names_expired, :integer)
+    field(:names_revoked, :integer)
+    field(:oracles_registered, :integer)
+    field(:oracles_expired, :integer)
+    field(:contracts_created, :integer)
+    field(:block_reward, :big_int)
+    field(:dev_reward, :big_int)
+    field(:locked_in_auctions, :big_int)
+    field(:burned_in_auctions, :big_int)
+    field(:channels_opened, :integer)
+    field(:channels_closed, :integer)
+    field(:locked_in_channels, :big_int)
+    field(:last_tx_hash, :string)
+  end
+
+  object :miners_stats do
+    field(:miner, :string)
+    field(:total_reward, :big_int)
+  end
+
+  object :stats do
+    field(:total_blocks, :integer)
+    field(:fees_trend, :float)
+    field(:last24hs_average_transaction_fees, :float)
+    field(:last24hs_transactions, :integer)
+    field(:max_transactions_per_second, :float)
+    field(:max_transactions_per_second_block_hash, :string)
+    field(:milliseconds_per_block, :integer)
+    field(:transactions_trend, :float)
+    field(:miners_count, :integer)
+  end
+
+  Macros.start_end_count(:transactions_stats)
+  Macros.start_end_count(:blocks_stats)
+  Macros.start_end_count(:names_stats)
 
   object :transaction do
     field(:hash, :string)
