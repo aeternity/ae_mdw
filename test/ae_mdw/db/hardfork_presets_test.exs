@@ -109,7 +109,7 @@ defmodule AeMdw.Db.HardforkPresetsTest do
 
   describe "mint_sum" do
     test "returns the sum of mintings of a hardfork" do
-      assert HardforkPresets.mint_sum(:genesis) == 89_451_376_822_397_976_634_367_408
+      assert HardforkPresets.mint_sum(:roma) == 89_451_376_822_397_976_634_367_408
       assert HardforkPresets.mint_sum(:minerva) == 27_051_422_546_127_651_538_826_703
       assert HardforkPresets.mint_sum(:fortuna) == 72_681_157_406_723_951_132_840_970
       assert HardforkPresets.mint_sum(:lima) == 86_948_638_040_240_004_719_633_952
