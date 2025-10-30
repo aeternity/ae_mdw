@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.GraphQL.Macros do
+defmodule AeMdwWeb.GraphQL.Schema.Helpers.Macros do
   defmacro start_end_count(type) do
     quote do
       object unquote(type) do
