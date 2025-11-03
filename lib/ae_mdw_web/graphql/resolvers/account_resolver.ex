@@ -138,6 +138,31 @@ defmodule AeMdwWeb.GraphQL.Resolvers.AccountResolver do
   end
   def account_aex9_balances(_, _args, _), do: {:error, "partial_state_unavailable"}
 
+  @spec account_aex141_tokens(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
+  def account_aex141_tokens(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
+    limit = args |> Map.get(:limit, 50) |> clamp_limit()
+    cursor = Map.get(args, :cursor)
+    contract_filter = Map.get(args, :contract_id)
+
+    pagination = {:backward, false, limit, not is_nil(cursor)}
+    query = case contract_filter do
+      nil -> %{}
+      cid -> %{"contract" => cid}
+    end
+
+    case AeMdw.Aex141.fetch_owned_tokens(state, id, cursor, pagination, query) do
+      {:ok, {prev, items, next}} ->
+        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
+      {:error, %AeMdw.Error.Input.Cursor{}} -> {:error, "invalid_cursor"}
+      {:error, %AeMdw.Error.Input.Query{}} -> {:error, "invalid_filter"}
+      {:error, _} -> {:error, "aex141_tokens_error"}
+    end
+  end
+  def account_aex141_tokens(_, _args, _), do: {:error, "partial_state_unavailable"}
+
+  defp cursor_val(nil), do: nil
+  defp cursor_val({val, _rev}), do: val
+
   defp aex9_balance(_state, contract_pk, account_pk) do
     try do
       {amount, _height_hash} = AeMdw.Node.Db.aex9_balance(contract_pk, account_pk, false)
