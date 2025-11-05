@@ -15,6 +15,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:error, _} -> {:error, "contract_error"}
     end
   end
+
   def contract(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   def contracts(_p, args, %{context: %{state: %State{} = state}}) do
@@ -37,11 +38,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, _} -> {:error, "contracts_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, _} ->
+        {:error, "contracts_error"}
     end
   end
+
   def contracts(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   def logs(_p, args, %{context: %{state: %State{} = state}}) do
@@ -49,6 +56,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -64,12 +72,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "contract_logs_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "contract_logs_error"}
     end
   end
+
   def logs(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   def contract_logs(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -77,6 +93,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -92,13 +109,23 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "contract_not_found"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "contract_logs_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "contract_not_found"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "contract_logs_error"}
     end
   end
+
   def contract_logs(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   def calls(_p, args, %{context: %{state: %State{} = state}}) do
@@ -106,6 +133,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -121,12 +149,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "contract_calls_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "contract_calls_error"}
     end
   end
+
   def calls(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   def contract_calls(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -134,6 +170,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -149,13 +186,23 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "contract_not_found"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "contract_calls_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "contract_not_found"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "contract_calls_error"}
     end
   end
+
   def contract_calls(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Helpers --------------
