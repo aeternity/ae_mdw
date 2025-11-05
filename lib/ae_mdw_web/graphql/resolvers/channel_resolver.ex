@@ -38,12 +38,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "channels_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "channels_error"}
     end
   end
+
   def channels(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Single channel --------------
@@ -61,15 +69,18 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
       {:error, _} -> {:error, "channel_error"}
     end
   end
+
   def channel(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Channel updates --------------
-  @spec channel_updates(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
+  @spec channel_updates(any, map(), Absinthe.Resolution.t()) ::
+          {:ok, map()} | {:error, String.t()}
   def channel_updates(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
     limit = clamp_limit(Map.get(args, :limit, 20))
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -84,16 +95,25 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "channel_not_found"}
-      {:error, _} -> {:error, "channel_updates_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "channel_not_found"}
+
+      {:error, _} ->
+        {:error, "channel_updates_error"}
     end
   end
+
   def channel_updates(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Helpers --------------
   defp parse_optional_block_hash(nil), do: {:ok, nil}
+
   defp parse_optional_block_hash(block_hash) when is_binary(block_hash) do
     with {:ok, decoded} <- Validate.id(block_hash) do
       if String.starts_with?(block_hash, "kh") do

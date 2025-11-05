@@ -19,9 +19,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
           {:error, _} -> {:error, "oracle_error"}
         end
 
-      {:error, _} -> {:error, "invalid_oracle_id"}
+      {:error, _} ->
+        {:error, "invalid_oracle_id"}
     end
   end
+
   def oracle(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Oracles list --------------
@@ -54,12 +56,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
       {:ok, {prev, items, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-      {:error, _} -> {:error, "oracles_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.Query{}} ->
+        {:error, "invalid_filter"}
+
+      {:error, _} ->
+        {:error, "oracles_error"}
     end
   end
+
   def oracles(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Oracle Queries --------------
@@ -73,20 +83,28 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
       {:ok, {prev, queries, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: queries}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "oracle_not_found"}
-      {:error, _} -> {:error, "oracle_queries_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "oracle_not_found"}
+
+      {:error, _} ->
+        {:error, "oracle_queries_error"}
     end
   end
+
   def oracle_queries(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Oracle Responses --------------
-  @spec oracle_responses(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
+  @spec oracle_responses(any, map(), Absinthe.Resolution.t()) ::
+          {:ok, map()} | {:error, String.t()}
   def oracle_responses(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
     limit = clamp_limit(Map.get(args, :limit, 20))
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
+
     range =
       cond do
         from_h && to_h -> {:gen, from_h..to_h}
@@ -101,12 +119,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
       {:ok, {prev, responses, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: responses}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "oracle_not_found"}
-      {:error, _} -> {:error, "oracle_responses_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.Scope{}} ->
+        {:error, "invalid_scope"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "oracle_not_found"}
+
+      {:error, _} ->
+        {:error, "oracle_responses_error"}
     end
   end
+
   def oracle_responses(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Oracle Extends --------------
@@ -120,11 +146,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
       {:ok, {prev, extends, next}} ->
         {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: extends}}
 
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, %ErrInput.NotFound{}} -> {:error, "oracle_not_found"}
-      {:error, _} -> {:error, "oracle_extends_error"}
+      {:error, %ErrInput.Cursor{}} ->
+        {:error, "invalid_cursor"}
+
+      {:error, %ErrInput.NotFound{}} ->
+        {:error, "oracle_not_found"}
+
+      {:error, _} ->
+        {:error, "oracle_extends_error"}
     end
   end
+
   def oracle_extends(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Helpers --------------
