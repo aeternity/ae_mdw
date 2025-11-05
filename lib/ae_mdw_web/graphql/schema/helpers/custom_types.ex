@@ -1,7 +1,11 @@
 defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
   use Absinthe.Schema.Notation
 
-  # Custom scalar capable of representing arbitrarily large integers
+  enum :direction do
+    value(:forward)
+    value(:backward)
+  end
+
   scalar :big_int, name: "BigInt" do
     parse(fn
       %Absinthe.Blueprint.Input.Integer{value: v} ->
