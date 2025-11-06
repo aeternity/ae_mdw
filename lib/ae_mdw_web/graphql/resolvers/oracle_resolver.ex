@@ -5,8 +5,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   alias AeMdw.{Oracles}
   alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
-
-  @max_limit 100
+  alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   # -------------- Single Oracle --------------
   @spec oracle(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
@@ -29,7 +28,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   # -------------- Oracles list --------------
   @spec oracles(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
   def oracles(_p, args, %{context: %{state: %State{} = state}}) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     state_filter = args |> Map.get(:state)
     from_h = Map.get(args, :from_height)
@@ -54,7 +53,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
 
     case Oracles.fetch_oracles(state, pagination, range, query, cursor, v3?: true) do
       {:ok, {prev, items, next}} ->
-        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
+        {:ok, %{prev_cursor: Helpers.cursor_val(prev), next_cursor: Helpers.cursor_val(next), data: items}}
 
       {:error, %ErrInput.Cursor{}} ->
         {:error, "invalid_cursor"}
@@ -75,13 +74,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   # -------------- Oracle Queries --------------
   @spec oracle_queries(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
   def oracle_queries(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     pagination = {:backward, false, limit, not is_nil(cursor)}
 
     case Oracles.fetch_oracle_queries(state, id, pagination, nil, cursor) do
       {:ok, {prev, queries, next}} ->
-        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: queries}}
+        {:ok, %{prev_cursor: Helpers.cursor_val(prev), next_cursor: Helpers.cursor_val(next), data: queries}}
 
       {:error, %ErrInput.Cursor{}} ->
         {:error, "invalid_cursor"}
@@ -100,7 +99,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   @spec oracle_responses(any, map(), Absinthe.Resolution.t()) ::
           {:ok, map()} | {:error, String.t()}
   def oracle_responses(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     from_h = Map.get(args, :from_height)
     to_h = Map.get(args, :to_height)
@@ -117,7 +116,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
 
     case Oracles.fetch_oracle_responses(state, id, pagination, range, cursor) do
       {:ok, {prev, responses, next}} ->
-        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: responses}}
+        {:ok, %{prev_cursor: Helpers.cursor_val(prev), next_cursor: Helpers.cursor_val(next), data: responses}}
 
       {:error, %ErrInput.Cursor{}} ->
         {:error, "invalid_cursor"}
@@ -158,12 +157,4 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   # end
 
   # def oracle_extends(_, _args, _), do: {:error, "partial_state_unavailable"}
-
-  # -------------- Helpers --------------
-  defp cursor_val(nil), do: nil
-  defp cursor_val({val, _rev}), do: val
-
-  defp clamp_limit(l) when is_integer(l) and l > @max_limit, do: @max_limit
-  defp clamp_limit(l) when is_integer(l) and l > 0, do: l
-  defp clamp_limit(_), do: 20
 end
