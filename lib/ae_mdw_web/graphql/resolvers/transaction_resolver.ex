@@ -2,6 +2,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   alias AeMdw.Txs
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
+  alias AeMdwWeb.GraphQL.Resolvers.Helpers
+  alias AeMdw.Db.NodeStore
+  alias AeMdw.Db.State
 
   @max_limit 100
 
@@ -11,6 +14,37 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
       {:ok, atomize_tx(tx)}
     else
       {:error, err} -> {:error, ErrInput.message(err)}
+    end
+  end
+
+  def pending_transactions(_p, args, _res) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    try do
+      {prev, txs, next} =
+        NodeStore.new()
+        |> State.new()
+        |> Txs.fetch_pending_txs(pagination, nil, cursor)
+
+      {:ok,
+       %{
+         prev_cursor: Helpers.cursor_val(prev),
+         next_cursor: Helpers.cursor_val(next),
+         data: txs |> Enum.map(&atomize_tx/1)
+       }}
+    rescue
+      _ -> {:error, "pending_transactions_error"}
+    end
+  end
+
+  def pending_transactions_count(_p, _args, _res) do
+    try do
+      {:ok, AeMdw.Node.Db.pending_txs_count()}
+    rescue
+      _ -> {:error, "pending_transactions_count_error"}
     end
   end
 
@@ -105,34 +139,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   def transactions_count(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # ---------------- Pending Transactions List ----------------
-  @spec pending_transactions(any, map(), Absinthe.Resolution.t()) ::
-          {:ok, map()} | {:error, String.t()}
-  def pending_transactions(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
-    cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    try do
-      {prev, txs, next} = AeMdw.Txs.fetch_pending_txs(state, pagination, nil, cursor)
-      data = Enum.map(txs, &atomize_tx/1)
-      {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: data}}
-    rescue
-      _ -> {:error, "pending_transactions_error"}
-    end
-  end
-
-  def pending_transactions(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # ---------------- Pending Transactions Count ----------------
-  @spec pending_transactions_count(any, map(), Absinthe.Resolution.t()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def pending_transactions_count(_p, _args, _res) do
-    try do
-      {:ok, AeMdw.Node.Db.pending_txs_count()}
-    rescue
-      _ -> {:error, "pending_transactions_count_error"}
-    end
-  end
 
   # ---------------- Micro Block Transactions ----------------
   @spec micro_block_transactions(any, map(), Absinthe.Resolution.t()) ::
