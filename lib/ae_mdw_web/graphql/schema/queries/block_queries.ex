@@ -8,8 +8,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.BlockQueries do
       arg(:cursor, :string)
       arg(:limit, :integer)
       arg(:direction, :direction, default_value: :backward)
-      arg(:from, :integer)
-      arg(:to, :integer)
+      arg(:from_height, :integer)
+      arg(:to_height, :integer)
       resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.key_blocks/3)
     end
 
@@ -33,8 +33,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.BlockQueries do
       arg(:cursor, :string)
       arg(:limit, :integer)
       arg(:direction, :direction, default_value: :backward)
-      arg(:from, :integer)
-      arg(:to, :integer)
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.micro_blocks/3)
     end
@@ -47,8 +45,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.BlockQueries do
       arg(:cursor, :string)
       arg(:limit, :integer)
       arg(:direction, :direction, default_value: :backward)
-      arg(:from, :integer)
-      arg(:to, :integer)
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.micro_blocks/3)
     end

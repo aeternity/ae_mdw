@@ -12,11 +12,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end
   end
 
-  # TODO: should nil be returned when only "to" is given?
-  def make_scope(from, to) do
+  # TODO: should nil be returned when only "to_height" is given?
+  def make_scope(from_height, to_height) do
     cond do
-      from && to -> {:gen, from..to}
-      from && is_nil(to) -> {:gen, from..from}
+      from_height && to_height -> {:gen, from_height..to_height}
+      from_height && is_nil(to_height) -> {:gen, from_height..from_height}
       true -> nil
     end
   end
