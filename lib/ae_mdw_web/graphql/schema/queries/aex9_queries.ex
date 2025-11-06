@@ -7,21 +7,25 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_count/3)
     end
 
-    # @desc "List AEX9 contracts (paginated)"
-    # field :aex9_contracts, :aex9_contract_page do
-    #  arg(:by, :string, description: "creation | name | symbol", default_value: "creation")
-    #  arg(:prefix, :string)
-    #  arg(:exact, :string)
-    #  arg(:cursor, :string)
-    #  arg(:limit, :integer, default_value: 20)
-    #  resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contracts/3)
-    # end
+    @desc "Get AEX9 tokens sorted by creation time, name or symbol"
+    field :aex9_contracts, :aex9_contract_page do
+      arg(:by, :aex9_contract_order_by, default_value: :creation)
+      arg(:prefix, :string)
+      arg(:exact, :string)
 
-    # @desc "Fetch an AEX9 contract by id"
-    # field :aex9_contract, :aex9_contract do
-    #  arg(:id, non_null(:string))
-    #  resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contract/3)
-    # end
+      # Pagination args
+      arg(:cursor, :string)
+      arg(:limit, :integer)
+      arg(:direction, :direction, default_value: :backward)
+
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contracts/3)
+    end
+
+    @desc "Fetch an AEX9 creation and meta_info information by contract id"
+    field :aex9_contract, :aex9_contract do
+     arg(:id, non_null(:string))
+     resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contract/3)
+    end
 
     # @desc "Balances within an AEX9 contract"
     # field :aex9_contract_balances, :aex9_contract_balance_page do
