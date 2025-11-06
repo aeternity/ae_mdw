@@ -9,38 +9,40 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.OracleTypes do
     value(:inactive)
   end
 
-  object :oracle_format do
-    field(:query, :string)
-    field(:response, :string)
-  end
-
   Macros.page(:oracle)
 
   object :oracle do
-    field(:oracle, :string)
     field(:active, :boolean)
-    field(:active_from, :integer)
-    field(:register_time, :integer)
-    field(:expire_height, :integer)
-    field(:approximate_expire_time, :integer)
-    field(:register_tx_hash, :string)
+    field(:register, :json)
+    field(:format, :json)
+    field(:oracle, :string)
     field(:query_fee, :big_int)
-    field(:format, :oracle_format)
+    field(:expire_height, :integer)
+    field(:active_from, :integer)
+    field(:approximate_expire_time, :integer)
+    field(:register_time, :integer)
+    field(:register_tx_hash, :string)
   end
 
   Macros.page(:oracle_query)
 
   object :oracle_query do
+    field(:response, :oracle_response)
     field(:height, :integer)
     field(:block_hash, :string)
+    field(:query_id, :string)
     field(:block_time, :integer)
     field(:source_tx_hash, :string)
     field(:source_tx_type, :string)
-    field(:query_id, :string)
-    # Base64 encoded query payload
+    field(:fee, :big_int)
+    field(:nonce, :integer)
+    field(:oracle_id, :string)
     field(:query, :string)
-    # When present, the associated response for this query
-    field(:response, :oracle_response)
+    field(:query_fee, :big_int)
+    field(:query_ttl, :json)
+    field(:response_ttl, :json)
+    field(:sender_id, :string)
+    field(:ttl, :integer)
   end
 
   Macros.page(:oracle_response)
@@ -48,23 +50,25 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.OracleTypes do
   object :oracle_response do
     field(:height, :integer)
     field(:block_hash, :string)
+    field(:query_id, :string)
     field(:block_time, :integer)
     field(:source_tx_hash, :string)
     field(:source_tx_type, :string)
-    field(:query_id, :string)
-    # Base64 encoded response payload
+    field(:fee, :big_int)
+    field(:nonce, :integer)
+    field(:oracle_id, :string)
     field(:response, :string)
-    # When present, the originating query for this response
-    field(:query, :oracle_query)
+    field(:response_ttl, :json)
+    field(:ttl, :integer)
   end
 
-  Macros.page(:oracle_extend)
+  # Macros.page(:oracle_extend)
 
-  object :oracle_extend do
-    field(:height, :integer)
-    field(:block_hash, :string)
-    field(:source_tx_hash, :string)
-    field(:source_tx_type, :string)
-    field(:tx, :json)
-  end
+  # object :oracle_extend do
+  #  field(:height, :integer)
+  #  field(:block_hash, :string)
+  #  field(:source_tx_hash, :string)
+  #  field(:source_tx_type, :string)
+  #  field(:tx, :json)
+  # end
 end

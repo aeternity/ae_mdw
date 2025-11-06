@@ -136,28 +136,28 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   def oracle_responses(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Oracle Extends --------------
-  @spec oracle_extends(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def oracle_extends(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
-    cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
+  # @spec oracle_extends(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
+  # def oracle_extends(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
+  #  limit = clamp_limit(Map.get(args, :limit, 20))
+  #  cursor = Map.get(args, :cursor)
+  #  pagination = {:backward, false, limit, not is_nil(cursor)}
 
-    case Oracles.fetch_oracle_extends(state, id, pagination, cursor) do
-      {:ok, {prev, extends, next}} ->
-        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: extends}}
+  #  case Oracles.fetch_oracle_extends(state, id, pagination, cursor) do
+  #    {:ok, {prev, extends, next}} ->
+  #      {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: extends}}
 
-      {:error, %ErrInput.Cursor{}} ->
-        {:error, "invalid_cursor"}
+  #    {:error, %ErrInput.Cursor{}} ->
+  #      {:error, "invalid_cursor"}
 
-      {:error, %ErrInput.NotFound{}} ->
-        {:error, "oracle_not_found"}
+  #    {:error, %ErrInput.NotFound{}} ->
+  #      {:error, "oracle_not_found"}
 
-      {:error, _} ->
-        {:error, "oracle_extends_error"}
-    end
-  end
+  #    {:error, _} ->
+  #      {:error, "oracle_extends_error"}
+  #  end
+  # end
 
-  def oracle_extends(_, _args, _), do: {:error, "partial_state_unavailable"}
+  # def oracle_extends(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # -------------- Helpers --------------
   defp cursor_val(nil), do: nil
