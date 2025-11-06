@@ -8,8 +8,22 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transaction/3)
     end
 
-    #@desc "Total number of transactions"
-    #field :transactions_count, :integer do
+    @desc "Pending transactions"
+    field :pending_transactions, :transaction_page do
+      # Pagination args
+      arg(:cursor, :string)
+      arg(:limit, :integer)
+      arg(:direction, :direction, default_value: :backward)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions/3)
+    end
+
+    @desc "Count of pending transactions"
+    field :pending_transactions_count, :integer do
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions_count/3)
+    end
+
+    # @desc "Total number of transactions"
+    # field :transactions_count, :integer do
     #  arg(:from_txi, :integer)
     #  arg(:to_txi, :integer)
     #  arg(:from_height, :integer)
@@ -18,10 +32,10 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
     #  arg(:type, :string)
     #  arg(:filter, :transaction_filter)
     #  resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions_count/3)
-    #end
+    # end
 
-    #@desc "Paginated transactions (backward direction); minimal filters supported"
-    #field :transactions, :transaction_page do
+    # @desc "Paginated transactions (backward direction); minimal filters supported"
+    # field :transactions, :transaction_page do
     #  arg(:cursor, :string, description: "Opaque cursor (tx index)")
     #  arg(:limit, :integer, default_value: 20)
     #  # legacy txi range (still accepted)
@@ -38,7 +52,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
     #  )
 
     #  resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions/3)
-    #end
+    # end
 
     @desc "Transactions contained in a micro block"
     field :micro_block_transactions, :transaction_page do
@@ -48,18 +62,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       arg(:account, :string)
       arg(:type, :string)
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.micro_block_transactions/3)
-    end
-
-    @desc "Pending transactions (node mempool)"
-    field :pending_transactions, :transaction_page do
-      arg(:cursor, :string)
-      arg(:limit, :integer, default_value: 20)
-      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions/3)
-    end
-
-    @desc "Count of pending transactions (node mempool)"
-    field :pending_transactions_count, :integer do
-      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions_count/3)
     end
   end
 end
