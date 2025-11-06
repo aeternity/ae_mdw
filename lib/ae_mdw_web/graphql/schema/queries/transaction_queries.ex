@@ -53,15 +53,5 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
 
     #  resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions/3)
     # end
-
-    @desc "Transactions contained in a micro block"
-    field :micro_block_transactions, :transaction_page do
-      arg(:hash, non_null(:string))
-      arg(:cursor, :string)
-      arg(:limit, :integer, default_value: 20)
-      arg(:account, :string)
-      arg(:type, :string)
-      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.micro_block_transactions/3)
-    end
   end
 end
