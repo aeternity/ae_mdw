@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   alias AeMdw.AexnTokens
+  alias AeMdw.Aex9
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
@@ -19,7 +20,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   end
 
   def aex9_contracts(_p, args, %{context: %{state: state}}) do
-    by = Map.get(args, :by)
+    order_by = Map.get(args, :order_by)
     limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     direction = Map.get(args, :direction, :backward)
@@ -29,7 +30,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
     query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
 
-    case AexnTokens.fetch_contracts(state, pagination, :aex9, query, by, cursor, true) do
+    case AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true) do
       {:ok, {prev, items, next}} ->
         {:ok,
          %{
@@ -53,96 +54,72 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     end
   end
 
-  # # ---------------- Contract balances ----------------
-  # @spec aex9_contract_balances(any, map(), Absinthe.Resolution.t()) ::
-  #         {:ok, map()} | {:error, String.t()}
-  # def aex9_contract_balances(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-  #   limit = clamp_limit(Map.get(args, :limit, 50))
-  #   cursor = Map.get(args, :cursor)
+  def aex9_contract_balances(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
+    order_by = Map.get(args, :order_by)
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
 
-  #   order_by =
-  #     case Map.get(args, :order_by, :pubkey) do
-  #       :amount -> :amount
-  #       _ -> :pubkey
-  #     end
+    query =
+      case Map.get(args, :block_hash) do
+        nil -> %{}
+        bh -> %{"block_hash" => bh}
+      end
 
-  #   # optional block_hash filter
-  #   query =
-  #     case Map.get(args, :block_hash) do
-  #       nil -> %{}
-  #       bh -> %{"block_hash" => bh}
-  #     end
+    case Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query) do
+      {:ok, {prev, items, next}} ->
+        {:ok,
+         %{
+           prev_cursor: Helpers.cursor_val(prev),
+           next_cursor: Helpers.cursor_val(next),
+           data: items
+         }}
 
-  #   pagination = {:backward, false, limit, not is_nil(cursor)}
+      {:error, err} ->
+        {:error, ErrInput.message(err)}
+    end
+  end
 
-  #   case Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query) do
-  #     {:ok, {prev, items, next}} ->
-  #       {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
-
-  #     {:error, %ErrInput.Cursor{}} ->
-  #       {:error, "invalid_cursor"}
-
-  #     {:error, %ErrInput.Query{}} ->
-  #       {:error, "invalid_filter"}
-
-  #     {:error, %ErrInput.NotFound{}} ->
-  #       {:error, "contract_not_found"}
-
-  #     {:error, _} ->
-  #       {:error, "aex9_balances_error"}
-  #   end
-  # end
-
-  # def aex9_contract_balances(_, _args, _), do: {:error, "partial_state_unavailable"}
-
-  # # ---------------- Single balance ----------------
-  # @spec aex9_token_balance(any, map(), Absinthe.Resolution.t()) ::
-  #         {:ok, map()} | {:error, String.t()}
   # def aex9_token_balance(_p, %{contract_id: cid, account_id: aid} = args, %{
-  #       context: %{state: %State{} = state}
-  #     }) do
-  #   hash = Map.get(args, :hash)
+  #      context: %{state: %State{} = state}
+  #    }) do
+  #  hash = Map.get(args, :hash)
 
-  #   with {:ok, balance} <- do_fetch_balance(state, cid, aid, hash) do
-  #     # Normalize keys to GraphQL: contract_id/account_id
-  #     {:ok, %{contract_id: balance.contract, account_id: balance.account, amount: balance.amount}}
-  #   else
-  #     {:error, %ErrInput.NotFound{}} -> {:error, "not_found"}
-  #     {:error, %ErrInput.Query{}} -> {:error, "invalid_filter"}
-  #     {:error, _} -> {:error, "aex9_balance_error"}
-  #   end
+  #  with {:ok, balance} <- do_fetch_balance(state, cid, aid, hash) do
+  #    {:ok, balance}
+  #  else
+  #    {:error, err} -> {:error, ErrInput.message(err)}
+  #  end
   # end
-
-  # def aex9_token_balance(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # defp do_fetch_balance(_state, contract_id, account_id, hash) do
-  #   # AexnTokenController uses Validate in Aex9.fetch_balance via AexnContracts; here we rely on Aex9 directly but it expects pks.
-  #   case AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
-  #     {:ok, contract_pk} ->
-  #       with {:ok, account_pk} <- AeMdw.Validate.id(account_id, [:account_pubkey]),
-  #            {:ok, height_hash} <- validate_block_hash(hash),
-  #            {:ok, balance} <- Aex9.fetch_balance(contract_pk, account_pk, height_hash) do
-  #         {:ok, balance}
-  #       end
+  #  case AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+  #    {:ok, contract_pk} ->
+  #      with {:ok, account_pk} <- AeMdw.Validate.id(account_id, [:account_pubkey]),
+  #           {:ok, height_hash} <- validate_block_hash(hash),
+  #           {:ok, balance} <- Aex9.fetch_balance(contract_pk, account_pk, height_hash) do
+  #        {:ok, balance}
+  #      end
 
-  #     other ->
-  #       other
-  #   end
+  #    other ->
+  #      other
+  #  end
   # end
 
   # defp validate_block_hash(nil), do: {:ok, nil}
 
   # defp validate_block_hash(block_id) do
-  #   case :aeser_api_encoder.safe_decode(:block_hash, block_id) do
-  #     {:ok, block_hash} ->
-  #       case :aec_chain.get_block(block_hash) do
-  #         {:ok, block} -> {:ok, {:aec_blocks.type(block), :aec_blocks.height(block), block_hash}}
-  #         :error -> {:error, ErrInput.NotFound.exception(value: block_id)}
-  #       end
+  #  case :aeser_api_encoder.safe_decode(:block_hash, block_id) do
+  #    {:ok, block_hash} ->
+  #      case :aec_chain.get_block(block_hash) do
+  #        {:ok, block} -> {:ok, {:aec_blocks.type(block), :aec_blocks.height(block), block_hash}}
+  #        :error -> {:error, ErrInput.NotFound.exception(value: block_id)}
+  #      end
 
-  #     _ ->
-  #       {:error, ErrInput.Query.exception(value: block_id)}
-  #   end
+  #    _ ->
+  #      {:error, ErrInput.Query.exception(value: block_id)}
+  #  end
   # end
 
   # # ---------------- Balance history ----------------

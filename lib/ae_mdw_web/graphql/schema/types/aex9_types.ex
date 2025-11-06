@@ -10,10 +10,11 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex9Types do
     value(:symbol, description: "Sort by symbol")
   end
 
-  # enum :aex9_balance_order_by do
-  #  value(:pubkey)
-  #  value(:amount)
-  # end
+  # TODO: make sure these are all the possible values for this enum
+  enum :aex9_balance_order_by do
+    value(:pubkey)
+    value(:amount)
+  end
 
   Macros.page(:aex9_contract)
 
