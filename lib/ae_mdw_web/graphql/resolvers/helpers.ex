@@ -12,12 +12,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end
   end
 
-  # TODO: scoping does not always work as expected
-  def make_scope(from_h, to_h) do
+  # TODO: should nil be returned when only "to" is given?
+  def make_scope(from, to) do
     cond do
-      from_h && to_h -> {:gen, from_h..to_h}
-      to_h && is_nil(from_h) -> nil
-      from_h && is_nil(to_h) -> {:gen, from_h..from_h}
+      from && to -> {:gen, from..to}
+      from && is_nil(to) -> {:gen, from..from}
       true -> nil
     end
   end
