@@ -50,12 +50,18 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.OracleQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.OracleResolver.oracle_responses/3)
     end
 
-    # @desc "Oracle extends (extension transactions for the oracle)"
-    # field :oracle_extends, :oracle_extend_page do
-    #  arg(:id, non_null(:string))
-    #  arg(:cursor, :string)
-    #  arg(:limit, :integer, default_value: 20)
-    #  resolve(&AeMdwWeb.GraphQL.Resolvers.OracleResolver.oracle_extends/3)
-    # end
+    @desc "Get an oracle's extensions"
+    field :oracle_extends, :oracle_extend_page do
+      arg(:id, non_null(:string))
+
+      # Pagination args
+      arg(:cursor, :string)
+      arg(:limit, :integer)
+      arg(:direction, :direction, default_value: :backward)
+      arg(:from_height, :integer)
+      arg(:to_height, :integer)
+
+      resolve(&AeMdwWeb.GraphQL.Resolvers.OracleResolver.oracle_extends/3)
+    end
   end
 end
