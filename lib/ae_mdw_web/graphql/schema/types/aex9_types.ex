@@ -4,6 +4,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex9Types do
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
   require Macros
 
+  enum :aex9_contract_order_by do
+    value(:creation, description: "Sort by creation time")
+    value(:name, description: "Sort by name")
+    value(:symbol, description: "Sort by symbol")
+  end
+
   # enum :aex9_balance_order_by do
   #  value(:pubkey)
   #  value(:amount)

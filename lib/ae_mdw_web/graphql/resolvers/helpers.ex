@@ -23,4 +23,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
 
   def cursor_val(nil), do: nil
   def cursor_val({val, _rev}), do: val
+
+  def maybe_put(map, _k, nil), do: map
+  def maybe_put(map, k, v), do: Map.put(map, k, v)
 end

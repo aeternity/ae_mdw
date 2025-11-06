@@ -1,8 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
+  alias AeMdw.AexnTokens
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  # alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Stats
+  alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   require Model
 
@@ -16,52 +18,40 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     {:ok, count}
   end
 
-  # # ---------------- Tokens ----------------
-  # @spec aex9_contract(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  # def aex9_contract(_p, %{id: id}, %{context: %{state: %State{} = state}}) do
-  #   case AexnTokens.fetch_contract(state, :aex9, id, true) do
-  #     {:ok, contract} -> {:ok, contract}
-  #     {:error, %ErrInput.NotFound{}} -> {:error, "contract_not_found"}
-  #     {:error, _} -> {:error, "aex9_contract_error"}
-  #   end
-  # end
+  def aex9_contracts(_p, args, %{context: %{state: state}}) do
+    by = Map.get(args, :by)
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
 
-  # def aex9_contract(_, _args, _), do: {:error, "partial_state_unavailable"}
+    query = %{}
+    query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
+    query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
 
-  # @spec aex9_contracts(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  # def aex9_contracts(_p, args, %{context: %{state: %State{} = state}}) do
-  #   limit = clamp_limit(Map.get(args, :limit, 20))
-  #   cursor = Map.get(args, :cursor)
-  #   by = Map.get(args, :by, "creation")
+    case AexnTokens.fetch_contracts(state, pagination, :aex9, query, by, cursor, true) do
+      {:ok, {prev, items, next}} ->
+        {:ok,
+         %{
+           prev_cursor: Helpers.cursor_val(prev),
+           next_cursor: Helpers.cursor_val(next),
+           data: items
+         }}
 
-  #   order_by =
-  #     case by do
-  #       "name" -> :name
-  #       "symbol" -> :symbol
-  #       _ -> :creation
-  #     end
+      {:error, err} ->
+        {:error, ErrInput.message(err)}
+    end
+  end
 
-  #   query = %{}
-  #   query = maybe_put(query, "prefix", Map.get(args, :prefix))
-  #   query = maybe_put(query, "exact", Map.get(args, :exact))
-  #   pagination = {:backward, false, limit, not is_nil(cursor)}
+  def aex9_contract(_p, %{id: id}, %{context: %{state: state}}) do
+    case AexnTokens.fetch_contract(state, :aex9, id, true) do
+      {:ok, contract} ->
+        {:ok, contract}
 
-  #   case AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true) do
-  #     {:ok, {prev, items, next}} ->
-  #       {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: items}}
-
-  #     {:error, %ErrInput.Cursor{}} ->
-  #       {:error, "invalid_cursor"}
-
-  #     {:error, %ErrInput.Query{}} ->
-  #       {:error, "invalid_filter"}
-
-  #     {:error, _} ->
-  #       {:error, "aex9_contracts_error"}
-  #   end
-  # end
-
-  # def aex9_contracts(_, _args, _), do: {:error, "partial_state_unavailable"}
+      {:error, err} ->
+        {:error, ErrInput.message(err)}
+    end
+  end
 
   # # ---------------- Contract balances ----------------
   # @spec aex9_contract_balances(any, map(), Absinthe.Resolution.t()) ::
@@ -386,7 +376,4 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   #     _ -> <<0::256>>
   #   end
   # end
-
-  # defp maybe_put(map, _k, nil), do: map
-  # defp maybe_put(map, k, v), do: Map.put(map, k, v)
 end
