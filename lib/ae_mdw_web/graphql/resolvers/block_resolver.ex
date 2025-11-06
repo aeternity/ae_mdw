@@ -7,9 +7,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     direction = Map.get(args, :direction, :backward)
-    from_h = Map.get(args, :from_height)
-    to_h = Map.get(args, :to_height)
-    scope = Helpers.make_scope(from_h, to_h)
+    from = Map.get(args, :from)
+    to = Map.get(args, :to)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from, to)
 
     case Blocks.fetch_key_blocks(state, direction, scope, cursor, limit) do
       {:ok, {prev, blocks, next}} ->
@@ -31,6 +32,40 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
 
   def key_block(_p, %{hash: hash}, %{context: %{state: state}}) do
     key_block_by_id(state, hash)
+  end
+
+  def micro_blocks(_p, %{height: height} = args, %{context: %{state: state}}) do
+    micro_blocks_by_id(state, args, "#{height}")
+  end
+
+  def micro_blocks(_p, %{hash: hash} = args, %{context: %{state: state}}) do
+    micro_blocks_by_id(state, args, hash)
+  end
+
+  def micro_blocks_by_id(state, args, id) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    # TODO: Blocks.fetch_key_block_micro_blocks/4 does not accept a scope arg
+    #       making "from", "to", and "scope", unusable for now.
+    from = Map.get(args, :from)
+    to = Map.get(args, :to)
+    _scope = Helpers.make_scope(from, to)
+
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    case Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor) do
+      {:ok, {prev, blocks, next}} ->
+        {:ok,
+         %{
+           prev_cursor: Helpers.cursor_val(prev),
+           next_cursor: Helpers.cursor_val(next),
+           data: blocks |> Enum.map(&normalize_micro_block/1)
+         }}
+
+      {:error, err} ->
+        {:error, ErrInput.message(err)}
+    end
   end
 
   def micro_block(_p, %{hash: hash}, %{context: %{state: state}}) do
