@@ -50,14 +50,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.micro_block_transactions/3)
     end
 
-    @desc "Micro blocks inside a key block"
-    field :key_block_micro_blocks, :micro_block_page do
-      arg(:id, non_null(:string), description: "Key block height or hash")
-      arg(:cursor, :string)
-      arg(:limit, :integer, default_value: 20)
-      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.key_block_micro_blocks/3)
-    end
-
     @desc "Pending transactions (node mempool)"
     field :pending_transactions, :transaction_page do
       arg(:cursor, :string)

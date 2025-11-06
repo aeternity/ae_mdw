@@ -6,7 +6,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   NOTE: Currently only a subset of REST filtering is exposed (account + type), enough for parity
   tests. Extend incrementally as needed.
   """
-  alias AeMdw.{Txs, Blocks}
+  alias AeMdw.Txs
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
 
@@ -193,54 +193,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
   def micro_block_transactions(_, _args, _), do: {:error, "partial_state_unavailable"}
 
-  # ---------------- Key Block Micro Blocks ----------------
-  @spec key_block_micro_blocks(any, map(), Absinthe.Resolution.t()) ::
-          {:ok, map()} | {:error, String.t()}
-  def key_block_micro_blocks(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
-    cursor = Map.get(args, :cursor)
-    id = Map.fetch!(args, :id)
-
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    case Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor) do
-      {:ok, {prev, micro_blocks, next}} ->
-        data = Enum.map(micro_blocks, &normalize_micro_block/1)
-        {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: data}}
-
-      {:error, %ErrInput.NotFound{}} ->
-        {:error, "key_block_not_found"}
-
-      {:error, %ErrInput.Cursor{}} ->
-        {:error, "invalid_cursor"}
-
-      {:error, _} ->
-        {:error, "key_block_micro_blocks_error"}
-    end
-  end
-
-  def key_block_micro_blocks(_, _args, _), do: {:error, "partial_state_unavailable"}
-
   # ---------------- Helpers ----------------
-  defp normalize_micro_block(block) do
-    %{
-      hash: Map.get(block, :hash) || Map.get(block, "hash"),
-      height: Map.get(block, :height) || Map.get(block, "height"),
-      time: Map.get(block, :time) || Map.get(block, "time"),
-      micro_block_index:
-        Map.get(block, :micro_block_index) || Map.get(block, "micro_block_index"),
-      transactions_count:
-        Map.get(block, :transactions_count) || Map.get(block, "transactions_count"),
-      gas: Map.get(block, :gas) || Map.get(block, "gas"),
-      pof_hash: Map.get(block, :pof_hash) || Map.get(block, "pof_hash"),
-      prev_hash: Map.get(block, :prev_hash) || Map.get(block, "prev_hash"),
-      state_hash: Map.get(block, :state_hash) || Map.get(block, "state_hash"),
-      txs_hash: Map.get(block, :txs_hash) || Map.get(block, "txs_hash"),
-      signature: Map.get(block, :signature) || Map.get(block, "signature"),
-      miner: Map.get(block, :miner) || Map.get(block, "miner")
-    }
-  end
-
   defp build_query_filters(nil, nil), do: {:ok, %{}}
 
   defp build_query_filters(account, type) do
