@@ -62,13 +62,14 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.OracleTypes do
     field(:ttl, :integer)
   end
 
-  # Macros.page(:oracle_extend)
+  Macros.page(:oracle_extend)
 
-  # object :oracle_extend do
-  #  field(:height, :integer)
-  #  field(:block_hash, :string)
-  #  field(:source_tx_hash, :string)
-  #  field(:source_tx_type, :string)
-  #  field(:tx, :json)
-  # end
+  # TODO: make sure that this type is not missing any fields
+  object :oracle_extend do
+    field(:height, :integer)
+    field(:block_hash, :string)
+    field(:source_tx_hash, :string)
+    field(:source_tx_type, :string)
+    field(:tx, :json)
+  end
 end
