@@ -138,36 +138,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
   def transactions_count(_, _args, _), do: {:error, "partial_state_unavailable"}
 
-  # ---------------- Pending Transactions List ----------------
-
-  # ---------------- Pending Transactions Count ----------------
-
-  # ---------------- Micro Block Transactions ----------------
-  @spec micro_block_transactions(any, map(), Absinthe.Resolution.t()) ::
-          {:ok, map()} | {:error, String.t()}
-  def micro_block_transactions(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 20))
-    cursor = Map.get(args, :cursor)
-    hash = Map.fetch!(args, :hash)
-    account = Map.get(args, :account)
-    type = Map.get(args, :type)
-
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    with {:ok, query} <- build_query_filters(account, type),
-         {:ok, {prev, txs, next}} <-
-           Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
-      data = Enum.map(txs, &atomize_tx/1)
-      {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: data}}
-    else
-      {:error, %ErrInput.NotFound{}} -> {:error, "micro_block_not_found"}
-      {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-      {:error, _} -> {:error, "micro_block_transactions_error"}
-    end
-  end
-
-  def micro_block_transactions(_, _args, _), do: {:error, "partial_state_unavailable"}
-
   # ---------------- Helpers ----------------
   defp build_query_filters(nil, nil), do: {:ok, %{}}
 
