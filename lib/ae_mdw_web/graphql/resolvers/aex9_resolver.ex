@@ -81,6 +81,34 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     end
   end
 
+  def aex9_balance_history(_p, %{contract_id: cid, account_id: aid} = args, %{
+        context: %{state: state}
+      }) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
+         {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]),
+         {:ok, {prev, items, next}} <-
+           Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
+      {:ok,
+       %{
+         prev_cursor: Helpers.cursor_val(prev),
+         next_cursor: Helpers.cursor_val(next),
+         data: items
+       }}
+    else
+      {:error, err} ->
+        {:error, ErrInput.message(err)}
+    end
+  end
+
   # def aex9_token_balance(_p, %{contract_id: cid, account_id: aid} = args, %{
   #      context: %{state: %State{} = state}
   #    }) do
@@ -121,52 +149,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   #      {:error, ErrInput.Query.exception(value: block_id)}
   #  end
   # end
-
-  # # ---------------- Balance history ----------------
-  # @spec aex9_balance_history(any, map(), Absinthe.Resolution.t()) ::
-  #         {:ok, map()} | {:error, String.t()}
-  # def aex9_balance_history(_p, %{contract_id: cid, account_id: aid} = args, %{
-  #       context: %{state: %State{} = state}
-  #     }) do
-  #   limit = clamp_limit(Map.get(args, :limit, 50))
-  #   cursor = Map.get(args, :cursor)
-  #   from_h = Map.get(args, :from_height)
-  #   to_h = Map.get(args, :to_height)
-
-  #   range =
-  #     cond do
-  #       from_h && to_h -> {:gen, from_h..to_h}
-  #       to_h && is_nil(from_h) -> {:gen, 0..to_h}
-  #       from_h && is_nil(to_h) -> {:gen, from_h..from_h}
-  #       true -> nil
-  #     end
-
-  #   pagination = {:backward, false, limit, not is_nil(cursor)}
-
-  #   with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
-  #        {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]),
-  #        {:ok, {prev, items, next}} <-
-  #          Aex9.fetch_balance_history(state, contract_pk, account_pk, range, cursor, pagination) do
-  #     # Normalize keys from %{contract: _, account: _}
-  #     data =
-  #       Enum.map(items, fn itm ->
-  #         %{
-  #           contract_id: itm.contract,
-  #           account_id: itm.account,
-  #           height: itm.height,
-  #           amount: itm.amount
-  #         }
-  #       end)
-
-  #     {:ok, %{prev_cursor: cursor_val(prev), next_cursor: cursor_val(next), data: data}}
-  #   else
-  #     {:error, %ErrInput.Cursor{}} -> {:error, "invalid_cursor"}
-  #     {:error, %ErrInput.Scope{}} -> {:error, "invalid_scope"}
-  #     {:error, _} -> {:error, "aex9_balance_history_error"}
-  #   end
-  # end
-
-  # def aex9_balance_history(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   # # ---------------- Transfers ----------------
   # @spec aex9_contract_transfers(any, map(), Absinthe.Resolution.t()) ::

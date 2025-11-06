@@ -41,6 +41,21 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contract_balances/3)
     end
 
+    @desc "AEX9 balance history for an account on a contract"
+    field :aex9_balance_history, :aex9_balance_history_item_page do
+      arg(:contract_id, non_null(:string))
+      arg(:account_id, non_null(:string))
+
+      # Pagination args
+      arg(:cursor, :string)
+      arg(:limit, :integer)
+      arg(:direction, :direction, default_value: :backward)
+      arg(:from_height, :integer)
+      arg(:to_height, :integer)
+
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_balance_history/3)
+    end
+
     # @desc "Single AEX9 balance for account on a contract"
     # field :aex9_token_balance, :aex9_balance_history_item do
     #  # reuse fields: contract_id/account_id/amount (height may be null)
@@ -48,17 +63,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
     #  arg(:account_id, non_null(:string))
     #  arg(:hash, :string, description: "Optional block hash to query balance at")
     #  resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_token_balance/3)
-    # end
-
-    # @desc "AEX9 balance history for an account on a contract"
-    # field :aex9_balance_history, :aex9_balance_history_item_page do
-    #  arg(:contract_id, non_null(:string))
-    #  arg(:account_id, non_null(:string))
-    #  arg(:from_height, :integer)
-    #  arg(:to_height, :integer)
-    #  arg(:cursor, :string)
-    #  arg(:limit, :integer, default_value: 50)
-    #  resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_balance_history/3)
     # end
 
     # @desc "AEX9 transfers on a specific contract (filter by sender, recipient or account)"
