@@ -1,49 +1,16 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
-  @moduledoc """
-  Transaction-related resolvers: single transaction lookup, paginated transactions, micro block
-  transactions and key block micro blocks.
-
-  NOTE: Currently only a subset of REST filtering is exposed (account + type), enough for parity
-  tests. Extend incrementally as needed.
-  """
   alias AeMdw.Txs
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
 
   @max_limit 100
 
-  # ---------------- Single Transaction ----------------
-  @spec transaction(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def transaction(_p, %{id: id}, %{context: %{state: state}}) when not is_nil(state) do
-    cond do
-      id =~ ~r/^\d+$/ -> fetch_by_index(state, id)
-      true -> fetch_by_hash(state, id)
-    end
-  end
-
-  def transaction(_, _args, _), do: {:error, "partial_state_unavailable"}
-
-  defp fetch_by_index(state, idx_str) do
-    case Integer.parse(idx_str) do
-      {txi, ""} ->
-        case Txs.fetch(state, txi, add_spendtx_details?: true, render_v3?: true) do
-          {:ok, tx} -> {:ok, atomize_tx(tx)}
-          {:error, %ErrInput.NotFound{}} -> {:error, "transaction_not_found"}
-          {:error, _} -> {:error, "transaction_error"}
-        end
-
-      _ ->
-        {:error, "invalid_transaction_id"}
-    end
-  end
-
-  defp fetch_by_hash(state, hash) do
-    with {:ok, _bin} <- Validate.id(hash),
-         {:ok, tx} <- Txs.fetch(state, hash, add_spendtx_details?: true, render_v3?: true) do
+  def transaction(_p, %{hash: hash}, %{context: %{state: state}}) do
+    with {:ok, tx_hash} <- Validate.id(hash),
+         {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
       {:ok, atomize_tx(tx)}
     else
-      {:error, %ErrInput.NotFound{}} -> {:error, "transaction_not_found"}
-      {:error, _} -> {:error, "transaction_error"}
+      {:error, err} -> {:error, ErrInput.message(err)}
     end
   end
 
@@ -222,39 +189,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   end
 
   defp atomize_tx(tx_map) do
-    tx_map =
-      Enum.reduce(tx_map, %{}, fn
-        {k, v}, acc when is_binary(k) -> Map.put(acc, String.to_atom(k), v)
-        {k, v}, acc -> Map.put(acc, k, v)
-      end)
-
-    encoded_tx =
-      case Map.get(tx_map, :tx) do
-        m when is_map(m) -> Jason.encode!(m)
-        other -> Jason.encode!(other)
-      end
-
-    base = Map.put(tx_map, :tx, encoded_tx)
-
-    inner =
-      case Jason.decode(encoded_tx) do
-        {:ok, m} -> m
-        _ -> %{}
-      end
-
-    # promote common fields if present
-    promoted =
-      Enum.reduce(
-        ~w(fee type gas gas_price nonce sender_id recipient_id amount ttl payload)a,
-        %{},
-        fn key, acc ->
-          kstr = to_string(key)
-          val = Map.get(tx_map, key) || Map.get(inner, kstr)
-          if is_nil(val), do: acc, else: Map.put(acc, key, val)
-        end
-      )
-
-    Map.merge(base, promoted)
+    %{
+      block_hash: tx_map["block_hash"],
+      block_height: tx_map["block_height"],
+      encoded_tx: tx_map["encoded_tx"],
+      hash: tx_map["hash"],
+      micro_index: tx_map["micro_index"],
+      micro_time: tx_map["micro_time"],
+      signatures: tx_map["signatures"],
+      tx: tx_map["tx"]
+    }
   end
 
   defp cursor_val(nil), do: nil
