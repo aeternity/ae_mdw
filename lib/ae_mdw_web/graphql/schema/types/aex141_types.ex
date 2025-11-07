@@ -4,87 +4,87 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
   require Macros
 
+  # TODO: duplicated enum in aex9_types.ex
+  enum :aex141_contract_order_by do
+    value(:creation, description: "Sort by creation time")
+    value(:name, description: "Sort by name")
+    value(:symbol, description: "Sort by symbol")
+  end
+
   Macros.page(:aex141_contract)
 
-  @desc "Limits info for an AEX141 contract"
-  object :aex141_limits do
-    field(:token_limit, :integer)
-    field(:template_limit, :integer)
-    field(:limit_tx_hash, :string)
-    field(:limit_log_idx, :integer)
-  end
-
-  @desc "AEX141 NFT contract"
   object :aex141_contract do
-    field(:contract_id, non_null(:string))
-    field(:contract_tx_hash, :string)
+    field(:invalid, :boolean)
     field(:name, :string)
-    field(:symbol, :string)
-    field(:base_url, :string)
-    field(:metadata_type, :string)
     field(:extensions, list_of(:string))
-    field(:limits, :aex141_limits)
-    field(:creation_time, :integer)
+    field(:symbol, :string)
+    field(:contract_id, :string)
     field(:block_height, :integer)
+    field(:creation_time, :integer)
     field(:nft_owners, :integer)
     field(:nfts_amount, :integer)
-    field(:invalid, :boolean)
+    field(:contract_tx_hash, :string)
+    # TODO: make sure this has the right type
     field(:invalid_reason, :string)
+    # TODO: make sure this has the right type
     field(:invalid_description, :string)
-  end
-
-  Macros.page(:aex141_token_owner)
-
-  @desc "NFT ownership entry"
-  object :aex141_token_owner do
-    field(:contract_id, :string)
-    field(:owner_id, :string)
-    field(:token_id, :integer)
-  end
-
-  Macros.page(:aex141_template)
-
-  @desc "AEX141 template info"
-  object :aex141_template do
-    field(:contract_id, :string)
-    field(:template_id, :integer)
-    field(:tx_hash, :string)
-    field(:log_idx, :integer)
-    field(:edition, :json)
-  end
-
-  Macros.page(:aex141_template_token)
-
-  @desc "AEX141 token minted from a template"
-  object :aex141_template_token do
-    field(:token_id, :integer)
-    field(:owner_id, :string)
-    field(:tx_hash, :string)
-    field(:log_idx, :integer)
-    field(:edition, :json)
+    # TODO: make sure this has the right type
+    field(:base_url, :string)
+    field(:limits, :json)
+    field(:metadata_type, :string)
   end
 
   Macros.page(:aex141_transfer)
 
-  @desc "AEX141 transfer event"
   object :aex141_transfer do
-    field(:token_id, :integer)
-    field(:block_height, :integer)
-    field(:micro_index, :integer)
-    field(:micro_time, :integer)
     field(:contract_id, :string)
-    field(:log_idx, :integer)
+    field(:recipient, :string)
     field(:tx_hash, :string)
     field(:sender, :string)
-    field(:recipient, :string)
+    field(:block_height, :integer)
+    field(:log_idx, :integer)
     field(:call_txi, :integer)
+    field(:micro_index, :integer)
+    field(:micro_time, :integer)
+    field(:token_id, :integer)
   end
 
-  @desc "Detailed NFT (with metadata)"
-  object :aex141_token_detail do
-    field(:contract_id, :string)
-    field(:token_id, :integer)
-    field(:owner_id, :string)
-    field(:metadata, :json)
-  end
+  # Macros.page(:aex141_token_owner)
+
+  # @desc "NFT ownership entry"
+  # object :aex141_token_owner do
+  #  field(:contract_id, :string)
+  #  field(:owner_id, :string)
+  #  field(:token_id, :integer)
+  # end
+
+  # Macros.page(:aex141_template)
+
+  # @desc "AEX141 template info"
+  # object :aex141_template do
+  #  field(:contract_id, :string)
+  #  field(:template_id, :integer)
+  #  field(:tx_hash, :string)
+  #  field(:log_idx, :integer)
+  #  field(:edition, :json)
+  # end
+
+  # Macros.page(:aex141_template_token)
+
+  # @desc "AEX141 token minted from a template"
+  # object :aex141_template_token do
+  #  field(:token_id, :integer)
+  #  field(:owner_id, :string)
+  #  field(:tx_hash, :string)
+  #  field(:log_idx, :integer)
+  #  field(:edition, :json)
+  # end
+
+  # @desc "Detailed NFT (with metadata)"
+  # object :aex141_token_detail do
+  #  field(:contract_id, :string)
+  #  field(:token_id, :integer)
+  #  field(:owner_id, :string)
+  #  field(:metadata, :json)
+  # end
 end

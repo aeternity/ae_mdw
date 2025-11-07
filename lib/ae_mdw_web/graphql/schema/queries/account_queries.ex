@@ -31,13 +31,13 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.AccountQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.AccountResolver.account_aex9_balances/3)
     end
 
-    @desc "AEX141 tokens owned by an account"
-    field :account_aex141_tokens, :aex141_token_owner_page do
-      arg(:id, non_null(:string))
-      arg(:contract_id, :string, description: "Optional filter by contract id")
-      arg(:cursor, :string)
-      arg(:limit, :integer, default_value: 50)
-      resolve(&AeMdwWeb.GraphQL.Resolvers.AccountResolver.account_aex141_tokens/3)
-    end
+    # @desc "AEX141 tokens owned by an account"
+    # field :account_aex141_tokens, :aex141_token_owner_page do
+    #  arg(:id, non_null(:string))
+    #  arg(:contract_id, :string, description: "Optional filter by contract id")
+    #  arg(:cursor, :string)
+    #  arg(:limit, :integer, default_value: 50)
+    #  resolve(&AeMdwWeb.GraphQL.Resolvers.AccountResolver.account_aex141_tokens/3)
+    # end
   end
 end
