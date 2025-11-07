@@ -1,103 +1,297 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   alias AeMdw.Miners
   alias AeMdw.Stats
+  alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def total(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
+  def transactions(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
-    {prev, data, next} = Stats.fetch_total_stats(state, :backward, nil, cursor, limit)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_transactions_stats(state, pagination, query, nil, cursor)
 
     {:ok,
      %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
        data: data
      }}
   end
 
-  def delta(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
+  def transactions_total(_p, args, %{context: %{state: state}}) do
+    query = %{}
+    query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    Stats.fetch_transactions_total_stats(state, query, nil)
+  end
+
+  def blocks(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
-    {prev, data, next} = Stats.fetch_delta_stats(state, :backward, nil, cursor, limit)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "type", Map.get(args, :type) |> to_string())
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_blocks_stats(state, pagination, query, nil, cursor)
 
     {:ok,
      %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
        data: data
      }}
   end
 
-  def miners(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
+  def difficulty(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_difficulty_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def hashrate(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_hashrate_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def total_accounts(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_total_accounts_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def active_accounts(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_active_accounts_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def names(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_names_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def total(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+
+    {prev, data, next} = Stats.fetch_total_stats(state, direction, scope, cursor, limit)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def delta(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+
+    {prev, data, next} = Stats.fetch_delta_stats(state, direction, scope, cursor, limit)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def contracts(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_contracts_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def aex9_transfers(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+
+    {:ok, {prev, data, next}} =
+      Stats.fetch_aex9_token_transfers_stats(state, pagination, query, nil, cursor)
+
+    {:ok,
+     %{
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
+       data: data
+     }}
+  end
+
+  def stats(_p, _args, %{context: %{state: state}}) do
+    Stats.fetch_stats(state)
+  end
+
+  def miners(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
     {:ok, {prev, data, next}} = Miners.fetch_miners(state, pagination, cursor)
 
     {:ok,
      %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
        data: data
      }}
   end
 
-  def transactions(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
+  def top_miners(_p, args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
+    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
     {:ok, {prev, data, next}} =
-      Stats.fetch_transactions_stats(state, pagination, [], nil, cursor)
+      Stats.fetch_top_miners_stats(state, pagination, query, nil, cursor)
 
     {:ok,
      %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
+       prev_cursor: Helpers.cursor_val(prev),
+       next_cursor: Helpers.cursor_val(next),
        data: data
      }}
   end
 
-  def blocks(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
-    cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    {:ok, {prev, data, next}} =
-      Stats.fetch_blocks_stats(state, pagination, [], nil, cursor)
-
+  def top_miners_24h(_p, _args, %{context: %{state: state}}) do
     {:ok,
      %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
-       data: data
+       data: Stats.fetch_top_miners_24hs(state)
      }}
   end
-
-  def names(_p, args, %{context: %{state: state}}) when not is_nil(state) do
-    limit = clamp_limit(Map.get(args, :limit, 10))
-    cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    {:ok, {prev, data, next}} =
-      Stats.fetch_names_stats(state, pagination, [], nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: cursor_val(prev),
-       next_cursor: cursor_val(next),
-       data: data
-     }}
-  end
-
-  def stats(_p, _args, %{context: %{state: state}}) when not is_nil(state) do
-    Stats.fetch_stats(state)
-  end
-
-  defp cursor_val(nil), do: nil
-  defp cursor_val({val, _rev}), do: val
-
-  defp clamp_limit(l) when is_integer(l) and l > 100, do: 100
-  defp clamp_limit(l) when is_integer(l) and l > 0, do: l
-  defp clamp_limit(_), do: 10
 end
