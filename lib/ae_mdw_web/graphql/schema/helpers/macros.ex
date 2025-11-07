@@ -1,14 +1,4 @@
 defmodule AeMdwWeb.GraphQL.Schema.Helpers.Macros do
-  defmacro start_end_count(type) do
-    quote do
-      object unquote(type) do
-        field(:count, :integer)
-        field(:start_date, :string)
-        field(:end_date, :string)
-      end
-    end
-  end
-
   # TODO: this should be use page/2 macro
   defmacro page(type) do
     quote do

@@ -3,7 +3,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
 
   object :stat_queries do
     @desc "Statistics over time of transactions count"
-    field :transactions_stats, :transactions_stats_page do
+    field :transactions_stats, :start_end_count_stats_page do
       arg(:tx_type, :string)
 
       arg(:interval_by, :stats_interval, default_value: :day)
@@ -29,7 +29,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of blocks count"
-    field :blocks_stats, :blocks_stats_page do
+    field :blocks_stats, :start_end_count_stats_page do
       arg(:type, :block_type)
 
       arg(:interval_by, :stats_interval, default_value: :day)
@@ -45,7 +45,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of difficulty"
-    field :difficulty_stats, :difficulty_stats_page do
+    field :difficulty_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
@@ -59,7 +59,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of hashrate"
-    field :hashrate_stats, :hashrate_stats_page do
+    field :hashrate_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
@@ -73,7 +73,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of total accounts count"
-    field :total_accounts_stats, :total_accounts_stats_page do
+    field :total_accounts_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
 
       # Pagination args
@@ -85,7 +85,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of active accounts count"
-    field :active_accounts_stats, :active_accounts_stats_page do
+    field :active_accounts_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
 
       # Pagination args
@@ -97,7 +97,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of names count"
-    field :names_stats, :names_stats_page do
+    field :names_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
@@ -133,7 +133,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of contracts count"
-    field :contracts_stats, :contracts_stats_page do
+    field :contracts_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
@@ -147,7 +147,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Statistics over time of AEX9 transfers count"
-    field :aex9_transfers_stats, :aex9_transfers_stats_page do
+    field :aex9_transfers_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)

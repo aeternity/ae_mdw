@@ -15,19 +15,27 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
     value(:micro)
   end
 
+  object :stats do
+    field(:total_blocks, :integer)
+    field(:fees_trend, :float)
+    field(:last24hs_average_transaction_fees, :float)
+    field(:last24hs_transactions, :integer)
+    field(:max_transactions_per_second, :float)
+    field(:max_transactions_per_second_block_hash, :string)
+    field(:milliseconds_per_block, :integer)
+    field(:transactions_trend, :float)
+    field(:miners_count, :integer)
+  end
+
+  Macros.page(:start_end_count_stats)
+
+  object :start_end_count_stats do
+    field(:count, :integer)
+    field(:start_date, :string)
+    field(:end_date, :string)
+  end
+
   Macros.page(:total_stats)
-  Macros.page(:delta_stats)
-  Macros.page(:miners_stats)
-  Macros.page(:transactions_stats)
-  Macros.page(:blocks_stats)
-  Macros.page(:difficulty_stats)
-  Macros.page(:hashrate_stats)
-  Macros.page(:total_accounts_stats)
-  Macros.page(:active_accounts_stats)
-  Macros.page(:names_stats)
-  Macros.page(:contracts_stats)
-  Macros.page(:aex9_transfers_stats)
-  Macros.page(:top_miners_stats)
 
   object :total_stats do
     field(:height, :integer)
@@ -46,6 +54,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
     field(:sum_dev_reward, :big_int)
     field(:total_token_supply, :big_int)
   end
+
+  Macros.page(:delta_stats)
 
   object :delta_stats do
     field(:height, :integer)
@@ -66,10 +76,14 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
     field(:last_tx_hash, :string)
   end
 
+  Macros.page(:miners_stats)
+
   object :miners_stats do
     field(:miner, :string)
     field(:total_reward, :big_int)
   end
+
+  Macros.page(:top_miners_stats)
 
   object :top_miners_stats do
     field(:miner, :string)
@@ -86,26 +100,4 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
   object :top_miners_24h_stats_page do
     field(:data, list_of(:top_miners_24h_stats))
   end
-
-  object :stats do
-    field(:total_blocks, :integer)
-    field(:fees_trend, :float)
-    field(:last24hs_average_transaction_fees, :float)
-    field(:last24hs_transactions, :integer)
-    field(:max_transactions_per_second, :float)
-    field(:max_transactions_per_second_block_hash, :string)
-    field(:milliseconds_per_block, :integer)
-    field(:transactions_trend, :float)
-    field(:miners_count, :integer)
-  end
-
-  Macros.start_end_count(:transactions_stats)
-  Macros.start_end_count(:blocks_stats)
-  Macros.start_end_count(:difficulty_stats)
-  Macros.start_end_count(:hashrate_stats)
-  Macros.start_end_count(:total_accounts_stats)
-  Macros.start_end_count(:active_accounts_stats)
-  Macros.start_end_count(:names_stats)
-  Macros.start_end_count(:contracts_stats)
-  Macros.start_end_count(:aex9_transfers_stats)
 end
