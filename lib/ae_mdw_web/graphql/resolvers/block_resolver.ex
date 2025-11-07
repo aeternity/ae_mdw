@@ -18,7 +18,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: blocks |> Enum.map(&normalize_key_block/1)
+           data: blocks |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -54,7 +54,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: blocks |> Enum.map(&normalize_micro_block/1)
+           data: blocks |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -64,63 +64,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
 
   def micro_block(_p, %{hash: hash}, %{context: %{state: state}}) do
     case Blocks.fetch_micro_block(state, hash) do
-      {:ok, block} -> {:ok, normalize_micro_block(block)}
+      {:ok, block} -> {:ok, block |> Helpers.normalize_map()}
       {:error, err} -> {:error, ErrInput.message(err)}
     end
   end
 
   defp key_block_by_id(state, id) do
     case Blocks.fetch_key_block(state, id) do
-      {:ok, block} -> {:ok, normalize_key_block(block)}
+      {:ok, block} -> {:ok, block |> Helpers.normalize_map()}
       {:error, err} -> {:error, ErrInput.message(err)}
     end
-  end
-
-  defp normalize_key_block(block) do
-    # TODO: do we need to check for both atom and string keys here?
-    %{
-      transactions_count:
-        Map.get(block, :transactions_count) || Map.get(block, "transactions_count"),
-      micro_blocks_count:
-        Map.get(block, :micro_blocks_count) || Map.get(block, "micro_blocks_count"),
-      beneficiary_reward:
-        Map.get(block, :beneficiary_reward) || Map.get(block, "beneficiary_reward"),
-      beneficiary: Map.get(block, :beneficiary) || Map.get(block, "beneficiary"),
-      flags: Map.get(block, :flags) || Map.get(block, "flags"),
-      hash: Map.get(block, :hash) || Map.get(block, "hash"),
-      height: Map.get(block, :height) || Map.get(block, "height") || Map.get(block, :generation),
-      info: Map.get(block, :info) || Map.get(block, "info"),
-      miner: Map.get(block, :miner) || Map.get(block, "miner"),
-      nonce: Map.get(block, :nonce) || Map.get(block, "nonce"),
-      pow: Map.get(block, :pow) || Map.get(block, "pow"),
-      prev_hash: Map.get(block, :prev_hash) || Map.get(block, "prev_hash"),
-      prev_key_hash: Map.get(block, :prev_key_hash) || Map.get(block, "prev_key_hash"),
-      state_hash: Map.get(block, :state_hash) || Map.get(block, "state_hash"),
-      target: Map.get(block, :target) || Map.get(block, "target"),
-      time: Map.get(block, :time) || Map.get(block, "time"),
-      version: Map.get(block, :version) || Map.get(block, "version")
-    }
-  end
-
-  defp normalize_micro_block(block) do
-    # TODO: do we need to check for both atom and string keys here?
-    %{
-      gas: Map.get(block, :gas) || Map.get(block, "gas"),
-      transactions_count:
-        Map.get(block, :transactions_count) || Map.get(block, "transactions_count"),
-      micro_block_index:
-        Map.get(block, :micro_block_index) || Map.get(block, "micro_block_index"),
-      flags: Map.get(block, :flags) || Map.get(block, "flags"),
-      hash: Map.get(block, :hash) || Map.get(block, "hash"),
-      height: Map.get(block, :height) || Map.get(block, "height"),
-      pof_hash: Map.get(block, :pof_hash) || Map.get(block, "pof_hash"),
-      prev_hash: Map.get(block, :prev_hash) || Map.get(block, "prev_hash"),
-      prev_key_hash: Map.get(block, :prev_key_hash) || Map.get(block, "prev_key_hash"),
-      signature: Map.get(block, :signature) || Map.get(block, "signature"),
-      state_hash: Map.get(block, :state_hash) || Map.get(block, "state_hash"),
-      time: Map.get(block, :time) || Map.get(block, "time"),
-      txs_hash: Map.get(block, :txs_hash) || Map.get(block, "txs_hash"),
-      version: Map.get(block, :version) || Map.get(block, "version")
-    }
   end
 end

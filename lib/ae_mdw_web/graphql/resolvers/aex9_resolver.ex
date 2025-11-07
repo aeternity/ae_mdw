@@ -36,7 +36,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: items
+           data: items |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -47,7 +47,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   def aex9_contract(_p, %{id: id}, %{context: %{state: state}}) do
     case AexnTokens.fetch_contract(state, :aex9, id, true) do
       {:ok, contract} ->
-        {:ok, contract}
+        {:ok, contract |> Helpers.normalize_map()}
 
       {:error, err} ->
         {:error, ErrInput.message(err)}
@@ -73,7 +73,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: items
+           data: items |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -101,7 +101,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
        %{
          prev_cursor: Helpers.cursor_val(prev),
          next_cursor: Helpers.cursor_val(next),
-         data: items
+         data: items |> Enum.map(&Helpers.normalize_map/1)
        }}
     else
       {:error, err} ->

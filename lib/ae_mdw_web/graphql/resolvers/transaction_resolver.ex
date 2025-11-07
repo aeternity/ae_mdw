@@ -9,7 +9,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   def transaction(_p, %{hash: hash}, %{context: %{state: state}}) do
     with {:ok, tx_hash} <- Validate.id(hash),
          {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
-      {:ok, atomize_tx(tx)}
+      {:ok, tx |> Helpers.normalize_map()}
     else
       {:error, err} -> {:error, ErrInput.message(err)}
     end
@@ -31,7 +31,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
        %{
          prev_cursor: Helpers.cursor_val(prev),
          next_cursor: Helpers.cursor_val(next),
-         data: txs |> Enum.map(&atomize_tx/1)
+         data: txs |> Enum.map(&Helpers.normalize_map/1)
        }}
     rescue
       _ -> {:error, "pending_transactions_error"}
@@ -44,19 +44,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     rescue
       _ -> {:error, "pending_transactions_count_error"}
     end
-  end
-
-  defp atomize_tx(tx_map) do
-    %{
-      block_hash: tx_map["block_hash"],
-      block_height: tx_map["block_height"],
-      encoded_tx: tx_map["encoded_tx"],
-      hash: tx_map["hash"],
-      micro_index: tx_map["micro_index"],
-      micro_time: tx_map["micro_time"],
-      signatures: tx_map["signatures"],
-      tx: tx_map["tx"]
-    }
   end
 
   # ---------------- Transactions List ----------------

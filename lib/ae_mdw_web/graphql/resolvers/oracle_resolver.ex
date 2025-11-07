@@ -8,7 +8,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     case AeMdw.Validate.id(id, [:oracle_pubkey]) do
       {:ok, pk} ->
         case Oracles.fetch(state, pk, v3?: true) do
-          {:ok, oracle} -> {:ok, oracle}
+          {:ok, oracle} -> {:ok, oracle |> Helpers.normalize_map()}
           {:error, err} -> {:error, ErrInput.message(err)}
         end
 
@@ -41,7 +41,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: items
+           data: items |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -65,7 +65,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: queries
+           data: queries |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -89,7 +89,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: responses
+           data: responses |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -113,7 +113,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: extends
+           data: extends |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
