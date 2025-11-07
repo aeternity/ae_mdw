@@ -4,12 +4,30 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
   require Macros
 
+  enum :stats_interval do
+    value(:day)
+    value(:week)
+    value(:month)
+  end
+
+  enum :block_type do
+    value(:key)
+    value(:micro)
+  end
+
   Macros.page(:total_stats)
   Macros.page(:delta_stats)
   Macros.page(:miners_stats)
   Macros.page(:transactions_stats)
   Macros.page(:blocks_stats)
+  Macros.page(:difficulty_stats)
+  Macros.page(:hashrate_stats)
+  Macros.page(:total_accounts_stats)
+  Macros.page(:active_accounts_stats)
   Macros.page(:names_stats)
+  Macros.page(:contracts_stats)
+  Macros.page(:aex9_transfers_stats)
+  Macros.page(:top_miners_stats)
 
   object :total_stats do
     field(:height, :integer)
@@ -53,6 +71,22 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
     field(:total_reward, :big_int)
   end
 
+  object :top_miners_stats do
+    field(:miner, :string)
+    field(:blocks_mined, :integer)
+    field(:start_date, :string)
+    field(:end_date, :string)
+  end
+
+  object :top_miners_24h_stats do
+    field(:miner, :string)
+    field(:blocks_mined, :integer)
+  end
+
+  object :top_miners_24h_stats_page do
+    field(:data, list_of(:top_miners_24h_stats))
+  end
+
   object :stats do
     field(:total_blocks, :integer)
     field(:fees_trend, :float)
@@ -67,5 +101,11 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatsTypes do
 
   Macros.start_end_count(:transactions_stats)
   Macros.start_end_count(:blocks_stats)
+  Macros.start_end_count(:difficulty_stats)
+  Macros.start_end_count(:hashrate_stats)
+  Macros.start_end_count(:total_accounts_stats)
+  Macros.start_end_count(:active_accounts_stats)
   Macros.start_end_count(:names_stats)
+  Macros.start_end_count(:contracts_stats)
+  Macros.start_end_count(:aex9_transfers_stats)
 end
