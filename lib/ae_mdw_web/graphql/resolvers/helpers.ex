@@ -26,4 +26,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
 
   def maybe_put(map, _k, nil), do: map
   def maybe_put(map, k, v), do: Map.put(map, k, v)
+
+  def normalize_map(map) when is_map(map) do
+    map
+    |> Enum.map(fn {k, v} ->
+      {normalize_key(k), v}
+    end)
+    |> Enum.into(%{})
+  end
+
+  def normalize_map(value), do: value
+
+  defp normalize_key(key) when is_binary(key), do: String.to_atom(key)
+  defp normalize_key(key), do: key
 end

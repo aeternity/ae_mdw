@@ -28,7 +28,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: items
+           data: items |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
@@ -39,7 +39,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
   def channel(_p, %{id: id}, %{context: %{state: state}}) do
     with {:ok, channel_pk} <- Validate.id(id, [:channel]),
          {:ok, channel} <- Channels.fetch_channel(state, channel_pk, nil) do
-      {:ok, channel}
+      {:ok, channel |> Helpers.normalize_map()}
     else
       {:error, err} ->
         {:error, ErrInput.message(err)}
@@ -62,7 +62,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
          %{
            prev_cursor: Helpers.cursor_val(prev),
            next_cursor: Helpers.cursor_val(next),
-           data: items
+           data: items |> Enum.map(&Helpers.normalize_map/1)
          }}
 
       {:error, err} ->
