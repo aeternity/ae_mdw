@@ -35,18 +35,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
         v -> %{"state" => to_string(v)}
       end
 
-    case Oracles.fetch_oracles(state, pagination, scope, query, cursor, [{:v3?, true}]) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Oracles.fetch_oracles(state, pagination, scope, query, cursor, [{:v3?, true}])
+    |> Helpers.make_page()
   end
 
   def oracle_queries(_p, %{id: id} = args, %{context: %{state: state}}) do
@@ -59,18 +49,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Oracles.fetch_oracle_queries(state, id, pagination, scope, cursor) do
-      {:ok, {prev, queries, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: queries |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Oracles.fetch_oracle_queries(state, id, pagination, scope, cursor)
+    |> Helpers.make_page()
   end
 
   def oracle_responses(_p, %{id: id} = args, %{context: %{state: state}}) do
@@ -83,18 +63,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Oracles.fetch_oracle_responses(state, id, pagination, scope, cursor) do
-      {:ok, {prev, responses, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: responses |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Oracles.fetch_oracle_responses(state, id, pagination, scope, cursor)
+    |> Helpers.make_page()
   end
 
   def oracle_extends(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -107,17 +77,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     _scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Oracles.fetch_oracle_extends(state, id, pagination, cursor) do
-      {:ok, {prev, extends, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: extends |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Oracles.fetch_oracle_extends(state, id, pagination, cursor)
+    |> Helpers.make_page()
   end
 end

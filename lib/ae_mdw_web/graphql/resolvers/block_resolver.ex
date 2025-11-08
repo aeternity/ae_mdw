@@ -12,18 +12,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     # TODO: scoping does not work as expected
     scope = Helpers.make_scope(from_height, to_height)
 
-    case Blocks.fetch_key_blocks(state, direction, scope, cursor, limit) do
-      {:ok, {prev, blocks, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: blocks |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Blocks.fetch_key_blocks(state, direction, scope, cursor, limit)
+    |> Helpers.make_page()
   end
 
   def key_block(_p, %{height: height}, %{context: %{state: state}}) do
@@ -48,18 +38,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     direction = Map.get(args, :direction, :backward)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor) do
-      {:ok, {prev, blocks, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: blocks |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor)
+    |> Helpers.make_page()
   end
 
   def micro_block(_p, %{hash: hash}, %{context: %{state: state}}) do

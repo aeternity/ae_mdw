@@ -30,18 +30,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
     query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
     query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
 
-    case AexnTokens.fetch_contracts(state, pagination, :aex141, query, order_by, cursor, true) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    AexnTokens.fetch_contracts(state, pagination, :aex141, query, order_by, cursor, true)
+    |> Helpers.make_page()
   end
 
   def aex141_contract(_p, %{id: id}, %{context: %{state: state}}) do
@@ -66,6 +56,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
     query = Helpers.maybe_put(query, "from", sender)
     query = Helpers.maybe_put(query, "to", recipient)
 
+    # TODO: can this be refactored using Helpers.make_page/1 ?
     case AexnTransfers.fetch_aex141_transfers(state, pagination, cursor, query) do
       {:ok, {prev, items, next}} ->
         {:ok,

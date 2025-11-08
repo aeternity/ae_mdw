@@ -30,18 +30,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
     query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
 
-    case AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true)
+    |> Helpers.make_page()
   end
 
   def aex9_contract(_p, %{id: id}, %{context: %{state: state}}) do
@@ -67,18 +57,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
         bh -> %{"block_hash" => bh}
       end
 
-    case Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query)
+    |> Helpers.make_page()
   end
 
   def aex9_balance_history(_p, %{contract_id: cid, account_id: aid} = args, %{
@@ -94,15 +74,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
-         {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]),
-         {:ok, {prev, items, next}} <-
-           Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
-      {:ok,
-       %{
-         prev_cursor: Helpers.cursor_val(prev),
-         next_cursor: Helpers.cursor_val(next),
-         data: items |> Enum.map(&Helpers.normalize_map/1)
-       }}
+         {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
+      Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination)
+      |> Helpers.make_page()
     else
       {:error, err} ->
         {:error, ErrInput.message(err)}

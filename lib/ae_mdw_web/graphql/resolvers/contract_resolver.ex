@@ -20,18 +20,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Contracts.fetch_contracts(state, pagination, scope, cursor) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_contracts(state, pagination, scope, cursor)
+    |> Helpers.make_page()
   end
 
   def logs(_p, args, %{context: %{state: state}}) do
@@ -52,18 +42,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     query = Helpers.maybe_put(query, "data", Map.get(args, :data))
     query = Helpers.maybe_put(query, "aexn_args", Map.get(args, :aexn_args))
 
-    case Contracts.fetch_logs(state, pagination, scope, query, cursor, v3?: true) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_logs(state, pagination, scope, query, cursor, v3?: true)
+    |> Helpers.make_page()
   end
 
   def calls(_p, args, %{context: %{state: state}}) do
@@ -76,18 +56,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Contracts.fetch_calls(state, pagination, scope, [], cursor, v3?: true) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_calls(state, pagination, scope, [], cursor, v3?: true)
+    |> Helpers.make_page()
   end
 
   def contract_logs(_p, %{id: id} = args, %{context: %{state: state}}) do
@@ -108,18 +78,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     query = Helpers.maybe_put(query, "data", Map.get(args, :data))
     query = Helpers.maybe_put(query, "aexn_args", Map.get(args, :aexn_args))
 
-    case Contracts.fetch_contract_logs(state, id, pagination, scope, query, cursor) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_contract_logs(state, id, pagination, scope, query, cursor)
+    |> Helpers.make_page()
   end
 
   def contract_calls(_p, %{id: id} = args, %{context: %{state: state}}) do
@@ -132,17 +92,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Contracts.fetch_contract_calls(state, id, pagination, scope, [], cursor) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_contract_calls(state, id, pagination, scope, [], cursor)
+    |> Helpers.make_page()
   end
 end

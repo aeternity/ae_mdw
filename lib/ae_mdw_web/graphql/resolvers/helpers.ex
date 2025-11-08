@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
+  alias AeMdw.Error.Input, as: ErrInput
+
   @min_page_limit 1
   @max_page_limit 100
   @default_page_limit 10
@@ -20,6 +22,21 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
       true -> nil
     end
   end
+
+  def make_page({_prev, _items, _next} = res) do
+    make_page({:ok, res})
+  end
+
+  def make_page({:ok, {prev, items, next}}) do
+    {:ok,
+     %{
+       prev_cursor: cursor_val(prev),
+       next_cursor: cursor_val(next),
+       data: items |> Enum.map(&normalize_map/1)
+     }}
+  end
+
+  def make_page({:error, err}), do: {:error, ErrInput.message(err)}
 
   def cursor_val(nil), do: nil
   def cursor_val({val, _rev}), do: val

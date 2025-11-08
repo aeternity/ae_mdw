@@ -22,17 +22,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     try do
-      {prev, txs, next} =
-        NodeStore.new()
-        |> State.new()
-        |> Txs.fetch_pending_txs(pagination, nil, cursor)
-
-      {:ok,
-       %{
-         prev_cursor: Helpers.cursor_val(prev),
-         next_cursor: Helpers.cursor_val(next),
-         data: txs |> Enum.map(&Helpers.normalize_map/1)
-       }}
+      NodeStore.new()
+      |> State.new()
+      |> Txs.fetch_pending_txs(pagination, nil, cursor)
+      |> Helpers.make_page()
     rescue
       _ -> {:error, "pending_transactions_error"}
     end
