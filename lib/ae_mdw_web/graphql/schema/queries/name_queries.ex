@@ -61,52 +61,5 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
       Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.account_name_claims/3)
     end
-
-    #   @desc "History for a name (claims, updates, transfers, revoke, expire)"
-    #   field :name_history, :name_history_page do
-    #     arg(:id, non_null(:string))
-    #     arg(:cursor, :string)
-    #     arg(:limit, :integer, default_value: 20)
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_history/3)
-    #   end
-
-    #   @desc "Updates for a name"
-    #   field :name_updates, :name_history_page do
-    #     arg(:id, non_null(:string))
-    #     arg(:cursor, :string)
-    #     arg(:limit, :integer, default_value: 20)
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_updates/3)
-    #   end
-
-    #   @desc "Transfers for a name"
-    #   field :name_transfers, :name_history_page do
-    #     arg(:id, non_null(:string))
-    #     arg(:cursor, :string)
-    #     arg(:limit, :integer, default_value: 20)
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_transfers/3)
-    #   end
-
-    #   @desc "Search names & auctions (only supports prefix + optional lifecycle filters)"
-    #   field :search_names, :search_name_page do
-    #     arg(:prefix, :string)
-    #     arg(:only, list_of(:string), description: "Allowed values: active, inactive, auction")
-    #     arg(:cursor, :string)
-    #     arg(:limit, :integer, default_value: 20)
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.search_names/3)
-    #   end
-
-    #   @desc "Account pointees (names pointing to account via AENS pointers)"
-    #   field :account_pointees, :pointee_page do
-    #     arg(:id, non_null(:string))
-    #     arg(:cursor, :string)
-    #     arg(:limit, :integer, default_value: 20)
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.account_pointees/3)
-    #   end
-
-    #   @desc "Name pointees (active & inactive pointer entries for a given name hash)"
-    #   field :name_pointees, :name_pointees do
-    #     arg(:id, non_null(:string))
-    #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_pointees/3)
-    #   end
   end
 end
