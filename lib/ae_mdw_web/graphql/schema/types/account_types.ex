@@ -2,24 +2,27 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.AccountTypes do
   use Absinthe.Schema.Notation
 
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
+
   require Macros
 
-  Macros.page(:account)
-
-  object :account do
-    field(:id, non_null(:string))
-    # Large balance uses custom BigInt scalar (no 32-bit restriction)
-    field(:balance, :big_int)
-    field(:creation_time, :integer)
-    field(:nonce, :integer)
-    field(:names_count, :integer)
-    field(:activities_count, :integer, description: "Number of recorded activity intervals")
+  enum :activity_type do
+    value(:transactions)
+    value(:aexn)
+    value(:aex9)
+    value(:aex141)
+    value(:contract)
+    value(:transfers)
+    value(:claims)
+    value(:swaps)
   end
 
-  Macros.page(:aex9_balance)
+  Macros.page(:account_activity)
 
-  object :aex9_balance do
-    field(:contract_id, :string)
-    field(:amount, :big_int)
+  object :account_activity do
+    field(:type, :string)
+    field(:height, :integer)
+    field(:block_hash, :string)
+    field(:payload, :json)
+    field(:block_time, :integer)
   end
 end
