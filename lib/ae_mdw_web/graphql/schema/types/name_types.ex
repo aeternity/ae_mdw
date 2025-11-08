@@ -67,42 +67,4 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
     field(:auction_end, :integer)
     field(:activation_time, :integer)
   end
-
-  # Macros.page(:search_name_page, :search_name_entry)
-
-  # object :search_name_entry do
-  #  field(:type, :string)
-  #  field(:name, :string)
-  #  field(:active, :boolean)
-  #  field(:auction, :auction)
-  # end
-
-  # Macros.page(:pointee)
-
-  # object :pointee do
-  #  field(:name, :string)
-  #  field(:active, :boolean)
-  #  field(:key, :string)
-  #  field(:block_height, :integer)
-  #  field(:block_hash, :string)
-  #  field(:block_time, :integer)
-  #  field(:source_tx_hash, :string)
-  #  field(:source_tx_type, :string)
-  #  field(:tx, :string)
-  # end
-
-  # object :name_pointees do
-  #  field(:active, list_of(:name_pointer))
-  #  field(:inactive, list_of(:name_pointer))
-  # end
-
-  # object :name_pointer do
-  #  field(:key, :string)
-  #  field(:id, :string)
-  # end
-
-  # object :name_ownership do
-  #  field(:current, :string)
-  #  field(:original, :string)
-  # end
 end
