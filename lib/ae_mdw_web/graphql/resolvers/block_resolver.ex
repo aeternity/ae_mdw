@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
   alias AeMdw.Blocks
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def key_blocks(_p, args, %{context: %{state: state}}) do
@@ -43,16 +42,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
   end
 
   def micro_block(_p, %{hash: hash}, %{context: %{state: state}}) do
-    case Blocks.fetch_micro_block(state, hash) do
-      {:ok, block} -> {:ok, block |> Helpers.normalize_map()}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    Blocks.fetch_micro_block(state, hash) |> Helpers.make_single()
   end
 
   defp key_block_by_id(state, id) do
-    case Blocks.fetch_key_block(state, id) do
-      {:ok, block} -> {:ok, block |> Helpers.normalize_map()}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    Blocks.fetch_key_block(state, id) |> Helpers.make_single()
   end
 end

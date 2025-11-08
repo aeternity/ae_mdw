@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
-  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Error
 
   @min_page_limit 1
   @max_page_limit 100
@@ -23,10 +23,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end
   end
 
-  def make_page({_prev, _items, _next} = res) do
-    make_page({:ok, res})
-  end
-
   def make_page({:ok, {prev, items, next}}) do
     {:ok,
      %{
@@ -36,7 +32,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
      }}
   end
 
-  def make_page({:error, err}), do: {:error, ErrInput.message(err)}
+  def make_page({:error, err}), do: {:error, format_err(err)}
+  def make_page({_prev, _items, _next} = res), do: make_page({:ok, res})
+
+  def make_single({:ok, item}), do: {:ok, normalize_map(item)}
+  def make_single({:error, err}), do: {:error, format_err(err)}
+
+  def format_err({reason, val}), do: Error.to_string(reason, val)
+  def format_err(_), do: "unrecognized_error"
 
   def cursor_val(nil), do: nil
   def cursor_val({val, _rev}), do: val

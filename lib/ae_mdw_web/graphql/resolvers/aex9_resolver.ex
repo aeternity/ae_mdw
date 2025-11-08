@@ -3,7 +3,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   alias AeMdw.Aex9
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Stats
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
@@ -35,13 +34,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   end
 
   def aex9_contract(_p, %{id: id}, %{context: %{state: state}}) do
-    case AexnTokens.fetch_contract(state, :aex9, id, true) do
-      {:ok, contract} ->
-        {:ok, contract |> Helpers.normalize_map()}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    AexnTokens.fetch_contract(state, :aex9, id, true) |> Helpers.make_single()
   end
 
   def aex9_contract_balances(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -79,7 +72,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
       |> Helpers.make_page()
     else
       {:error, err} ->
-        {:error, ErrInput.message(err)}
+        {:error, Helpers.format_err(err)}
     end
   end
 

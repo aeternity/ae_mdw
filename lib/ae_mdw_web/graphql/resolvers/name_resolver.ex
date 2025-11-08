@@ -2,14 +2,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   alias AeMdw.Names
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
-  alias AeMdw.Error
-  alias AeMdw.Error.Input, as: ErrInput
 
   def name(_p, %{id: id}, %{context: %{state: state}}) do
-    case Names.fetch_name(state, id, [{:render_v3?, true}]) do
-      {:ok, name} -> {:ok, name}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    Names.fetch_name(state, id, [{:render_v3?, true}]) |> Helpers.make_single()
   end
 
   def names(_p, args, %{context: %{state: state}}) do
@@ -35,10 +30,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     query = %{}
     query = Helpers.maybe_put(query, "owned_by", Map.get(args, :owned_by))
 
-    case Names.count_names(state, query) do
-      {:ok, count} -> {:ok, count}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    Names.count_names(state, query) |> Helpers.make_single()
   end
 
   def name_claims(_p, %{id: id} = args, %{context: %{state: state}}) do
@@ -56,10 +48,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   end
 
   def auction(_p, %{id: id}, %{context: %{state: state}}) do
-    case AeMdw.AuctionBids.fetch_auction(state, id, [{:render_v3?, true}]) do
-      {:ok, auction} -> {:ok, auction}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    AeMdw.AuctionBids.fetch_auction(state, id, [{:render_v3?, true}]) |> Helpers.make_single()
   end
 
   def auctions(_p, args, %{context: %{state: state}}) do
@@ -87,8 +76,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
       Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
       |> Helpers.make_page()
     else
-      {:error, {reason, val}} -> {:error, Error.to_string(reason, val)}
-      {:error, _} -> {:error, "auction_claims_error"}
+      {:error, err} -> {:error, Helpers.format_err(err)}
     end
   end
 
