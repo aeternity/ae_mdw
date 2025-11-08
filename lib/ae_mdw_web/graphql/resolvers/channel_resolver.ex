@@ -22,18 +22,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
         v -> %{"state" => to_string(v)}
       end
 
-    case Channels.fetch_channels(state, pagination, scope, query, cursor) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Channels.fetch_channels(state, pagination, scope, query, cursor)
+    |> Helpers.make_page()
   end
 
   def channel(_p, %{id: id}, %{context: %{state: state}}) do
@@ -56,17 +46,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
     scope = Helpers.make_scope(from_height, to_height)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    case Channels.fetch_channel_updates(state, id, pagination, scope, cursor) do
-      {:ok, {prev, items, next}} ->
-        {:ok,
-         %{
-           prev_cursor: Helpers.cursor_val(prev),
-           next_cursor: Helpers.cursor_val(next),
-           data: items |> Enum.map(&Helpers.normalize_map/1)
-         }}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    Channels.fetch_channel_updates(state, id, pagination, scope, cursor)
+    |> Helpers.make_page()
   end
 end

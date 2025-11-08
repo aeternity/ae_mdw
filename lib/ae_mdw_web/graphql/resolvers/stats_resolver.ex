@@ -22,15 +22,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_transactions_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_transactions_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def transactions_total(_p, args, %{context: %{state: state}}) do
@@ -63,15 +56,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_blocks_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_blocks_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def difficulty(_p, args, %{context: %{state: state}}) do
@@ -92,15 +78,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_difficulty_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_difficulty_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def hashrate(_p, args, %{context: %{state: state}}) do
@@ -121,15 +100,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_hashrate_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_hashrate_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def total_accounts(_p, args, %{context: %{state: state}}) do
@@ -147,15 +119,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
         Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
       )
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_total_accounts_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_total_accounts_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def active_accounts(_p, args, %{context: %{state: state}}) do
@@ -173,15 +138,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
         Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
       )
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_active_accounts_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_active_accounts_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def names(_p, args, %{context: %{state: state}}) do
@@ -202,15 +160,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_names_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_names_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def total(_p, args, %{context: %{state: state}}) do
@@ -222,14 +173,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     # TODO: scoping does not work as expected
     scope = Helpers.make_scope(from_height, to_height)
 
-    {prev, data, next} = Stats.fetch_total_stats(state, direction, scope, cursor, limit)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_total_stats(state, direction, scope, cursor, limit)
+    |> Helpers.make_page()
   end
 
   def delta(_p, args, %{context: %{state: state}}) do
@@ -241,14 +186,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     # TODO: scoping does not work as expected
     scope = Helpers.make_scope(from_height, to_height)
 
-    {prev, data, next} = Stats.fetch_delta_stats(state, direction, scope, cursor, limit)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_delta_stats(state, direction, scope, cursor, limit)
+    |> Helpers.make_page()
   end
 
   def contracts(_p, args, %{context: %{state: state}}) do
@@ -269,15 +208,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_contracts_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_contracts_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def aex9_transfers(_p, args, %{context: %{state: state}}) do
@@ -298,15 +230,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_aex9_token_transfers_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_aex9_token_transfers_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def stats(_p, _args, %{context: %{state: state}}) do
@@ -319,14 +244,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     direction = Map.get(args, :direction, :backward)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
-    {:ok, {prev, data, next}} = Miners.fetch_miners(state, pagination, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Miners.fetch_miners(state, pagination, cursor)
+    |> Helpers.make_page()
   end
 
   def top_miners(_p, args, %{context: %{state: state}}) do
@@ -347,15 +266,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
-    {:ok, {prev, data, next}} =
-      Stats.fetch_top_miners_stats(state, pagination, query, nil, cursor)
-
-    {:ok,
-     %{
-       prev_cursor: Helpers.cursor_val(prev),
-       next_cursor: Helpers.cursor_val(next),
-       data: data
-     }}
+    Stats.fetch_top_miners_stats(state, pagination, query, nil, cursor)
+    |> Helpers.make_page()
   end
 
   def top_miners_24h(_p, _args, %{context: %{state: state}}) do
