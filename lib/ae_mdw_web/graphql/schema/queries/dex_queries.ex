@@ -1,7 +1,7 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.DexQueries do
   use Absinthe.Schema.Notation
 
-  alias AeMdwWeb.GraphQL.Resolvers.Helpers.Macros
+  alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
 
   require Macros
 

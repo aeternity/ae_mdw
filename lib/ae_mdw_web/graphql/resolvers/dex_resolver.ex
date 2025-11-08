@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
   alias AeMdw.Dex
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def swaps(_p, args, %{context: %{state: state}}) do
