@@ -11,7 +11,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
     query = %{}
     query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -42,8 +49,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "type", Map.get(args, :type) |> to_string())
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(query, "type", Map.get(args, :type) |> Helpers.maybe_map(&to_string/1))
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -65,7 +81,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -87,7 +110,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -109,7 +139,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
 
     {:ok, {prev, data, next}} =
       Stats.fetch_total_accounts_stats(state, pagination, query, nil, cursor)
@@ -129,7 +165,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
 
     {:ok, {prev, data, next}} =
       Stats.fetch_active_accounts_stats(state, pagination, query, nil, cursor)
@@ -149,7 +191,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -209,7 +258,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -231,7 +287,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 
@@ -273,7 +336,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
-    query = Helpers.maybe_put(query, "interval_by", Map.get(args, :interval_by) |> to_string())
+
+    query =
+      Helpers.maybe_put(
+        query,
+        "interval_by",
+        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
+      )
+
     query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
     query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
 

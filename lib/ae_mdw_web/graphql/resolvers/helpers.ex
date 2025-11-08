@@ -27,6 +27,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   def maybe_put(map, _k, nil), do: map
   def maybe_put(map, k, v), do: Map.put(map, k, v)
 
+  def maybe_map(nil, _fun), do: nil
+  def maybe_map(value, fun), do: fun.(value)
+
   def normalize_map(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} ->
