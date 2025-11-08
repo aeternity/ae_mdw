@@ -1,6 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
   use Absinthe.Schema.Notation
 
+  alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
+
+  require Macros
+
   object :transaction_queries do
     @desc "Get a single transaction"
     field :transaction, :transaction do
@@ -10,10 +14,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
 
     @desc "Pending transactions"
     field :pending_transactions, :transaction_page do
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions/3)
     end
 

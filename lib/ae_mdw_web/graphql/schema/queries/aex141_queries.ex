@@ -1,6 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
   use Absinthe.Schema.Notation
 
+  alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
+
+  require Macros
+
   object :aex141_queries do
     @desc "AEX141 contracts count"
     field :aex141_count, :integer do
@@ -12,12 +16,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
       arg(:order_by, :aex141_contract_order_by, default_value: :creation)
       arg(:prefix, :string)
       arg(:exact, :string)
-
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contracts/3)
     end
 
@@ -31,12 +30,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
     field :aex141_transfers, :aex141_transfer_page do
       arg(:sender, :string)
       arg(:recipient, :string)
-
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_transfers/3)
     end
 
