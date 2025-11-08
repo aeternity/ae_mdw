@@ -55,6 +55,13 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.auction_claims/3)
     end
 
+    @desc "Fetch account name claims"
+    field :account_name_claims, :name_claim_page do
+      arg(:account_id, non_null(:string))
+      Macros.pagination_args_with_scope()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.account_name_claims/3)
+    end
+
     #   @desc "History for a name (claims, updates, transfers, revoke, expire)"
     #   field :name_history, :name_history_page do
     #     arg(:id, non_null(:string))

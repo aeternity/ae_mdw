@@ -80,6 +80,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     end
   end
 
+  def account_name_claims(_p, %{account_id: account_id} = args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    Names.fetch_account_claims(state, account_id, pagination, scope, cursor)
+    |> Helpers.make_page()
+  end
+
   """
   alias AeMdw.Names
   alias AeMdw.Db.State
