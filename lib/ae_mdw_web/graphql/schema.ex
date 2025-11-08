@@ -14,6 +14,7 @@ defmodule AeMdwWeb.GraphQL.Schema do
   import_types(AeMdwWeb.GraphQL.Schema.Types.Aex9Types)
   import_types(AeMdwWeb.GraphQL.Schema.Types.Aex141Types)
   import_types(AeMdwWeb.GraphQL.Schema.Types.OracleTypes)
+  import_types(AeMdwWeb.GraphQL.Schema.Types.DexTypes)
 
   import_types(AeMdwWeb.GraphQL.Schema.Queries.AccountQueries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.BlockQueries)
@@ -26,6 +27,7 @@ defmodule AeMdwWeb.GraphQL.Schema do
   import_types(AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.OracleQueries)
+  import_types(AeMdwWeb.GraphQL.Schema.Queries.DexQueries)
 
   query do
     import_fields(:account_queries)
@@ -39,5 +41,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     import_fields(:aex9_queries)
     import_fields(:aex141_queries)
     import_fields(:oracle_queries)
+    import_fields(:dex_queries)
   end
 end
