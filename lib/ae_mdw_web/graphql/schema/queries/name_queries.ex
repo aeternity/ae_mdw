@@ -35,6 +35,27 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_claims/3)
     end
 
+    @desc "Fetch name updates"
+    field :name_updates, :name_update_page do
+      arg(:id, non_null(:string))
+      Macros.pagination_args_with_scope()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_updates/3)
+    end
+
+    @desc "Fetch name transfers"
+    field :name_transfers, :name_transfer_page do
+      arg(:id, non_null(:string))
+      Macros.pagination_args_with_scope()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_transfers/3)
+    end
+
+    @desc "Fetch name history"
+    field :name_history, :name_history_page do
+      arg(:id, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_history/3)
+    end
+
     @desc "Fetch a single auction"
     field :auction, :auction do
       arg(:id, non_null(:string))

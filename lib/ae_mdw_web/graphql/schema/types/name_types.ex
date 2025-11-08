@@ -56,6 +56,46 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
     field(:source_tx_type, :string)
   end
 
+  Macros.page(:name_update)
+
+  # TODO: verify fields and types
+  object :name_update do
+    field(:height, :integer)
+    field(:block_hash, :string)
+    field(:tx, :json)
+    field(:active_from, :integer)
+    field(:internal_source, :boolean)
+    field(:source_tx_hash, :string)
+    field(:source_tx_type, :string)
+  end
+
+  Macros.page(:name_transfer)
+
+  # TODO: verify fields and types
+  object :name_transfer do
+    field(:height, :integer)
+    field(:block_hash, :string)
+    field(:tx, :json)
+    field(:active_from, :integer)
+    field(:internal_source, :boolean)
+    field(:source_tx_hash, :string)
+    field(:source_tx_type, :string)
+  end
+
+  Macros.page(:name_history)
+
+  # TODO: verify fields and types
+  object :name_history do
+    field(:height, :integer)
+    field(:block_hash, :string)
+    field(:tx, :json)
+    field(:active_from, :integer)
+    field(:expired_at, :integer)
+    field(:internal_source, :boolean)
+    field(:source_tx_hash, :string)
+    field(:source_tx_type, :string)
+  end
+
   Macros.page(:auction)
 
   object :auction do
