@@ -1,8 +1,97 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
-  @moduledoc """
-  GraphQL resolvers for Names domain (initial subset: names, namesCount, name).
+  alias AeMdw.Names
+  alias AeMdw.Validate
+  alias AeMdwWeb.GraphQL.Resolvers.Helpers
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
 
-  Roadmap: extend with history, claims, transfers, updates, auctions, search, pointees.
+  def name(_p, %{id: id}, %{context: %{state: state}}) do
+    case Names.fetch_name(state, id, [{:render_v3?, true}]) do
+      {:ok, name} -> {:ok, name}
+      {:error, err} -> {:error, ErrInput.message(err)}
+    end
+  end
+
+  def names(_p, args, %{context: %{state: state}}) do
+    order_by = Map.get(args, :order_by, :expiration)
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    query = %{}
+    query = Helpers.maybe_put(query, "owned_by", Map.get(args, :owned_by))
+
+    query =
+      Helpers.maybe_put(query, "state", Map.get(args, :state) |> Helpers.maybe_map(&to_string/1))
+
+    query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
+
+    Names.fetch_names(state, pagination, nil, order_by, query, cursor, [{:render_v3?, true}])
+    |> Helpers.make_page()
+  end
+
+  def names_count(_p, args, %{context: %{state: state}}) do
+    query = %{}
+    query = Helpers.maybe_put(query, "owned_by", Map.get(args, :owned_by))
+
+    case Names.count_names(state, query) do
+      {:ok, count} -> {:ok, count}
+      {:error, err} -> {:error, ErrInput.message(err)}
+    end
+  end
+
+  def name_claims(_p, %{id: id} = args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    Names.fetch_name_claims(state, id, pagination, scope, cursor)
+    |> Helpers.make_page()
+  end
+
+  def auction(_p, %{id: id}, %{context: %{state: state}}) do
+    case AeMdw.AuctionBids.fetch_auction(state, id, [{:render_v3?, true}]) do
+      {:ok, auction} -> {:ok, auction}
+      {:error, err} -> {:error, ErrInput.message(err)}
+    end
+  end
+
+  def auctions(_p, args, %{context: %{state: state}}) do
+    order_by = Map.get(args, :order_by, :expiration)
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    AeMdw.AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [{:render_v3?, true}])
+    |> Helpers.make_page()
+  end
+
+  def auction_claims(_p, %{id: id} = args, %{context: %{state: state}}) do
+    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = Helpers.make_scope(from_height, to_height)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    with {:ok, plain_name} <- Validate.plain_name(state, id) do
+      Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
+      |> Helpers.make_page()
+    else
+      {:error, {reason, val}} -> {:error, Error.to_string(reason, val)}
+      {:error, _} -> {:error, "auction_claims_error"}
+    end
+  end
+
   """
   alias AeMdw.Names
   alias AeMdw.Db.State
@@ -11,66 +100,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   @max_limit 100
 
   @type page_tuple :: {String.t() | nil, list(), String.t() | nil}
-
-  @spec names(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def names(_parent, args, %{context: %{state: %State{} = state}}) do
-    limit = args |> Map.get(:limit, 20) |> clamp_limit()
-    cursor = Map.get(args, :cursor)
-    order_by = Map.get(args, :order_by, :expiration)
-
-    query =
-      %{}
-      |> maybe_put("owned_by", Map.get(args, :owned_by))
-      |> maybe_put("state", Map.get(args, :state) && to_string(Map.get(args, :state)))
-      |> maybe_put("prefix", Map.get(args, :prefix))
-
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    with {:ok, {prev, list, next}} <-
-           Names.fetch_names(state, pagination, nil, order_by, query, cursor, [
-             {:render_v3?, true}
-           ]) do
-      {:ok,
-       %{
-         prev_cursor: cursor_to_str(prev),
-         next_cursor: cursor_to_str(next),
-         data: Enum.map(list, &normalize_name/1)
-       }}
-    else
-      {:error, _reason} -> {:error, "invalid_query"}
-      _ -> {:error, "unknown_error"}
-    end
-  end
-
-  def names(_, _args, _), do: {:error, "partial_state_unavailable"}
-
-  @spec names_count(any, map(), Absinthe.Resolution.t()) ::
-          {:ok, non_neg_integer()} | {:error, String.t()}
-  def names_count(_parent, args, %{context: %{state: %State{} = state}}) do
-    query =
-      %{}
-      |> maybe_put("owned_by", Map.get(args, :owned_by))
-      |> maybe_put("state", Map.get(args, :state) && to_string(Map.get(args, :state)))
-      |> maybe_put("prefix", Map.get(args, :prefix))
-
-    case Names.count_names(state, query) do
-      {:ok, count} -> {:ok, count}
-      {:error, _} -> {:error, "invalid_query"}
-    end
-  end
-
-  def names_count(_, _args, _), do: {:error, "partial_state_unavailable"}
-
-  @spec name(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def name(_parent, %{id: id}, %{context: %{state: %State{} = state}}) do
-    # Accept plain name or name hash; backend handles
-    case Names.fetch_name(state, id, [{:render_v3?, true}]) do
-      {:ok, name_map} -> {:ok, normalize_name(name_map)}
-      {:error, _} -> {:error, "name_not_found"}
-    end
-  end
-
-  def name(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   @spec name_history(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
   def name_history(_parent, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -89,22 +118,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
 
   def name_history(_, _args, _), do: {:error, "partial_state_unavailable"}
 
-  @spec name_claims(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def name_claims(_parent, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-    limit = args |> Map.get(:limit, 20) |> clamp_limit()
-    cursor = Map.get(args, :cursor)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    with {:ok, {prev, list, next}} <- Names.fetch_name_claims(state, id, pagination, nil, cursor) do
-      data = Enum.map(list, &history_item_to_graphql/1)
-      {:ok, %{prev_cursor: cursor_to_str(prev), next_cursor: cursor_to_str(next), data: data}}
-    else
-      {:error, _} -> {:error, "name_not_found"}
-      _ -> {:error, "unknown_error"}
-    end
-  end
-
-  def name_claims(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   @spec name_updates(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
   def name_updates(_parent, %{id: id} = args, %{context: %{state: %State{} = state}}) do
@@ -141,33 +154,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
 
   def name_transfers(_, _args, _), do: {:error, "partial_state_unavailable"}
 
-  @spec auction(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def auction(_parent, %{id: id}, %{context: %{state: %State{} = state}}) do
-    case AeMdw.AuctionBids.fetch_auction(state, id, [{:render_v3?, true}]) do
-      {:ok, auc} -> {:ok, auction_to_graphql(auc)}
-      {:error, _} -> {:error, "auction_not_found"}
-    end
-  end
 
-  def auction(_, _args, _), do: {:error, "partial_state_unavailable"}
 
   @spec auctions(any, map(), Absinthe.Resolution.t()) :: {:ok, map()} | {:error, String.t()}
-  def auctions(_parent, args, %{context: %{state: %State{} = state}}) do
-    limit = args |> Map.get(:limit, 20) |> clamp_limit()
-    cursor = Map.get(args, :cursor)
-    order_by = Map.get(args, :order_by, :expiration)
-    pagination = {:backward, false, limit, not is_nil(cursor)}
-
-    with {:ok, {prev, list, next}} <-
-           AeMdw.AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [
-             {:render_v3?, true}
-           ]) do
-      data = Enum.map(list, &auction_to_graphql/1)
-      {:ok, %{prev_cursor: cursor_to_str(prev), next_cursor: cursor_to_str(next), data: data}}
-    else
-      {:error, _} -> {:error, "invalid_query"}
-    end
-  end
 
   def auctions(_, _args, _), do: {:error, "partial_state_unavailable"}
 
@@ -323,4 +312,5 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   end
 
   defp map_pointee_set(_), do: []
+  """
 end
