@@ -1,7 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
   alias AeMdw.Channels
   alias AeMdw.Validate
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def channels(_p, args, %{context: %{state: state}}) do
@@ -27,12 +26,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
   end
 
   def channel(_p, %{id: id}, %{context: %{state: state}}) do
-    with {:ok, channel_pk} <- Validate.id(id, [:channel]),
-         {:ok, channel} <- Channels.fetch_channel(state, channel_pk, nil) do
-      {:ok, channel |> Helpers.normalize_map()}
+    with {:ok, channel_pk} <- Validate.id(id, [:channel]) do
+      Channels.fetch_channel(state, channel_pk, nil) |> Helpers.make_single()
     else
       {:error, err} ->
-        {:error, ErrInput.message(err)}
+        {:error, Helpers.format_err(err)}
     end
   end
 

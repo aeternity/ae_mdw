@@ -1,19 +1,13 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   alias AeMdw.Oracles
   alias AeMdw.Db.State
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def oracle(_p, %{id: id}, %{context: %{state: %State{} = state}}) do
-    case AeMdw.Validate.id(id, [:oracle_pubkey]) do
-      {:ok, pk} ->
-        case Oracles.fetch(state, pk, v3?: true) do
-          {:ok, oracle} -> {:ok, oracle |> Helpers.normalize_map()}
-          {:error, err} -> {:error, ErrInput.message(err)}
-        end
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
+    with {:ok, pk} <- AeMdw.Validate.id(id, [:oracle_pubkey]) do
+      Oracles.fetch(state, pk, v3?: true) |> Helpers.make_single()
+    else
+      {:error, err} -> {:error, Helpers.format_err(err)}
     end
   end
 

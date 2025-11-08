@@ -1,13 +1,9 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
   alias AeMdw.Contracts
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def contract(_p, %{id: id}, %{context: %{state: state}}) do
-    case Contracts.fetch_contract(state, id) do
-      {:ok, contract} -> {:ok, contract |> Helpers.normalize_map()}
-      {:error, err} -> {:error, ErrInput.message(err)}
-    end
+    Contracts.fetch_contract(state, id) |> Helpers.make_single()
   end
 
   def contracts(_p, args, %{context: %{state: state}}) do

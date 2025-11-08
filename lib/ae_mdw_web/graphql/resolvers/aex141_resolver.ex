@@ -3,9 +3,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
   alias AeMdw.AexnTransfers
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Stats
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
+  alias AeMdw.Error.Input, as: ErrInput
 
   require Model
 
@@ -35,13 +35,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
   end
 
   def aex141_contract(_p, %{id: id}, %{context: %{state: state}}) do
-    case AexnTokens.fetch_contract(state, :aex141, id, true) do
-      {:ok, contract} ->
-        {:ok, contract |> Helpers.normalize_map()}
-
-      {:error, err} ->
-        {:error, ErrInput.message(err)}
-    end
+    AexnTokens.fetch_contract(state, :aex141, id, true) |> Helpers.make_single()
   end
 
   def aex141_transfers(_p, args, %{context: %{state: %State{} = state}}) do

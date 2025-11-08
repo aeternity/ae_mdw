@@ -63,7 +63,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
     #     resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.name_history/3)
     #   end
 
-
     #   @desc "Updates for a name"
     #   field :name_updates, :name_history_page do
     #     arg(:id, non_null(:string))

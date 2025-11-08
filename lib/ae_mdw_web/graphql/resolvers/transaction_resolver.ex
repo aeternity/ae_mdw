@@ -1,17 +1,16 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   alias AeMdw.Txs
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
   alias AeMdw.Db.NodeStore
   alias AeMdw.Db.State
 
   def transaction(_p, %{hash: hash}, %{context: %{state: state}}) do
-    with {:ok, tx_hash} <- Validate.id(hash),
-         {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
-      {:ok, tx |> Helpers.normalize_map()}
+    with {:ok, tx_hash} <- Validate.id(hash) do
+      Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true)
+      |> Helpers.make_single()
     else
-      {:error, err} -> {:error, ErrInput.message(err)}
+      {:error, err} -> {:error, Helpers.format_err(err)}
     end
   end
 
