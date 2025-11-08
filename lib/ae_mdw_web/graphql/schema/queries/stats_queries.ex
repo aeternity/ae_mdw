@@ -150,7 +150,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     end
 
     @desc "Top miners in the last 24 hours statistics"
-    field :top_miners_24h_stats, :top_miners_24h_stats_page do
+    field :top_miners24h_stats, :top_miners_24h_stats_page do
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.top_miners_24h/3)
     end
   end
