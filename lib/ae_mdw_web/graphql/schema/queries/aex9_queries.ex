@@ -1,6 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
   use Absinthe.Schema.Notation
 
+  alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
+
+  require Macros
+
   object :aex9_queries do
     @desc "AEX9 contracts count"
     field :aex9_count, :integer do
@@ -12,12 +16,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       arg(:order_by, :aex9_contract_order_by, default_value: :creation)
       arg(:prefix, :string)
       arg(:exact, :string)
-
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contracts/3)
     end
 
@@ -32,12 +31,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       arg(:id, non_null(:string))
       arg(:order_by, :aex9_balance_order_by, default_value: :pubkey)
       arg(:block_hash, :string)
-
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contract_balances/3)
     end
 
@@ -45,14 +39,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
     field :aex9_balance_history, :aex9_balance_history_item_page do
       arg(:contract_id, non_null(:string))
       arg(:account_id, non_null(:string))
-
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-      arg(:from_height, :integer)
-      arg(:to_height, :integer)
-
+      Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_balance_history/3)
     end
 

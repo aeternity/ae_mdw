@@ -1,6 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
   use Absinthe.Schema.Notation
 
+  alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
+
+  require Macros
+
   object :stat_queries do
     @desc "Statistics over time of transactions count"
     field :transactions_stats, :start_end_count_stats_page do
@@ -10,10 +14,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.transactions/3)
     end
@@ -36,10 +37,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.blocks/3)
     end
@@ -50,10 +48,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.difficulty/3)
     end
@@ -64,10 +59,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.hashrate/3)
     end
@@ -76,10 +68,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     field :total_accounts_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.total_accounts/3)
     end
@@ -88,10 +77,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
     field :active_accounts_stats, :start_end_count_stats_page do
       arg(:interval_by, :stats_interval, default_value: :day)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.active_accounts/3)
     end
@@ -102,33 +88,20 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.names/3)
     end
 
     @desc "Statistics for generations from tip of the chain"
     field :total_stats, :total_stats_page do
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-      arg(:from_height, :integer)
-      arg(:to_height, :integer)
+      Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.total/3)
     end
 
     @desc "Aggregated statistics for generations from tip of the chain"
     field :delta_stats, :delta_stats_page do
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
-      arg(:from_height, :integer)
-      arg(:to_height, :integer)
+      Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.delta/3)
     end
 
@@ -138,10 +111,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.contracts/3)
     end
@@ -152,10 +122,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.aex9_transfers/3)
     end
@@ -167,10 +134,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
 
     @desc "Total rewards for each miner"
     field :miners_stats, :miners_stats_page do
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.miners/3)
     end
 
@@ -180,10 +144,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       arg(:min_start_date, :string)
       arg(:max_start_date, :string)
 
-      # Pagination args
-      arg(:cursor, :string)
-      arg(:limit, :integer)
-      arg(:direction, :direction, default_value: :backward)
+      Macros.pagination_args()
 
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.top_miners/3)
     end
