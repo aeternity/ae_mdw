@@ -48,6 +48,12 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end
   end
 
+  def make_scope(args) do
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    make_scope(from_height, to_height)
+  end
+
   # TODO: should nil be returned when only "to_height" is given?
   defp make_scope(from_height, to_height) do
     cond do
