@@ -107,4 +107,18 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
     field(:auction_end, :integer)
     field(:activation_time, :integer)
   end
+
+  Macros.page(:pointee)
+
+  object :pointee do
+    field(:active, :boolean)
+    field(:name, :string)
+    field(:key, :string)
+    field(:block_hash, :string)
+    field(:tx, :json)
+    field(:block_height, :integer)
+    field(:block_time, :integer)
+    field(:source_tx_hash, :string)
+    field(:source_tx_type, :string)
+  end
 end
