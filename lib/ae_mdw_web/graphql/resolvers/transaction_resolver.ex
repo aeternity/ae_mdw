@@ -28,6 +28,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
         ls ->
           ls
           |> Enum.flat_map(fn type ->
+            # TODO: fix for type groups
             case Validate.tx_type(to_string(type)) do
               {:ok, valid} -> [valid]
               {:error, _} -> []
@@ -96,6 +97,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
         ls ->
           ls
           |> Enum.flat_map(fn type ->
+            # TODO: fix for type groups
             case Validate.tx_type(to_string(type)) do
               {:ok, valid} -> [valid]
               {:error, _} -> []
@@ -108,5 +110,29 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
     Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true)
     |> Helpers.make_page()
+  end
+
+  def account_transactions_count(_p, %{id: id} = args, %{context: %{state: state}}) do
+    with {:ok, pubkey} <- Validate.id(id) do
+      result =
+        cond do
+          Map.has_key?(args, :type_group) ->
+            with {:ok, tx_type_group} <- Validate.tx_group(args.type_group) do
+              {:ok, Txs.count_id_type_group(state, pubkey, tx_type_group)}
+            end
+
+          Map.has_key?(args, :type) ->
+            with {:ok, tx_type} <- Validate.tx_type(args.type) do
+              {:ok, Txs.count_id_type(state, pubkey, tx_type)}
+            end
+
+          true ->
+            {:ok, Txs.id_counts(state, pubkey)}
+        end
+
+      result |> Helpers.make_single()
+    else
+      {:error, err} -> {:error, Helpers.format_err(err)}
+    end
   end
 end
