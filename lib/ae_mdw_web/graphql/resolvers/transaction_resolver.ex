@@ -82,4 +82,31 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
     Txs.count(state, scope, query) |> Helpers.make_single()
   end
+
+  def micro_block_transactions(_p, %{hash: hash} = args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    query = %{}
+
+    types =
+      case Map.get(args, :type, []) ++ Map.get(args, :type_group, []) do
+        [] ->
+          nil
+
+        ls ->
+          ls
+          |> Enum.flat_map(fn type ->
+            case Validate.tx_type(to_string(type)) do
+              {:ok, valid} -> [valid]
+              {:error, _} -> []
+            end
+          end)
+          |> MapSet.new()
+      end
+
+    query = Helpers.maybe_put(query, :types, types)
+
+    Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true)
+    |> Helpers.make_page()
+  end
 end
