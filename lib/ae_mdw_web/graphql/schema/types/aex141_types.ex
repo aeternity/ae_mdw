@@ -48,43 +48,4 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
     field(:micro_time, :integer)
     field(:token_id, :integer)
   end
-
-  # Macros.page(:aex141_token_owner)
-
-  # @desc "NFT ownership entry"
-  # object :aex141_token_owner do
-  #  field(:contract_id, :string)
-  #  field(:owner_id, :string)
-  #  field(:token_id, :integer)
-  # end
-
-  # Macros.page(:aex141_template)
-
-  # @desc "AEX141 template info"
-  # object :aex141_template do
-  #  field(:contract_id, :string)
-  #  field(:template_id, :integer)
-  #  field(:tx_hash, :string)
-  #  field(:log_idx, :integer)
-  #  field(:edition, :json)
-  # end
-
-  # Macros.page(:aex141_template_token)
-
-  # @desc "AEX141 token minted from a template"
-  # object :aex141_template_token do
-  #  field(:token_id, :integer)
-  #  field(:owner_id, :string)
-  #  field(:tx_hash, :string)
-  #  field(:log_idx, :integer)
-  #  field(:edition, :json)
-  # end
-
-  # @desc "Detailed NFT (with metadata)"
-  # object :aex141_token_detail do
-  #  field(:contract_id, :string)
-  #  field(:token_id, :integer)
-  #  field(:owner_id, :string)
-  #  field(:metadata, :json)
-  # end
 end
