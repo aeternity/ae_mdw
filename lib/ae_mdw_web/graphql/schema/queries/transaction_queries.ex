@@ -56,5 +56,13 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.micro_block_transactions/3)
     end
+
+    @desc "Get detailed transaction counts for an account"
+    field :account_transactions_count, :json do
+      arg(:id, non_null(:string))
+      arg(:type, :string)
+      arg(:type_group, :string)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.account_transactions_count/3)
+    end
   end
 end
