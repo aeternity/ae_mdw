@@ -6,15 +6,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.AccountResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "owned_only", Map.get(args, :owned_only))
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "type",
-        Map.get(args, :type) |> Helpers.maybe_map(&to_string/1)
-      )
+    query = Helpers.build_query(args, [:owned_only, :type])
 
     Activities.fetch_account_activities(
       state,

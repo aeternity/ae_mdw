@@ -5,50 +5,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def transactions(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-    query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:tx_type, :interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_transactions_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
   end
 
   def transactions_total(_p, args, %{context: %{state: state}}) do
-    query = %{}
-    query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
-
+    query = Helpers.build_query(args, [:tx_type, :min_start_date, :max_start_date])
     Stats.fetch_transactions_total_stats(state, query, nil)
   end
 
   def blocks(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(query, "type", Map.get(args, :type) |> Helpers.maybe_map(&to_string/1))
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:tx_type, :interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_blocks_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -56,18 +26,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def difficulty(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_difficulty_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -75,18 +34,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def hashrate(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_hashrate_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -94,15 +42,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def total_accounts(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
+    query = Helpers.build_query(args, [:interval_by])
 
     Stats.fetch_total_accounts_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -110,15 +50,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def active_accounts(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
+    query = Helpers.build_query(args, [:interval_by])
 
     Stats.fetch_active_accounts_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -126,18 +58,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def names(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_names_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -161,18 +82,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def contracts(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_contracts_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -180,18 +90,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def aex9_transfers(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_aex9_token_transfers_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()
@@ -210,18 +109,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
 
   def top_miners(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "interval_by",
-        Map.get(args, :interval_by) |> Helpers.maybe_map(&to_string/1)
-      )
-
-    query = Helpers.maybe_put(query, "min_start_date", Map.get(args, :min_start_date))
-    query = Helpers.maybe_put(query, "max_start_date", Map.get(args, :max_start_date))
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Stats.fetch_top_miners_stats(state, pagination, query, nil, cursor)
     |> Helpers.make_page()

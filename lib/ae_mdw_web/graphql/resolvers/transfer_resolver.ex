@@ -6,9 +6,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransferResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "account", Map.get(args, :account))
-    query = Helpers.maybe_put(query, "kind", Map.get(args, :kind))
+    query = Helpers.build_query(args, [:account, :kind])
 
     Transfers.fetch_transfers(state, pagination, scope, query, cursor)
     |> Helpers.make_page()
