@@ -64,9 +64,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     end
   end
 
-  def aex9_token_balance(_p, %{contract_id: cid, account_id: aid} = args, %{
-        context: %{state: state}
-      }) do
+  def aex9_token_balance(_p, %{contract_id: cid, account_id: aid} = args, _ctx) do
     with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
          {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
       block_hash = Map.get(args, :hash)
@@ -113,23 +111,23 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
       recipient = Map.get(args, :recipient)
       account = Map.get(args, :account)
 
-      {filter_by, account_pk} =
+      filter_by =
         cond do
           sender != nil ->
             case AeMdw.Validate.id(sender, [:account_pubkey]) do
-              {:ok, pk} -> {{:from, pk}, pk}
+              {:ok, pk} -> {:from, pk}
               {:error, err} -> throw({:error, Helpers.format_err(err)})
             end
 
           recipient != nil ->
             case AeMdw.Validate.id(recipient, [:account_pubkey]) do
-              {:ok, pk} -> {{:to, pk}, pk}
+              {:ok, pk} -> {:to, pk}
               {:error, err} -> throw({:error, Helpers.format_err(err)})
             end
 
           account != nil ->
             case AeMdw.Validate.id(account, [:account_pubkey]) do
-              {:ok, pk} -> {{nil, pk}, pk}
+              {:ok, pk} -> {nil, pk}
               {:error, err} -> throw({:error, Helpers.format_err(err)})
             end
 
