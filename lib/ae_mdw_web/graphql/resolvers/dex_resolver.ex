@@ -13,14 +13,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
-
-    query =
-      Helpers.maybe_put(
-        query,
-        "token_symbol",
-        Map.get(args, :token_symbol)
-      )
+    query = Helpers.build_query(args, [:token_symbol])
 
     Dex.fetch_account_swaps(state, account_id, pagination, scope, cursor, query)
     |> Helpers.make_page()

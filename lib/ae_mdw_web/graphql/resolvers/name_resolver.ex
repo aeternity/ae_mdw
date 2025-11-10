@@ -11,22 +11,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by, :expiration)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "owned_by", Map.get(args, :owned_by))
-
-    query =
-      Helpers.maybe_put(query, "state", Map.get(args, :state) |> Helpers.maybe_map(&to_string/1))
-
-    query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
+    query = Helpers.build_query(args, [:owned_by, :state, :prefix])
 
     Names.fetch_names(state, pagination, nil, order_by, query, cursor, [{:render_v3?, true}])
     |> Helpers.make_page()
   end
 
   def names_count(_p, args, %{context: %{state: state}}) do
-    query = %{}
-    query = Helpers.maybe_put(query, "owned_by", Map.get(args, :owned_by))
-
+    query = Helpers.build_query(args, [:owned_by])
     Names.count_names(state, query) |> Helpers.make_single()
   end
 

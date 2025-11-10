@@ -24,9 +24,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
-    query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
+    query = Helpers.build_query(args, [:prefix, :exact])
 
     AexnTokens.fetch_contracts(state, pagination, :aex141, query, order_by, cursor, true)
     |> Helpers.make_page()
@@ -38,13 +36,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
   def aex141_transfers(_p, args, %{context: %{state: %State{} = state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
-    sender = Map.get(args, :sender)
-    recipient = Map.get(args, :recipient)
-
-    query = %{}
-    query = Helpers.maybe_put(query, "from", sender)
-    query = Helpers.maybe_put(query, "to", recipient)
+    query = Helpers.build_query(args, [:from, :to])
 
     # TODO: can this be refactored using Helpers.make_page/1 ?
     case AexnTransfers.fetch_aex141_transfers(state, pagination, cursor, query) do
@@ -148,11 +140,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
       }) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
-    query =
-      case Map.get(args, :contract) do
-        nil -> %{}
-        contract -> %{"contract" => contract}
-      end
+    query = Helpers.build_query(args, [:contract])
 
     Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query) |> Helpers.make_page()
   end

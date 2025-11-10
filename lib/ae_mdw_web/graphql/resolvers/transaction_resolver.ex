@@ -18,16 +18,18 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
+    query =
+      Helpers.build_query(args, [
+        :account,
+        :contract,
+        :channel,
+        :oracle,
+        :sender_id,
+        :recipient_id,
+        :entrypoint
+      ])
 
     query = Helpers.maybe_put(query, :types, build_type_set(args))
-    query = Helpers.maybe_put(query, "account", Map.get(args, :account))
-    query = Helpers.maybe_put(query, "contract", Map.get(args, :contract))
-    query = Helpers.maybe_put(query, "channel", Map.get(args, :channel))
-    query = Helpers.maybe_put(query, "oracle", Map.get(args, :oracle))
-    query = Helpers.maybe_put(query, "sender_id", Map.get(args, :sender_id))
-    query = Helpers.maybe_put(query, "recipient_id", Map.get(args, :recipient_id))
-    query = Helpers.maybe_put(query, "entrypoint", Map.get(args, :entrypoint))
 
     opts = [render_v3?: true, add_spendtx_details?: Map.has_key?(args, :account)]
 
@@ -57,21 +59,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
   def transactions_count(_p, args, %{context: %{state: state}}) do
     scope = Helpers.make_scope(args)
-
-    query = %{}
-
-    query = Helpers.maybe_put(query, "id", Map.get(args, :id))
-    query = Helpers.maybe_put(query, "type", Map.get(args, :type))
-    query = Helpers.maybe_put(query, "type_group", Map.get(args, :type_group))
-
+    query = Helpers.build_query(args, [:id, :type, :type_group])
     Txs.count(state, scope, query) |> Helpers.make_single()
   end
 
   def micro_block_transactions(_p, %{hash: hash} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-
     query = %{}
-
     query = Helpers.maybe_put(query, :types, build_type_set(args))
 
     Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true)

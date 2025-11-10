@@ -15,14 +15,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    state_filter = Map.get(args, :state)
-
-    query =
-      case state_filter do
-        nil -> %{}
-        v when is_atom(v) -> %{"state" => Atom.to_string(v)}
-        v -> %{"state" => to_string(v)}
-      end
+    query = Helpers.build_query(args, [:state])
 
     Oracles.fetch_oracles(state, pagination, scope, query, cursor, [{:v3?, true}])
     |> Helpers.make_page()

@@ -5,6 +5,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   @max_page_limit 100
   @default_page_limit 10
 
+  def build_query(args, keys) do
+    Enum.reduce(keys, %{}, fn key, acc ->
+      maybe_put(
+        acc,
+        Atom.to_string(key),
+        Map.get(args, key)
+        |> maybe_map(fn
+          v when is_atom(v) -> Atom.to_string(v)
+          v -> v
+        end)
+      )
+    end)
+  end
+
   def pagination_args(args) do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)

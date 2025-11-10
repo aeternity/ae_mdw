@@ -28,8 +28,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
 
     @desc "Fetch AEX141 transfers"
     field :aex141_transfers, :aex141_transfer_page do
-      arg(:sender, :string)
-      arg(:recipient, :string)
+      arg(:from, :string)
+      arg(:to, :string)
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_transfers/3)
     end

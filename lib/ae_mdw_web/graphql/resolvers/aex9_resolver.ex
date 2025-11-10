@@ -22,9 +22,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
-    query = Helpers.maybe_put(query, "exact", Map.get(args, :exact))
+    query = Helpers.build_query(args, [:prefix, :exact])
 
     AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true)
     |> Helpers.make_page()
@@ -38,11 +36,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
 
-    query =
-      case Map.get(args, :block_hash) do
-        nil -> %{}
-        bh -> %{"block_hash" => bh}
-      end
+    query = Helpers.build_query(args, [:block_hash])
 
     Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query)
     |> Helpers.make_page()

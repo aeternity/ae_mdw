@@ -18,13 +18,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "contract_id", Map.get(args, :contract_id))
-    query = Helpers.maybe_put(query, "event", Map.get(args, :event))
-    query = Helpers.maybe_put(query, "function", Map.get(args, :function))
-    query = Helpers.maybe_put(query, "function_prefix", Map.get(args, :function_prefix))
-    query = Helpers.maybe_put(query, "data", Map.get(args, :data))
-    query = Helpers.maybe_put(query, "aexn_args", Map.get(args, :aexn_args))
+    query =
+      Helpers.build_query(args, [
+        :contract_id,
+        :event,
+        :function,
+        :function_prefix,
+        :data,
+        :aexn_args
+      ])
 
     Contracts.fetch_logs(state, pagination, scope, query, cursor, v3?: true)
     |> Helpers.make_page()
@@ -42,13 +44,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = %{}
-    query = Helpers.maybe_put(query, "contract_id", Map.get(args, :contract_id))
-    query = Helpers.maybe_put(query, "event", Map.get(args, :event))
-    query = Helpers.maybe_put(query, "function", Map.get(args, :function))
-    query = Helpers.maybe_put(query, "function_prefix", Map.get(args, :function_prefix))
-    query = Helpers.maybe_put(query, "data", Map.get(args, :data))
-    query = Helpers.maybe_put(query, "aexn_args", Map.get(args, :aexn_args))
+    query =
+      Helpers.build_query(args, [
+        :contract_id,
+        :event,
+        :function,
+        :function_prefix,
+        :data,
+        :aexn_args
+      ])
 
     Contracts.fetch_contract_logs(state, id, pagination, scope, query, cursor)
     |> Helpers.make_page()
