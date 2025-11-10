@@ -12,15 +12,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   end
 
   def oracles(_p, args, %{context: %{state: %State{} = state}}) do
+    %{pagination: pagination, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_with_scope(args)
+
     state_filter = Map.get(args, :state)
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
-    pagination = {direction, false, limit, not is_nil(cursor)}
 
     query =
       case state_filter do
@@ -34,42 +29,23 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   end
 
   def oracle_queries(_p, %{id: id} = args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_with_scope(args)
 
     Oracles.fetch_oracle_queries(state, id, pagination, scope, cursor)
     |> Helpers.make_page()
   end
 
   def oracle_responses(_p, %{id: id} = args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_with_scope(args)
 
     Oracles.fetch_oracle_responses(state, id, pagination, scope, cursor)
     |> Helpers.make_page()
   end
 
   def oracle_extends(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: should scoping be removed here?
-    _scope = Helpers.make_scope(from_height, to_height)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     Oracles.fetch_oracle_extends(state, id, pagination, cursor)
     |> Helpers.make_page()
