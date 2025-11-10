@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
+  alias AeMdw.Aex141
   alias AeMdw.AexnTokens
   alias AeMdw.AexnTransfers
   alias AeMdw.Db.State
@@ -120,5 +121,39 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
     end
   catch
     {:error, msg} -> {:error, msg}
+  end
+
+  def aex141_contract_token(_p, %{contract_id: contract_id, token_id: token_id}, %{
+        context: %{state: state}
+      }) do
+    Aex141.fetch_nft(state, contract_id, token_id, v3?: true) |> Helpers.make_single()
+  end
+
+  def aex141_contract_tokens(_p, %{contract_id: contract_id} = args, %{
+        context: %{state: state}
+      }) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+      Aex141.fetch_collection_owners(state, contract_pk, cursor, pagination)
+      |> Helpers.make_page()
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  end
+
+  def aex141_account_tokens(_p, %{account_id: account_id} = args, %{
+        context: %{state: state}
+      }) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    query =
+      case Map.get(args, :contract) do
+        nil -> %{}
+        contract -> %{"contract" => contract}
+      end
+
+    Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query) |> Helpers.make_page()
   end
 end
