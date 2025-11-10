@@ -37,5 +37,15 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
     field :pending_transactions_count, :integer do
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.pending_transactions_count/3)
     end
+
+    @desc "Count transactions with optional filters"
+    field :transactions_count, :integer do
+      arg(:id, :string)
+      arg(:type, :string)
+      arg(:type_group, :string)
+      arg(:from_height, :integer)
+      arg(:to_height, :integer)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions_count/3)
+    end
   end
 end

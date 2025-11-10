@@ -70,4 +70,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
       _ -> {:error, "pending_transactions_count_error"}
     end
   end
+
+  def transactions_count(_p, args, %{context: %{state: state}}) do
+    scope = Helpers.make_scope(args)
+
+    query = %{}
+
+    query = Helpers.maybe_put(query, "id", Map.get(args, :id))
+    query = Helpers.maybe_put(query, "type", Map.get(args, :type))
+    query = Helpers.maybe_put(query, "type_group", Map.get(args, :type_group))
+
+    Txs.count(state, scope, query) |> Helpers.make_single()
+  end
 end
