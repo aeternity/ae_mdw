@@ -63,4 +63,74 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
         {:error, Helpers.format_err(err)}
     end
   end
+
+  def aex9_contract_transfers(_p, %{contract_id: contract_id} = args, %{
+        context: %{state: %State{} = state}
+      }) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+      sender = Map.get(args, :sender)
+      recipient = Map.get(args, :recipient)
+      account = Map.get(args, :account)
+
+      {filter_by, account_pk} =
+        cond do
+          sender != nil ->
+            case AeMdw.Validate.id(sender, [:account_pubkey]) do
+              {:ok, pk} -> {{:from, pk}, pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+
+          recipient != nil ->
+            case AeMdw.Validate.id(recipient, [:account_pubkey]) do
+              {:ok, pk} -> {{:to, pk}, pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+
+          account != nil ->
+            case AeMdw.Validate.id(account, [:account_pubkey]) do
+              {:ok, pk} -> {{nil, pk}, pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+
+          true ->
+            {:error, "sender, recipient, or account param is required"}
+            |> throw()
+        end
+
+      case AeMdw.AexnTransfers.fetch_contract_transfers(
+             state,
+             contract_pk,
+             filter_by,
+             pagination,
+             cursor
+           ) do
+        {:ok, {prev, transfer_keys, next}} ->
+          {:ok,
+           %{
+             prev_cursor: Helpers.cursor_val(prev),
+             next_cursor: Helpers.cursor_val(next),
+             data:
+               Enum.map(transfer_keys, fn key ->
+                 AeMdwWeb.AexnView.contract_transfer_to_map(
+                   state,
+                   :aex9,
+                   elem(filter_by, 0),
+                   key,
+                   true
+                 )
+               end)
+           }}
+
+        {:error, err} ->
+          {:error, Helpers.format_err(err)}
+      end
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  catch
+    {:error, msg} -> {:error, msg}
+  end
 end

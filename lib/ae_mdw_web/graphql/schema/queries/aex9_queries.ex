@@ -42,5 +42,15 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_balance_history/3)
     end
+
+    @desc "Fetch AEX9 transfers for a specific contract"
+    field :aex9_contract_transfers, :aex9_transfer_page do
+      arg(:contract_id, non_null(:string))
+      arg(:sender, :string)
+      arg(:recipient, :string)
+      arg(:account, :string)
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_contract_transfers/3)
+    end
   end
 end

@@ -59,4 +59,66 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
         {:error, ErrInput.message(err)}
     end
   end
+
+  def aex141_contract_transfers(_p, %{contract_id: contract_id} = args, %{
+        context: %{state: %State{} = state}
+      }) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+      from = Map.get(args, :from)
+      to = Map.get(args, :to)
+
+      {filter_by, account_pk} =
+        cond do
+          from != nil ->
+            case AeMdw.Validate.id(from, [:account_pubkey]) do
+              {:ok, pk} -> {{:from, pk}, pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+
+          to != nil ->
+            case AeMdw.Validate.id(to, [:account_pubkey]) do
+              {:ok, pk} -> {{:to, pk}, pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+
+          true ->
+            {{:from, nil}, nil}
+        end
+
+      case AexnTransfers.fetch_contract_transfers(
+             state,
+             contract_pk,
+             filter_by,
+             pagination,
+             cursor
+           ) do
+        {:ok, {prev, transfer_keys, next}} ->
+          {:ok,
+           %{
+             prev_cursor: Helpers.cursor_val(prev),
+             next_cursor: Helpers.cursor_val(next),
+             data:
+               Enum.map(transfer_keys, fn key ->
+                 AeMdwWeb.AexnView.contract_transfer_to_map(
+                   state,
+                   :aex141,
+                   elem(filter_by, 0),
+                   key,
+                   true
+                 )
+               end)
+           }}
+
+        {:error, err} ->
+          {:error, Helpers.format_err(err)}
+      end
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  catch
+    {:error, msg} -> {:error, msg}
+  end
 end
