@@ -69,22 +69,22 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
       from = Map.get(args, :from)
       to = Map.get(args, :to)
 
-      {filter_by, account_pk} =
+      filter_by =
         cond do
           from != nil ->
             case AeMdw.Validate.id(from, [:account_pubkey]) do
-              {:ok, pk} -> {{:from, pk}, pk}
+              {:ok, pk} -> {:from, pk}
               {:error, err} -> throw({:error, Helpers.format_err(err)})
             end
 
           to != nil ->
             case AeMdw.Validate.id(to, [:account_pubkey]) do
-              {:ok, pk} -> {{:to, pk}, pk}
+              {:ok, pk} -> {:to, pk}
               {:error, err} -> throw({:error, Helpers.format_err(err)})
             end
 
           true ->
-            {{:from, nil}, nil}
+            {:from, nil}
         end
 
       case AexnTransfers.fetch_contract_transfers(
