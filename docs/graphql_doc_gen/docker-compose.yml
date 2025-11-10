@@ -1,0 +1,14 @@
+services:
+  ae_mdw_gql_docs:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: aeternity/ae_mdw_gql_docs:latest
+    ports:
+      - "4400:4400"
+    networks:
+      - ae_mdw_net
+networks:
+  ae_mdw_net:
+    name: ae_mdw_net
+    driver: bridge
