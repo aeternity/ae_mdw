@@ -92,4 +92,12 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     Names.fetch_account_claims(state, account_id, pagination, scope, cursor)
     |> Helpers.make_page()
   end
+
+  def account_name_pointees(_p, %{account_id: account_id} = args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_with_scope(args)
+
+    Names.fetch_pointees(state, account_id, pagination, scope, cursor)
+    |> Helpers.make_page()
+  end
 end

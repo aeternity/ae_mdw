@@ -82,5 +82,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
       Macros.pagination_args_with_scope()
       resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.account_name_claims/3)
     end
+
+    @desc "Fetch account name pointees"
+    field :account_name_pointees, :pointee_page do
+      arg(:account_id, non_null(:string))
+      Macros.pagination_args_with_scope()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.account_name_pointees/3)
+    end
   end
 end
