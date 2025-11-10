@@ -12,6 +12,21 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transaction/3)
     end
 
+    @desc "Get transactions with optional filters"
+    field :transactions, :transaction_page do
+      arg(:type, list_of(:string))
+      arg(:type_group, list_of(:string))
+      arg(:account, :string)
+      arg(:contract, :string)
+      arg(:channel, :string)
+      arg(:oracle, :string)
+      arg(:sender_id, :string)
+      arg(:recipient_id, :string)
+      arg(:entrypoint, :string)
+      Macros.pagination_args_with_scope()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions/3)
+    end
+
     @desc "Pending transactions"
     field :pending_transactions, :transaction_page do
       Macros.pagination_args()
