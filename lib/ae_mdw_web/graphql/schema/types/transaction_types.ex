@@ -16,11 +16,4 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.TransactionTypes do
     field(:signatures, list_of(:string))
     field(:tx, :json)
   end
-
-  # input_object :transaction_filter do
-  #  field(:account, :string)
-  #  field(:type, :string)
-  #  field(:from_height, :integer)
-  #  field(:to_height, :integer)
-  # end
 end
