@@ -43,6 +43,21 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex9Queries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_balance_history/3)
     end
 
+    @desc "Get AEX9 token balance for a specific account on a contract"
+    field :aex9_token_balance, :aex9_balance do
+      arg(:contract_id, non_null(:string))
+      arg(:account_id, non_null(:string))
+      arg(:hash, :string)
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_token_balance/3)
+    end
+
+    @desc "Get all AEX9 token balances for an account"
+    field :aex9_account_balances, :aex9_account_balance_page do
+      arg(:account_id, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex9Resolver.aex9_account_balances/3)
+    end
+
     @desc "Fetch AEX9 transfers for a specific contract"
     field :aex9_contract_transfers, :aex9_transfer_page do
       arg(:contract_id, non_null(:string))

@@ -57,6 +57,27 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex9Types do
     field(:amount, :big_int)
   end
 
+  object :aex9_balance do
+    field(:contract, :string)
+    field(:account, :string)
+    field(:amount, :big_int)
+  end
+
+  Macros.page(:aex9_account_balance)
+
+  object :aex9_account_balance do
+    field(:decimals, :integer)
+    field(:height, :integer)
+    field(:amount, :big_int)
+    field(:contract_id, :string)
+    field(:block_hash, :string)
+    field(:tx_hash, :string)
+    field(:tx_type, :string)
+    field(:tx_index, :integer)
+    field(:token_name, :string)
+    field(:token_symbol, :string)
+  end
+
   Macros.page(:aex9_transfer)
 
   object :aex9_transfer do
