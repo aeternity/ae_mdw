@@ -20,11 +20,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
   end
 
   def aex141_contracts(_p, args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
     query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
@@ -39,12 +36,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
   end
 
   def aex141_transfers(_p, args, %{context: %{state: %State{} = state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
     sender = Map.get(args, :sender)
     recipient = Map.get(args, :recipient)
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
     query = Helpers.maybe_put(query, "from", sender)

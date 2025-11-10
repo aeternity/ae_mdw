@@ -36,7 +36,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.OracleQueries do
     @desc "Get an oracle's extensions"
     field :oracle_extends, :oracle_extend_page do
       arg(:id, non_null(:string))
-      Macros.pagination_args_with_scope()
+      Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.OracleResolver.oracle_extends/3)
     end
   end

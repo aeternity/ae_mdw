@@ -5,7 +5,41 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   @max_page_limit 100
   @default_page_limit 10
 
-  def clamp_page_limit(limit) do
+  def pagination_args(args) do
+    limit = clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    %{:pagination => pagination, :cursor => cursor}
+  end
+
+  def pagination_args_with_scope(args) do
+    limit = clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = make_scope(from_height, to_height)
+    pagination = {direction, false, limit, not is_nil(cursor)}
+
+    %{:pagination => pagination, :cursor => cursor, :scope => scope}
+  end
+
+  def pagination_args_all_with_scope(args) do
+    limit = clamp_page_limit(Map.get(args, :limit))
+    cursor = Map.get(args, :cursor)
+    direction = Map.get(args, :direction, :backward)
+    from_height = Map.get(args, :from_height)
+    to_height = Map.get(args, :to_height)
+    # TODO: scoping does not work as expected
+    scope = make_scope(from_height, to_height)
+
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope}
+  end
+
+  defp clamp_page_limit(limit) do
     cond do
       limit == nil -> @default_page_limit
       limit < @min_page_limit -> @min_page_limit
@@ -15,7 +49,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   end
 
   # TODO: should nil be returned when only "to_height" is given?
-  def make_scope(from_height, to_height) do
+  defp make_scope(from_height, to_height) do
     cond do
       from_height && to_height -> {:gen, from_height..to_height}
       from_height && is_nil(to_height) -> {:gen, from_height..from_height}

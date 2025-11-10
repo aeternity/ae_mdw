@@ -15,10 +15,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   end
 
   def pending_transactions(_p, args, _res) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     try do
       NodeStore.new()

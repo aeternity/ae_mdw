@@ -4,10 +4,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   def transactions(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
     query = Helpers.maybe_put(query, "tx_type", Map.get(args, :tx_type))
@@ -36,10 +33,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def blocks(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -61,10 +55,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def difficulty(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -83,10 +74,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def hashrate(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -105,10 +93,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def total_accounts(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -124,10 +109,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def active_accounts(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -143,10 +125,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def names(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -165,36 +144,23 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def total(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_all_with_scope(args)
 
     Stats.fetch_total_stats(state, direction, scope, cursor, limit)
     |> Helpers.make_page()
   end
 
   def delta(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_all_with_scope(args)
 
     Stats.fetch_delta_stats(state, direction, scope, cursor, limit)
     |> Helpers.make_page()
   end
 
   def contracts(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -213,10 +179,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def aex9_transfers(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 
@@ -239,20 +202,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   end
 
   def miners(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     Miners.fetch_miners(state, pagination, cursor)
     |> Helpers.make_page()
   end
 
   def top_miners(_p, args, %{context: %{state: state}}) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     query = %{}
 

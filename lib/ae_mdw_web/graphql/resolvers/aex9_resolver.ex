@@ -19,11 +19,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   end
 
   def aex9_contracts(_p, args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
 
     query = %{}
     query = Helpers.maybe_put(query, "prefix", Map.get(args, :prefix))
@@ -38,11 +35,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   end
 
   def aex9_contract_balances(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by)
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    pagination = {direction, false, limit, not is_nil(cursor)}
 
     query =
       case Map.get(args, :block_hash) do
@@ -57,14 +51,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
   def aex9_balance_history(_p, %{contract_id: cid, account_id: aid} = args, %{
         context: %{state: state}
       }) do
-    limit = Helpers.clamp_page_limit(Map.get(args, :limit))
-    cursor = Map.get(args, :cursor)
-    direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = Helpers.make_scope(from_height, to_height)
-    pagination = {direction, false, limit, not is_nil(cursor)}
+    %{pagination: pagination, cursor: cursor, scope: scope} =
+      Helpers.pagination_args_with_scope(args)
 
     with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
          {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
