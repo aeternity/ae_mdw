@@ -48,4 +48,19 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
     field(:micro_time, :integer)
     field(:token_id, :integer)
   end
+
+  Macros.page(:aex141_token)
+
+  object :aex141_token do
+    field(:owner_id, :string)
+    field(:contract_id, :string)
+    field(:token_id, :integer)
+  end
+
+  object :aex141_token_with_metadata do
+    field(:owner, :string)
+    field(:metadata, :json)
+    field(:contract_id, :string)
+    field(:token_id, :integer)
+  end
 end

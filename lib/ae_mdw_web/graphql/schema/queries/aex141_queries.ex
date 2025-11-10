@@ -42,5 +42,27 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_transfers/3)
     end
+
+    @desc "Get all tokens in an AEX141 contract"
+    field :aex141_contract_tokens, :aex141_token_page do
+      arg(:contract_id, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_tokens/3)
+    end
+
+    @desc "Get information about the a specific AEX141 token"
+    field :aex141_contract_token, :aex141_token_with_metadata do
+      arg(:contract_id, non_null(:string))
+      arg(:token_id, non_null(:string))
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_token/3)
+    end
+
+    @desc "Get all AEX141 tokens owned by an account"
+    field :aex141_account_tokens, :aex141_token_page do
+      arg(:account_id, non_null(:string))
+      arg(:contract, :string)
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_account_tokens/3)
+    end
   end
 end
