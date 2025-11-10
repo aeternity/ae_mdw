@@ -64,6 +64,45 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     end
   end
 
+  def aex9_token_balance(_p, %{contract_id: cid, account_id: aid} = args, %{
+        context: %{state: state}
+      }) do
+    with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
+         {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
+      block_hash = Map.get(args, :hash)
+
+      height_hash =
+        case block_hash do
+          nil ->
+            nil
+
+          hash ->
+            case AeMdw.Validate.id(hash, [:key_block_hash, :micro_block_hash]) do
+              {:ok, block_hash_pk} -> {:hash, block_hash_pk}
+              {:error, err} -> throw({:error, Helpers.format_err(err)})
+            end
+        end
+
+      Aex9.fetch_balance(contract_pk, account_pk, height_hash) |> Helpers.make_single()
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  catch
+    {:error, msg} -> {:error, msg}
+  end
+
+  def aex9_account_balances(_p, %{account_id: aid} = args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
+      Aex9.fetch_account_balances(state, account_pk, cursor, pagination) |> Helpers.make_page()
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  end
+
   def aex9_contract_transfers(_p, %{contract_id: contract_id} = args, %{
         context: %{state: %State{} = state}
       }) do
