@@ -47,5 +47,14 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
       arg(:to_height, :integer)
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transactions_count/3)
     end
+
+    @desc "Get transactions from a micro block"
+    field :micro_block_transactions, :transaction_page do
+      arg(:hash, non_null(:string))
+      arg(:type, list_of(:string))
+      arg(:type_group, list_of(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.micro_block_transactions/3)
+    end
   end
 end
