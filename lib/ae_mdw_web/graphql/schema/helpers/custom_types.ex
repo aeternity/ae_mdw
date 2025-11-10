@@ -6,6 +6,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
     value(:backward)
   end
 
+  # TODO: big_int shouldn't be rendered as a floating point
   scalar :big_int, name: "BigInt" do
     parse(fn
       %Absinthe.Blueprint.Input.Integer{value: v} ->

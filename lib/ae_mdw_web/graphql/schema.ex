@@ -16,6 +16,7 @@ defmodule AeMdwWeb.GraphQL.Schema do
   import_types(AeMdwWeb.GraphQL.Schema.Types.OracleTypes)
   import_types(AeMdwWeb.GraphQL.Schema.Types.DexTypes)
   import_types(AeMdwWeb.GraphQL.Schema.Types.TransferTypes)
+  import_types(AeMdwWeb.GraphQL.Schema.Types.WealthTypes)
 
   import_types(AeMdwWeb.GraphQL.Schema.Queries.AccountQueries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.BlockQueries)
@@ -30,6 +31,7 @@ defmodule AeMdwWeb.GraphQL.Schema do
   import_types(AeMdwWeb.GraphQL.Schema.Queries.OracleQueries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.DexQueries)
   import_types(AeMdwWeb.GraphQL.Schema.Queries.TransferQueries)
+  import_types(AeMdwWeb.GraphQL.Schema.Queries.WealthQueries)
 
   query do
     import_fields(:account_queries)
@@ -45,5 +47,6 @@ defmodule AeMdwWeb.GraphQL.Schema do
     import_fields(:oracle_queries)
     import_fields(:dex_queries)
     import_fields(:transfer_queries)
+    import_fields(:wealth_queries)
   end
 end
