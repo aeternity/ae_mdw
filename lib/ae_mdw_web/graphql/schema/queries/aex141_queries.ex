@@ -33,5 +33,14 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_transfers/3)
     end
+
+    @desc "Fetch AEX141 transfers for a specific contract"
+    field :aex141_contract_transfers, :aex141_transfer_page do
+      arg(:contract_id, non_null(:string))
+      arg(:from, :string)
+      arg(:to, :string)
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_transfers/3)
+    end
   end
 end
