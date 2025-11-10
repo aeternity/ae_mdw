@@ -20,24 +20,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
     query = %{}
 
-    types =
-      case Map.get(args, :type, []) ++ Map.get(args, :type_group, []) do
-        [] ->
-          nil
-
-        ls ->
-          ls
-          |> Enum.flat_map(fn type ->
-            # TODO: fix for type groups
-            case Validate.tx_type(to_string(type)) do
-              {:ok, valid} -> [valid]
-              {:error, _} -> []
-            end
-          end)
-          |> MapSet.new()
-      end
-
-    query = Helpers.maybe_put(query, :types, types)
+    query = Helpers.maybe_put(query, :types, build_type_set(args))
     query = Helpers.maybe_put(query, "account", Map.get(args, :account))
     query = Helpers.maybe_put(query, "contract", Map.get(args, :contract))
     query = Helpers.maybe_put(query, "channel", Map.get(args, :channel))
@@ -89,24 +72,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
     query = %{}
 
-    types =
-      case Map.get(args, :type, []) ++ Map.get(args, :type_group, []) do
-        [] ->
-          nil
-
-        ls ->
-          ls
-          |> Enum.flat_map(fn type ->
-            # TODO: fix for type groups
-            case Validate.tx_type(to_string(type)) do
-              {:ok, valid} -> [valid]
-              {:error, _} -> []
-            end
-          end)
-          |> MapSet.new()
-      end
-
-    query = Helpers.maybe_put(query, :types, types)
+    query = Helpers.maybe_put(query, :types, build_type_set(args))
 
     Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true)
     |> Helpers.make_page()
@@ -133,6 +99,37 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
       result |> Helpers.make_single()
     else
       {:error, err} -> {:error, Helpers.format_err(err)}
+    end
+  end
+
+  defp build_type_set(args) do
+    types = Map.get(args, :type, [])
+    type_groups = Map.get(args, :type_group, [])
+
+    validated_types =
+      types
+      |> Enum.flat_map(fn type ->
+        case Validate.tx_type(to_string(type)) do
+          {:ok, valid} -> [valid]
+          {:error, _} -> []
+        end
+      end)
+
+    validated_type_groups =
+      type_groups
+      |> Enum.flat_map(fn group ->
+        case Validate.tx_group(to_string(group)) do
+          {:ok, valid} -> [valid]
+          {:error, _} -> []
+        end
+      end)
+
+    all_types = validated_types ++ validated_type_groups
+
+    if all_types == [] do
+      nil
+    else
+      MapSet.new(all_types)
     end
   end
 end
