@@ -63,4 +63,26 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
     field(:contract_id, :string)
     field(:token_id, :integer)
   end
+
+  Macros.page(:aex141_template)
+
+  # TODO: make sure the fields and their types are right
+  object :aex141_template do
+    field(:contract_id, :string)
+    field(:template_id, :integer)
+    field(:tx_hash, :string)
+    field(:log_idx, :integer)
+    field(:edition, :json)
+  end
+
+  Macros.page(:aex141_template_token)
+
+  # TODO: make sure the fields and their types are right
+  object :aex141_template_token do
+    field(:edition, :string)
+    field(:token_id, :integer)
+    field(:owner_id, :string)
+    field(:tx_hash, :string)
+    field(:log_idx, :integer)
+  end
 end

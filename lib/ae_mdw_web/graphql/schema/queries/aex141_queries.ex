@@ -64,5 +64,20 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.Aex141Queries do
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_account_tokens/3)
     end
+
+    @desc "Get all templates in an AEX141 contract"
+    field :aex141_contract_templates, :aex141_template_page do
+      arg(:contract_id, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_templates/3)
+    end
+
+    @desc "Get all tokens for a specific template in an AEX141 contract"
+    field :aex141_contract_template_tokens, :aex141_template_token_page do
+      arg(:contract_id, non_null(:string))
+      arg(:template_id, non_null(:integer))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.Aex141Resolver.aex141_contract_template_tokens/3)
+    end
   end
 end

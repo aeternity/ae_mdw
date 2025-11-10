@@ -156,4 +156,34 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query) |> Helpers.make_page()
   end
+
+  def aex141_contract_templates(_p, %{contract_id: contract_id} = args, %{
+        context: %{state: state}
+      }) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+      Aex141.fetch_templates(state, contract_pk, cursor, pagination)
+      |> Helpers.make_page()
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  end
+
+  def aex141_contract_template_tokens(
+        _p,
+        %{contract_id: contract_id, template_id: template_id} = args,
+        %{context: %{state: state}}
+      ) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    with {:ok, contract_pk} <- AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
+      Aex141.fetch_template_tokens(state, contract_pk, template_id, cursor, pagination)
+      |> Helpers.make_page()
+    else
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
+    end
+  end
 end
