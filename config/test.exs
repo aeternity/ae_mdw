@@ -1,5 +1,14 @@
 import Config
 
+# Ensure consistent node name for tests to match persisted DB owner (avoids :wrong_db_owner_node)
+config :kernel, :distributed, [:'aeternity@localhost']
+
+# Do not start embedded node services for GraphQL/data correctness tests to avoid DB owner mismatch
+# Use full node services in tests; ensure you invoke tests with:
+#   elixir --name aeternity@localhost -S mix test
+config :ae_mdw, :start_node_services, true
+config :ae_mdw, :sync, true
+
 # Sync
 config :ae_mdw,
   sync: false,
