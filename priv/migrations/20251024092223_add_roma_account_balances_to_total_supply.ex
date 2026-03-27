@@ -1,4 +1,8 @@
 defmodule AeMdw.Migrations.AddRomaAccountBalancesToTotalSupply do
+  @moduledoc """
+  Adds Roma hardfork account balances to total supply for all heights.
+  """
+
   alias AeMdw.Db.HardforkPresets
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDbCF
