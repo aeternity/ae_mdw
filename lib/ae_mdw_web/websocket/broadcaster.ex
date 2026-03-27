@@ -130,7 +130,17 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       |> Map.merge(counters)
       |> encode_message(channel, source)
       |> broadcast(channel, source, version)
+    else
+      {:error, reason} ->
+        require Logger
+        Logger.warning("[broadcaster] serialize_block failed: #{inspect(reason)}")
+        {:error, reason}
     end
+  rescue
+    e ->
+      require Logger
+      Logger.warning("[broadcaster] do_broadcast_block exception: #{inspect(e)}")
+      {:error, e}
   end
 
   defp serialize_block(header, :key, :mdw, version) when version in [:v2, :v3] do

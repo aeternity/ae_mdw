@@ -23,7 +23,7 @@ defmodule AeMdw.Transfers do
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
 
-  @hardforks_accounts ~w(accounts_genesis accounts_minerva accounts_fortuna accounts_lima)
+  @hardforks_accounts ~w(accounts_roma accounts_minerva accounts_fortuna accounts_lima)
   @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle) ++
            @hardforks_accounts
 
