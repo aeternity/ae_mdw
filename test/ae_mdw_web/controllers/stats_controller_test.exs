@@ -6,8 +6,6 @@ defmodule AeMdwWeb.StatsControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
-  alias AeMdw.Db.RocksDbCF
-  alias AeMdw.Collection
 
   require Model
 
@@ -1102,19 +1100,22 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       last_txi = 21
 
-      fee_avg = Enum.sum((last_txi - 3)..last_txi) / Enum.count((last_txi - 3)..last_txi)
-      txs_count = 4
-
-      encoded_txs_stats =
-        {{txs_count, "-0.25"}, {"#{fee_avg}", "0.21"}}
+      fee_avg =
+        0..last_txi
+        |> Enum.map_reduce(0, fn txi, acc_fee ->
+          {acc_fee + txi, acc_fee + txi}
+        end)
+        |> then(fn {accums, _acc} -> accums end)
+        |> then(fn accums ->
+          (Enum.at(accums, last_txi) - Enum.at(accums, last_txi - 4) + last_txi - 4) / 5
+        end)
 
       store =
         store
-        |> add_transactions_every_5_hours(1, last_txi, now)
+        |> add_transactions_every_5_hours(0, last_txi, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
-        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, encoded_txs_stats}))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1131,9 +1132,9 @@ defmodule AeMdwWeb.StatsControllerTest do
          end}
       ]) do
         assert %{
-                 "last_24hs_transactions" => 4,
-                 "transactions_trend" => -0.25,
-                 "fees_trend" => 0.21,
+                 "last_24hs_transactions" => 5,
+                 "transactions_trend" => 0.0,
+                 "fees_trend" => 0.24,
                  "last_24hs_average_transaction_fees" => ^fee_avg,
                  "milliseconds_per_block" => ^three_minutes,
                  "holders_count" => 3
@@ -1152,16 +1153,12 @@ defmodule AeMdwWeb.StatsControllerTest do
       now = :aeu_time.now_in_msecs()
       three_minutes = 3 * 60 * 1_000
 
-      endcoded_txs_stats =
-        {{1, "1.0"}, {"1.0", "0.0"}}
-
       store =
         store
         |> add_transactions_every_5_hours(1, 1, now)
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
-        |> Store.put(Model.Stat, Model.stat(index: :tx_stats, payload: {now, endcoded_txs_stats}))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
 
@@ -1175,17 +1172,6 @@ defmodule AeMdwWeb.StatsControllerTest do
          time_in_msecs: fn
            :first_block -> now - 10 * three_minutes
            :other_block -> now
-         end},
-        {RocksDbCF, [],
-         stream: fn
-           Model.Tx, [key_boundary: {start_txi, end_txi}] ->
-             store
-             |> State.new()
-             |> Collection.stream(Model.Tx, :forward, {start_txi, end_txi}, nil)
-             |> Stream.map(fn index ->
-               {:ok, tx} = Store.get(store, Model.Tx, index)
-               tx
-             end)
          end}
       ]) do
         assert %{
@@ -1217,6 +1203,7 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 3))
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<1::256>>))
         |> Store.put(Model.Block, Model.block(index: {10, -1}, hash: <<2::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: <<3::256>>, id: <<2::256>>, accumulated_fee: 123))
 
       with_mocks([
         {:aec_chain, [],
@@ -1542,16 +1529,23 @@ defmodule AeMdwWeb.StatsControllerTest do
   end
 
   defp add_transactions_every_5_hours(store, start_txi, end_txi, now) do
-    end_txi..start_txi
-    |> Enum.reduce({store, 1}, fn txi, {store, i} ->
+    init_time = now - :timer.hours((end_txi - start_txi) * 5)
+
+    start_txi..end_txi
+    |> Enum.reduce({store, 0}, fn txi, {store, acc_fee} ->
+      acc_fee = acc_fee + txi
+
       {
         store
-        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, fee: txi))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi, id: <<txi::256>>, fee: txi, accumulated_fee: acc_fee)
+        )
         |> Store.put(
           Model.Time,
-          Model.time(index: {now - :timer.hours(i * 5), txi})
+          Model.time(index: {init_time + :timer.hours(txi * 5), txi})
         ),
-        i + 1
+        acc_fee
       }
     end)
     |> elem(0)
