@@ -23,9 +23,9 @@ defmodule AeMdw.Db.HardforkPresetsTest do
                  State.new()
                  |> Collection.stream(
                    Model.KindIntTransferTx,
-                   {"accounts_genesis", nil, nil, nil}
+                   {"accounts_roma", nil, nil, nil}
                  )
-                 |> Stream.take_while(&match?({"accounts_genesis", _bi, _target, _txi}, &1))
+                 |> Stream.take_while(&match?({"accounts_roma", _bi, _target, _txi}, &1))
                  |> Enum.count()
 
         assert 325 ==
@@ -79,9 +79,9 @@ defmodule AeMdw.Db.HardforkPresetsTest do
                  State.new()
                  |> Collection.stream(
                    Model.KindIntTransferTx,
-                   {"accounts_genesis", nil, nil, nil}
+                   {"accounts_roma", nil, nil, nil}
                  )
-                 |> Stream.take_while(&match?({"accounts_genesis", _bi, _target, _txi}, &1))
+                 |> Stream.take_while(&match?({"accounts_roma", _bi, _target, _txi}, &1))
                  |> Enum.count()
 
         assert 3 ==
