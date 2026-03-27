@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.104.6](https://github.com/aeternity/ae_mdw/compare/v1.104.5...v1.104.6) (2026-03-27)
+
+
+### Bug Fixes
+
+* bump node version and fix tests ([#2168](https://github.com/aeternity/ae_mdw/issues/2168)) ([24bc2c4](https://github.com/aeternity/ae_mdw/commit/24bc2c4a914cab2c89056adf4ade4b808dd30ab3))
+
 ## [1.104.5](https://github.com/aeternity/ae_mdw/compare/v1.104.4...v1.104.5) (2025-10-29)
 
 
