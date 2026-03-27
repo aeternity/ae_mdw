@@ -48,6 +48,7 @@ defmodule AeMdw.Db.HardforkPresets do
   defp accounts(:roma), do: :aec_fork_block_settings.genesis_accounts()
   defp accounts(:minerva), do: :aec_fork_block_settings.minerva_accounts()
   defp accounts(:fortuna), do: :aec_fork_block_settings.fortuna_accounts()
+
   defp accounts(:lima) do
     contract_account =
       Node.lima_contracts()
@@ -59,6 +60,7 @@ defmodule AeMdw.Db.HardforkPresets do
       Node.lima_accounts() ++
       Node.lima_extra_accounts()
   end
+
   defp accounts(:iris), do: %{}
   defp accounts(:ceres), do: %{}
 

@@ -443,13 +443,13 @@ defmodule AeMdw.Node do
 
   defmemop token_supply_delta() do
     :aec_hard_forks.protocols()
-      |> Map.keys()
-      |> Enum.sort()
-      |> Enum.map(fn proto ->
-        proto_vsn = :aec_hard_forks.protocol_vsn_name(proto)
-        {HardforkPresets.hardfork_height(proto_vsn), HardforkPresets.mint_sum(proto_vsn)}
-      end)
-      |> Map.new()
+    |> Map.keys()
+    |> Enum.sort()
+    |> Enum.map(fn proto ->
+      proto_vsn = :aec_hard_forks.protocol_vsn_name(proto)
+      {HardforkPresets.hardfork_height(proto_vsn), HardforkPresets.mint_sum(proto_vsn)}
+    end)
+    |> Map.new()
   end
 
   defmemop tx_ids_positions() do

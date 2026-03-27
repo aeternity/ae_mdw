@@ -13,11 +13,12 @@ defmodule AeMdw.Migrations.AddRomaAccountBalancesToTotalSupply do
       Model.TotalStat
       |> RocksDbCF.stream()
       |> Enum.map(fn Model.total_stat(index: height, total_supply: old_total_supply) ->
-          new_total_supply = old_total_supply + HardforkPresets.mint_sum(:roma)
-          WriteMutation.new(
-            Model.TotalStat,
-            Model.total_stat(index: height, total_supply: new_total_supply)
-          )
+        new_total_supply = old_total_supply + HardforkPresets.mint_sum(:roma)
+
+        WriteMutation.new(
+          Model.TotalStat,
+          Model.total_stat(index: height, total_supply: new_total_supply)
+        )
       end)
 
     _state = State.commit_db(state, mutations)
