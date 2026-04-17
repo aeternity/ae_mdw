@@ -162,7 +162,7 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
          {aexn_type, {txi, idx}} = cursor_term
          when aexn_type in ~w(aex9 aex141)a and is_integer(txi) and is_integer(idx) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor_term}
     else
       _invalid ->
@@ -176,7 +176,7 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
          {aexn_type, _name_symbol_creation, pubkey} = cursor_term
          when aexn_type in ~w(aex9 aex141)a and is_binary(pubkey) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor_term}
     else
       _invalid ->

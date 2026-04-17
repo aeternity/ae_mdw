@@ -814,11 +814,13 @@ defmodule AeMdw.Names do
   defp deserialize_height_cursor(cursor_bin) do
     with {:ok, base64_decoded} <- Base.decode64(cursor_bin, padding: false),
          {height, name} when is_integer(height) and is_binary(name) <-
-           :erlang.binary_to_term(base64_decoded) do
+           :erlang.binary_to_term(base64_decoded, [:safe]) do
       {height, name}
     else
       _invalid -> nil
     end
+  rescue
+    ArgumentError -> nil
   end
 
   defp serialize_history_cursor(name, {height, txi_idx, _table}) do
@@ -831,12 +833,14 @@ defmodule AeMdw.Names do
 
   defp deserialize_history_cursor(name, cursor_str) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_str, padding: false),
-         {^name, _height, _txi_idx} = name_op <- :erlang.binary_to_term(cursor_bin) do
+         {^name, _height, _txi_idx} = name_op <- :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, name_op}
     else
       _invalid ->
         {:error, ErrInput.Cursor.exception(value: cursor_str)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_str)}
   end
 
   defp expand_txi_idx(state, {_bi, {txi, idx}}, opts) do
@@ -1073,11 +1077,13 @@ defmodule AeMdw.Names do
 
   defp deserialize_claims_cursor(cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
-         {_txi, _idx} = cursor <- :erlang.binary_to_term(cursor_bin) do
+         {_txi, _idx} = cursor <- :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp serialize_name_claims_cursor({height, {txi, idx}, _table}) do
@@ -1090,11 +1096,13 @@ defmodule AeMdw.Names do
 
   defp deserialize_name_claims_cursor(cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
-         {_height, {_txi, _idx}} = cursor <- :erlang.binary_to_term(cursor_bin) do
+         {_height, {_txi, _idx}} = cursor <- :erlang.binary_to_term(cursor_bin, [:safe]) do
       cursor
     else
       _invalid -> nil
     end
+  rescue
+    ArgumentError -> nil
   end
 
   defp validate_height_filters(filters, :activation) do

@@ -339,11 +339,13 @@ defmodule AeMdw.Aex9 do
 
   defp deserialize_account_balance_cursor(cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
-         {<<_pk1::256>>, <<_pk2::256>>} = cursor <- :erlang.binary_to_term(cursor_bin) do
+         {<<_pk1::256>>, <<_pk2::256>>} = cursor <- :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   #

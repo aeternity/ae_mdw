@@ -270,12 +270,14 @@ defmodule AeMdw.Dex do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
          {<<_pk::256>>, create_txi, txi, log_idx} = cursor
          when is_integer(create_txi) and is_integer(txi) and is_integer(log_idx) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_hex)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
   end
 
   defp deserialize_contract_swaps_cursor(nil), do: {:ok, nil}
@@ -284,12 +286,14 @@ defmodule AeMdw.Dex do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
          {create_txi, <<_pk::256>> = account_pk, txi, log_idx}
          when is_integer(create_txi) and is_integer(txi) and is_integer(log_idx) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, {create_txi, account_pk, txi, log_idx}}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_hex)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
   end
 
   defp deserialize_debug_contract_swaps_cursor(nil), do: {:ok, nil}
@@ -299,12 +303,14 @@ defmodule AeMdw.Dex do
          {{create_txi, create_idx}, txi, log_idx} = cursor
          when is_integer(create_txi) and is_integer(create_idx) and is_integer(txi) and
                 is_integer(log_idx) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
   end
 
   defp serialize_cursor(cursor_tuple) do

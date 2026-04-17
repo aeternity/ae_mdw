@@ -256,7 +256,7 @@ defmodule AeMdw.AexnTransfers do
 
   defp deserialize_cursor(<<cursor_bin64::binary>>) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
-         cursor_term <- :erlang.binary_to_term(cursor_bin),
+         cursor_term <- :erlang.binary_to_term(cursor_bin, [:safe]),
          true <-
            (elem(cursor_term, 0) in [:aex9, :aex141] or is_integer(elem(cursor_term, 0))) and
              (match?(
@@ -276,6 +276,8 @@ defmodule AeMdw.AexnTransfers do
       _invalid ->
         {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp deserialize_account_cursors(_state, nil, _account_pk), do: {:ok, {nil, nil}}
