@@ -806,21 +806,21 @@ defmodule AeMdw.Names do
   defp serialize_height_cursor({{height, name}, _tab}),
     do: serialize_height_cursor({height, name})
 
+  # Cursor format: "<height_integer>:<url-safe-base64-of-name>"
+  # Plain text avoids binary_to_term entirely — no atom injection risk.
   defp serialize_height_cursor({height, name}),
-    do: Base.encode64(:erlang.term_to_binary({height, name}), padding: false)
+    do: "#{height}:#{Base.url_encode64(name, padding: false)}"
 
   defp deserialize_height_cursor(nil), do: nil
 
   defp deserialize_height_cursor(cursor_bin) do
-    with {:ok, base64_decoded} <- Base.decode64(cursor_bin, padding: false),
-         {height, name} when is_integer(height) and is_binary(name) <-
-           :erlang.binary_to_term(base64_decoded, [:safe]) do
+    with [height_str, name_b64] <- String.split(cursor_bin, ":", parts: 2),
+         {height, ""} <- Integer.parse(height_str),
+         {:ok, name} <- Base.url_decode64(name_b64, padding: false) do
       {height, name}
     else
       _invalid -> nil
     end
-  rescue
-    ArgumentError -> nil
   end
 
   defp serialize_history_cursor(name, {height, txi_idx, _table}) do

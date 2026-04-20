@@ -14,7 +14,7 @@ defmodule AeMdwWeb.CursorInjectionTest do
   """
 
   use AeMdwWeb.ConnCase
-  @moduletag skip_store: true
+  import AeMdw.TestUtil, only: [with_store: 2]
 
   # A 32-byte zeroed public key used in path segments.
   @zeroed_pk <<0::256>>
@@ -173,19 +173,24 @@ defmodule AeMdwWeb.CursorInjectionTest do
   # ---------------------------------------------------------------------------
 
   describe "names listing — base64 ETF cursor (invalid cursor treated as nil)" do
-    test "invalid base64 cursor is ignored — no atom created", %{conn: conn} do
+    test "invalid base64 cursor is ignored — no atom created", %{conn: conn, store: store} do
       unique = "ae_mdw_names_inject_#{System.unique_integer([:positive])}"
       refute atom_exists?(unique)
 
-      # names uses Base.decode64 with padding: false
+      # The names height cursor format is "height:url_base64(name)", not ETF.
+      # A crafted ETF payload (which WOULD contain an atom in ETF format) is
+      # treated as an unrecognisable cursor and silently ignored (treated as nil).
+      # No atom must ever be created regardless of how the cursor is encoded.
       cursor = unique |> novel_atom_etf() |> Base.encode64(padding: false)
 
-      # The endpoint silently ignores an invalid cursor and returns the first page.
-      # What matters is that no atom is created.
-      conn |> get("/v3/names", cursor: cursor)
+      # Use an empty in-memory store so last_gen_and_time returns :no_blocks
+      # (handled gracefully) without touching the chain DB / Mnesia.
+      conn
+      |> with_store(store)
+      |> get("/v3/names", cursor: cursor)
+      |> json_response(200)
 
       refute atom_exists?(unique)
     end
   end
-
 end

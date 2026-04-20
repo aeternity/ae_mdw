@@ -54,8 +54,13 @@ defmodule AeMdw.Aex9 do
           {:ok, amounts()} | {:error, Error.t()}
   def fetch_balances(state, async_state, contract_pk, top?) do
     if top? do
-      {amounts, _height} = Db.aex9_balances!(contract_pk, true)
-      amounts
+      case Db.aex9_balances(contract_pk, Db.top_height_hash(true)) do
+        {:ok, amounts} ->
+          {:ok, amounts}
+
+        {:error, _reason} ->
+          {:error, ErrInput.ContractDryRun.exception(value: encode_contract(contract_pk))}
+      end
     else
       state = get_store_state(state, async_state, contract_pk)
 
@@ -135,10 +140,9 @@ defmodule AeMdw.Aex9 do
   end
 
   defp event_balances_streamer(state, contract_pk, creation_txi, cursor, %{block_hash: block_hash}) do
-    with {:ok, {height, mbi}} <- ensure_contract_at_block(state, creation_txi, block_hash) do
-      block_type = if mbi == -1, do: :key, else: :micro
-      {amounts, _height_hash} = Db.aex9_balances!(contract_pk, {block_type, height, block_hash})
-
+    with {:ok, {height, mbi}} <- ensure_contract_at_block(state, creation_txi, block_hash),
+         block_type = if(mbi == -1, do: :key, else: :micro),
+         {:ok, amounts} <- Db.aex9_balances(contract_pk, {block_type, height, block_hash}) do
       amounts =
         amounts
         |> Enum.reject(fn {{:address, _pk}, amount} -> amount == 0 end)
