@@ -139,12 +139,14 @@ defmodule AeMdw.ActiveEntities do
 
   defp deserialize_cursor(cursor) do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor, padding: false),
-         {entity, txi, create_txi} <- :erlang.binary_to_term(cursor_bin) do
+         {entity, txi, create_txi} <- :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, {entity, txi, create_txi}}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor)}
   end
 
   defp serialize_cursor({entity, txi, create_txi}) do

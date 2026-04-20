@@ -652,7 +652,7 @@ defmodule AeMdw.Stats do
   defp deserialize_top_miners_cursor(cursor_bin) do
     case Base.decode64(cursor_bin) do
       {:ok, bin} ->
-        case :erlang.binary_to_term(bin) do
+        case :erlang.binary_to_term(bin, [:safe]) do
           cursor when is_tuple(cursor) -> {:ok, cursor}
           _bad_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
         end
@@ -660,6 +660,8 @@ defmodule AeMdw.Stats do
       :error ->
         {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
   end
 
   defp render_delta_stats(state, gens), do: Enum.map(gens, &fetch_delta_stat!(state, &1))

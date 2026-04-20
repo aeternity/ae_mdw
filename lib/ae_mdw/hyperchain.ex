@@ -443,7 +443,9 @@ defmodule AeMdw.Hyperchain do
   defp deserialize_numeric_cursor(bin) do
     bin
     |> Base.decode64!()
-    |> :erlang.binary_to_term()
+    |> :erlang.binary_to_term([:safe])
+  rescue
+    ArgumentError -> nil
   end
 
   defp deserialize_validator_cursor(nil) do
@@ -453,7 +455,9 @@ defmodule AeMdw.Hyperchain do
   defp deserialize_validator_cursor(bin) do
     bin
     |> Base.decode64!()
-    |> :erlang.binary_to_term()
+    |> :erlang.binary_to_term([:safe])
+  rescue
+    ArgumentError -> nil
   end
 
   defp serialize_validator_cursor(nil) do
@@ -483,6 +487,8 @@ defmodule AeMdw.Hyperchain do
   defp deserialize_validator_delegates_cursor(bin) do
     bin
     |> Base.decode64!()
-    |> :erlang.binary_to_term()
+    |> :erlang.binary_to_term([:safe])
+  rescue
+    ArgumentError -> nil
   end
 end
