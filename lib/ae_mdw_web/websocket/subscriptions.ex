@@ -16,7 +16,6 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @subs_pids :subs_pids
   @subs_channel_pid :subs_channel_pid
   @subs_pid_channel :subs_pid_channel
-  @limit_per_pid Application.compile_env(:ae_mdw, [__MODULE__, :max_subs_per_conn])
   @eot :"$end_of_table"
   @counter_pos 3
 
@@ -166,7 +165,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   defp unsubscribe_all(pid) do
     @subs_pid_channel
-    |> :ets.match_object({pid, :"$1"})
+    |> :ets.match_object({pid, :_, :_})
     |> Enum.each(fn {^pid, channel_key, channel} ->
       :ets.delete_object(@subs_pid_channel, {pid, channel_key, channel})
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
@@ -176,13 +175,17 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   defp validate_subscribe(pid, source, version, channel) do
     with {:ok, channel_key} <- channel_key(source, version, channel),
          false <- exists?(pid, channel_key),
-         count when count < @limit_per_pid <- subscriptions_count(pid) do
+         count when count < limit_per_pid() <- subscriptions_count(pid) do
       {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
       true -> {:error, :already_subscribed}
       _above_limit -> {:error, :limit_reached}
     end
+  end
+
+  defp limit_per_pid do
+    Application.get_env(:ae_mdw, __MODULE__)[:max_subs_per_conn]
   end
 
   defp validate_unsubscribe(pid, source, version, channel) do

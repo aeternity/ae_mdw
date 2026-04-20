@@ -133,6 +133,26 @@ You can also pass environment variables to configure the node, similar to standa
 
 Refer to [Aeternity Configuration Docs](https://docs.aeternity.io/en/stable/configuration/) for more details.
 
+### Middleware Environment Variables
+
+The following environment variables configure the middleware itself (not the underlying node):
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `4000` | HTTP API port |
+| `WS_PORT` | `4001` | WebSocket port |
+| `DISABLE_IPV6` | `false` | Set to `true` to bind on IPv4 only (`0.0.0.0` instead of `::`) |
+| `LOG_LEVEL` | `debug` | Log verbosity: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`, `none` |
+| `LOG_FILE_PATH` | `log/info.log` | Path for the log file |
+| `ENABLE_JSON_LOG` | `false` | Set to `true` to emit logs in JSON format |
+| `ENABLE_CONSOLE_LOG` | `false` | Set to `true` to also log to stdout |
+| `WEALTH_RANK_SIZE` | `200` | Number of top accounts tracked for the wealth rank endpoint |
+| `MAX_SUBS_PER_CONN` | `10000` | Maximum WebSocket subscriptions allowed per connection |
+| `ENABLE_TELEMETRY` | `false` | Set to `true` to enable StatsD telemetry reporting |
+| `TELEMETRY_STATSD_HOST` | hostname | StatsD host (used when `ENABLE_TELEMETRY=true`) |
+| `TELEMETRY_STATSD_PORT` | `8125` | StatsD port |
+| `TELEMETRY_POLLER_PERIOD` | `10000` | VM metrics polling interval in milliseconds |
+
 ## Additional Resources
 
 - [Aeternity Node Configuration](https://docs.aeternity.io/en/stable/configuration/)
