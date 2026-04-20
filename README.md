@@ -3625,14 +3625,31 @@ In order to differentiate, please check the "source" field on [Publishing Messag
 ```
 {
   "op": <subscription operation>,
-  "payload": "<message payload>",
+  "payload": "<message payload>"
 }
 ```
 
+The `payload` field is required for `Subscribe` and `Unsubscribe`. It is **not** used by `Ping`.
+
 ### Supported subscription operations
 
-  * Subscribe
-  * Unsubscribe
+  * `Subscribe` — subscribe to a channel. Response: a list containing only the newly subscribed channel.
+  * `Unsubscribe` — unsubscribe from a channel. Response: a list containing only the removed channel.
+  * `Ping` — retrieve the full list of currently active subscriptions. No `payload` field needed.
+
+### Ping response format
+
+```
+{"op":"Ping"}
+```
+
+Response:
+
+```
+{"subscriptions": ["KeyBlocks", "Transactions"], "payload": "Pong"}
+```
+
+Send `Ping` any time to get an authoritative snapshot of all active subscriptions for the current connection.
 
 ### Supported payloads
 
@@ -3643,7 +3660,7 @@ In order to differentiate, please check the "source" field on [Publishing Messag
 
 ### `/websocket`
 
-The V1 websocket interface accepts JSON - encoded commands to subscribe and unsubscribe, and answers these with the list of subscriptions. A session will look like this:
+The V1 websocket interface accepts JSON-encoded commands to subscribe and unsubscribe. Each `Subscribe` response contains only the newly subscribed channel; each `Unsubscribe` response contains only the removed channel. Use `Ping` to retrieve the full list of active subscriptions at any time. A session will look like this:
 
 ```
 wscat -c wss://mainnet.aeternity.io/mdw/websocket
@@ -3654,15 +3671,15 @@ connected (press CTRL+C to quit)
 > {"op":"Ping"}
 < {"subscriptions":["KeyBlocks"],"payload":"Pong"}
 > {"op":"Subscribe", "payload": "MicroBlocks"}
-< ["KeyBlocks","MicroBlocks"]
+< ["MicroBlocks"]
 > {"op":"Unsubscribe", "payload": "MicroBlocks"}
-< ["KeyBlocks"]
+< ["MicroBlocks"]
 > {"op":"Subscribe", "payload": "Transactions"}
-< ["KeyBlocks","Transactions"]
+< ["Transactions"]
 > {"op":"Unsubscribe", "payload": "Transactions"}
-< ["KeyBlocks"]
+< ["Transactions"]
 > {"op":"Subscribe", "payload": "Object", "target":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"}
-< ["KeyBlocks","ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"]
+< ["ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"]
 < {"subscription":"KeyBlocks","payload":{"version":4,"time":1588935852368,"target":505727522,"state_hash":"bs_6PKt6GXM9Nu3As4XYr3kjmMiuJoTzkHUPDAwm21GBtjbpfWyL","prev_key_hash":"kh_2Dtcpq9ZdB7AJK1aeEwQtoSncDhFejSdzgTTwuNyscFzJrnsnJ","prev_hash":"mh_2H9cAZHHbyMzPwd4vjQHZpxXsrggG54VCryh6k1BTk511At8Bs","pow":[895666,52781556,66367943,73040389,83465124,91957344,137512183,139025150,145635838,147496688,174889700,196453040,223464154,236816295,249867489,251365348,253234990,284153380,309504789,316268731,337440038,348735058,352371122,367534696,378716232,396258628,400918205,407082251,424187867,427465210,430070369,430312387,432729464,438115994,440444207,442136189,473766117,478006149,482575574,489211700,498083855,518253098],"nonce":567855076671752,"miner":"ak_2Go59eRMNcdiq5uUvVAKjSRoxtREtJe6QvNdcAAPh9GiE5ekQi","info":"cb_AAACHMKhM24=","height":252274,"hash":"kh_FProa64FL423f3xok2fKTfbsuEP2QtdUM4idN7GidQ279zgZ1","beneficiary":"ak_2kHmiJN1RzQL6zXZVuoTuFaVLTCeH3BKyDMZKmixCV3QSWs3dd"}}
 < {"subscription":"Object","payload":{"tx":{"version":1,"type":"SpendTx","ttl":252284,"sender_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","recipient_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","payload":"ba_MjUyMjc0OmtoX0ZQcm9hNjRGTDQyM2YzeG9rMmZLVGZic3VFUDJRdGRVTTRpZE43R2lkUTI3OXpnWjE6bWhfMmJTcFlDRVRzZ3hMZDd3eEx2Rkw5Wlp5V1ZqaEtNQXF6aGc3eVB6ZUNraThySFVTbzI6MTU4ODkzNTkwMjSozR4=","nonce":2044360,"fee":19320000000000,"amount":20000},"signatures":["sg_Kdh2uaoaiDEHoehDZsRHk7LvqUm5kPqyKR3RD71utjkkh5DTqoJeNWqYv4gRePL9FyBcU7oeL8nsT39zQg4ydCmiKUuhN"],"hash":"th_rGmoP9FCJMQMJKmwDE8gCk7i63vX33St3UiqGQsRGG1twHD7R","block_height":252274,"block_hash":"mh_2gYb8Pv1yLpdsPjxkzq8g9zzBVy42ZLDRvWH6aKYXhb8QjxdvU"}}
 ```
@@ -3683,7 +3700,7 @@ If it's "mdw", it indicates that it's already available through AeMdw Api.
 
 ### `/v3/websocket`
 
-The V3 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v3/transactions` endpoint).
+The V3 websocket interface supports the same operations (`Subscribe`, `Unsubscribe`, `Ping`) and the same lean-reply protocol as the V1 interface. The difference is that when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v3/transactions` endpoint).
 
 ## Tests
 

@@ -8,7 +8,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
   import Support.WsUtil
 
   describe "subscribe/2" do
-    test "returns all subscribed channels on success" do
+    test "returns the subscribed channel on success" do
       pid1 = new_pid()
       pid2 = new_pid()
       pid3 = new_pid()
@@ -17,31 +17,24 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :node, :v1, "KeyBlocks")
       assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :node, :v1, "MicroBlocks")
-
-      assert {:ok, ["KeyBlocks", "Transactions"]} =
-               Subscriptions.subscribe(pid1, :node, :v1, "Transactions")
+      assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid1, :node, :v1, "Transactions")
 
       channel = encode(:account_pubkey, :crypto.strong_rand_bytes(32))
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :node, :v1, channel)
 
       channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
-      assert {:ok, subs} = Subscriptions.subscribe(pid3, :node, :v1, channel)
-      assert channel in subs
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :node, :v1, channel)
 
       channel = encode(:contract_pubkey, :crypto.strong_rand_bytes(32))
-      assert {:ok, subs} = Subscriptions.subscribe(pid3, :node, :v1, channel)
-      assert channel in subs
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :node, :v1, channel)
 
       channel = encode(:channel, :crypto.strong_rand_bytes(32))
-      assert {:ok, subs} = Subscriptions.subscribe(pid3, :node, :v1, channel)
-      assert channel in subs
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :node, :v1, channel)
 
       channel = encode(:name, :crypto.strong_rand_bytes(32))
-      assert {:ok, subs} = Subscriptions.subscribe(pid3, :node, :v1, channel)
-      assert channel in subs
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :node, :v1, channel)
 
-      assert {:ok, subs} = Subscriptions.subscribe(pid3, :node, :v1, "Transactions")
-      assert channel in subs
+      assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid3, :node, :v1, "Transactions")
     end
 
     test "returns invalid channel when unknown and not a valid id" do
@@ -91,21 +84,18 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
   end
 
   describe "unsubscribe/2" do
-    test "returns remaining subscribed channels" do
+    test "returns the unsubscribed channel" do
       pid1 = new_pid()
       pid2 = new_pid()
 
       on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
 
       assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :node, :v1, "KeyBlocks")
-
-      assert {:ok, ["KeyBlocks", "Transactions"]} =
-               Subscriptions.subscribe(pid1, :node, :v1, "Transactions")
-
+      assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid1, :node, :v1, "Transactions")
       assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :node, :v1, "MicroBlocks")
 
-      assert {:ok, ["Transactions"]} = Subscriptions.unsubscribe(pid1, :node, :v1, "KeyBlocks")
-      assert {:ok, []} = Subscriptions.unsubscribe(pid2, :node, :v1, "MicroBlocks")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.unsubscribe(pid1, :node, :v1, "KeyBlocks")
+      assert {:ok, ["MicroBlocks"]} = Subscriptions.unsubscribe(pid2, :node, :v1, "MicroBlocks")
     end
 
     test "returns error when channel is unknown and not a valid id" do
@@ -127,7 +117,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :mdw, :v2, channel)
 
       channel = encode(:oracle_pubkey, <<14::256>>)
-      assert {:ok, []} = Subscriptions.unsubscribe(pid, :mdw, :v2, channel)
+      assert {:ok, [^channel]} = Subscriptions.unsubscribe(pid, :mdw, :v2, channel)
       assert {:error, :not_subscribed} = Subscriptions.unsubscribe(pid, :mdw, :v2, channel)
     end
   end
@@ -145,10 +135,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid1, :mdw, :v2, channel)
-
-      assert {:ok, [^channel, "KeyBlocks"]} =
-               Subscriptions.subscribe(pid1, :node, :v1, "KeyBlocks")
-
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :node, :v1, "KeyBlocks")
       assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :mdw, :v2, "MicroBlocks")
       assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid3, :mdw, :v2, "Transactions")
 

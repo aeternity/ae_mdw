@@ -148,6 +148,7 @@ The following environment variables configure the middleware itself (not the und
 | `ENABLE_CONSOLE_LOG` | `false` | Set to `true` to also log to stdout |
 | `WEALTH_RANK_SIZE` | `200` | Number of top accounts tracked for the wealth rank endpoint |
 | `MAX_SUBS_PER_CONN` | `10000` | Maximum WebSocket subscriptions allowed per connection |
+| `WS_SUBS_FULL_LIST_REPLY` | `false` | Set to `true` to return the full subscription list on every subscribe/unsubscribe response (legacy behaviour; use `Ping` to retrieve the full list instead) |
 | `ENABLE_TELEMETRY` | `false` | Set to `true` to enable StatsD telemetry reporting |
 | `TELEMETRY_STATSD_HOST` | hostname | StatsD host (used when `ENABLE_TELEMETRY=true`) |
 | `TELEMETRY_STATSD_PORT` | `8125` | StatsD port |

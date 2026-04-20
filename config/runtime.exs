@@ -5,7 +5,8 @@ env = config_env()
 config :ae_mdw, :wealth_rank_size, String.to_integer(System.get_env("WEALTH_RANK_SIZE", "200"))
 
 config :ae_mdw, AeMdwWeb.Websocket.Subscriptions,
-  max_subs_per_conn: String.to_integer(System.get_env("MAX_SUBS_PER_CONN", "10000"))
+  max_subs_per_conn: String.to_integer(System.get_env("MAX_SUBS_PER_CONN", "10000")),
+  subs_full_list_reply: System.get_env("WS_SUBS_FULL_LIST_REPLY", "false") in ["true", "1"]
 
 #
 # Telemetry

@@ -60,7 +60,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
       :ets.insert(@subs_pid_channel, {pid, channel_key, channel})
       :ets.insert(@subs_channel_pid, {channel_key, pid})
 
-      {:ok, subscribed_channels(pid)}
+      {:ok, reply_channels(pid, channel)}
     end
   end
 
@@ -72,7 +72,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
       :ets.match_delete(@subs_pid_channel, {pid, channel_key, :_})
 
-      {:ok, subscribed_channels(pid)}
+      {:ok, reply_channels(pid, channel)}
     end
   end
 
@@ -164,12 +164,13 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   end
 
   defp unsubscribe_all(pid) do
-    @subs_pid_channel
-    |> :ets.match_object({pid, :_, :_})
-    |> Enum.each(fn {^pid, channel_key, channel} ->
-      :ets.delete_object(@subs_pid_channel, {pid, channel_key, channel})
-      :ets.delete_object(@subs_channel_pid, {channel_key, pid})
-    end)
+    channel_keys =
+      @subs_pid_channel
+      |> :ets.match({pid, :"$1", :_})
+      |> List.flatten()
+
+    :ets.match_delete(@subs_pid_channel, {pid, :_, :_})
+    Enum.each(channel_keys, &:ets.delete_object(@subs_channel_pid, {&1, pid}))
   end
 
   defp validate_subscribe(pid, source, version, channel) do
@@ -181,6 +182,14 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
       {:error, _reason} -> {:error, :invalid_channel}
       true -> {:error, :already_subscribed}
       _above_limit -> {:error, :limit_reached}
+    end
+  end
+
+  defp reply_channels(pid, channel) do
+    if Application.get_env(:ae_mdw, __MODULE__)[:subs_full_list_reply] do
+      subscribed_channels(pid)
+    else
+      [channel]
     end
   end
 
