@@ -526,7 +526,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.subscribe(&1, :transactions, :mdw))
-    assert_websocket_receive(clients, :subs, ["Transactions", "Transactions"])
+    assert_websocket_receive(clients, :subs, ["Transactions"])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
     Broadcaster.broadcast_txs(block0, :mdw)

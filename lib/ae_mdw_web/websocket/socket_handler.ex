@@ -7,6 +7,16 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Util
 
+  # Messages queued beyond this threshold indicate a slow/dead client; drop to protect broadcaster.
+  @max_client_backlog Application.compile_env(:ae_mdw, __MODULE__, [])[:max_client_backlog] ||
+                        2_000
+
+  # Hard upper bound on the number of subscription entries returned in a single Ping response.
+  # Clients monitoring large numbers of accounts already track their own state; Ping is a liveness
+  # check. At 1000 x ~55 bytes/pubkey the JSON payload is ~60 KB, well within one WS frame.
+  defp ping_limit,
+    do: Application.get_env(:ae_mdw, __MODULE__, [])[:max_ping_limit] || 1_000
+
   @impl Phoenix.Socket.Transport
   def child_spec(_opts) do
     # Won't spawn any additional process for the handler then returns a dummy task
@@ -14,23 +24,54 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   @impl Phoenix.Socket.Transport
-  def connect(%{connect_info: %{version: version}}) when version in [:v1, :v2, :v3] do
-    {:ok, %{version: version}}
+  def connect(%{connect_info: %{version: version} = connect_info})
+      when version in [:v1, :v2, :v3] do
+    ip =
+      case connect_info do
+        %{peer_data: %{address: addr}} -> addr |> :inet.ntoa() |> to_string()
+        _other -> "unknown"
+      end
+
+    {:ok, %{version: version, peer_ip: ip}}
   end
 
   @impl Phoenix.Socket.Transport
-  def init(state) do
-    {:ok, state}
+  def init(%{peer_ip: peer_ip} = state) do
+    case Subscriptions.register_connection(self(), peer_ip) do
+      :ok ->
+        {:ok, state}
+
+      {:error, reason} ->
+        Process.send(self(), {:close_connection, reason}, [])
+        {:ok, state}
+    end
   end
 
   @spec send(pid(), binary()) :: :ok
   def send(pid, msg) do
-    Process.send(pid, {:push, msg}, [:noconnect])
+    case Process.info(pid, :message_queue_len) do
+      {:message_queue_len, len} when len < @max_client_backlog ->
+        Process.send(pid, {:push, msg}, [:noconnect])
+
+      nil ->
+        # Process already dead
+        :ok
+
+      _above_limit ->
+        # Slow or dead client — drop message to protect the broadcaster
+        :ok
+    end
   end
 
   @impl Phoenix.Socket.Transport
   def handle_info({:push, msg}, state) do
     {:push, {:text, msg}, state}
+  end
+
+  def handle_info({:close_connection, reason}, state) do
+    require Logger
+    Logger.warning("[ws] connection rejected: #{inspect(reason)}")
+    {:stop, :normal, state}
   end
 
   def handle_info(_ignored_msg, state) do
@@ -39,6 +80,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
   @impl Phoenix.Socket.Transport
   def terminate(_reason, _state) do
+    Subscriptions.deregister_connection(self())
     :ok
   end
 
@@ -151,8 +193,14 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   defp handle_message(%{"op" => "Ping"}, state) do
-    channels = Subscriptions.subscribed_channels(self())
-    reply(%{"subscriptions" => channels, "payload" => "Pong"}, state)
+    limit = ping_limit()
+    {channels, total} = Subscriptions.subscribed_channels_sample(self(), limit)
+
+    response =
+      %{"subscriptions" => channels, "count" => total, "payload" => "Pong"}
+      |> then(fn r -> if total > limit, do: Map.put(r, "has_more", true), else: r end)
+
+    reply(response, state)
   end
 
   defp handle_message(msg, state) do

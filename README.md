@@ -3616,6 +3616,16 @@ $ curl https://mainnet.aeternity.io/mdw/v3/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
 
 ## Websocket interface
 
+> **Migration note for clients upgrading to v1.105+**
+>
+> The WebSocket subscription protocol changed in two ways. Both are described in detail in the [Migration guide](#websocket-migration-guide-v1104--v1105) below.
+>
+> **1. Subscribe/Unsubscribe replies are now lean (breaking)**
+> Previously, every `Subscribe` and `Unsubscribe` reply returned the **full accumulated list** of active subscriptions. Now each reply returns a **single-element list** containing only the channel that was just subscribed or unsubscribed. Send `Ping` to retrieve the full list.
+>
+> **2. Ping reply has new fields (additive, non-breaking)**
+> The Pong response now always includes `"count"` (total subscriptions) and, when results are truncated, `"has_more": true`. Existing clients ignoring unknown fields are unaffected.
+
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 Each event is notified twice: firstly when the Node has synced the block or transaction and after when AeMdw indexation is done.
 In order to differentiate, please check the "source" field on [Publishing Message format](#pub-message-format).
@@ -3635,21 +3645,28 @@ The `payload` field is required for `Subscribe` and `Unsubscribe`. It is **not**
 
   * `Subscribe` — subscribe to a channel. Response: a list containing only the newly subscribed channel.
   * `Unsubscribe` — unsubscribe from a channel. Response: a list containing only the removed channel.
-  * `Ping` — retrieve the full list of currently active subscriptions. No `payload` field needed.
+  * `Ping` — check liveness and get the total subscription count plus a fixed-size sample of active subscriptions. No `payload` field needed. There is no pagination — see [Ping response format](#ping-response-format) for details.
 
 ### Ping response format
 
+Request:
 ```
 {"op":"Ping"}
 ```
 
-Response:
-
+Response (total fits within the sample limit):
+```json
+{"subscriptions": ["KeyBlocks", "Transactions"], "count": 2, "payload": "Pong"}
 ```
-{"subscriptions": ["KeyBlocks", "Transactions"], "payload": "Pong"}
+
+Response when total exceeds the sample limit (e.g. a 100k-account monitoring service):
+```json
+{"subscriptions": ["ak_abc...", "ak_def...", ...], "count": 100000, "has_more": true, "payload": "Pong"}
 ```
 
-Send `Ping` any time to get an authoritative snapshot of all active subscriptions for the current connection.
+`count` is always the true total. `subscriptions` is a fixed-size sample of up to `MAX_PING_LIMIT` entries (default 1000, ~60 KB at that size). **There is no cursor or offset — the full subscription list cannot be enumerated via Ping.** This is intentional: Ping is a liveness and count-verification tool. Clients that need to enumerate their subscriptions should track them locally as they subscribe. When `has_more` is `true`, use `count` to verify the total matches your local record.
+
+> **Keepalive:** The server idle timeout and most reverse proxies will close connections that carry no traffic for extended periods. Long-running monitoring clients should send `Ping` every **~10 minutes** to keep both the proxy and the server connection alive. The Pong response counts as traffic on both sides.
 
 ### Supported payloads
 
@@ -3669,7 +3686,7 @@ connected (press CTRL+C to quit)
 > {"op":"Subscribe", "payload": "KeyBlocks"}
 < ["KeyBlocks"]
 > {"op":"Ping"}
-< {"subscriptions":["KeyBlocks"],"payload":"Pong"}
+< {"subscriptions":["KeyBlocks"],"count":1,"payload":"Pong"}
 > {"op":"Subscribe", "payload": "MicroBlocks"}
 < ["MicroBlocks"]
 > {"op":"Unsubscribe", "payload": "MicroBlocks"}
@@ -3701,6 +3718,79 @@ If it's "mdw", it indicates that it's already available through AeMdw Api.
 ### `/v3/websocket`
 
 The V3 websocket interface supports the same operations (`Subscribe`, `Unsubscribe`, `Ping`) and the same lean-reply protocol as the V1 interface. The difference is that when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v3/transactions` endpoint).
+
+### WebSocket migration guide: v1.104 → v1.105
+
+#### Breaking: Subscribe and Unsubscribe responses
+
+**Before (v1.104 and earlier)**
+
+Every `Subscribe` and `Unsubscribe` reply returned the full accumulated list of all active subscriptions for the connection:
+
+```
+> {"op":"Subscribe", "payload": "KeyBlocks"}
+< ["KeyBlocks"]
+> {"op":"Subscribe", "payload": "MicroBlocks"}
+< ["KeyBlocks","MicroBlocks"]          ← full accumulated list
+> {"op":"Unsubscribe", "payload": "KeyBlocks"}
+< ["MicroBlocks"]                       ← remaining list
+```
+
+**After (v1.105+)**
+
+Each reply contains only the single channel that was just subscribed or unsubscribed:
+
+```
+> {"op":"Subscribe", "payload": "KeyBlocks"}
+< ["KeyBlocks"]
+> {"op":"Subscribe", "payload": "MicroBlocks"}
+< ["MicroBlocks"]                       ← only the new channel
+> {"op":"Unsubscribe", "payload": "KeyBlocks"}
+< ["KeyBlocks"]                         ← only the removed channel
+```
+
+**How to migrate**
+
+If your client used the subscribe/unsubscribe reply to maintain a local list of active subscriptions, switch to one of these patterns:
+
+1. **Maintain local state yourself.** You know what you subscribed and unsubscribed — track it client-side and don't rely on the server echoing it back.
+
+2. **Use `Ping` to get the authoritative list.** Send `{"op":"Ping"}` at any time; the reply contains the server-side truth:
+   ```
+   > {"op":"Ping"}
+   < {"subscriptions":["MicroBlocks"],"count":1,"payload":"Pong"}
+   ```
+
+If you cannot update clients immediately, operators can enable the legacy behaviour by setting `WS_SUBS_FULL_LIST_REPLY=true` on the server (see [Middleware Environment Variables](#middleware-environment-variables)). This is a temporary compatibility shim and will be removed in a future version.
+
+#### Additive: Ping response fields
+
+The Pong response now always includes `"count"` (the true total number of active subscriptions for this connection) and, when the subscription list exceeds the server-side sample limit, `"has_more": true`:
+
+```json
+{"subscriptions": ["ak_abc...", ...], "count": 100000, "has_more": true, "payload": "Pong"}
+```
+
+This is additive — clients that already ignore unknown fields are unaffected.
+
+The sample limit is 1000 entries by default (configurable via `MAX_PING_LIMIT`). **Ping does not support pagination** — it returns a fixed sample, not a page cursor. Use `"count"` to verify your total subscription count rather than attempting to enumerate all subscriptions from Ping responses.
+
+#### New: connection and subscription limits
+
+Connections may now be rejected at the WebSocket handshake stage if server-configured limits are exceeded (total connections, connections per IP). The server closes the socket with a normal closure in this case. Clients should handle `CLOSE` frames and apply exponential back-off before reconnecting.
+
+Default limits (all configurable — see [Middleware Environment Variables](#middleware-environment-variables)):
+
+| Limit | Default |
+|---|---|
+| Total connections | 1 000 |
+| Connections per IP | 50 |
+| Subscriptions per connection | 100 000 |
+| Total subscriptions across all connections | 2 000 000 |
+
+#### Idle timeout
+
+Long-lived monitoring connections should still send `{"op":"Ping"}` every **~10 minutes** to reset reverse-proxy idle timers that may be stricter than the server.
 
 ## Tests
 

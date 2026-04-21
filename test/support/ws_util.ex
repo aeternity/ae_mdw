@@ -12,11 +12,12 @@ defmodule Support.WsUtil do
   defp do_unsubscribe_all(pid) do
     :ets.delete(:subs_pids, pid)
 
-    :subs_pid_channel
-    |> :ets.match_object({pid, :"$1", :_})
-    |> Enum.each(fn {^pid, channel_key, _channel} ->
-      :ets.delete_object(:subs_pid_channel, {pid, channel_key})
-      :ets.delete_object(:subs_channel_pid, {channel_key, pid})
-    end)
+    channel_keys =
+      :subs_pid_channel
+      |> :ets.match({pid, :"$1", :_})
+      |> List.flatten()
+
+    :ets.match_delete(:subs_pid_channel, {pid, :_, :_})
+    Enum.each(channel_keys, &:ets.delete_object(:subs_channel_pid, {&1, pid}))
   end
 end

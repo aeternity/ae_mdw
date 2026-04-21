@@ -62,6 +62,9 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
     end
 
     test "returns error on subscriptions limit is reached" do
+      test_pid = self()
+      on_exit(fn -> unsubscribe_all([test_pid]) end)
+
       max_subs =
         Application.get_env(:ae_mdw, AeMdwWeb.Websocket.Subscriptions)[:max_subs_per_conn]
 
