@@ -32,6 +32,10 @@ defmodule Support.WsClient do
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
+  def ping(client) do
+    WebSockex.send_frame(client, {:text, Jason.encode!(%{op: "Ping"})})
+  end
+
   def unsubscribe(client, payload, source) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Unsubscribe", source: source}
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
@@ -59,11 +63,13 @@ defmodule Support.WsClient do
           state
           |> Map.put(:mb, msg)
           |> Map.update(:msgs, [msg], &(&1 ++ [msg]))
+          |> notify_waiters(:mb, msg)
 
         %{"subscription" => "KeyBlocks"} = msg ->
           state
           |> Map.put(:kb, msg)
           |> Map.update(:msgs, [msg], &(&1 ++ [msg]))
+          |> notify_waiters(:kb, msg)
 
         %{"subscription" => "Transactions", "payload" => %{"hash" => @mock_hash}} = msg ->
           Map.put(state, :tx, msg)
@@ -86,6 +92,9 @@ defmodule Support.WsClient do
         subs when is_list(subs) ->
           Map.put(state, :subs, subs)
 
+        %{"subscriptions" => subs, "payload" => "Pong"} ->
+          Map.put(state, :ping_subs, subs)
+
         msg ->
           Map.put(state, :error, msg)
       end
@@ -97,6 +106,19 @@ defmodule Support.WsClient do
     {:ok, Map.put(state, list_key, [])}
   end
 
+  # :kb and :mb are populated by async Tasks inside the broadcaster GenServer.
+  # Defer the reply until the WS frame actually arrives instead of returning nil.
+  def handle_info({request, from}, state) when request in [:kb, :mb] do
+    case Map.get(state, request) do
+      nil ->
+        {:ok, Map.update(state, {:waiting, request}, [from], &[from | &1])}
+
+      data ->
+        send(from, data)
+        {:ok, state}
+    end
+  end
+
   def handle_info({request, from}, state) do
     data = Map.get(state, request)
     send(from, data)
@@ -105,6 +127,14 @@ defmodule Support.WsClient do
 
   def handle_disconnect(disconnect_map, state) do
     super(disconnect_map, state)
+  end
+
+  defp notify_waiters(state, key, data) do
+    state
+    |> Map.get({:waiting, key}, [])
+    |> Enum.each(&send(&1, data))
+
+    Map.delete(state, {:waiting, key})
   end
 
   defp to_subs(subs) when is_atom(subs), do: "#{subs}" |> Macro.camelize()

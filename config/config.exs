@@ -57,8 +57,6 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   watchers: [],
   check_origin: false
 
-config :ae_mdw, AeMdwWeb.Websocket.Subscriptions, max_subs_per_conn: 10_000
-
 config :logger_json, :backend, json_encoder: Jason
 
 # API

@@ -133,6 +133,32 @@ You can also pass environment variables to configure the node, similar to standa
 
 Refer to [Aeternity Configuration Docs](https://docs.aeternity.io/en/stable/configuration/) for more details.
 
+### Middleware Environment Variables
+
+The following environment variables configure the middleware itself (not the underlying node):
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `4000` | HTTP API port |
+| `WS_PORT` | `4001` | WebSocket port |
+| `DISABLE_IPV6` | `false` | Set to `true` to bind on IPv4 only (`0.0.0.0` instead of `::`) |
+| `LOG_LEVEL` | `debug` | Log verbosity: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`, `none` |
+| `LOG_FILE_PATH` | `log/info.log` | Path for the log file |
+| `ENABLE_JSON_LOG` | `false` | Set to `true` to emit logs in JSON format |
+| `ENABLE_CONSOLE_LOG` | `false` | Set to `true` to also log to stdout |
+| `WEALTH_RANK_SIZE` | `200` | Number of top accounts tracked for the wealth rank endpoint |
+| `MAX_SUBS_PER_CONN` | `100000` | Maximum WebSocket subscriptions per connection. 100k covers monitoring 100k accounts on a single connection; ETS cost is ~15 MB at that size |
+| `MAX_WS_CONNECTIONS` | `1000` | Total simultaneous WebSocket connections across all clients |
+| `MAX_WS_CONNECTIONS_PER_IP` | `50` | Maximum simultaneous connections from a single IP. 50 accommodates services with many workers behind shared egress NAT |
+| `MAX_TOTAL_WS_SUBS` | `2000000` | Global cap on active subscription rows. At ~150 bytes/row this is ~300 MB |
+| `MAX_WS_CLIENT_BACKLOG` | `2000` | Pending-message queue depth above which a slow client's messages are dropped. At peak ~750 object messages/s this is ~2.7 s of buffer |
+| `MAX_PING_LIMIT` | `1000` | Maximum number of subscription entries included in a Ping response sample. When the total exceeds this, the response includes `"has_more": true` and `"count": N`. There is no cursor — Ping is a liveness and count-verification tool, not an enumerator. At 1000 entries the JSON payload is ~60 KB |
+| `WS_SUBS_FULL_LIST_REPLY` | `false` | Set to `true` to return the full subscription list on every subscribe/unsubscribe response (legacy behaviour; use `Ping` to retrieve the full list instead) |
+| `ENABLE_TELEMETRY` | `false` | Set to `true` to enable StatsD telemetry reporting |
+| `TELEMETRY_STATSD_HOST` | hostname | StatsD host (used when `ENABLE_TELEMETRY=true`) |
+| `TELEMETRY_STATSD_PORT` | `8125` | StatsD port |
+| `TELEMETRY_POLLER_PERIOD` | `10000` | VM metrics polling interval in milliseconds |
+
 ## Additional Resources
 
 - [Aeternity Node Configuration](https://docs.aeternity.io/en/stable/configuration/)

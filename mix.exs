@@ -12,7 +12,7 @@ defmodule AeMdw.MixProject do
         warnings_as_errors: true
       ],
       aliases: aliases(),
-      compilers: [:phoenix] ++ Mix.compilers(),
+      compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       xref: [
