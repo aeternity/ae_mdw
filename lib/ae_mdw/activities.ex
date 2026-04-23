@@ -51,7 +51,7 @@ defmodule AeMdw.Activities do
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
 
-  @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block fee_refund_oracle fee_lock_name)
+  @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_roma accounts_lima accounts_minerva contracts_lima reward_dev reward_block fee_refund_oracle fee_lock_name)
   @txs_int_transfer_kinds ~w(fee_refund_name fee_spend_name reward_oracle fee_lock_name)
   @activity_stream_types %{
     "transactions" => ~w(transactions)a,

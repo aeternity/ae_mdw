@@ -414,7 +414,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.count(response["data"]) == 100
 
       assert Enum.all?(response["data"], fn %{"kind" => kind} ->
-               kind == "accounts_genesis"
+               kind == "accounts_roma"
              end)
 
       conn_next = get(conn, response["next"])
@@ -423,7 +423,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.count(response_next["data"]) == 100
 
       assert Enum.all?(response_next["data"], fn %{"kind" => kind} ->
-               kind == "accounts_genesis"
+               kind == "accounts_roma"
              end)
     end
 

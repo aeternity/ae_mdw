@@ -177,7 +177,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
       assert [
                %{
                  "type" => "InternalTransferEvent",
-                 "payload" => %{"kind" => "accounts_genesis", "amount" => _amount}
+                 "payload" => %{"kind" => "accounts_roma", "amount" => _amount}
                }
                | _rest
              ] = events
