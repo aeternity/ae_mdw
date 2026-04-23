@@ -1296,7 +1296,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {:aec_headers, [], [time_in_msecs: fn :header -> 1 end]}
       ] do
         assert %{"data" => [], "next" => nil, "prev" => nil} =
-                 conn |> get("/v3/names/auctions") |> with_store(store) |> json_response(200)
+                 conn |> with_store(store) |> get("/v3/names/auctions") |> json_response(200)
       end
     end
 
