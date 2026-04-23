@@ -1,5 +1,62 @@
 # Changelog
 
+## [1.104.6](https://github.com/aeternity/ae_mdw/compare/v1.104.5...v1.104.6) (2026-03-27)
+
+
+### Bug Fixes
+
+* bump node version and fix tests ([#2168](https://github.com/aeternity/ae_mdw/issues/2168)) ([24bc2c4](https://github.com/aeternity/ae_mdw/commit/24bc2c4a914cab2c89056adf4ade4b808dd30ab3))
+
+## [1.104.5](https://github.com/aeternity/ae_mdw/compare/v1.104.4...v1.104.5) (2025-10-29)
+
+
+### Bug Fixes
+
+* change the name of the genesis hardfork to roma ([#2163](https://github.com/aeternity/ae_mdw/issues/2163)) ([465557a](https://github.com/aeternity/ae_mdw/commit/465557a65f1d105f2830278a45dbe5f444312eaa))
+
+## [1.104.4](https://github.com/aeternity/ae_mdw/compare/v1.104.3...v1.104.4) (2025-08-04)
+
+
+### Bug Fixes
+
+* change level for update_tx_stats in order to avoid flooding the logs ([#2140](https://github.com/aeternity/ae_mdw/issues/2140)) ([d3df371](https://github.com/aeternity/ae_mdw/commit/d3df3717460833047a16330b25777485cb933b2e))
+* test for negative balance ([8b8d21a](https://github.com/aeternity/ae_mdw/commit/8b8d21adc06f9c63be2afc2fa2d499f4213c20ab))
+* update AEX9 holders according to actual balance changes ([68f035b](https://github.com/aeternity/ae_mdw/commit/68f035be8b28d50a2c6aeaba96f80566019a6516))
+
+
+### Miscellaneous
+
+* better error messages on invalid holders in AEX9 ([b11fdb4](https://github.com/aeternity/ae_mdw/commit/b11fdb4a08240934997e4074be50c9b7e127901c))
+* format ([92296e0](https://github.com/aeternity/ae_mdw/commit/92296e0d543fc2152203a2b751b620bd7972537f))
+* remove unneded warnings for compiling migrations at app start ([#2130](https://github.com/aeternity/ae_mdw/issues/2130)) ([0c3e676](https://github.com/aeternity/ae_mdw/commit/0c3e676472d42d2f0f04527e81be750f798b748a))
+
+## [1.104.3](https://github.com/aeternity/ae_mdw/compare/v1.104.2...v1.104.3) (2025-04-25)
+
+
+### Bug Fixes
+
+* fix swapped name and symbol in aexn_contracts ([#2142](https://github.com/aeternity/ae_mdw/issues/2142)) ([2d10fe5](https://github.com/aeternity/ae_mdw/commit/2d10fe575fc392f2b76ae48123c7a6ce2d9a8f5f))
+
+## [1.104.2](https://github.com/aeternity/ae_mdw/compare/v1.104.1...v1.104.2) (2025-04-16)
+
+
+### Bug Fixes
+
+* make invalid aexn tokens display with invalid flag instead of just error ([#2135](https://github.com/aeternity/ae_mdw/issues/2135)) ([0dee0e6](https://github.com/aeternity/ae_mdw/commit/0dee0e6cd10773173e051f822594f22706c9ffb9))
+
+## [1.104.1](https://github.com/aeternity/ae_mdw/compare/v1.104.0...v1.104.1) (2025-04-09)
+
+
+### Bug Fixes
+
+* fix hc error when there is a fork and no total_stats records ([#2128](https://github.com/aeternity/ae_mdw/issues/2128)) ([b1ffeaf](https://github.com/aeternity/ae_mdw/commit/b1ffeafd2f5d941d31f35e3a686c6a72bc9075f7))
+* make tx stats async ([#2133](https://github.com/aeternity/ae_mdw/issues/2133)) ([e2d0b93](https://github.com/aeternity/ae_mdw/commit/e2d0b93e44232bbe36633daaa4c6367cd4a86f9c))
+
+
+### Miscellaneous
+
+* update ubuntu in actions due to deprecation ([#2131](https://github.com/aeternity/ae_mdw/issues/2131)) ([051168e](https://github.com/aeternity/ae_mdw/commit/051168ef382bc689da7a91989852e3aea7dcc0c0))
+
 ## [1.104.0](https://github.com/aeternity/ae_mdw/compare/v1.103.0...v1.104.0) (2025-04-07)
 
 

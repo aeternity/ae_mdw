@@ -247,32 +247,38 @@ defmodule AeMdw.Aex141 do
   defp deserialize_cursor(Model.NftTemplate, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>>, template_id} = cursor when is_integer(template_id) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp deserialize_cursor(Model.NftTemplateToken, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>>, template_id, token_id} = cursor
          when is_integer(template_id) and is_integer(token_id) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp deserialize_cursor(Model.NftTokenOwner, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>>, token_id} = cursor when is_integer(token_id) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp serialize_ownership_cursor({_account_pk, contract_pk, token_id}),
@@ -283,11 +289,13 @@ defmodule AeMdw.Aex141 do
   defp deserialize_ownership_cursor(account_pk, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>> = contract_pk, token_id} when is_integer(token_id) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, {account_pk, contract_pk, token_id}}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp convert_owned_tokens_param({"contract", contract_id}) do

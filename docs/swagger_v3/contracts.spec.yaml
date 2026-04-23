@@ -1,4 +1,142 @@
 schemas:
+  MdwContractCommonExtras:
+    type: object
+    required:
+      - aexn_type
+      - gas_used
+      - return_type
+    properties:
+      aexn_type:
+        nullable: true
+        type: string
+        example: aex9
+        enum:
+          - aex9
+          - aex141
+      gas_used:
+        type: integer
+        example: 1000
+      return_type:
+        type: string
+        example: ok
+        enum:
+          - ok
+          - error
+      ttl:
+        type: integer
+        example: 1000
+
+  MdwContractCallExtras:
+      type: object
+      required:
+        - arguments
+        - function
+        - log
+        - result
+        - return
+      properties:
+        arguments:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - value
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+          example:
+            - type: int
+              value: 1
+            - type: string
+              value: "hello"
+        function:
+          type: string
+          example: "main"
+        log:
+          type: array
+          items:
+            type: object
+            required:
+              - address
+              - data
+              - topics
+            properties:
+              address:
+                type: string
+              data:
+                type: string
+              topics:
+                type: array
+                items:
+                  type: string
+          example:
+            - address: "ct_2U1usf3A8ZNUcZLkZe5rEoBTxk7eJvk9fcbRDNqmRiwXCHAYN"
+              data: cb_+Jg==
+              topics:
+                - "topic1"
+                - "topic2"
+        result:
+          type: string
+          example: ok
+          enum:
+            - ok
+            - error
+            - revert
+        return:
+          type: object
+          required:
+            - type
+            - value
+          properties:
+            type:
+              type: string
+            value:
+              type: string
+          example:
+            type: int
+            value: 1
+
+  MdwContractCreateExtras:
+    type: object
+    required:
+      - args
+      - caller_id
+      - compiler_version
+      - contract_id
+      - return_value
+      - source_hash
+    properties:
+      args:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            value:
+              type: string
+        example:
+          - type: int
+            value: 1
+          - type: string
+            value: "hello"
+      caller_id:
+        $ref: '#/components/schemas/AccountAddress'
+      compiler_version:
+        type: string
+        example: "8.0.0"
+      contract_id:
+        $ref: '#/components/schemas/ContractAddress'
+      return_value:
+        type: string
+        example: "cb_Xfbg4g=="
+      source_hash:
+        type: string
+        example: "cb_Xfbg4gasdasdasdasdadasdasd=="
+
   ContractInternalTx:
     description: Contract internal transaction
     type: object
@@ -56,7 +194,7 @@ schemas:
           gas: 200000
           gas_price: 1000000000
           nonce: 66
-          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4 
+          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4
           ttl: 0
           vm_version: 5
   ContractCall:

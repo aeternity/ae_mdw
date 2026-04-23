@@ -13,27 +13,31 @@ defmodule AeMdwWeb.WebsocketEndpoint do
     signing_salt: "1cOf/zsp"
   ]
 
+  # Idle timeout matches a typical 3-hour reverse-proxy keepalive window.
+  # Clients should send Ping every ~10 minutes to keep the proxy connection alive.
+  @ws_idle_timeout 10_800_000
+
   socket "/websocket", AeMdwWeb.Websocket.SocketHandler,
     websocket: [
-      connect_info: [session: @session_options, version: :v1],
+      connect_info: [session: @session_options, peer_data: [], version: :v1],
       path: "/",
-      timeout: 660_000,
+      timeout: @ws_idle_timeout,
       max_frame_size: 128_000
     ]
 
   socket "/v2/websocket", AeMdwWeb.Websocket.SocketHandler,
     websocket: [
-      connect_info: [session: @session_options, version: :v2],
+      connect_info: [session: @session_options, peer_data: [], version: :v2],
       path: "/",
-      timeout: 660_000,
+      timeout: @ws_idle_timeout,
       max_frame_size: 128_000
     ]
 
   socket "/v3/websocket", AeMdwWeb.Websocket.SocketHandler,
     websocket: [
-      connect_info: [session: @session_options, version: :v3],
+      connect_info: [session: @session_options, peer_data: [], version: :v3],
       path: "/",
-      timeout: 660_000,
+      timeout: @ws_idle_timeout,
       max_frame_size: 128_000
     ]
 end

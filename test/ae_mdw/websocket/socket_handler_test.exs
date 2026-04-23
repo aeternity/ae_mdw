@@ -21,20 +21,24 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client_v2, :key_blocks, :mdw)
       WsClient.unsubscribe(client, :key_blocks, :mdw)
 
-      Process.send_after(client, {:subs, self()}, 100)
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
 
       WsClient.unsubscribe(client_v2, :key_blocks, :mdw)
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
       WsClient.subscribe(client_v2, :key_blocks, :node)
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
 
       Process.send_after(client, {:error, self()}, 100)
@@ -56,10 +60,12 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client_v2, :key_blocks)
       WsClient.unsubscribe(client, :key_blocks, :mdw)
 
-      Process.send_after(client, {:subs, self()}, 100)
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
 
       Process.send_after(client, {:error, self()}, 100)
@@ -95,20 +101,24 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client_v2, :micro_blocks)
       WsClient.unsubscribe(client, :micro_blocks)
 
-      Process.send_after(client, {:subs, self()}, 100)
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["MicroBlocks"], 300
 
       WsClient.unsubscribe(client_v2, :micro_blocks, :mdw)
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
       WsClient.subscribe(client_v2, :micro_blocks, :node)
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["MicroBlocks"], 300
 
       Process.send_after(client, {:error, self()}, 100)
@@ -144,10 +154,12 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client_v2, :transactions)
       WsClient.unsubscribe(client, :transactions)
 
-      Process.send_after(client, {:subs, self()}, 100)
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive ["Transactions"], 300
 
       Process.send_after(client, {:error, self()}, 100)
@@ -184,10 +196,15 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client, name_id)
       WsClient.subscribe(client, channel_id)
 
-      Process.send_after(client, {:subs, self()}, 100)
-      assert_receive [^account_id, ^contract_id, ^oracle_id, ^name_id, ^channel_id], 300
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
+      assert_receive ping_subs, 300
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert Enum.sort(ping_subs) ==
+               Enum.sort([account_id, contract_id, oracle_id, name_id, channel_id])
+
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
       assert_receive [], 300
 
       WsClient.subscribe(client_v2, name_id)
@@ -196,11 +213,15 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.unsubscribe(client, account_id)
       WsClient.unsubscribe(client, channel_id)
 
-      Process.send_after(client, {:subs, self()}, 100)
-      assert_receive [^contract_id, ^oracle_id, ^name_id], 300
+      WsClient.ping(client)
+      Process.send_after(client, {:ping_subs, self()}, 100)
+      assert_receive ping_subs, 300
+      assert Enum.sort(ping_subs) == Enum.sort([contract_id, oracle_id, name_id])
 
-      Process.send_after(client_v2, {:subs, self()}, 100)
-      assert_receive [^name_id, ^channel_id], 300
+      WsClient.ping(client_v2)
+      Process.send_after(client_v2, {:ping_subs, self()}, 100)
+      assert_receive ping_subs_v2, 300
+      assert Enum.sort(ping_subs_v2) == Enum.sort([name_id, channel_id])
 
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300

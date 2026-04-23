@@ -14,7 +14,7 @@
 #
 ARG ELIXIR_VERSION=1.17.3
 ARG OTP_VERSION=26.2.5.3
-ARG NODE_VERSION=7.3.0-rc5
+ARG NODE_VERSION=7.3.0-rc7
 
 ARG NODE_IMAGE=aeternity/aeternity:v${NODE_VERSION}
 ARG UBUNTU_VERSION=focal-20240918
@@ -114,8 +114,8 @@ RUN mix release
 FROM ${RUNNER_IMAGE}
 
 RUN apt-get update -y && apt-get install -y git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 libsnappy-dev libgflags2.2 \
-  && ldconfig \
-  && apt-get clean && rm -f /var/lib/apt/lists/*_*
+    && ldconfig \
+    && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen

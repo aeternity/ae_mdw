@@ -718,12 +718,14 @@ defmodule AeMdw.Txs do
     cursor =
       bin
       |> Base.decode64!()
-      |> :erlang.binary_to_term()
+      |> :erlang.binary_to_term([:safe])
 
     case match?({_neg_fee, _neg_gas_price, <<_::256>>, _nonce, <<_::256>>}, cursor) do
       true -> cursor
       false -> nil
     end
+  rescue
+    ArgumentError -> nil
   end
 
   defp render_pending_tx(%State{store: node_store}, mempool_key) do

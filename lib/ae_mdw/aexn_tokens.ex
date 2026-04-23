@@ -52,14 +52,9 @@ defmodule AeMdw.AexnTokens do
           {:ok, aexn_contract()} | {:error, Error.t()}
   def fetch_contract(state, aexn_type, contract_id, v3?) do
     with {:ok, contract_pk} <- Validate.id(contract_id),
-         {:ok, aexn_contract} <- State.get(state, @aexn_table, {aexn_type, contract_pk}),
-         {:invalid, false} <-
-           {:invalid, State.exists?(state, Model.AexnInvalidContract, {aexn_type, contract_pk})} do
+         {:ok, aexn_contract} <- State.get(state, @aexn_table, {aexn_type, contract_pk}) do
       {:ok, render_contract(state, aexn_contract, v3?)}
     else
-      {:invalid, true} ->
-        {:error, ErrInput.AexnContractInvalid.exception(value: contract_id)}
-
       {:error, reason} ->
         {:error, reason}
 
@@ -167,7 +162,7 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
          {aexn_type, {txi, idx}} = cursor_term
          when aexn_type in ~w(aex9 aex141)a and is_integer(txi) and is_integer(idx) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor_term}
     else
       _invalid ->
@@ -181,7 +176,7 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
          {aexn_type, _name_symbol_creation, pubkey} = cursor_term
          when aexn_type in ~w(aex9 aex141)a and is_binary(pubkey) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, cursor_term}
     else
       _invalid ->
@@ -225,18 +220,19 @@ defmodule AeMdw.AexnTokens do
 
     num_holders = Aex9.fetch_holders_count(state, contract_pk)
 
-    response = %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_id: encode_contract(contract_pk),
-      extensions: extensions,
-      initial_supply: initial_supply,
-      event_supply: event_supply,
-      holders: num_holders,
-      invalid: State.exists?(state, Model.AexnInvalidContract, index),
-      logs_count: Stats.fetch_aex9_logs_count(state, contract_pk)
-    }
+    response =
+      %{
+        name: name,
+        symbol: symbol,
+        decimals: decimals,
+        contract_id: encode_contract(contract_pk),
+        extensions: extensions,
+        initial_supply: initial_supply,
+        event_supply: event_supply,
+        holders: num_holders,
+        logs_count: Stats.fetch_aex9_logs_count(state, contract_pk)
+      }
+      |> put_invalid(state, index)
 
     case v3? do
       true ->
@@ -268,12 +264,38 @@ defmodule AeMdw.AexnTokens do
       metadata_type: metadata_type,
       extensions: extensions,
       limits: Aex141.fetch_limits(state, contract_pk, v3?),
-      invalid: State.exists?(state, Model.AexnInvalidContract, index),
       creation_time: micro_time,
       block_height: height
     }
     |> maybe_put_contract_tx_hash(state, txi, v3?)
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
+    |> put_invalid(state, index)
+  end
+
+  defp put_invalid(response, state, index) do
+    state
+    |> State.get(Model.AexnInvalidContract, index)
+    |> case do
+      {:ok, Model.aexn_invalid_contract(reason: reason, description: description)} ->
+        Map.merge(
+          response,
+          %{
+            invalid: true,
+            invalid_reason: reason,
+            invalid_description: description
+          }
+        )
+
+      :not_found ->
+        Map.merge(
+          response,
+          %{
+            invalid: false,
+            invalid_reason: nil,
+            invalid_description: nil
+          }
+        )
+    end
   end
 
   defp maybe_put_contract_tx_hash(data, state, txi, v3?) do

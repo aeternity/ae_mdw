@@ -4,6 +4,21 @@ env = config_env()
 
 config :ae_mdw, :wealth_rank_size, String.to_integer(System.get_env("WEALTH_RANK_SIZE", "200"))
 
+config :ae_mdw, AeMdwWeb.Websocket.Subscriptions,
+  # 100k per connection lets a single service monitor 100k accounts without multiplexing
+  max_subs_per_conn: String.to_integer(System.get_env("MAX_SUBS_PER_CONN", "100000")),
+  subs_full_list_reply: System.get_env("WS_SUBS_FULL_LIST_REPLY", "false") in ["true", "1"],
+  max_total_connections: String.to_integer(System.get_env("MAX_WS_CONNECTIONS", "1000")),
+  # 50 allows services with many pods/workers behind shared egress NAT
+  max_connections_per_ip: String.to_integer(System.get_env("MAX_WS_CONNECTIONS_PER_IP", "50")),
+  # 2M rows x ~150 bytes ≈ 300 MB; bounded by max tx/s throughput, not size
+  max_total_subs: String.to_integer(System.get_env("MAX_TOTAL_WS_SUBS", "2000000"))
+
+config :ae_mdw, AeMdwWeb.Websocket.SocketHandler,
+  # At ~55 bytes/entry a limit of 1000 produces ~60 KB; 100k entries uncapped would be ~5.5 MB.
+  max_client_backlog: String.to_integer(System.get_env("MAX_WS_CLIENT_BACKLOG", "2000")),
+  max_ping_limit: String.to_integer(System.get_env("MAX_PING_LIMIT", "1000"))
+
 #
 # Telemetry
 #

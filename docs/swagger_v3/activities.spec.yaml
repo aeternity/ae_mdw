@@ -134,7 +134,7 @@ schemas:
         enum:
           - accounts_extra_lima
           - accounts_fortuna
-          - accounts_genesis
+          - accounts_roma
           - accounts_lima
           - accounts_minerva
           - contracts_lima

@@ -90,25 +90,36 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @impl GenServer
   def handle_cast({:broadcast_key_block, header, source, version, mbs_count, txs_count}, state) do
-    _result =
-      do_broadcast_block(header, source, version, %{
-        micro_blocks_count: mbs_count,
-        transactions_count: txs_count
-      })
+    {:ok, _pid} =
+      Task.start(fn ->
+        do_broadcast_block(header, source, version, %{
+          micro_blocks_count: mbs_count,
+          transactions_count: txs_count
+        })
+      end)
 
     {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:broadcast_micro_block, header, source, versions, txs_count}, state) do
-    Enum.each(versions, &do_broadcast_block(header, source, &1, %{transactions_count: txs_count}))
+    {:ok, _pid} =
+      Task.start(fn ->
+        Enum.each(
+          versions,
+          &do_broadcast_block(header, source, &1, %{transactions_count: txs_count})
+        )
+      end)
 
     {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:broadcast_txs, micro_block, source, versions}, state) do
-    Enum.each(versions, &do_broadcast_txs(micro_block, source, &1))
+    {:ok, _pid} =
+      Task.start(fn ->
+        Enum.each(versions, &do_broadcast_txs(micro_block, source, &1))
+      end)
 
     {:noreply, state}
   end
@@ -125,12 +136,23 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     type = :aec_headers.type(header)
     channel = Map.fetch!(@block_subs, type)
 
-    with {:ok, block} <- serialize_block(header, type, source, version) do
-      block
-      |> Map.merge(counters)
-      |> encode_message(channel, source)
-      |> broadcast(channel, source, version)
+    case serialize_block(header, type, source, version) do
+      {:ok, block} ->
+        block
+        |> Map.merge(counters)
+        |> encode_message(channel, source)
+        |> broadcast(channel, source, version)
+
+      {:error, reason} ->
+        require Logger
+        Logger.warning("[broadcaster] serialize_block failed: #{inspect(reason)}")
+        {:error, reason}
     end
+  rescue
+    e ->
+      require Logger
+      Logger.warning("[broadcaster] do_broadcast_block exception: #{inspect(e)}")
+      {:error, e}
   end
 
   defp serialize_block(header, :key, :mdw, version) when version in [:v2, :v3] do
