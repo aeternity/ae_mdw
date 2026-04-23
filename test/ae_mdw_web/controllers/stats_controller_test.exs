@@ -36,6 +36,25 @@ defmodule AeMdwWeb.StatsControllerTest do
              } = stat1
     end
 
+    test "it includes accounts field", %{conn: conn, store: store} do
+      tx_hash = <<1::256>>
+
+      store =
+        store
+        |> Store.put(Model.DeltaStat, Model.delta_stat(index: 1))
+        |> Store.put(Model.TotalStat, Model.total_stat(index: 1, accounts: 42))
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: tx_hash))
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 1))
+
+      assert %{"data" => [stat1]} =
+               conn
+               |> with_store(store)
+               |> get("/v2/totalstats")
+               |> json_response(200)
+
+      assert %{"accounts" => 42} = stat1
+    end
+
     test "if no gens synced yet, it returns empty results", %{conn: conn, store: store} do
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
@@ -65,6 +84,24 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{
                "last_tx_hash" => ^encoded_tx_hash
              } = stat1
+    end
+
+    test "it includes accounts field", %{conn: conn, store: store} do
+      tx_hash = <<1::256>>
+
+      store =
+        store
+        |> Store.put(Model.DeltaStat, Model.delta_stat(index: 1, accounts: 7))
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: tx_hash))
+        |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 1))
+
+      assert %{"data" => [stat1]} =
+               conn
+               |> with_store(store)
+               |> get("/v3/stats/delta")
+               |> json_response(200)
+
+      assert %{"accounts" => 7} = stat1
     end
 
     test "if no gens synced yet, it returns empty results", %{conn: conn, store: store} do

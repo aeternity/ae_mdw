@@ -41,4 +41,21 @@ defmodule AeMdw.Db.AccountCreationMutationTest do
 
     assert 3 = Enum.count(all_active_account_statistics)
   end
+
+  test "new account increments :accounts stat" do
+    state = empty_state()
+
+    state = AccountCreationMutation.execute(AccountCreationMutation.new(<<10::256>>, 1), state)
+
+    assert State.get_stat(state, :accounts, 0) == 1
+  end
+
+  test "duplicate account does not increment :accounts stat" do
+    state = empty_state()
+
+    state = AccountCreationMutation.execute(AccountCreationMutation.new(<<10::256>>, 1), state)
+    state = AccountCreationMutation.execute(AccountCreationMutation.new(<<10::256>>, 2), state)
+
+    assert State.get_stat(state, :accounts, 0) == 1
+  end
 end

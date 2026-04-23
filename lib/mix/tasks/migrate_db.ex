@@ -79,29 +79,39 @@ defmodule Mix.Tasks.MigrateDb do
     Log.info("applying version #{version} with #{module}...")
     begin = DateTime.utc_now()
 
-    {:ok, total_count} =
-      case module.run(state, from_startup?) do
-        {:ok, total_count} ->
-          {:ok, total_count}
+    case module.run(state, from_startup?) do
+      {:ok, total_count} ->
+        duration = DateTime.diff(DateTime.utc_now(), begin)
+        Log.info("total #{total_count} in #{duration} seconds")
+        write_migration_record(version)
+        Log.info("applied version #{version}")
 
-        {:async, async_migrations} ->
-          count =
-            async_migrations
-            |> Stream.each(&SyncingQueue.push(&1))
-            |> Enum.count()
+      {:async, async_migrations} ->
+        # Wrap the last task so the version record is written only after the
+        # task actually completes. A crash before that point leaves the version
+        # unrecorded and the migration will re-run on next boot.
+        {prefix, [last_fn]} = Enum.split(async_migrations, length(async_migrations) - 1)
 
-          {:ok, count}
-      end
+        Enum.each(prefix, &SyncingQueue.push(&1))
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-    Log.info("total #{total_count} in #{duration} seconds")
+        SyncingQueue.push(fn ->
+          last_fn.()
+          write_migration_record(version)
+          Log.info("async applied version #{version}")
+        end)
 
+        count = length(async_migrations)
+        duration = DateTime.diff(DateTime.utc_now(), begin)
+        Log.info("total #{count} async tasks queued in #{duration} seconds")
+    end
+
+    :ok
+  end
+
+  defp write_migration_record(version) do
     Database.dirty_write(
       @table,
       Model.migrations(index: version, inserted_at: DateTime.utc_now())
     )
-
-    Log.info("applied version #{version}")
-    :ok
   end
 end

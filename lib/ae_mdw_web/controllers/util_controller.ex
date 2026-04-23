@@ -23,7 +23,9 @@ defmodule AeMdwWeb.UtilController do
     filepath = Path.join(:code.priv_dir(:ae_mdw), filepath)
 
     if File.exists?(filepath) do
-      send_file(conn, 200, filepath)
+      conn
+      |> Conn.put_resp_content_type("application/json")
+      |> send_file(200, filepath)
     else
       Util.send_error(conn, Input.NotFound, "no such route")
     end

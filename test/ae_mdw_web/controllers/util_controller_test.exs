@@ -8,15 +8,13 @@ defmodule AeMdwWeb.UtilControllerTest do
 
   describe "static_file" do
     test "gets v1/v2 swagger files from priv directory", %{conn: conn} do
-      assert <<"{", _rest::binary>> =
-               conn
-               |> get("/api")
-               |> response(200)
+      resp = conn |> get("/api")
+      assert response(resp, 200) =~ "{"
+      assert response_content_type(resp, :json) =~ "application/json"
 
-      assert <<"{", _rest::binary>> =
-               conn
-               |> get("/v2/api")
-               |> response(200)
+      resp2 = conn |> get("/v2/api")
+      assert response(resp2, 200) =~ "{"
+      assert response_content_type(resp2, :json) =~ "application/json"
     end
   end
 

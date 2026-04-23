@@ -23,6 +23,7 @@ defmodule AeMdw.Accounts do
           Model.account_creation(index: pubkey, creation_time: time)
         )
         |> SyncStats.increment_statistics(:total_accounts, time, 1)
+        |> State.inc_stat(:accounts)
 
       _account_creation ->
         state

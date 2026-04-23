@@ -322,6 +322,47 @@ defmodule AeMdw.Db.StatsMutationTest do
       end
     end
 
+    test "with all_cached? = false, accounts delta equals new AccountCreation keys minus previous total" do
+      height = 150
+      key_hash = <<height::256>>
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false, 123)
+
+      # Seed 3 AccountCreation records so count_keys returns 3.
+      # TotalStat for the previous block already has accounts: 1, so delta = 3 - 1 = 2.
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.DeltaStat, Model.delta_stat(index: height - 1))
+        |> State.put(Model.TotalStat, Model.total_stat(index: height, accounts: 1))
+        |> State.put(Model.TotalStat, Model.total_stat(index: height - 1, accounts: 1))
+        |> State.put(
+          Model.AccountCreation,
+          Model.account_creation(index: <<1::256>>, creation_time: 1)
+        )
+        |> State.put(
+          Model.AccountCreation,
+          Model.account_creation(index: <<2::256>>, creation_time: 2)
+        )
+        |> State.put(
+          Model.AccountCreation,
+          Model.account_creation(index: <<3::256>>, creation_time: 3)
+        )
+
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state = StatsMutation.execute(mutation, state)
+
+        m_delta = State.fetch!(state, Model.DeltaStat, height)
+        m_total = State.fetch!(state, Model.TotalStat, height + 1)
+
+        assert Model.delta_stat(m_delta, :accounts) == 2
+        assert Model.total_stat(m_total, :accounts) == 1 + 2
+      end
+    end
+
     test "with all_cached? = true, it increments oracles and names total stats based on keys" do
       height = 200
       key_hash = <<height::256>>
@@ -386,6 +427,35 @@ defmodule AeMdw.Db.StatsMutationTest do
 
         assert expected_delta == State.fetch!(state, Model.DeltaStat, height)
         assert expected_total == State.fetch!(state, Model.TotalStat, height + 1)
+      end
+    end
+
+    test "with all_cached? = true, accounts delta uses inc_stat counter and accumulates into total" do
+      height = 250
+      key_hash = <<height::256>>
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.DeltaStat, Model.delta_stat(index: height - 1))
+        |> State.put(Model.TotalStat, Model.total_stat(index: height, accounts: 5))
+        |> State.put(Model.TotalStat, Model.total_stat(index: height - 1, accounts: 5))
+        |> State.inc_stat(:accounts, 3)
+
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, true, 123)
+
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state = StatsMutation.execute(mutation, state)
+
+        m_delta = State.fetch!(state, Model.DeltaStat, height)
+        m_total = State.fetch!(state, Model.TotalStat, height + 1)
+
+        assert Model.delta_stat(m_delta, :accounts) == 3
+        assert Model.total_stat(m_total, :accounts) == 5 + 3
       end
     end
   end

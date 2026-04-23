@@ -113,7 +113,8 @@ defmodule AeMdw.Db.StatsMutation do
       burned_in_auctions: get(state, :burned_in_auctions, 0),
       channels_opened: get(state, :channels_opened, 0),
       channels_closed: get(state, :channels_closed, 0),
-      locked_in_channels: get(state, :locked_in_channels, 0)
+      locked_in_channels: get(state, :locked_in_channels, 0),
+      accounts: get(state, :accounts, 0)
     )
   end
 
@@ -122,7 +123,8 @@ defmodule AeMdw.Db.StatsMutation do
       active_auctions: prev_active_auctions,
       active_names: prev_active_names,
       active_oracles: prev_active_oracles,
-      contracts: prev_contracts
+      contracts: prev_contracts,
+      accounts: prev_accounts
     ) =
       state
       |> State.get(Model.TotalStat, height)
@@ -169,6 +171,8 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_auctions = spent_in_auctions - refund_in_auctions
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
+    current_accounts = State.count_keys(state, Model.AccountCreation)
+
     Model.delta_stat(
       index: height,
       auctions_started: max(0, current_active_auctions - prev_active_auctions),
@@ -184,7 +188,8 @@ defmodule AeMdw.Db.StatsMutation do
       burned_in_auctions: burned_in_auctions,
       channels_opened: channels_opened,
       channels_closed: channels_closed,
-      locked_in_channels: locked_in_channels
+      locked_in_channels: locked_in_channels,
+      accounts: max(0, current_accounts - prev_accounts)
     )
   end
 
@@ -201,7 +206,8 @@ defmodule AeMdw.Db.StatsMutation do
            burned_in_auctions: burned_in_auctions,
            channels_opened: channels_opened,
            channels_closed: channels_closed,
-           locked_in_channels: locked_in_channels
+           locked_in_channels: locked_in_channels,
+           accounts: accounts
          )
        ) do
     Model.total_stat(
@@ -213,7 +219,8 @@ defmodule AeMdw.Db.StatsMutation do
       locked_in_auctions: prev_locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions,
       open_channels: prev_open_channels,
-      locked_in_channels: prev_locked_in_channels
+      locked_in_channels: prev_locked_in_channels,
+      accounts: prev_accounts
     ) = fetch_total_stat(state, height - 1)
 
     token_supply_delta = Node.token_supply_delta(height - 1)
@@ -233,7 +240,8 @@ defmodule AeMdw.Db.StatsMutation do
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,
       open_channels: prev_open_channels + channels_opened - channels_closed,
-      locked_in_channels: prev_locked_in_channels + locked_in_channels
+      locked_in_channels: prev_locked_in_channels + locked_in_channels,
+      accounts: prev_accounts + accounts
     )
   end
 
