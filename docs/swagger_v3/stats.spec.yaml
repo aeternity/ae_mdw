@@ -68,6 +68,9 @@ schemas:
       locked_in_channels:
         description: The amount locked in channels
         type: integer
+      accounts:
+        description: The number of new accounts created in this generation
+        type: integer
     example:
       auctions_started: 0
       block_reward: 269973000000000000000
@@ -85,6 +88,7 @@ schemas:
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
       locked_in_auctions: 0
       locked_in_channels: 0
+      accounts: 0
   TotalStat:
     type: object
     description: TotalStat
@@ -150,6 +154,9 @@ schemas:
       last_tx_hash:
         description: The last transaction hash for this height
         $ref: '#/components/schemas/TransactionHash'
+      accounts:
+        description: The cumulative total number of accounts up to this generation
+        type: integer
     example:
       height: 121804
       contracts: 0
@@ -166,6 +173,7 @@ schemas:
       sum_dev_reward: 33027000000000000000
       total_token_supply: 10000000000000000000000000000
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
+      accounts: 0
   Stat:
     type: object
     description: Stat

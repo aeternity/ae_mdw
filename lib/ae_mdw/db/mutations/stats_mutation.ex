@@ -14,7 +14,6 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Stats, as: SyncStats
-  alias AeMdw.Sync.Transaction
   alias AeMdw.Node
   alias AeMdw.Stats
   alias AeMdw.Txs
@@ -172,8 +171,7 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_auctions = spent_in_auctions - refund_in_auctions
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
-    current_accounts =
-      get_accounts(state, from_txi, next_txi)
+    current_accounts = State.count_keys(state, Model.AccountCreation)
 
     Model.delta_stat(
       index: height,
@@ -269,37 +267,6 @@ defmodule AeMdw.Db.StatsMutation do
     |> Stream.map(&State.fetch!(state, Model.IntTransferTx, &1))
     |> Enum.reduce(0, fn Model.int_transfer_tx(amount: amount), amount_acc ->
       amount_acc + amount
-    end)
-  end
-
-  defp get_accounts(state, from_txi, next_txi) do
-    state
-    |> Collection.stream(Model.Tx, :forward, {from_txi, next_txi}, nil)
-    |> Stream.take_while(&(&1 < next_txi))
-    |> Enum.reduce(0, fn txi, accounts ->
-      Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-
-      new_count =
-        tx_hash
-        |> :aec_db.get_signed_tx()
-        |> Transaction.get_ids_from_tx()
-        |> Enum.reduce(0, fn
-          {:id, :account, pubkey}, acc ->
-            state
-            |> State.get(Model.AccountCreation, pubkey)
-            |> case do
-              {:ok, _account_creation} ->
-                acc
-
-              :not_found ->
-                acc + 1
-            end
-
-          _other, acc ->
-            acc
-        end)
-
-      accounts + new_count
     end)
   end
 end
