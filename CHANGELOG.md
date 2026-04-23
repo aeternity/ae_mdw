@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.105.0](https://github.com/aeternity/ae_mdw/compare/v1.104.6...v1.105.0) (2026-04-23)
+
+
+### Features
+
+* add accounts count to delta and total stats ([#2109](https://github.com/aeternity/ae_mdw/issues/2109)) ([cc42358](https://github.com/aeternity/ae_mdw/commit/cc423587e8c6c4739fef9401855d0819a41cfbd6))
+* websocket performance and security ([#2173](https://github.com/aeternity/ae_mdw/issues/2173)) ([00c756a](https://github.com/aeternity/ae_mdw/commit/00c756a6475b04a993c58346c9f22bc36f37c61d))
+
+
+### Bug Fixes
+
+* cursor parameter sanitization and AEX9 balance lookup errors ([#2171](https://github.com/aeternity/ae_mdw/issues/2171)) ([e8c1a02](https://github.com/aeternity/ae_mdw/commit/e8c1a02b36d157b9d6a9f4b935e4ce08e5d81dc7))
+* **docker:** healthcheck WebSocket probe for Phoenix/Bandit ([#2167](https://github.com/aeternity/ae_mdw/issues/2167)) ([97f1672](https://github.com/aeternity/ae_mdw/commit/97f167264b518fd45f4091bebf82c70503c7ec2f))
+* fix name tests ([f231c57](https://github.com/aeternity/ae_mdw/commit/f231c57bdde212c2b761648c7c8656582e17bb52))
+* rename genesis to roma leftovers ([5a66cdd](https://github.com/aeternity/ae_mdw/commit/5a66cdd5a55efca609ffe684ec81857dfff866c8))
+
 ## [1.104.6](https://github.com/aeternity/ae_mdw/compare/v1.104.5...v1.104.6) (2026-03-27)
 
 
