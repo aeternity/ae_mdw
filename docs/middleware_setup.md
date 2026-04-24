@@ -6,6 +6,90 @@ AeMdw is a middleware that acts as a caching and reporting layer for the [ætern
 
 The middleware runs an Aeternity Node alongside it in the same Docker container and BEAM VM instance. This node can be configured using the `aeternity.yaml` file or by passing environment variables, just like configuring the node directly.
 
+## Server Prerequisites
+
+### Open File Descriptor Limit
+
+Each WebSocket connection consumes one file descriptor. The BEAM VM and RocksDB also open many fds internally. The default of 1024 is far too low for production.
+
+Apply to the host running Docker. The override file does not exist by default — create it with:
+
+```
+sudo systemctl edit docker
+```
+
+This opens an editor. Add:
+
+```ini
+[Service]
+LimitNOFILE=131072
+```
+
+Save and exit, then apply:
+
+```
+sudo systemctl daemon-reload && sudo systemctl restart docker
+```
+
+Verify inside a container:
+
+```
+docker run --rm busybox sh -c 'ulimit -n'
+```
+
+### Kernel Network and Memory Tuning
+
+Check current values with:
+
+```
+sysctl net.core.somaxconn net.ipv4.tcp_tw_reuse net.ipv4.ip_local_port_range vm.overcommit_memory
+```
+
+Create `/etc/sysctl.d/99-ae-mdw.conf` with the following content and apply it:
+
+```
+# /etc/sysctl.d/99-ae-mdw.conf
+
+# Listen backlog — allows more pending connections before the kernel drops them.
+# Default on most systems is already 4096; set explicitly to ensure it.
+net.core.somaxconn = 4096
+
+# TIME_WAIT socket reuse. Value 2 (loopback-only, Linux 4.6+) is the safest option.
+# Value 1 enables global reuse which can break NAT; 0 disables reuse entirely.
+net.ipv4.tcp_tw_reuse = 2
+
+# Ephemeral port range. Widening beyond the default (32768–60999) helps under
+# extreme connection churn; leave at default if churn is low.
+net.ipv4.ip_local_port_range = 1024 65535
+
+# BEAM requires overcommit to allocate large ETS tables without triggering OOM.
+# 0 = heuristic (default, can kill BEAM), 1 = always allow, 2 = strict deny.
+vm.overcommit_memory = 1
+```
+
+Apply without rebooting:
+
+```
+sudo sysctl --system
+```
+
+### Performance Notes
+
+The WebSocket Broadcaster is a single-threaded GenServer — it is the primary CPU bottleneck on busy blocks. Increasing the BEAM scheduler count (via `+S` in `vm.args`) does not fix this directly, but it ensures schedulers are split sensibly between the broadcaster, HTTP workers, and RocksDB dirty I/O threads.
+
+### Monitoring
+
+With `ENABLE_TELEMETRY=true` and a StatsD → Grafana pipeline, alert on:
+
+| Metric | Alert threshold |
+|---|---|
+| ETS subscriptions table size | > 5 M rows |
+| BEAM ETS memory (`erlang:memory(:ets)`) | > 8 GB |
+| Broadcaster `handle_cast` queue depth | > 1000 |
+| Open file descriptors | > 100 k |
+
+The ETS subscription row count is the key early-warning metric for subscriber-cleanup regressions: rows should drop to zero promptly after a client disconnects.
+
 ## Quick Start with Docker Compose
 
 ### Step 1: Clone the Repository
