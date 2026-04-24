@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.105.1](https://github.com/aeternity/ae_mdw/compare/v1.105.0...v1.105.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* config mismatch ([d398400](https://github.com/aeternity/ae_mdw/commit/d398400d0b14ff0d371ec667aff7ebabb742cf0c))
+* proper sdk test config ([57ccbab](https://github.com/aeternity/ae_mdw/commit/57ccbab3d1749221bfed05ec6d826cf83d66e4d9))
+* reorder dependency installation in test-devmode script ([a3ac7b4](https://github.com/aeternity/ae_mdw/commit/a3ac7b4f12ade51e731a5f774296b3ec347261a4))
+* update nodejs deps ([06cdb5a](https://github.com/aeternity/ae_mdw/commit/06cdb5a0ca32feff0d1894ae84b4cedbff7c3f60))
+
+
+### Miscellaneous
+
+* **ci:** fix missing manifest ([33e35df](https://github.com/aeternity/ae_mdw/commit/33e35df2f7320a01d55ed6ddbd16cbf9f4f579c7))
+* **ci:** update actions ([9d55c63](https://github.com/aeternity/ae_mdw/commit/9d55c635d7097cf6b274a64b360e27bf8cfd323e))
+* **ci:** upgrade action ([00bed1d](https://github.com/aeternity/ae_mdw/commit/00bed1d391d9276471c8ccd9ee4282d89cdab2a8))
+* **deps:** bump brace-expansion from 1.1.11 to 1.1.14 in /node_sdk ([#2176](https://github.com/aeternity/ae_mdw/issues/2176)) ([50a466a](https://github.com/aeternity/ae_mdw/commit/50a466a8c259a333f7784fb7fbdc1bfd17e96a15))
+* **deps:** bump minimatch from 3.1.2 to 3.1.5 in /node_sdk ([#2175](https://github.com/aeternity/ae_mdw/issues/2175)) ([534d39c](https://github.com/aeternity/ae_mdw/commit/534d39c735a4a0d53e9287c6824012b38d93fc06))
+
 ## [1.105.0](https://github.com/aeternity/ae_mdw/compare/v1.104.6...v1.105.0) (2026-04-23)
 
 
