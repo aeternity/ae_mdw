@@ -59,6 +59,11 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 
 config :logger_json, :backend, json_encoder: Jason
 
+# Websocket
+config :ae_mdw, AeMdwWeb.Websocket.SocketHandler,
+  max_client_backlog: 2_000,
+  max_ping_limit: 1_000
+
 # API
 config :phoenix, :json_library, Jason
 
