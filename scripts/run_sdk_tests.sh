@@ -2,7 +2,7 @@
 
 set -xe
 
-export AETERNITY_CONFIG=/home/aeternity/aeternity-dev.yaml
+export AETERNITY_CONFIG=/home/aeternity/.aeternity/aeternity/aeternity-dev.yaml
 export IMAGE_NAME_SUFFIX=devmode
 
 docker compose -f docker-compose-dev.yml build --build-arg MIX_ENV=prod --build-arg DEV_MODE=true ae_mdw
