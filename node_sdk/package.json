@@ -10,7 +10,10 @@
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.19"
+  },
   "dependencies": {
-    "@aeternity/aepp-sdk": "^13.3.2"
+    "@aeternity/aepp-sdk": "^14.1.1"
   }
 }

@@ -1,4 +1,4 @@
-import { Node, MemoryAccount, AeSdk, CompilerHttp } from '@aeternity/aepp-sdk'
+import { Node, MemoryAccount, AeSdk, CompilerHttp, Contract, encode, Encoding } from '@aeternity/aepp-sdk'
 import fs from 'fs'
 
 const COMPILER_URL = 'https://v8.compiler.aepps.com'
@@ -43,14 +43,15 @@ const keypair = {
   'secretKey': '7fa7934d142c8c1c944e1585ec700f671cbc71fb035dc9e54ee4fb880edfe8d974f58feba752ae0426ecbee3a31414d8e6b3335d64ec416f3e574e106c7e5412'
 }
 const node = new Node('http://mdw.aeternity.localhost:3013/', { ignoreVersion: true });
-const account = new MemoryAccount(keypair.secretKey);
+const secretKey = encode(Buffer.from(keypair.secretKey, 'hex').subarray(0, 32), Encoding.AccountSecretKey);
+const account = new MemoryAccount(secretKey);
 const aeSdk = new AeSdk({
   nodes: [{ name: 'devnet', instance: node }],
   accounts: [account],
   onCompiler: new CompilerHttp(COMPILER_URL)
 });
-const factoryContract = await aeSdk.initializeContract({ sourceCode: factorySource });
-const cloneFactoryContract = await aeSdk.initializeContract({ sourceCode: cloneSource });
+const factoryContract = await Contract.initialize({ ...aeSdk.getContext(), sourceCode: factorySource });
+const cloneFactoryContract = await Contract.initialize({ ...aeSdk.getContext(), sourceCode: cloneSource });
 
 // Use client here..
 await emitKb()
