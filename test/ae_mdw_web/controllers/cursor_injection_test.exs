@@ -167,6 +167,40 @@ defmodule AeMdwWeb.CursorInjectionTest do
     end
   end
 
+  describe "miners — hex32 ETF cursor" do
+    test "random non-hex32 string returns 400", %{conn: conn} do
+      cursor = "!!!not-hex32!!!"
+
+      assert %{"error" => "invalid cursor: " <> _} =
+               conn
+               |> get("/v3/stats/miners", cursor: cursor)
+               |> json_response(400)
+    end
+
+    test "hex32 of random bytes returns 400", %{conn: conn} do
+      cursor = Base.hex_encode32("not_etf_data", padding: false)
+
+      assert %{"error" => "invalid cursor: " <> _} =
+               conn
+               |> get("/v3/stats/miners", cursor: cursor)
+               |> json_response(400)
+    end
+
+    test "ETF with novel atom is rejected and does not grow the atom table", %{conn: conn} do
+      unique = "ae_mdw_miners_inject_#{System.unique_integer([:positive])}"
+      refute atom_exists?(unique)
+
+      cursor = unique |> novel_atom_etf() |> Base.hex_encode32(padding: false)
+
+      assert %{"error" => "invalid cursor: " <> _} =
+               conn
+               |> get("/v3/stats/miners", cursor: cursor)
+               |> json_response(400)
+
+      refute atom_exists?(unique)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Tests: endpoints where an invalid cursor is silently ignored (no 400),
   # but the atom table must still not grow.
