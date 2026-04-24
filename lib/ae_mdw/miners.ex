@@ -30,7 +30,7 @@ defmodule AeMdw.Miners do
     end
   end
 
-  @spec fetch_miner!(state(), pubkey()) :: miner()
+  @spec fetch_miner!(state(), {non_neg_integer(), pubkey()}) :: miner()
   def fetch_miner!(state, {_total_reward, miner_pk}),
     do: render_miner(State.fetch!(state, Model.Miner, miner_pk))
 
@@ -61,11 +61,13 @@ defmodule AeMdw.Miners do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
          {total_reward, <<miner_pk::256>>}
          when is_integer(total_reward) <-
-           :erlang.binary_to_term(cursor_bin) do
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
       {:ok, {total_reward, <<miner_pk::256>>}}
     else
       _invalid_cursor ->
         {:error, ErrInput.Cursor.exception(value: cursor_hex)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
   end
 end
