@@ -551,7 +551,7 @@ defmodule AeMdw.Contract do
     height =
       case :aec_chain.get_block(block_hash) do
         {:ok, block} -> block |> :aec_blocks.to_header() |> :aec_headers.height()
-        _ -> nil
+        _error -> nil
       end
 
     do_contract_init_args(contract_pk, tx_rec, :aect_create_tx, height)
