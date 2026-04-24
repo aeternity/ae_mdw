@@ -183,7 +183,7 @@ defmodule AeMdw.Contract do
         {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
 
       {:error, :no_function_matching_function_hash} ->
-        Log.warning(
+        Log.warn(
           "decode_call_data FATE: no function matching hash=#{Base.encode16(fun_hash, case: :lower)}"
         )
 
@@ -205,7 +205,7 @@ defmodule AeMdw.Contract do
               {fun_name, aevm_val({arg_type, vm_args}, mapper)}
             else
               {:error, reason} ->
-                Log.warning(
+                Log.warn(
                   "decode_call_data AEVM: failed reason=#{inspect(reason)} function=#{fun_name} fun_hash=#{hash_hex}"
                 )
 
@@ -213,7 +213,7 @@ defmodule AeMdw.Contract do
             end
 
           {:error, reason} ->
-            Log.warning(
+            Log.warn(
               "decode_call_data AEVM: failed reason=#{inspect(reason)} fun_hash=#{hash_hex}"
             )
 
@@ -221,7 +221,7 @@ defmodule AeMdw.Contract do
         end
 
       {:error, reason} ->
-        Log.warning("decode_call_data AEVM: failed to extract hash reason=#{inspect(reason)}")
+        Log.warn("decode_call_data AEVM: failed to extract hash reason=#{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -547,8 +547,6 @@ defmodule AeMdw.Contract do
     end
   end
 
-  defp contract_init_args(contract_pk, tx_rec, mod_or_block_hash \\ :aect_create_tx)
-
   defp contract_init_args(contract_pk, tx_rec, block_hash) when is_binary(block_hash) do
     height =
       case :aec_chain.get_block(block_hash) do
@@ -570,14 +568,14 @@ defmodule AeMdw.Contract do
       args_type_value(args)
     else
       {:error, reason} ->
-        Log.warning(
+        Log.warn(
           "contract_init_args failed reason=#{inspect(reason)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)} (of ContractCreateTx)"
         )
 
         nil
 
       other ->
-        Log.warning(
+        Log.warn(
           "contract_init_args unexpected result=#{inspect(other)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)}"
         )
 
