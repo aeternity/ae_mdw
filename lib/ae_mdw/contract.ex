@@ -178,22 +178,52 @@ defmodule AeMdw.Contract do
   defp decode_call_data({:fcode, _funs, _syms, _annotations} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
 
-    # sample fun_hash not matching: <<74, 202, 20, 78, 108, 15, 83, 141, 70, 92, 69, 235, 191, 127, 43, 123, 21, 80, 189, 1, 86, 76, 125, 166, 246, 81, 67, 150, 69, 95, 156, 6>>
     case :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info) do
       {:ok, fun_name} ->
         {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
 
       {:error, :no_function_matching_function_hash} ->
+        Log.warning(
+          "decode_call_data FATE: no function matching hash=#{Base.encode16(fun_hash, case: :lower)}"
+        )
+
         {:error, :no_function_matching_function_hash}
     end
   end
 
   defp decode_call_data([_ | _] = aevm_info, call_data, mapper) do
-    {:ok, fun_hash} = :aeb_aevm_abi.get_function_hash_from_calldata(call_data)
-    {:ok, fun_name} = :aeb_aevm_abi.function_name_from_type_hash(fun_hash, aevm_info)
-    {:ok, arg_type, _type_rep} = :aeb_aevm_abi.typereps_from_type_hash(fun_hash, aevm_info)
-    {:ok, {_arg_type, vm_args}} = :aeb_heap.from_binary({:tuple, [:word, arg_type]}, call_data)
-    {fun_name, aevm_val({arg_type, vm_args}, mapper)}
+    case :aeb_aevm_abi.get_function_hash_from_calldata(call_data) do
+      {:ok, fun_hash} ->
+        hash_hex = Base.encode16(fun_hash, case: :lower)
+
+        case :aeb_aevm_abi.function_name_from_type_hash(fun_hash, aevm_info) do
+          {:ok, fun_name} ->
+            with {:ok, arg_type, _type_rep} <-
+                   :aeb_aevm_abi.typereps_from_type_hash(fun_hash, aevm_info),
+                 {:ok, {_arg_type, vm_args}} <-
+                   :aeb_heap.from_binary({:tuple, [:word, arg_type]}, call_data) do
+              {fun_name, aevm_val({arg_type, vm_args}, mapper)}
+            else
+              {:error, reason} ->
+                Log.warning(
+                  "decode_call_data AEVM: failed reason=#{inspect(reason)} function=#{fun_name} fun_hash=#{hash_hex}"
+                )
+
+                {:error, reason}
+            end
+
+          {:error, reason} ->
+            Log.warning(
+              "decode_call_data AEVM: failed reason=#{inspect(reason)} fun_hash=#{hash_hex}"
+            )
+
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        Log.warning("decode_call_data AEVM: failed to extract hash reason=#{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   defp decode_call_result({:fcode, _functions, _symbols, _annotations}, _fun_name, value, mapper),
@@ -297,7 +327,7 @@ defmodule AeMdw.Contract do
 
     call_details = %{
       "contract_id" => encode_contract(contract_pk),
-      "args" => contract_init_args(contract_pk, tx_rec),
+      "args" => contract_init_args(contract_pk, tx_rec, block_hash),
       "compiler_version" => compiler_vsn,
       "source_hash" => source_hash && Base.encode64(source_hash)
     }
@@ -517,13 +547,41 @@ defmodule AeMdw.Contract do
     end
   end
 
-  defp contract_init_args(contract_pk, tx_rec, mod \\ :aect_create_tx) do
+  defp contract_init_args(contract_pk, tx_rec, mod_or_block_hash \\ :aect_create_tx)
+
+  defp contract_init_args(contract_pk, tx_rec, block_hash) when is_binary(block_hash) do
+    height =
+      case :aec_chain.get_block(block_hash) do
+        {:ok, block} -> block |> :aec_blocks.to_header() |> :aec_headers.height()
+        _ -> nil
+      end
+
+    do_contract_init_args(contract_pk, tx_rec, :aect_create_tx, height)
+  end
+
+  defp contract_init_args(contract_pk, tx_rec, mod) when is_atom(mod) do
+    do_contract_init_args(contract_pk, tx_rec, mod, nil)
+  end
+
+  defp do_contract_init_args(contract_pk, tx_rec, mod, height) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- get_info(contract_pk),
          call_data <- mod.call_data(tx_rec),
          {"init", args} <- decode_call_data(type_info, call_data) do
       args_type_value(args)
     else
-      {:error, _reason} -> nil
+      {:error, reason} ->
+        Log.warning(
+          "contract_init_args failed reason=#{inspect(reason)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)} (of ContractCreateTx)"
+        )
+
+        nil
+
+      other ->
+        Log.warning(
+          "contract_init_args unexpected result=#{inspect(other)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)}"
+        )
+
+        nil
     end
   end
 
