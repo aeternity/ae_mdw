@@ -54,12 +54,6 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
   @dialyzer [
     # run/2 dispatches on a boolean guard that dialyzer can't fully see.
     {:no_match, run: 2},
-    # do_run/1 builds Model.total_stat via a runtime keyword list which dialyzer
-    # cannot type-check against the record macro, and it sees the local
-    # defrecord :total_stat (old schema) as conflicting with the model record.
-    {:no_return, do_run: 1},
-    {:no_fail_call, do_run: 1},
-    {:unmatched_returns, do_run: 1},
     # delta_stat_mutation/3 pattern-matches the old (pre-migration) record shape
     # which dialyzer considers impossible once the model is updated.
     {:no_match, delta_stat_mutation: 3}
@@ -162,12 +156,11 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
       Model.TotalStat
       |> RocksDbCF.stream()
       |> Enum.reduce({0, 0, []}, fn record, {count_acc, written, buf} ->
-        {index, fields} = total_stat_fields(record)
+        index = Model.total_stat(record, :index)
         delta_accounts = Map.get(delta_counts, index, 0)
         accounts_count = delta_accounts + count_acc
 
-        new_total_stat =
-          Model.total_stat([{:index, index}, {:accounts, accounts_count}] ++ fields)
+        new_total_stat = Model.total_stat(record, accounts: accounts_count)
 
         buf = [WriteMutation.new(Model.TotalStat, new_total_stat) | buf]
 
@@ -251,80 +244,6 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
 
       :not_found ->
         []
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # TotalStat field extractor — handles old and new schema
-  # ---------------------------------------------------------------------------
-
-  defp total_stat_fields(record) do
-    case record do
-      total_stat(
-        index: index,
-        block_reward: br,
-        dev_reward: dr,
-        total_supply: ts,
-        active_auctions: aa,
-        active_names: an,
-        inactive_names: inn,
-        active_oracles: ao,
-        inactive_oracles: ioo,
-        contracts: c,
-        locked_in_auctions: lia,
-        burned_in_auctions: bia,
-        locked_in_channels: lic,
-        open_channels: oc
-      ) ->
-        {index,
-         [
-           block_reward: br,
-           dev_reward: dr,
-           total_supply: ts,
-           active_auctions: aa,
-           active_names: an,
-           inactive_names: inn,
-           active_oracles: ao,
-           inactive_oracles: ioo,
-           contracts: c,
-           locked_in_auctions: lia,
-           burned_in_auctions: bia,
-           locked_in_channels: lic,
-           open_channels: oc
-         ]}
-
-      Model.total_stat(
-        index: index,
-        block_reward: br,
-        dev_reward: dr,
-        total_supply: ts,
-        active_auctions: aa,
-        active_names: an,
-        inactive_names: inn,
-        active_oracles: ao,
-        inactive_oracles: ioo,
-        contracts: c,
-        locked_in_auctions: lia,
-        burned_in_auctions: bia,
-        locked_in_channels: lic,
-        open_channels: oc
-      ) ->
-        {index,
-         [
-           block_reward: br,
-           dev_reward: dr,
-           total_supply: ts,
-           active_auctions: aa,
-           active_names: an,
-           inactive_names: inn,
-           active_oracles: ao,
-           inactive_oracles: ioo,
-           contracts: c,
-           locked_in_auctions: lia,
-           burned_in_auctions: bia,
-           locked_in_channels: lic,
-           open_channels: oc
-         ]}
     end
   end
 
