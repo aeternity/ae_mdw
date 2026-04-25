@@ -160,7 +160,15 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
         delta_accounts = Map.get(delta_counts, index, 0)
         accounts_count = delta_accounts + count_acc
 
-        new_total_stat = Model.total_stat(record, accounts: accounts_count)
+        # Records on disk may still be in the old 15-element format (no `accounts`
+        # field). Tuple.append adds `accounts` at position 16 (the last field).
+        # Already-migrated records have 16 elements and can be updated normally.
+        new_total_stat =
+          if tuple_size(record) == 15 do
+            Tuple.append(record, accounts_count)
+          else
+            Model.total_stat(record, accounts: accounts_count)
+          end
 
         buf = [WriteMutation.new(Model.TotalStat, new_total_stat) | buf]
 

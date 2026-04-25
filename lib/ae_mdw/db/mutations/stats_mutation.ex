@@ -130,7 +130,7 @@ defmodule AeMdw.Db.StatsMutation do
       |> State.get(Model.TotalStat, height)
       |> case do
         {:ok, total_stat} ->
-          total_stat
+          normalize_total_stat(total_stat)
 
         :not_found ->
           Model.total_stat(active_auctions: 0, active_names: 0, active_oracles: 0, contracts: 0)
@@ -252,8 +252,15 @@ defmodule AeMdw.Db.StatsMutation do
   end
 
   defp fetch_total_stat(state, height) do
-    State.fetch!(state, Model.TotalStat, height)
+    state
+    |> State.fetch!(Model.TotalStat, height)
+    |> normalize_total_stat()
   end
+
+  # Upgrades a pre-migration TotalStat record (15 elements, no `accounts` field)
+  # to the current schema by appending accounts=0 at position 16.
+  defp normalize_total_stat(record) when tuple_size(record) == 15, do: Tuple.append(record, 0)
+  defp normalize_total_stat(record), do: record
 
   defp height_int_amount(state, height, kind) do
     kind_str = "fee_#{kind}"
