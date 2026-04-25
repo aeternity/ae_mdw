@@ -66,6 +66,7 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
   ]
 
   @chunk_size 5_000
+  @progress_key {:ae_mdw, :migration_progress, :add_accounts_to_stats}
 
   # Crash safety: the migration runner wraps async tasks so the version record in
   # Model.Migrations is written only after the task lambda returns. A crash, OOM,
@@ -92,6 +93,8 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
   # ---------------------------------------------------------------------------
 
   defp do_run(state) do
+    set_progress(%{status: :running, phase: 1, processed: 0, total: nil})
+
     # Phase 1: scan Model.KeyBlockTime — pure RocksDB, no Mnesia calls.
     # Index is kb_time_msecs, so a forward scan is already time-ordered.
     # We need height-ordered pairs for Phase 3, so sort by height after.
@@ -103,6 +106,8 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
       end)
       |> Enum.sort_by(fn {height, _t} -> height end)
 
+    n_heights = length(sorted_height_times)
+
     # Build a tuple of {kb_time, height} for O(1) indexed binary search.
     times_tuple =
       sorted_height_times
@@ -110,6 +115,8 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
       |> List.to_tuple()
 
     n = tuple_size(times_tuple)
+
+    set_progress(%{status: :running, phase: 2, processed: 0, total: nil})
 
     # Phase 2: single forward scan of AccountCreation.
     # For each account, binary-search its creation_time into the heights list
@@ -125,6 +132,8 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
         end
       end)
 
+    set_progress(%{status: :running, phase: 3, processed: 0, total: n_heights})
+
     # Phase 3: write updated DeltaStat records in chunks.
     delta_count =
       sorted_height_times
@@ -137,8 +146,12 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
           end)
 
         _state = State.commit_db(state, mutations)
-        total + length(mutations)
+        new_total = total + length(mutations)
+        set_progress(%{status: :running, phase: 3, processed: new_total, total: n_heights})
+        new_total
       end)
+
+    set_progress(%{status: :running, phase: 4, processed: 0, total: n_heights})
 
     # Phase 4: sequential TotalStat accumulation.
     # Uses delta_counts directly so we don't depend on Phase 3 writes being
@@ -160,7 +173,9 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
 
         if length(buf) >= @chunk_size do
           _state = State.commit_db(state, buf)
-          {accounts_count, written + length(buf), []}
+          new_written = written + length(buf)
+          set_progress(%{status: :running, phase: 4, processed: new_written, total: n_heights})
+          {accounts_count, new_written, []}
         else
           {accounts_count, written, buf}
         end
@@ -170,7 +185,17 @@ defmodule AeMdw.Migrations.AddAccountsToStats do
         written + length(buf)
       end)
 
-    delta_count + total_stat_count
+    result = delta_count + total_stat_count
+    set_progress(%{status: :done, phase: 4, processed: result, total: result})
+    result
+  end
+
+  # ---------------------------------------------------------------------------
+  # Progress tracking
+  # ---------------------------------------------------------------------------
+
+  defp set_progress(info) do
+    :persistent_term.put(@progress_key, info)
   end
 
   # ---------------------------------------------------------------------------
