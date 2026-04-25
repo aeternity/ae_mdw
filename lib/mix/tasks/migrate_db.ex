@@ -8,7 +8,7 @@ defmodule Mix.Tasks.MigrateDb do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Log
-  alias AeMdw.Sync.SyncingQueue
+  alias AeMdw.Sync.Server
 
   require Model
 
@@ -87,22 +87,20 @@ defmodule Mix.Tasks.MigrateDb do
         Log.info("applied version #{version}")
 
       {:async, async_migrations} ->
-        # Wrap the last task so the version record is written only after the
-        # task actually completes. A crash before that point leaves the version
-        # unrecorded and the migration will re-run on next boot.
-        {prefix, [last_fn]} = Enum.split(async_migrations, length(async_migrations) - 1)
-
-        Enum.each(prefix, &SyncingQueue.push(&1))
-
-        SyncingQueue.push(fn ->
-          last_fn.()
-          write_migration_record(version)
-          Log.info("async applied version #{version}")
-        end)
+        # Run migration in a supervised task so syncing can proceed concurrently.
+        # The version record is written only after all tasks complete; a crash
+        # leaves the version unrecorded and the migration re-runs on next boot.
+        {:ok, _pid} =
+          Server.task_supervisor()
+          |> Task.Supervisor.start_child(fn ->
+            Enum.each(async_migrations, & &1.())
+            write_migration_record(version)
+            Log.info("async applied version #{version}")
+          end)
 
         count = length(async_migrations)
         duration = DateTime.diff(DateTime.utc_now(), begin)
-        Log.info("total #{count} async tasks queued in #{duration} seconds")
+        Log.info("total #{count} async tasks started in #{duration} seconds")
     end
 
     :ok

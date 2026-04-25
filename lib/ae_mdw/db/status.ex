@@ -19,7 +19,10 @@ defmodule AeMdw.Db.Status do
   @spec node_and_mdw_status(State.t()) :: map()
   def node_and_mdw_status(state) do
     node_status = node_status()
-    Map.merge(node_status, mdw_status(state, node_status.node_height))
+
+    node_status
+    |> Map.merge(mdw_status(state, node_status.node_height))
+    |> sort_map_deep()
   end
 
   @spec set_gens_per_min(gens_per_min()) :: :ok
@@ -74,6 +77,7 @@ defmodule AeMdw.Db.Status do
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
       mdw_async_tasks: async_tasks_counters,
+      mdw_pending_migrations: pending_migrations_progress(),
       mdw_synced: node_height == mdw_height,
       mdw_syncing: mdw_syncing?,
       mdw_gens_per_minute: round(gens_per_minute * 100) / 100
@@ -101,4 +105,31 @@ defmodule AeMdw.Db.Status do
   defp calculate_gens_per_min(prev_gens_per_min, gens_per_min),
     # exponential moving average
     do: (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
+
+  defp sort_map_deep(map) when is_map(map) do
+    map
+    |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+    |> Map.new(fn {k, v} -> {k, sort_map_deep(v)} end)
+  end
+
+  defp sort_map_deep(list) when is_list(list), do: Enum.map(list, &sort_map_deep/1)
+
+  defp sort_map_deep(val), do: val
+
+  # Known async migrations keyed by their progress persistent_term key.
+  @async_migration_progress_keys [
+    {:ae_mdw, :migration_progress, :add_accounts_to_stats}
+  ]
+
+  defp pending_migrations_progress do
+    @async_migration_progress_keys
+    |> Enum.flat_map(fn key ->
+      case :persistent_term.get(key, :none) do
+        :none -> []
+        %{status: :done} -> []
+        info -> [{key |> Tuple.to_list() |> List.last(), info}]
+      end
+    end)
+    |> Map.new()
+  end
 end
