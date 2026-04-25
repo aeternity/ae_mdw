@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.106.0](https://github.com/aeternity/ae_mdw/compare/v1.105.1...v1.106.0) (2026-04-25)
+
+
+### Features
+
+* enhance migration progress tracking and status reporting ([#2178](https://github.com/aeternity/ae_mdw/issues/2178)) ([9461fd1](https://github.com/aeternity/ae_mdw/commit/9461fd1a5a8e6d8cffc1cf862402feaf352920b6))
+
+
+### Miscellaneous
+
+* fix Log.warn and remove unused default arg in contract_init_args ([76ce139](https://github.com/aeternity/ae_mdw/commit/76ce1392c8a309185b26825a549f22c192368578))
+* fix Log.warn and remove unused default arg in contract_init_args ([0a2785f](https://github.com/aeternity/ae_mdw/commit/0a2785f6b5a6fcac4c19a43f3b9783349425adcf))
+* more info for invalid contract calls ([e370ddf](https://github.com/aeternity/ae_mdw/commit/e370ddff8302fc79a8b9ee0db7d6454ad9aafe3e))
+* server setup ([037fca1](https://github.com/aeternity/ae_mdw/commit/037fca1a5374c3c56f36876051d209e02720f5ad))
+
 ## [1.105.1](https://github.com/aeternity/ae_mdw/compare/v1.105.0...v1.105.1) (2026-04-24)
 
 
