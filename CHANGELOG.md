@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.106.2](https://github.com/aeternity/ae_mdw/compare/v1.106.1...v1.106.2) (2026-04-25)
+
+
+### Bug Fixes
+
+* fix migration ([cb56565](https://github.com/aeternity/ae_mdw/commit/cb56565813253c9269028e2d112a44973b150934))
+
 ## [1.106.1](https://github.com/aeternity/ae_mdw/compare/v1.106.0...v1.106.1) (2026-04-25)
 
 
