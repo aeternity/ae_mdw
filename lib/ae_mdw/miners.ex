@@ -30,11 +30,12 @@ defmodule AeMdw.Miners do
     end
   end
 
-  @spec fetch_miner!(state(), pubkey()) :: miner()
-  def fetch_miner!(state, miner_pk),
+  @spec fetch_miner!(state(), {non_neg_integer(), pubkey()}) :: miner()
+  def fetch_miner!(state, {_total_reward, miner_pk}),
     do: render_miner(State.fetch!(state, Model.Miner, miner_pk))
 
-  defp build_streamer(state, cursor), do: &Collection.stream(state, Model.Miner, &1, nil, cursor)
+  defp build_streamer(state, cursor),
+    do: &Collection.stream(state, Model.RewardMiner, &1, nil, cursor)
 
   defp render_miner(
          Model.miner(
@@ -48,14 +49,25 @@ defmodule AeMdw.Miners do
     }
   end
 
-  defp serialize_cursor(miner_pk), do: Enc.encode(:account_pubkey, miner_pk)
+  defp serialize_cursor({total_reward, miner_pk}) do
+    {total_reward, miner_pk}
+    |> :erlang.term_to_binary()
+    |> Base.hex_encode32(padding: false)
+  end
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 
-  defp deserialize_cursor(cursor_bin) do
-    case Enc.safe_decode(:account_pubkey, cursor_bin) do
-      {:ok, miner_pk} -> {:ok, miner_pk}
-      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+  defp deserialize_cursor(cursor_hex) do
+    with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
+         {total_reward, <<miner_pk::256>>}
+         when is_integer(total_reward) <-
+           :erlang.binary_to_term(cursor_bin, [:safe]) do
+      {:ok, {total_reward, <<miner_pk::256>>}}
+    else
+      _invalid_cursor ->
+        {:error, ErrInput.Cursor.exception(value: cursor_hex)}
     end
+  rescue
+    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
   end
 end
