@@ -92,7 +92,12 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   def make_single({:error, err}), do: {:error, format_err(err)}
 
   def format_err({reason, val}), do: Error.to_string(reason, val)
-  def format_err(_), do: "unrecognized_error"
+
+  def format_err(err) do
+    require Logger
+    Logger.error("unrecognized GraphQL resolver error: #{inspect(err)}")
+    "unrecognized_error"
+  end
 
   def cursor_val(nil), do: nil
   def cursor_val({val, _rev}), do: val

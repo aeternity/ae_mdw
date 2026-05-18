@@ -26,7 +26,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     micro_blocks_by_id(state, args, hash)
   end
 
-  def micro_blocks_by_id(state, args, id) do
+  defp micro_blocks_by_id(state, args, id) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor)

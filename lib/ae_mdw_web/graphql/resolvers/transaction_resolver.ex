@@ -45,7 +45,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
       |> Txs.fetch_pending_txs(pagination, nil, cursor)
       |> Helpers.make_page()
     rescue
-      _ -> {:error, "pending_transactions_error"}
+      err ->
+        require Logger
+        Logger.error("pending_transactions failed: #{Exception.message(err)}")
+        {:error, "pending_transactions_error"}
     end
   end
 
@@ -53,7 +56,10 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     try do
       {:ok, AeMdw.Node.Db.pending_txs_count()}
     rescue
-      _ -> {:error, "pending_transactions_count_error"}
+      err ->
+        require Logger
+        Logger.error("pending_transactions_count failed: #{Exception.message(err)}")
+        {:error, "pending_transactions_count_error"}
     end
   end
 

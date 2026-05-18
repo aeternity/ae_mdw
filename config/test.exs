@@ -1,5 +1,7 @@
 import Config
 
+config :ae_mdw, :env, :test
+
 # Sync
 config :ae_mdw,
   sync: false,
