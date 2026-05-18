@@ -114,6 +114,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
 
   def normalize_map(value), do: value
 
-  defp normalize_key(key) when is_binary(key), do: String.to_atom(key)
+  defp normalize_key(key) when is_binary(key) do
+    String.to_existing_atom(key)
+  rescue
+    ArgumentError -> key
+  end
+
   defp normalize_key(key), do: key
 end
