@@ -60,3 +60,6 @@ config :ae_mdw, AeMdwWeb.LogsView,
     "Offer" => %{1 => :contract_pubkey},
     "Trade" => %{2 => :contract_pubkey}
   }
+
+# Disable GraphQL response cache during tests to preserve test isolation.
+config :ae_mdw, :graphql_response_cache_ttl_ms, 0
