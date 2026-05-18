@@ -1,7 +1,5 @@
 import Config
 
-config :ae_mdw, :env, :dev
-
 # Telemetry
 config :ae_mdw, :enable_livedashboard, true
 

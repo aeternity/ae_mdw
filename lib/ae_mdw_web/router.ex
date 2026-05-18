@@ -49,12 +49,7 @@ defmodule AeMdwWeb.Router do
     pipe_through [:api, :graphql]
 
     forward "/graphql", Absinthe.Plug, schema: AeMdwWeb.GraphQL.Schema
-
-    if Mix.env() != :prod do
-      forward "/graphiql", Absinthe.Plug.GraphiQL,
-        schema: AeMdwWeb.GraphQL.Schema,
-        interface: :playground
-    end
+    forward "/graphiql", AeMdwWeb.Plugs.GraphiQLPlug
   end
 
   scope "/", AeMdwWeb do
