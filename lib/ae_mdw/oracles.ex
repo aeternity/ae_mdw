@@ -108,7 +108,7 @@ defmodule AeMdw.Oracles do
               {oracle_pk, "reward_oracle", {Util.max_int(), -1}, -1}
             }
 
-          first_gen..last_gen//_step ->
+          {:gen, first_gen..last_gen//_step} ->
             {
               {oracle_pk, "reward_oracle", {first_gen, Util.min_int()}, -1},
               {oracle_pk, "reward_oracle", {last_gen, Util.max_int()}, -1}

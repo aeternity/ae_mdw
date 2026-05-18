@@ -5,6 +5,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   @max_page_limit 100
   @default_page_limit 10
 
+  # Sentinel upper-bound generation: any gen beyond the chain tip maps correctly
+  # to the last known txi via DbUtil.gen_to_txi/2 (returns last_txi + 1 when the
+  # gen block does not exist yet).
+  @max_gen 999_999_999
+
   def build_query(args, keys) do
     Enum.reduce(keys, %{}, fn key, acc ->
       maybe_put(
@@ -32,10 +37,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = make_scope(from_height, to_height)
+    scope = make_scope(args)
     pagination = {direction, false, limit, not is_nil(cursor)}
 
     %{:pagination => pagination, :cursor => cursor, :scope => scope}
@@ -45,10 +47,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
     direction = Map.get(args, :direction, :backward)
-    from_height = Map.get(args, :from_height)
-    to_height = Map.get(args, :to_height)
-    # TODO: scoping does not work as expected
-    scope = make_scope(from_height, to_height)
+    scope = make_scope(args)
 
     %{direction: direction, limit: limit, cursor: cursor, scope: scope}
   end
@@ -68,14 +67,14 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     make_scope(from_height, to_height)
   end
 
-  # TODO: should nil be returned when only "to_height" is given?
-  defp make_scope(from_height, to_height) do
-    cond do
-      from_height && to_height -> {:gen, from_height..to_height}
-      from_height && is_nil(to_height) -> {:gen, from_height..from_height}
-      true -> nil
-    end
+  defp make_scope(from, to) when not is_nil(from) and not is_nil(to) do
+    # Always produce an ascending range; direction is controlled separately.
+    {:gen, min(from, to)..max(from, to)}
   end
+
+  defp make_scope(from, nil) when not is_nil(from), do: {:gen, from..@max_gen}
+  defp make_scope(nil, to) when not is_nil(to), do: {:gen, 0..to}
+  defp make_scope(nil, nil), do: nil
 
   def make_page({:ok, {prev, items, next}}) do
     {:ok,
