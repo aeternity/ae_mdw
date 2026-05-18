@@ -6,6 +6,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.AccountQueries do
   require Macros
 
   object :account_queries do
+    @desc "Fetch a single account by id"
+    field :account, :account do
+      arg(:id, non_null(:string))
+      resolve(&AeMdwWeb.GraphQL.Resolvers.AccountResolver.account/3)
+    end
+
     @desc "Account activities"
     field :account_activities, :account_activity_page do
       arg(:id, non_null(:string))

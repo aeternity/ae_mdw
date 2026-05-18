@@ -6,9 +6,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     %{direction: direction, limit: limit, cursor: cursor, scope: scope} =
       Helpers.pagination_args_all_with_scope(args)
 
-    Blocks.fetch_key_blocks(state, direction, scope, cursor, limit)
-    |> Helpers.make_page()
+    case Blocks.fetch_key_blocks(state, direction, scope, cursor, limit) do
+      {:ok, _} = ok -> Helpers.make_page(ok)
+      {:error, _} -> {:error, "key_blocks_error"}
+    end
   end
+
+  def key_blocks(_p, _args, _res), do: {:error, "partial_state_unavailable"}
 
   def key_block(_p, %{height: height}, %{context: %{state: state}}) do
     key_block_by_id(state, "#{height}")
@@ -18,6 +22,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     key_block_by_id(state, hash)
   end
 
+  def key_block(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+
+  def key_block_by_id(_p, %{id: id}, %{context: %{state: state}}) do
+    case Blocks.fetch_key_block(state, id) do
+      {:ok, _} = ok -> Helpers.make_single(ok)
+      {:error, _} -> {:error, "key_block_error"}
+    end
+  end
+
+  def key_block_by_id(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+
   def micro_blocks(_p, %{height: height} = args, %{context: %{state: state}}) do
     micro_blocks_by_id(state, args, "#{height}")
   end
@@ -26,16 +41,36 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
     micro_blocks_by_id(state, args, hash)
   end
 
+  def micro_blocks(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+
   defp micro_blocks_by_id(state, args, id) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
-    Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor)
-    |> Helpers.make_page()
+    case Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor) do
+      {:ok, _} = ok -> Helpers.make_page(ok)
+      {:error, _} -> {:error, "key_block_micro_blocks_error"}
+    end
   end
 
   def micro_block(_p, %{hash: hash}, %{context: %{state: state}}) do
-    Blocks.fetch_micro_block(state, hash) |> Helpers.make_single()
+    case Blocks.fetch_micro_block(state, hash) do
+      {:ok, _} = ok -> Helpers.make_single(ok)
+      {:error, _} -> {:error, "micro_block_error"}
+    end
   end
+
+  def micro_block(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+
+  def key_block_micro_blocks(_p, %{id: id} = args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+
+    case Blocks.fetch_key_block_micro_blocks(state, id, pagination, cursor) do
+      {:ok, _} = ok -> Helpers.make_page(ok)
+      {:error, _} -> {:error, "key_block_micro_blocks_error"}
+    end
+  end
+
+  def key_block_micro_blocks(_p, _args, _res), do: {:error, "partial_state_unavailable"}
 
   defp key_block_by_id(state, id) do
     Blocks.fetch_key_block(state, id) |> Helpers.make_single()

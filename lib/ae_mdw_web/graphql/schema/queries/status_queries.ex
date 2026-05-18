@@ -6,5 +6,10 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatusQueries do
     field :status, :status do
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatusResolver.status/3)
     end
+
+    @desc "Get sync status"
+    field :sync_status, :sync_status do
+      resolve(&AeMdwWeb.GraphQL.Resolvers.StatusResolver.sync_status/3)
+    end
   end
 end

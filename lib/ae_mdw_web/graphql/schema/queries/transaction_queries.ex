@@ -8,7 +8,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.TransactionQueries do
   object :transaction_queries do
     @desc "Get a single transaction"
     field :transaction, :transaction do
-      arg(:hash, non_null(:string))
+      arg(:hash, :string)
+      arg(:id, :string)
       resolve(&AeMdwWeb.GraphQL.Resolvers.TransactionResolver.transaction/3)
     end
 

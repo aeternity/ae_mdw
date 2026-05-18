@@ -17,6 +17,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
+  def search_names(_p, %{prefix: prefix} = args, %{context: %{state: state}}) do
+    %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+    query = %{"prefix" => prefix}
+    Names.fetch_names(state, pagination, nil, :name, query, cursor, [{:render_v3?, true}])
+    |> Helpers.make_page()
+  end
+
+  def search_names(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+
   def names_count(_p, args, %{context: %{state: state}}) do
     query = Helpers.build_query(args, [:owned_by])
     Names.count_names(state, query) |> Helpers.make_single()

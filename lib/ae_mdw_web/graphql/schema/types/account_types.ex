@@ -16,6 +16,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.AccountTypes do
     value(:swaps)
   end
 
+  object :account do
+    field(:id, :string)
+    field(:balance, :integer)
+    field(:creation_time, :integer)
+  end
+
   Macros.page(:account_activity)
 
   object :account_activity do

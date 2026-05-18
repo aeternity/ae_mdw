@@ -5,14 +5,22 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   alias AeMdw.Db.NodeStore
   alias AeMdw.Db.State
 
+  def transaction(parent, %{id: id} = args, ctx) do
+    transaction(parent, Map.merge(args, %{hash: id}) |> Map.delete(:id), ctx)
+  end
+
   def transaction(_p, %{hash: hash}, %{context: %{state: state}}) do
     with {:ok, tx_hash} <- Validate.id(hash) do
-      Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true)
-      |> Helpers.make_single()
+      case Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
+        {:ok, _} = ok -> Helpers.make_single(ok)
+        {:error, _} -> {:error, "transaction_error"}
+      end
     else
-      {:error, err} -> {:error, Helpers.format_err(err)}
+      {:error, _} -> {:error, "transaction_error"}
     end
   end
+
+  def transaction(_p, _args, _res), do: {:error, "partial_state_unavailable"}
 
   def transactions(_p, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
@@ -74,9 +82,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     query = %{}
     query = Helpers.maybe_put(query, :types, build_type_set(args))
 
-    Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true)
-    |> Helpers.make_page()
+    case Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
+      {:ok, _} = ok -> Helpers.make_page(ok)
+      {:error, _} -> {:error, "micro_block_transactions_error"}
+    end
   end
+
+  def micro_block_transactions(_p, _args, _res), do: {:error, "partial_state_unavailable"}
 
   def account_transactions_count(_p, %{id: id} = args, %{context: %{state: state}}) do
     with {:ok, pubkey} <- Validate.id(id) do

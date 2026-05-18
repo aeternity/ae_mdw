@@ -15,5 +15,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.TransactionTypes do
     field(:micro_time, :integer)
     field(:signatures, list_of(:string))
     field(:tx, :json)
+    field(:tx_index, :integer)
   end
 end

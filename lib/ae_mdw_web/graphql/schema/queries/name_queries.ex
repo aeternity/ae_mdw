@@ -22,6 +22,13 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.NameQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.names/3)
     end
 
+    @desc "Search names by prefix"
+    field :search_names, :name_page do
+      arg(:prefix, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.NameResolver.search_names/3)
+    end
+
     @desc "Count names"
     field :names_count, :integer do
       arg(:owned_by, :string)

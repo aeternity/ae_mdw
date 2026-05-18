@@ -27,6 +27,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
   object :name do
     field(:active, :boolean)
     field(:name, :string)
+    field(:type, :string)
     field(:hash, :string)
     field(:name_fee, :big_int)
     # TODO: make sure this is the right type

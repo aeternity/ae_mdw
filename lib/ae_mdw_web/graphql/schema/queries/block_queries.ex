@@ -43,5 +43,18 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.BlockQueries do
       arg(:hash, non_null(:string))
       resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.micro_block/3)
     end
+
+    @desc "Fetch a key block by height or hash (id)"
+    field :key_block, :key_block do
+      arg(:id, non_null(:string))
+      resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.key_block_by_id/3)
+    end
+
+    @desc "Fetch micro blocks of a key block by height or hash (id)"
+    field :key_block_micro_blocks, :micro_block_page do
+      arg(:id, non_null(:string))
+      Macros.pagination_args()
+      resolve(&AeMdwWeb.GraphQL.Resolvers.BlockResolver.key_block_micro_blocks/3)
+    end
   end
 end

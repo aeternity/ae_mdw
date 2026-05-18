@@ -16,5 +16,16 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.StatusTypes do
     field(:node_progress, :float)
     field(:node_revision, :string)
     field(:node_syncing, :boolean)
+    field(:partial, :boolean)
+    field(:last_synced_height, :integer)
+    field(:last_key_block_hash, :string)
+    field(:last_key_block_time, :integer)
+    field(:total_transactions, :integer)
+    field(:pending_transactions, :integer)
+  end
+
+  object :sync_status do
+    field(:last_synced_height, :integer)
+    field(:partial, :boolean)
   end
 end
