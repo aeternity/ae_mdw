@@ -43,6 +43,7 @@ defmodule AeMdw.Application do
     else
       Logger.info("[AeMdw] Skipping aecore/aesync services in test mode")
     end
+
     init(:tables)
     init(:formatters)
 

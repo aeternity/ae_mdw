@@ -48,8 +48,7 @@ defmodule AeMdwWeb.Router do
   scope "/" do
     pipe_through [:api, :graphql]
 
-    forward "/graphql", Absinthe.Plug,
-      schema: AeMdwWeb.GraphQL.Schema
+    forward "/graphql", Absinthe.Plug, schema: AeMdwWeb.GraphQL.Schema
 
     if Mix.env() != :prod do
       forward "/graphiql", Absinthe.Plug.GraphiQL,
@@ -193,7 +192,7 @@ defmodule AeMdwWeb.Router do
         assigns: %{filepath: "static/swagger/swagger_v3.json"}
     end
 
-  scope "/v2" do
+    scope "/v2" do
       # v2-only routes
       get "/blocks", BlockController, :blocks
       get "/blocks/:hash_or_kbi", BlockController, :block
@@ -292,7 +291,7 @@ defmodule AeMdwWeb.Router do
         assigns: %{filepath: "static/swagger/swagger_v2.json"}
     end
 
-  # v1-only routes
+    # v1-only routes
     get "/tx/:hash_or_index", TxController, :tx_v2
     get "/txs/:direction", TxController, :txs_v2
     get "/txs/:scope_type/:range", TxController, :txs_v2

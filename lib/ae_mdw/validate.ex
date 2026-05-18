@@ -141,8 +141,8 @@ defmodule AeMdw.Validate do
       [
         base,
         underscored,
-        (underscored |> String.replace_suffix("_tx", "")),
-        (base |> String.replace_suffix("Tx", "")) |> underscore()
+        underscored |> String.replace_suffix("_tx", ""),
+        base |> String.replace_suffix("Tx", "") |> underscore()
       ]
       |> Enum.reject(&(&1 in [nil, ""]))
       |> Enum.flat_map(fn cand ->
@@ -153,9 +153,11 @@ defmodule AeMdw.Validate do
       end)
       |> Enum.uniq()
 
-    Enum.reduce_while(candidates, {:error, ErrInput.TxType.exception(value: type)}, fn cand, _acc ->
+    Enum.reduce_while(candidates, {:error, ErrInput.TxType.exception(value: type)}, fn cand,
+                                                                                       _acc ->
       try do
         atom = String.to_existing_atom(cand)
+
         case tx_type(atom) do
           {:ok, _} = ok -> {:halt, ok}
           _ -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}

@@ -9,8 +9,13 @@ defmodule AeMdwWeb.GraphQL.AuctionsSearchTest do
 
   test "auctions list basic" do
     st = state()
+
     if st do
-      {:ok, res} = Absinthe.run("{ auctions(limit:1){ data { name auctionEnd } } }", @schema, context: %{state: st})
+      {:ok, res} =
+        Absinthe.run("{ auctions(limit:1){ data { name auctionEnd } } }", @schema,
+          context: %{state: st}
+        )
+
       _ = get_in(res, [:data, "auctions", "data"]) || []
       assert Map.get(res, :errors, []) == []
     else
@@ -20,8 +25,13 @@ defmodule AeMdwWeb.GraphQL.AuctionsSearchTest do
 
   test "search names basic" do
     st = state()
+
     if st do
-      {:ok, res} = Absinthe.run("{ searchNames(prefix:\"a\", limit:2){ data { type name } } }", @schema, context: %{state: st})
+      {:ok, res} =
+        Absinthe.run("{ searchNames(prefix:\"a\", limit:2){ data { type name } } }", @schema,
+          context: %{state: st}
+        )
+
       assert Map.get(res, :errors, []) == []
     else
       assert true

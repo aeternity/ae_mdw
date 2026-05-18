@@ -21,6 +21,7 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
   defp sample_kb_with_micro(state, last_gen, attempts \\ 50) do
     Enum.find(0..attempts, fn offset ->
       h = max(last_gen - offset, 0)
+
       case State.get(state, Model.Block, {h, 0}) do
         {:ok, _} -> true
         :not_found -> false
@@ -34,26 +35,44 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
 
   test "key_block_micro_blocks pagination + cursor" do
     state = ctx_state()
+
     if state do
-      last_gen = case Util.last_gen(state) do {:ok, g} -> g; :none -> 0 end
+      last_gen =
+        case Util.last_gen(state) do
+          {:ok, g} -> g
+          :none -> 0
+        end
+
       kb_height = sample_kb_with_micro(state, last_gen) || last_gen
 
       # First page
-      {:ok, res} = run("{ keyBlockMicroBlocks(id: \"#{kb_height}\", limit: 2){ data { hash height microBlockIndex: micro_block_index } nextCursor prevCursor } }", state)
+      {:ok, res} =
+        run(
+          "{ keyBlockMicroBlocks(id: \"#{kb_height}\", limit: 2){ data { hash height microBlockIndex: micro_block_index } nextCursor prevCursor } }",
+          state
+        )
+
       page = get_in(res, [:data, "keyBlockMicroBlocks"]) || %{}
       data1 = page["data"] || []
+
       if data1 == [] do
         assert true
       else
         assert length(data1) <= 2
         # Fetch second page if nextCursor exists
         nc = page["nextCursor"]
+
         if nc do
-          {:ok, res2} = run("{ keyBlockMicroBlocks(id: \"#{kb_height}\", limit:2, cursor: \"#{nc}\"){ data { microBlockIndex: micro_block_index } } }", state)
+          {:ok, res2} =
+            run(
+              "{ keyBlockMicroBlocks(id: \"#{kb_height}\", limit:2, cursor: \"#{nc}\"){ data { microBlockIndex: micro_block_index } } }",
+              state
+            )
+
           data2 = get_in(res2, [:data, "keyBlockMicroBlocks", "data"]) || []
           i1 = MapSet.new(Enum.map(data1, & &1["microBlockIndex"]))
           i2 = MapSet.new(Enum.map(data2, & &1["microBlockIndex"]))
-          if data2 != [], do: assert MapSet.disjoint?(i1, i2)
+          if data2 != [], do: assert(MapSet.disjoint?(i1, i2))
         end
       end
     else
@@ -63,7 +82,23 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
 
   test "key_block_micro_blocks invalid id" do
     state = ctx_state()
-    {:ok, res} = Absinthe.run("{ keyBlockMicroBlocks(id: \"999999999\"){ data { hash } } }", @schema, context: %{state: state})
-  if res[:errors], do: assert Enum.any?(res.errors, &(&1.message in ["key_block_not_found","partial_state_unavailable","key_block_micro_blocks_error"]))
+
+    {:ok, res} =
+      Absinthe.run("{ keyBlockMicroBlocks(id: \"999999999\"){ data { hash } } }", @schema,
+        context: %{state: state}
+      )
+
+    if res[:errors],
+      do:
+        assert(
+          Enum.any?(
+            res.errors,
+            &(&1.message in [
+                "key_block_not_found",
+                "partial_state_unavailable",
+                "key_block_micro_blocks_error"
+              ])
+          )
+        )
   end
 end

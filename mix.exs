@@ -136,7 +136,7 @@ defmodule AeMdw.MixProject do
         load: [],
         start_sync: []
       ],
-  extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -153,9 +153,9 @@ defmodule AeMdw.MixProject do
       {:logger_file_backend, "~> 0.0.11"},
       {:logger_json, "~> 5.0"},
       {:phoenix, "~> 1.7.18"},
-  # GraphQL
-  {:absinthe, "~> 1.7"},
-  {:absinthe_plug, "~> 1.5"},
+      # GraphQL
+      {:absinthe, "~> 1.7"},
+      {:absinthe_plug, "~> 1.5"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.0.0"},

@@ -16,7 +16,9 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
     post(conn, @graphql_path, %{"query" => query})
   end
 
-  test "sync_status + key_blocks via HTTP returns data or partial_state_unavailable", %{conn: conn} do
+  test "sync_status + key_blocks via HTTP returns data or partial_state_unavailable", %{
+    conn: conn
+  } do
     q = """
     { sync_status { last_synced_height partial } key_blocks(limit:5){ data { height hash miner } } }
     """
@@ -26,7 +28,8 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
     body = json_response(resp, 200)
 
     # sync_status should always be present when schema loaded
-    assert is_map(get_in(body, ["data", "sync_status"])) or is_list(body["errors"]) # tolerate early schema edge
+    # tolerate early schema edge
+    assert is_map(get_in(body, ["data", "sync_status"])) or is_list(body["errors"])
 
     key_blocks = get_in(body, ["data", "key_blocks", "data"]) || []
 
@@ -41,7 +44,10 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
     # If errors exist, they should be among known tokens
     if errs = body["errors"] do
       known = ["partial_state_unavailable", "key_blocks_error", "invalid_cursor"]
-      assert Enum.all?(errs, fn %{"message" => m} -> m in known or String.starts_with?(m, "Cannot return null") end)
+
+      assert Enum.all?(errs, fn %{"message" => m} ->
+               m in known or String.starts_with?(m, "Cannot return null")
+             end)
     end
   end
 
@@ -70,6 +76,7 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
     assert resp.status == 200
     body = json_response(resp, 200)
     entries = get_in(body, ["data", "key_blocks", "data"]) || []
+
     if entries != [] do
       refute Enum.any?(entries, &is_nil/1)
       Enum.each(entries, fn kb -> assert is_integer(kb["height"] || kb[:height]) end)
@@ -85,9 +92,13 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
     assert resp.status == 200
     body = json_response(resp, 200)
     entries = get_in(body, ["data", "key_blocks", "data"]) || []
+
     if entries != [] do
       refute Enum.any?(entries, &is_nil/1)
-      assert Enum.all?(entries, fn e -> is_integer(e["height"] || e[:height]) and is_binary(e["hash"] || e[:hash]) end)
+
+      assert Enum.all?(entries, fn e ->
+               is_integer(e["height"] || e[:height]) and is_binary(e["hash"] || e[:hash])
+             end)
     end
   end
 end

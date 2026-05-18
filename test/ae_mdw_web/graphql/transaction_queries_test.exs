@@ -32,17 +32,24 @@ defmodule AeMdwWeb.GraphQL.TransactionQueriesTest do
       assert length(page["data"]) <= 5
       # Basic shape assertions
       Enum.each(page["data"], fn tx ->
-        assert is_binary(tx["hash"]) or is_nil(tx["hash"]) # some early tx might be nil if partial
+        # some early tx might be nil if partial
+        assert is_binary(tx["hash"]) or is_nil(tx["hash"])
       end)
     end
   end
 
   test "transaction fetch by invalid id errors" do
-  {:ok, res} = run("{ transaction(id: \"not_a_hash\") { hash } }")
-  # Absinthe may return errors with atom keys; normalize
-  errors = res[:errors] || []
-  [first | _] = errors
-  msg = Map.get(first, "message") || Map.get(first, :message)
-  assert msg in ["transaction_not_found", "invalid_transaction_id", "transaction_error", "partial_state_unavailable"]
+    {:ok, res} = run("{ transaction(id: \"not_a_hash\") { hash } }")
+    # Absinthe may return errors with atom keys; normalize
+    errors = res[:errors] || []
+    [first | _] = errors
+    msg = Map.get(first, "message") || Map.get(first, :message)
+
+    assert msg in [
+             "transaction_not_found",
+             "invalid_transaction_id",
+             "transaction_error",
+             "partial_state_unavailable"
+           ]
   end
 end
