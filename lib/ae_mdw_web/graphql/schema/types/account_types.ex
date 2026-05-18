@@ -18,7 +18,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.AccountTypes do
 
   object :account do
     field(:id, :string)
-    field(:balance, :integer)
+    field(:balance, :big_int)
     field(:creation_time, :integer)
   end
 

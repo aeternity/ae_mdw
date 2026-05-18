@@ -27,8 +27,8 @@ defmodule AeMdwWeb.GraphQL.AccountsEnrichmentTest do
 
         acct = get_in(acct_res, [:data, "account"]) || %{}
         assert acct["id"] == id
-        # BigInt may appear as integer
-        assert is_integer(acct["balance"]) || is_nil(acct["balance"]) || is_float(acct["balance"])
+        # BigInt is serialized as string
+        assert is_binary(acct["balance"]) || is_nil(acct["balance"])
       else
         assert true
       end

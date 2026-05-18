@@ -6,7 +6,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
     value(:backward)
   end
 
-  # TODO: big_int shouldn't be rendered as a floating point
+  # BigInt values are serialized as JSON strings to avoid precision loss for
+  # values that exceed JavaScript's Number.MAX_SAFE_INTEGER.
   scalar :big_int, name: "BigInt" do
     parse(fn
       %Absinthe.Blueprint.Input.Integer{value: v} ->
@@ -24,11 +25,11 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
 
     serialize(fn
       v when is_integer(v) ->
-        v
+        Integer.to_string(v)
 
       v when is_binary(v) ->
         case Integer.parse(v) do
-          {int, ""} -> int
+          {_int, ""} -> v
           _ -> raise Absinthe.SerializationError, "Invalid BigInt binary"
         end
 

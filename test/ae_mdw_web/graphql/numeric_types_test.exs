@@ -46,24 +46,21 @@ defmodule AeMdwWeb.GraphQL.NumericTypesTest do
       kb = get_in(kb_res, [:data, "keyBlocks", "data"]) || []
 
       Enum.each(kb, fn b ->
-        for k <- [
-              "height",
-              "time",
-              "micro_blocks_count",
-              "transactions_count",
-              "beneficiary_reward"
-            ] do
+        for k <- ["height", "time", "micro_blocks_count", "transactions_count"] do
           if b[k], do: assert(is_integer(b[k]))
         end
+
+        # beneficiary_reward is BigInt -> serialized as string
+        if b["beneficiary_reward"], do: assert(is_binary(b["beneficiary_reward"]))
       end)
 
-      # accounts sample (balance is BigInt -> integer)
+      # accounts sample (balance is BigInt -> string)
       {:ok, acc_res} = run("{ accounts(limit:1){ data { id balance creation_time } } }", st)
       accs = get_in(acc_res, [:data, "accounts", "data"]) || []
 
       Enum.each(accs, fn a ->
         if a["creation_time"], do: assert(is_integer(a["creation_time"]))
-        if a["balance"], do: assert(is_integer(a["balance"]))
+        if a["balance"], do: assert(is_binary(a["balance"]))
       end)
 
       # transactions sample

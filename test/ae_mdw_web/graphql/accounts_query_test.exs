@@ -38,7 +38,7 @@ defmodule AeMdwWeb.GraphQL.AccountsQueryTest do
 
         data = get_in(res, [:data, "account"]) || %{}
         assert data["id"] == acc
-        assert is_integer(data["balance"]) and data["balance"] == balance
+        assert is_binary(data["balance"]) and data["balance"] == Integer.to_string(balance)
       else
         assert true
       end
