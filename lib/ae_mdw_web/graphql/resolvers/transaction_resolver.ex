@@ -5,24 +5,29 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   alias AeMdw.Db.NodeStore
   alias AeMdw.Db.State
 
+  @spec transaction(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
   def transaction(parent, %{id: id} = args, ctx) do
     transaction(parent, Map.merge(args, %{hash: id}) |> Map.delete(:id), ctx)
   end
 
-  def transaction(_p, %{hash: hash}, %{context: %{state: state}}) do
-    with {:ok, tx_hash} <- Validate.id(hash) do
-      case Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
-        {:ok, _} = ok -> Helpers.make_single(ok)
-        {:error, _} -> {:error, "transaction_error"}
-      end
-    else
-      {:error, _} -> {:error, "transaction_error"}
+  def transaction(_parent, %{hash: hash}, %{context: %{state: state}}) do
+    case Validate.id(hash) do
+      {:ok, tx_hash} ->
+        case Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
+          {:ok, _} = ok -> Helpers.make_single(ok)
+          {:error, _} -> {:error, "transaction_error"}
+        end
+
+      {:error, _} ->
+        {:error, "transaction_error"}
     end
   end
 
-  def transaction(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+  def transaction(_parent, _args, _resolution), do: {:error, "partial_state_unavailable"}
 
-  def transactions(_p, args, %{context: %{state: state}}) do
+  @spec transactions(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def transactions(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -44,7 +49,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     Txs.fetch_txs(state, pagination, scope, query, cursor, opts) |> Helpers.make_page()
   end
 
-  def pending_transactions(_p, args, _res) do
+  @spec pending_transactions(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def pending_transactions(_parent, args, _resolution) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     try do
@@ -60,7 +67,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     end
   end
 
-  def pending_transactions_count(_p, _args, _res) do
+  @spec pending_transactions_count(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def pending_transactions_count(_parent, _args, _resolution) do
     try do
       {:ok, AeMdw.Node.Db.pending_txs_count()}
     rescue
@@ -71,13 +80,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     end
   end
 
-  def transactions_count(_p, args, %{context: %{state: state}}) do
+  @spec transactions_count(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def transactions_count(_parent, args, %{context: %{state: state}}) do
     scope = Helpers.make_scope(args)
     query = Helpers.build_query(args, [:id, :type, :type_group])
     Txs.count(state, scope, query) |> Helpers.make_single()
   end
 
-  def micro_block_transactions(_p, %{hash: hash} = args, %{context: %{state: state}}) do
+  @spec micro_block_transactions(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def micro_block_transactions(_parent, %{hash: hash} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = %{}
     query = Helpers.maybe_put(query, :types, build_type_set(args))
@@ -88,29 +101,34 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     end
   end
 
-  def micro_block_transactions(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+  def micro_block_transactions(_parent, _args, _resolution),
+    do: {:error, "partial_state_unavailable"}
 
-  def account_transactions_count(_p, %{id: id} = args, %{context: %{state: state}}) do
-    with {:ok, pubkey} <- Validate.id(id) do
-      result =
-        cond do
-          Map.has_key?(args, :type_group) ->
-            with {:ok, tx_type_group} <- Validate.tx_group(args.type_group) do
-              {:ok, Txs.count_id_type_group(state, pubkey, tx_type_group)}
-            end
+  @spec account_transactions_count(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def account_transactions_count(_parent, %{id: id} = args, %{context: %{state: state}}) do
+    case Validate.id(id) do
+      {:ok, pubkey} ->
+        result =
+          cond do
+            Map.has_key?(args, :type_group) ->
+              with {:ok, tx_type_group} <- Validate.tx_group(args.type_group) do
+                {:ok, Txs.count_id_type_group(state, pubkey, tx_type_group)}
+              end
 
-          Map.has_key?(args, :type) ->
-            with {:ok, tx_type} <- Validate.tx_type(args.type) do
-              {:ok, Txs.count_id_type(state, pubkey, tx_type)}
-            end
+            Map.has_key?(args, :type) ->
+              with {:ok, tx_type} <- Validate.tx_type(args.type) do
+                {:ok, Txs.count_id_type(state, pubkey, tx_type)}
+              end
 
-          true ->
-            {:ok, Txs.id_counts(state, pubkey)}
-        end
+            true ->
+              {:ok, Txs.id_counts(state, pubkey)}
+          end
 
-      result |> Helpers.make_single()
-    else
-      {:error, err} -> {:error, Helpers.format_err(err)}
+        result |> Helpers.make_single()
+
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
     end
   end
 

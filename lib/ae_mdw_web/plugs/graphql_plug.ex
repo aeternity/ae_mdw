@@ -96,23 +96,19 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
 
   defp maybe_register_cache_write(conn, cache_key) do
     Plug.Conn.register_before_send(conn, fn conn ->
-      if conn.status == 200 and not graphql_error_response?(conn.resp_body) do
+      # GraphQL always returns HTTP 200, even for errors — the actual error
+      # information lives in the top-level "errors" key. We must not cache error
+      # responses, or a transient error (e.g. account-not-found) would block
+      # correct responses for the full TTL.
+      with 200 <- conn.status,
+           {:ok, body} <- Jason.decode(conn.resp_body),
+           false <- match?(%{"errors" => [_ | _]}, body) do
         GraphQLResponseCache.store(cache_key, conn.resp_body)
       end
 
       conn
     end)
   end
-
-  # GraphQL always returns HTTP 200, even for errors — the actual error
-  # information lives in the top-level "errors" key. We must not cache error
-  # responses, or a transient error (e.g. account-not-found) would block
-  # correct responses for the full TTL.
-  defp graphql_error_response?(body) when is_binary(body) do
-    match?({:ok, %{"errors" => [_ | _]}}, Jason.decode(body))
-  end
-
-  defp graphql_error_response?(_body), do: false
 
   defp runtime_opts do
     Map.put(

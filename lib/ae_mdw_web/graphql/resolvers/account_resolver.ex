@@ -6,23 +6,27 @@ defmodule AeMdwWeb.GraphQL.Resolvers.AccountResolver do
 
   require Model
 
-  def account(_p, %{id: id}, %{context: %{state: state}}) do
-    with {:ok, pubkey} <- Validate.id(id) do
-      case State.get(state, Model.AccountBalance, pubkey) do
-        {:ok, Model.account_balance(balance: balance)} ->
-          {:ok, %{id: id, balance: balance, creation_time: nil}}
+  @spec account(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def account(_parent, %{id: id}, %{context: %{state: state}}) do
+    case Validate.id(id) do
+      {:ok, pubkey} ->
+        case State.get(state, Model.AccountBalance, pubkey) do
+          {:ok, Model.account_balance(balance: balance)} ->
+            {:ok, %{id: id, balance: balance, creation_time: nil}}
 
-        :not_found ->
-          {:error, "account_not_found"}
-      end
-    else
-      {:error, _} -> {:error, "account_not_found"}
+          :not_found ->
+            {:error, "account_not_found"}
+        end
+
+      {:error, _} ->
+        {:error, "account_not_found"}
     end
   end
 
-  def account(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+  def account(_parent, _args, _resolution), do: {:error, "partial_state_unavailable"}
 
-  def activities(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec activities(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def activities(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 

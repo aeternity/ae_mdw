@@ -3,7 +3,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def channels(_p, args, %{context: %{state: state}}) do
+  @spec channels(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def channels(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -13,16 +14,20 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ChannelResolver do
     |> Helpers.make_page()
   end
 
-  def channel(_p, %{id: id}, %{context: %{state: state}}) do
-    with {:ok, channel_pk} <- Validate.id(id, [:channel]) do
-      Channels.fetch_channel(state, channel_pk, nil) |> Helpers.make_single()
-    else
+  @spec channel(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def channel(_parent, %{id: id}, %{context: %{state: state}}) do
+    case Validate.id(id, [:channel]) do
+      {:ok, channel_pk} ->
+        Channels.fetch_channel(state, channel_pk, nil) |> Helpers.make_single()
+
       {:error, err} ->
         {:error, Helpers.format_err(err)}
     end
   end
 
-  def channel_updates(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec channel_updates(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def channel_updates(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 

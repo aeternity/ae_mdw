@@ -2,7 +2,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransferResolver do
   alias AeMdw.Transfers
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def transfers(_p, args, %{context: %{state: state}}) do
+  @spec transfers(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def transfers(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 

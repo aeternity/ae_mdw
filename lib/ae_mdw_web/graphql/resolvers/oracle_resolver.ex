@@ -3,15 +3,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
   alias AeMdw.Db.State
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def oracle(_p, %{id: id}, %{context: %{state: %State{} = state}}) do
-    with {:ok, pk} <- AeMdw.Validate.id(id, [:oracle_pubkey]) do
-      Oracles.fetch(state, pk, v3?: true) |> Helpers.make_single()
-    else
+  @spec oracle(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def oracle(_parent, %{id: id}, %{context: %{state: %State{} = state}}) do
+    case AeMdw.Validate.id(id, [:oracle_pubkey]) do
+      {:ok, pk} -> Oracles.fetch(state, pk, v3?: true) |> Helpers.make_single()
       {:error, err} -> {:error, Helpers.format_err(err)}
     end
   end
 
-  def oracles(_p, args, %{context: %{state: %State{} = state}}) do
+  @spec oracles(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def oracles(_parent, args, %{context: %{state: %State{} = state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -21,7 +22,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     |> Helpers.make_page()
   end
 
-  def oracle_queries(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec oracle_queries(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def oracle_queries(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -29,7 +32,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     |> Helpers.make_page()
   end
 
-  def oracle_responses(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec oracle_responses(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def oracle_responses(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -37,7 +42,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.OracleResolver do
     |> Helpers.make_page()
   end
 
-  def oracle_extends(_p, %{id: id} = args, %{context: %{state: %State{} = state}}) do
+  @spec oracle_extends(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def oracle_extends(_parent, %{id: id} = args, %{context: %{state: %State{} = state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     Oracles.fetch_oracle_extends(state, id, pagination, cursor)

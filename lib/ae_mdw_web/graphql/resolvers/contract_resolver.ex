@@ -2,11 +2,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
   alias AeMdw.Contracts
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def contract(_p, %{id: id}, %{context: %{state: state}}) do
+  @spec contract(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def contract(_parent, %{id: id}, %{context: %{state: state}}) do
     Contracts.fetch_contract(state, id) |> Helpers.make_single()
   end
 
-  def contracts(_p, args, %{context: %{state: state}}) do
+  @spec contracts(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def contracts(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -14,7 +16,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     |> Helpers.make_page()
   end
 
-  def logs(_p, args, %{context: %{state: state}}) do
+  @spec logs(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def logs(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -32,7 +35,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     |> Helpers.make_page()
   end
 
-  def calls(_p, args, %{context: %{state: state}}) do
+  @spec calls(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def calls(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -42,7 +46,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     |> Helpers.make_page()
   end
 
-  def contract_logs(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec contract_logs(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def contract_logs(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -60,7 +66,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     |> Helpers.make_page()
   end
 
-  def contract_calls(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec contract_calls(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def contract_calls(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 

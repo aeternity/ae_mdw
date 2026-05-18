@@ -3,11 +3,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
-  def name(_p, %{id: id}, %{context: %{state: state}}) do
+  @spec name(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def name(_parent, %{id: id}, %{context: %{state: state}}) do
     Names.fetch_name(state, id, [{:render_v3?, true}]) |> Helpers.make_single()
   end
 
-  def names(_p, args, %{context: %{state: state}}) do
+  @spec names(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def names(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by, :expiration)
 
@@ -17,7 +19,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def search_names(_p, %{prefix: prefix} = args, %{context: %{state: state}}) do
+  @spec search_names(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def search_names(_parent, %{prefix: prefix} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = %{"prefix" => prefix}
 
@@ -25,14 +29,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def search_names(_p, _args, _res), do: {:error, "partial_state_unavailable"}
+  def search_names(_parent, _args, _resolution), do: {:error, "partial_state_unavailable"}
 
-  def names_count(_p, args, %{context: %{state: state}}) do
+  @spec names_count(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def names_count(_parent, args, %{context: %{state: state}}) do
     query = Helpers.build_query(args, [:owned_by])
     Names.count_names(state, query) |> Helpers.make_single()
   end
 
-  def name_claims(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec name_claims(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def name_claims(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -40,7 +46,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def name_updates(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec name_updates(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def name_updates(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -48,7 +56,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def name_transfers(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec name_transfers(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def name_transfers(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -56,18 +66,22 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def name_history(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec name_history(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def name_history(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     Names.fetch_name_history(state, pagination, id, cursor)
     |> Helpers.make_page()
   end
 
-  def auction(_p, %{id: id}, %{context: %{state: state}}) do
+  @spec auction(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def auction(_parent, %{id: id}, %{context: %{state: state}}) do
     AeMdw.AuctionBids.fetch_auction(state, id, [{:render_v3?, true}]) |> Helpers.make_single()
   end
 
-  def auctions(_p, args, %{context: %{state: state}}) do
+  @spec auctions(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
+  def auctions(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     order_by = Map.get(args, :order_by, :expiration)
 
@@ -75,19 +89,27 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def auction_claims(_p, %{id: id} = args, %{context: %{state: state}}) do
+  @spec auction_claims(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def auction_claims(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    with {:ok, plain_name} <- Validate.plain_name(state, id) do
-      Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
-      |> Helpers.make_page()
-    else
-      {:error, err} -> {:error, Helpers.format_err(err)}
+    case Validate.plain_name(state, id) do
+      {:ok, plain_name} ->
+        Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
+        |> Helpers.make_page()
+
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
     end
   end
 
-  def account_name_claims(_p, %{account_id: account_id} = args, %{context: %{state: state}}) do
+  @spec account_name_claims(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def account_name_claims(_parent, %{account_id: account_id} = args, %{
+        context: %{state: state}
+      }) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
@@ -95,7 +117,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
     |> Helpers.make_page()
   end
 
-  def account_name_pointees(_p, %{account_id: account_id} = args, %{context: %{state: state}}) do
+  @spec account_name_pointees(any(), map(), Absinthe.Resolution.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def account_name_pointees(_parent, %{account_id: account_id} = args, %{
+        context: %{state: state}
+      }) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
