@@ -64,7 +64,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.OracleTypes do
 
   Macros.page(:oracle_extend)
 
-  # TODO: make sure that this type is not missing any fields
   object :oracle_extend do
     field(:height, :integer)
     field(:block_hash, :string)

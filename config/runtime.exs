@@ -2,8 +2,7 @@ import Config
 
 env = config_env()
 
-config :ae_mdw, :graphiql_enabled,
-  System.get_env("GRAPHIQL_ENABLED", "false") in ["true", "1"]
+config :ae_mdw, :graphiql_enabled, System.get_env("GRAPHIQL_ENABLED", "false") in ["true", "1"]
 
 # Maximum query complexity score before Absinthe rejects the request.
 # Without per-field complexity annotations the default scoring is 1 per
@@ -11,15 +10,17 @@ config :ae_mdw, :graphiql_enabled,
 # `complexity/2` function (multiplying limit × child_complexity) to get
 # meaningful enforcement. Default 1_000 blocks pathologically wide queries
 # while leaving typical exploratory queries well under the limit.
-config :ae_mdw, :graphql_max_complexity,
-  String.to_integer(System.get_env("GRAPHQL_MAX_COMPLEXITY", "1000"))
+config :ae_mdw,
+       :graphql_max_complexity,
+       String.to_integer(System.get_env("GRAPHQL_MAX_COMPLEXITY", "1000"))
 
 # GraphQL response cache TTL in milliseconds. Successful query responses are
 # cached in ETS for this duration. Lower values return fresher data at the
 # cost of more DB load. Set to "0" to disable caching (lookup will always
 # miss; entries are never stored when TTL is 0).
-config :ae_mdw, :graphql_response_cache_ttl_ms,
-  String.to_integer(System.get_env("GRAPHQL_RESPONSE_CACHE_TTL_MS", "5000"))
+config :ae_mdw,
+       :graphql_response_cache_ttl_ms,
+       String.to_integer(System.get_env("GRAPHQL_RESPONSE_CACHE_TTL_MS", "5000"))
 
 config :ae_mdw, :wealth_rank_size, String.to_integer(System.get_env("WEALTH_RANK_SIZE", "200"))
 

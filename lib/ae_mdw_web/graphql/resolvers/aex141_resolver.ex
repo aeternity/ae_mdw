@@ -38,7 +38,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = Helpers.build_query(args, [:from, :to])
 
-    # TODO: can this be refactored using Helpers.make_page/1 ?
+    # Custom mapping with state is required (pair_transfer_to_map/2 takes state
+    # as first arg), so Helpers.make_page/1 cannot be used directly here.
     case AexnTransfers.fetch_aex141_transfers(state, pagination, cursor, query) do
       {:ok, {prev, items, next}} ->
         {:ok,

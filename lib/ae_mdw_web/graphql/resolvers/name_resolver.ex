@@ -20,6 +20,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
   def search_names(_p, %{prefix: prefix} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = %{"prefix" => prefix}
+
     Names.fetch_names(state, pagination, nil, :name, query, cursor, [{:render_v3?, true}])
     |> Helpers.make_page()
   end

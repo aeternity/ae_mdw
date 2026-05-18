@@ -10,7 +10,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex9Types do
     value(:symbol, description: "Sort by symbol")
   end
 
-  # TODO: make sure these are all the possible values for this enum
   enum :aex9_balance_order_by do
     value(:pubkey)
     value(:amount)
@@ -26,9 +25,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex9Types do
     field(:symbol, :string)
     field(:contract_id, :string)
     field(:contract_tx_hash, :string)
-    # TODO: make sure this is the right type
     field(:invalid_description, :string)
-    # TODO: make sure this is the right type
     field(:invalid_reason, :string)
     field(:event_supply, :big_int)
     field(:holders, :integer)

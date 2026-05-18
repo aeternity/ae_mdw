@@ -4,7 +4,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros
   require Macros
 
-  # TODO: duplicated enum in aex9_types.ex
+  # aex9_contract_order_by has the same values; kept separate so each query
+  # field has its own named input type in the GraphQL schema.
   enum :aex141_contract_order_by do
     value(:creation, description: "Sort by creation time")
     value(:name, description: "Sort by name")
@@ -24,11 +25,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
     field(:nft_owners, :integer)
     field(:nfts_amount, :integer)
     field(:contract_tx_hash, :string)
-    # TODO: make sure this has the right type
     field(:invalid_reason, :string)
-    # TODO: make sure this has the right type
     field(:invalid_description, :string)
-    # TODO: make sure this has the right type
     field(:base_url, :string)
     field(:limits, :json)
     field(:metadata_type, :string)
@@ -66,7 +64,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
 
   Macros.page(:aex141_template)
 
-  # TODO: make sure the fields and their types are right
   object :aex141_template do
     field(:contract_id, :string)
     field(:template_id, :integer)
@@ -77,7 +74,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.Aex141Types do
 
   Macros.page(:aex141_template_token)
 
-  # TODO: make sure the fields and their types are right
   object :aex141_template_token do
     field(:edition, :string)
     field(:token_id, :integer)

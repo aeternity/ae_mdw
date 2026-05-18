@@ -30,15 +30,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
     field(:type, :string)
     field(:hash, :string)
     field(:name_fee, :big_int)
-    # TODO: make sure this is the right type
     field(:pointers, list_of(:json))
-    # TODO: make sure this is the right type
-    field(:revoke, :string)
+    field(:revoke, :json)
     field(:expire_height, :integer)
     field(:claims_count, :integer)
     field(:auction_timeout, :integer)
-    # TODO: make sure this is the right type
-    field(:auction, :string)
+    field(:auction, :json)
     field(:active_from, :integer)
     field(:approximate_expire_time, :integer)
     field(:ownership, :json)
@@ -59,7 +56,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
 
   Macros.page(:name_update)
 
-  # TODO: verify fields and types
+  # name_update, name_transfer, name_history share the same render shape
+  # from Names.render_nested_resource/2
   object :name_update do
     field(:height, :integer)
     field(:block_hash, :string)
@@ -72,7 +70,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
 
   Macros.page(:name_transfer)
 
-  # TODO: verify fields and types
   object :name_transfer do
     field(:height, :integer)
     field(:block_hash, :string)
@@ -85,7 +82,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.NameTypes do
 
   Macros.page(:name_history)
 
-  # TODO: verify fields and types
   object :name_history do
     field(:height, :integer)
     field(:block_hash, :string)

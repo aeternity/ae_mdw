@@ -33,12 +33,8 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
 
     key_blocks = get_in(body, ["data", "key_blocks", "data"]) || []
 
-    # NOTE: Currently resolver may still yield null entries due to non-null field failure before filtering.
-    # We log presence but don't fail test; TODO: tighten once resolver fixed.
     if key_blocks != [] do
-      # Expect either all maps or all nulls (consistent failure mode)
-      mixed? = Enum.any?(key_blocks, & &1) and Enum.any?(key_blocks, &is_nil/1)
-      refute mixed?
+      assert Enum.all?(key_blocks, &is_map/1)
     end
 
     # If errors exist, they should be among known tokens
