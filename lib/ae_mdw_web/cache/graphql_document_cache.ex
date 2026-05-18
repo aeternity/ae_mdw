@@ -19,6 +19,11 @@ defmodule AeMdwWeb.Cache.GraphQLDocumentCache do
 
   @table :graphql_document_cache
 
+  # Hard cap on the number of cached blueprints. Once reached, new unique
+  # queries bypass the cache (still execute normally). Prevents unbounded ETS
+  # growth from adversarially varied query strings.
+  @max_cached_documents 1_000
+
   # Phases executed at "compile" time (parsing + structural validation only).
   # Stops before the Context phase so the cached blueprint does not contain
   # a request-specific execution context, allowing it to be reused across
@@ -50,7 +55,10 @@ defmodule AeMdwWeb.Cache.GraphQLDocumentCache do
 
         case Absinthe.Pipeline.run(source, compilation_pipeline) do
           {:ok, blueprint, _phases} ->
-            :ets.insert(@table, {source, blueprint})
+            if :ets.info(@table, :size) < @max_cached_documents do
+              :ets.insert(@table, {source, blueprint})
+            end
+
             {:halt, %{query | document: blueprint}}
 
           _error ->

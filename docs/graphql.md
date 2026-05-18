@@ -647,9 +647,8 @@ setting the environment variable:
 GRAPHIQL_ENABLED=true
 ```
 
-The check is at request time, so it can be toggled on a running node without
-a redeploy — useful when running multiple instances behind a load balancer and
-exposing the playground on only one of them.
+The flag is read from the Application environment at node startup. To change
+the setting, update `GRAPHIQL_ENABLED` and restart the node.
 
 ### Running GraphiQL on a production node
 

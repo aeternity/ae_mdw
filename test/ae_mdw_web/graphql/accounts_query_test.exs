@@ -87,7 +87,7 @@ defmodule AeMdwWeb.GraphQL.AccountsQueryTest do
         id = acc_map["id"]
         {:ok, pk} = :aeser_api_encoder.safe_decode(:account_pubkey, id)
         Model.account_balance(balance: bal) = State.fetch!(st, Model.AccountBalance, pk)
-        assert is_integer(acc_map["balance"]) and acc_map["balance"] == bal
+        assert is_binary(acc_map["balance"]) and acc_map["balance"] == Integer.to_string(bal)
       end)
 
       # If we have a nextCursor attempt second page and ensure disjoint IDs

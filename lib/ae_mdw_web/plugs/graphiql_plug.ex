@@ -3,10 +3,9 @@ defmodule AeMdwWeb.Plugs.GraphiQLPlug do
   Forwards to the Absinthe GraphiQL playground only when the
   GRAPHIQL_ENABLED environment variable is set to "true".
 
-  Keeping the feature flag at request time (rather than compile time) lets
-  operators enable or disable the UI on a running instance without a
-  redeploy—useful when running multiple instances behind a load balancer and
-  only wanting to expose the playground on internal/admin nodes.
+  The flag is read from the Application environment, which is populated once
+  at node startup from `runtime.exs`. Changing the environment variable on
+  a running node has no effect — restart the node to pick up the new value.
   """
 
   @behaviour Plug

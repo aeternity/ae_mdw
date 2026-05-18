@@ -36,7 +36,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    Contracts.fetch_calls(state, pagination, scope, [], cursor, v3?: true)
+    query = Helpers.build_query(args, [:function, :function_prefix, :aexn_args])
+
+    Contracts.fetch_calls(state, pagination, scope, query, cursor, v3?: true)
     |> Helpers.make_page()
   end
 
@@ -62,7 +64,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.ContractResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    Contracts.fetch_contract_calls(state, id, pagination, scope, [], cursor)
+    query = Helpers.build_query(args, [:function, :function_prefix, :aexn_args])
+
+    Contracts.fetch_contract_calls(state, id, pagination, scope, query, cursor)
     |> Helpers.make_page()
   end
 end

@@ -27,6 +27,17 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
   # Schema initialisation happens once at compile time.
   @base_opts Absinthe.Plug.init(schema: AeMdwWeb.GraphQL.Schema)
 
+  # Static Absinthe opts – everything except max_complexity, which comes from
+  # the Application environment set at runtime via runtime.exs. Pre-merged here
+  # so each request only pays for a single Map.put instead of a full merge.
+  @static_opts Map.merge(@base_opts, %{
+                 analyze_complexity: true,
+                 document_providers: [
+                   GraphQLDocumentCache,
+                   Absinthe.Plug.DocumentProvider.Default
+                 ]
+               })
+
   # Pre-built Plug.Parsers opts -- JSON only, no form data.
   @parsers_opts Plug.Parsers.init(parsers: [:json], json_decoder: Jason)
 
@@ -48,7 +59,7 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
         |> Plug.Conn.send_resp(200, cached_body)
         |> Plug.Conn.halt()
 
-      _ ->
+      _other ->
         conn
         |> maybe_register_cache_write(cache_key)
         |> Absinthe.Plug.call(runtime_opts())
@@ -85,7 +96,7 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
 
   defp maybe_register_cache_write(conn, cache_key) do
     Plug.Conn.register_before_send(conn, fn conn ->
-      if conn.status == 200 do
+      if conn.status == 200 and not graphql_error_response?(conn.resp_body) do
         GraphQLResponseCache.store(cache_key, conn.resp_body)
       end
 
@@ -93,11 +104,21 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
     end)
   end
 
+  # GraphQL always returns HTTP 200, even for errors — the actual error
+  # information lives in the top-level "errors" key. We must not cache error
+  # responses, or a transient error (e.g. account-not-found) would block
+  # correct responses for the full TTL.
+  defp graphql_error_response?(body) when is_binary(body) do
+    match?({:ok, %{"errors" => [_ | _]}}, Jason.decode(body))
+  end
+
+  defp graphql_error_response?(_body), do: false
+
   defp runtime_opts do
-    Map.merge(@base_opts, %{
-      analyze_complexity: true,
-      max_complexity: Application.get_env(:ae_mdw, :graphql_max_complexity, 1_000),
-      document_providers: [GraphQLDocumentCache, Absinthe.Plug.DocumentProvider.Default]
-    })
+    Map.put(
+      @static_opts,
+      :max_complexity,
+      Application.get_env(:ae_mdw, :graphql_max_complexity, 1_000)
+    )
   end
 end

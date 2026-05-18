@@ -145,8 +145,10 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
 
       if kb && kb["beneficiary_reward"] do
         {:ok, kmap} = Blocks.fetch_key_block(state, Integer.to_string(target))
-        assert kb["beneficiary_reward"] == kmap[:beneficiary_reward]
-        assert is_integer(kb["beneficiary_reward"]) and kb["beneficiary_reward"] >= 0
+        assert kb["beneficiary_reward"] == Integer.to_string(kmap[:beneficiary_reward])
+
+        assert is_binary(kb["beneficiary_reward"]) and
+                 String.to_integer(kb["beneficiary_reward"]) >= 0
       end
     end
   end
