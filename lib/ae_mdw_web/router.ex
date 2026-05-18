@@ -48,7 +48,7 @@ defmodule AeMdwWeb.Router do
   scope "/" do
     pipe_through [:api, :graphql]
 
-    forward "/graphql", Absinthe.Plug, schema: AeMdwWeb.GraphQL.Schema
+    forward "/graphql", AeMdwWeb.Plugs.GraphQLPlug
     forward "/graphiql", AeMdwWeb.Plugs.GraphiQLPlug
   end
 
