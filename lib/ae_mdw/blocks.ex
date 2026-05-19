@@ -212,6 +212,11 @@ defmodule AeMdw.Blocks do
 
   defp render_key_block(state, gen) do
     case State.get(state, @table, {gen, -1}) do
+      {:ok, Model.block(hash: nil)} ->
+        # Sparse-state fixtures can produce key-block rows without a hash;
+        # caller filters out nils via Enum.reject/1.
+        nil
+
       {:ok, Model.block(hash: hash, tx_index: first_tx_index)} ->
         mbi_count = micro_blocks_count(state, gen)
         txs_count = key_block_transactions_count(state, gen, first_tx_index)
