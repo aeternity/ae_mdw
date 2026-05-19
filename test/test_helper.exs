@@ -1,9 +1,3 @@
-# Set the aec_db backend_module persistent_term FIRST, before ExUnit and any
-# test setup that touches aec_db. Maintenance mode boot skips aecore's own
-# put_backend_module/1, so without this :aec_db.get_backend_module/0 crashes
-# in any test that reaches it (ordering-dependent flake otherwise).
-:persistent_term.put({:aec_db, :backend_module}, "rocksdb")
-
 ExUnit.start()
 
 # Ranch is a direct OTP dependency of aecore and starts regardless of app_ctrl
@@ -17,6 +11,10 @@ end
 
 for kv <- [{:txi, 0}, {:kbi, 0}] do
   :ets.insert_new(:counters, kv)
+end
+
+if :persistent_term.get({:aec_db, :backend_module}, nil) == nil do
+  :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
 end
 
 # Optional heavy reset only when explicitly requested to avoid races with running sync processes.

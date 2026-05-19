@@ -21,6 +21,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   require Model
 
+  setup_all do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that go
+    # through the AexnContracts → DryRun.Runner → :aec_chain → :aec_db path
+    # need the persistent_term seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+    :ok
+  end
+
   describe "events_mutations/5" do
     test "it creates an internal call for each event that's not Chain.create/clone" do
       call_txi = 3

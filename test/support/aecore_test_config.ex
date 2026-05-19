@@ -23,11 +23,5 @@ defmodule AeMdw.AecoreTestConfig do
       ],
       modify: [protected_mode_apps: [add: [:lager, :mnesia]]]
     )
-
-    # Maintenance mode skips the aecore boot path that calls
-    # aec_db:put_backend_module/1, so :aec_db.get_backend_module/0 crashes
-    # in tests that reach it via passthrough mocks (e.g. aec_chain → aec_db).
-    # Pre-populate the term here, matching AeMdw.Db.RocksDb.open/1's value.
-    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
   end
 end

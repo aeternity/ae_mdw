@@ -28,6 +28,14 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   require Model
 
+  setup_all do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests reaching
+    # :aec_db (via Node.Db.get_tx_fee/1 or aexn contract creation paths) crash
+    # unless the persistent_term is seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+    :ok
+  end
+
   @sender_id_pos AE.tx_ids(:spend_tx).sender_id
   @recipient_id_pos AE.tx_ids(:spend_tx).recipient_id
   @very_high_txi 100_000_000_000
