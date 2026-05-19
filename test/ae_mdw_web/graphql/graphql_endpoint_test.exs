@@ -1,7 +1,6 @@
 defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
   # Fallback to direct ExUnit + Phoenix.ConnTest to avoid ConnCase load ordering issue
   use ExUnit.Case, async: false
-  import Plug.Conn
   import Phoenix.ConnTest
 
   @endpoint AeMdwWeb.Endpoint
@@ -9,11 +8,33 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
   @graphql_path "/graphql"
 
   setup do
+    previous_ttl = Application.get_env(:ae_mdw, :graphql_response_cache_ttl_ms, 0)
+    clear_graphql_response_cache()
+
+    on_exit(fn ->
+      Application.put_env(:ae_mdw, :graphql_response_cache_ttl_ms, previous_ttl)
+      clear_graphql_response_cache()
+    end)
+
     {:ok, conn: build_conn()}
   end
 
-  defp post_query(conn, query) do
-    post(conn, @graphql_path, %{"query" => query})
+  defp post_query(conn, query, attrs \\ %{}) do
+    post(conn, @graphql_path, Map.put(attrs, "query", query))
+  end
+
+  defp clear_graphql_response_cache do
+    case :ets.whereis(:graphql_response_cache) do
+      :undefined -> :ok
+      table -> :ets.delete_all_objects(table)
+    end
+  end
+
+  defp graphql_response_cache_size do
+    case :ets.whereis(:graphql_response_cache) do
+      :undefined -> 0
+      table -> :ets.info(table, :size)
+    end
   end
 
   test "sync_status + key_blocks via HTTP returns data or partial_state_unavailable", %{
@@ -96,5 +117,44 @@ defmodule AeMdwWeb.GraphQL.EndpointIntegrationTest do
                is_integer(e["height"] || e[:height]) and is_binary(e["hash"] || e[:hash])
              end)
     end
+  end
+
+  test "response cache keys include operationName", %{conn: conn} do
+    Application.put_env(:ae_mdw, :graphql_response_cache_ttl_ms, 5_000)
+
+    q = """
+    query Meta { __typename }
+    query Schema { __schema { queryType { name } } }
+    """
+
+    body1 =
+      conn
+      |> post_query(q, %{"operationName" => "Meta"})
+      |> json_response(200)
+
+    body2 =
+      build_conn()
+      |> post_query(q, %{"operationName" => "Schema"})
+      |> json_response(200)
+
+    assert Map.has_key?(body1["data"], "__typename")
+    refute Map.has_key?(body1["data"], "__schema")
+
+    assert Map.has_key?(body2["data"], "__schema")
+    refute Map.has_key?(body2["data"], "__typename")
+
+    assert graphql_response_cache_size() == 2
+  end
+
+  test "response cache ttl 0 does not store entries", %{conn: conn} do
+    Application.put_env(:ae_mdw, :graphql_response_cache_ttl_ms, 0)
+
+    body =
+      conn
+      |> post_query("{ __typename }")
+      |> json_response(200)
+
+    assert body["data"] != nil
+    assert graphql_response_cache_size() == 0
   end
 end

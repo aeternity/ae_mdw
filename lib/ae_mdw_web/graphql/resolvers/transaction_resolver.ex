@@ -42,11 +42,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
         :entrypoint
       ])
 
-    query = Helpers.maybe_put(query, :types, build_type_set(args))
+    with {:ok, types} <- build_type_set(args) do
+      query = Helpers.maybe_put(query, :types, types)
 
-    opts = [render_v3?: true, add_spendtx_details?: Map.has_key?(args, :account)]
+      opts = [render_v3?: true, add_spendtx_details?: Map.has_key?(args, :account)]
 
-    Txs.fetch_txs(state, pagination, scope, query, cursor, opts) |> Helpers.make_page()
+      Txs.fetch_txs(state, pagination, scope, query, cursor, opts) |> Helpers.make_page()
+    else
+      {:error, err} -> {:error, Helpers.format_err(err)}
+    end
   end
 
   @spec pending_transactions(any(), map(), Absinthe.Resolution.t()) ::
@@ -93,11 +97,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   def micro_block_transactions(_parent, %{hash: hash} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = %{}
-    query = Helpers.maybe_put(query, :types, build_type_set(args))
 
-    case Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
-      {:ok, _} = ok -> Helpers.make_page(ok)
-      {:error, _} -> {:error, "micro_block_transactions_error"}
+    with {:ok, types} <- build_type_set(args) do
+      query = Helpers.maybe_put(query, :types, types)
+
+      case Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
+        {:ok, _} = ok -> Helpers.make_page(ok)
+        {:error, _} -> {:error, "micro_block_transactions_error"}
+      end
+    else
+      {:error, err} -> {:error, Helpers.format_err(err)}
     end
   end
 
@@ -136,30 +145,30 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     types = Map.get(args, :type, [])
     type_groups = Map.get(args, :type_group, [])
 
-    validated_types =
-      types
-      |> Enum.flat_map(fn type ->
-        case Validate.tx_type(to_string(type)) do
-          {:ok, valid} -> [valid]
-          {:error, _} -> []
-        end
-      end)
+    with {:ok, validated_types} <- validate_filter_values(types, &Validate.tx_type/1),
+         {:ok, validated_type_groups} <- validate_filter_values(type_groups, &Validate.tx_group/1) do
+      all_types = validated_types ++ validated_type_groups
 
-    validated_type_groups =
-      type_groups
-      |> Enum.flat_map(fn group ->
-        case Validate.tx_group(to_string(group)) do
-          {:ok, valid} -> [valid]
-          {:error, _} -> []
-        end
-      end)
+      {:ok,
+       if all_types == [] do
+         nil
+       else
+         MapSet.new(all_types)
+       end}
+    end
+  end
 
-    all_types = validated_types ++ validated_type_groups
-
-    if all_types == [] do
-      nil
-    else
-      MapSet.new(all_types)
+  defp validate_filter_values(values, validator) do
+    values
+    |> Enum.reduce_while({:ok, []}, fn value, {:ok, acc} ->
+      case validator.(to_string(value)) do
+        {:ok, valid} -> {:cont, {:ok, [valid | acc]}}
+        {:error, err} -> {:halt, {:error, err}}
+      end
+    end)
+    |> case do
+      {:ok, validated_values} -> {:ok, Enum.reverse(validated_values)}
+      {:error, err} -> {:error, err}
     end
   end
 end

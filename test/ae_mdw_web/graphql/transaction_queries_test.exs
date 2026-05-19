@@ -52,4 +52,27 @@ defmodule AeMdwWeb.GraphQL.TransactionQueriesTest do
              "partial_state_unavailable"
            ]
   end
+
+  test "transactions invalid type returns validation error" do
+    {:ok, res} = run("{ transactions(type: [\"not_a_tx\"], limit: 1) { data { hash } } }")
+
+    errors = res[:errors] || []
+    [first | _] = errors
+    msg = Map.get(first, "message") || Map.get(first, :message)
+
+    assert String.starts_with?(msg, "invalid transaction type")
+  end
+
+  test "micro_block_transactions invalid type group returns validation error" do
+    {:ok, res} =
+      run(
+        "{ micro_block_transactions(hash: \"mh_dummy\", type_group: [\"not_a_group\"], limit: 1) { data { hash } } }"
+      )
+
+    errors = res[:errors] || []
+    [first | _] = errors
+    msg = Map.get(first, "message") || Map.get(first, :message)
+
+    assert String.starts_with?(msg, "invalid transaction group")
+  end
 end

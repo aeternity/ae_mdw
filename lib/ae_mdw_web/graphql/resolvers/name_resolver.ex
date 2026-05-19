@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Names
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
@@ -91,17 +92,37 @@ defmodule AeMdwWeb.GraphQL.Resolvers.NameResolver do
 
   @spec auction_claims(any(), map(), Absinthe.Resolution.t()) ::
           {:ok, term()} | {:error, String.t()}
+  def auction_claims(_parent, %{id: ""}, _resolution),
+    do: {:error, Helpers.format_err({ErrInput.Id, ""})}
+
   def auction_claims(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    case Validate.plain_name(state, id) do
-      {:ok, plain_name} ->
-        Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
-        |> Helpers.make_page()
+    case Validate.id(id) do
+      {:ok, name_hash} ->
+        case AeMdw.Db.Name.plain_name(state, name_hash) do
+          {:ok, plain_name} ->
+            Names.fetch_auction_claims(state, plain_name, pagination, scope, cursor)
+            |> Helpers.make_page()
 
-      {:error, err} ->
-        {:error, Helpers.format_err(err)}
+          nil ->
+            {:error, Helpers.format_err({ErrInput.NotFound, id})}
+        end
+
+      {:error, _reason} ->
+        if String.printable?(id) do
+          Names.fetch_auction_claims(
+            state,
+            String.downcase(Validate.ensure_name_suffix(id)),
+            pagination,
+            scope,
+            cursor
+          )
+          |> Helpers.make_page()
+        else
+          {:error, Helpers.format_err({ErrInput.Id, id})}
+        end
     end
   end
 

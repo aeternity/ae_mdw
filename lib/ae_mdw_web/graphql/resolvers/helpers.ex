@@ -92,6 +92,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   def make_single({:error, err}), do: {:error, format_err(err)}
 
   def format_err({reason, val}), do: Error.to_string(reason, val)
+  def format_err(%{__exception__: true, message: message}) when is_binary(message), do: message
 
   def format_err(err) do
     require Logger

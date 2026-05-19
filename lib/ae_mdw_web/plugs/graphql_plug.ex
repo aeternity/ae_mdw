@@ -74,20 +74,32 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
   # GraphQL error response.
   defp parse_body(conn) do
     try do
-      Plug.Parsers.call(conn, @parsers_opts)
+      conn
+      |> Plug.Parsers.call(@parsers_opts)
+      |> Plug.Conn.fetch_query_params()
+      |> sync_body_params_into_params()
     rescue
       Plug.Parsers.ParseError -> conn
     end
   end
 
-  # Build a stable cache key from the normalised {query, variables} pair so
-  # that JSON-formatting differences in the raw body do not cause cache misses.
+  defp sync_body_params_into_params(
+         %{body_params: %{} = body_params, params: %{} = params} = conn
+       ) do
+    %{conn | params: Map.merge(params, body_params)}
+  end
+
+  # Build a stable cache key from the normalised {query, operationName,
+  # variables} triple so that JSON-formatting differences in the raw body do
+  # not cause cache misses, while distinct named operations on the same
+  # document stay isolated.
   # Returns nil for non-JSON requests, which disables the response cache for
   # that request (application/graphql requests still benefit from the document
   # cache).
   defp build_cache_key(%{body_params: %{"query" => query} = body_params}) do
+    operation_name = Map.get(body_params, "operationName")
     variables = Map.get(body_params, "variables", %{})
-    :crypto.hash(:md5, :erlang.term_to_binary({query, variables}))
+    :crypto.hash(:md5, :erlang.term_to_binary({query, operation_name, variables}))
   end
 
   defp build_cache_key(_conn), do: nil

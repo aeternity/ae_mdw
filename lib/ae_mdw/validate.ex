@@ -99,7 +99,7 @@ defmodule AeMdw.Validate do
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
   @spec plain_name(State.t(), String.t()) ::
-          {:ok, pubkey()} | {:error, Error.t()}
+    {:ok, Names.plain_name()} | {:error, Error.t()}
   def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
@@ -117,7 +117,7 @@ defmodule AeMdw.Validate do
     end
   end
 
-  @spec plain_name!(State.t(), String.t()) :: pubkey()
+  @spec plain_name!(State.t(), String.t()) :: Names.plain_name()
   def plain_name!(state, name_ident), do: unwrap!(&plain_name(state, &1), name_ident)
 
   @spec tx_type(tx_type() | binary()) :: {:ok, tx_type()} | {:error, ErrInput.t()}

@@ -42,6 +42,15 @@ defmodule AeMdwWeb.Cache.GraphQLDocumentCache do
   end
 
   @impl Absinthe.Plug.DocumentProvider
+  def process(%{operation_name: operation_name} = query, _opts)
+      when is_binary(operation_name) and operation_name != "" do
+    # Named-operation requests require the operation name during document
+    # selection/validation, which this provider's cache key and compilation path
+    # do not currently encode. Bypass the cache so Absinthe's default provider
+    # can process the request correctly.
+    {:cont, query}
+  end
+
   def process(%{document: source} = query, _opts) when is_binary(source) do
     case :ets.lookup(@table, source) do
       [{^source, blueprint}] ->
