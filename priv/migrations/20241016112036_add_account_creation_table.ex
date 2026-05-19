@@ -32,16 +32,21 @@ defmodule AeMdw.Migrations.AddAccountCreationTable do
     Model.Tx
     |> RocksDbCF.stream()
     |> Task.async_stream(fn Model.tx(id: tx_hash, time: time) ->
-      tx_hash
-      |> :aec_db.get_signed_tx()
-      |> Transaction.get_ids_from_tx()
-      |> Enum.reduce(%{}, fn
-        {:id, :account, pubkey}, acc ->
-          Map.put_new(acc, pubkey, time)
+      case fetch_tx_location(tx_hash) do
+        {:ok, signed_tx} ->
+          signed_tx
+          |> Transaction.get_ids_from_tx()
+          |> Enum.reduce(%{}, fn
+            {:id, :account, pubkey}, acc ->
+              Map.put_new(acc, pubkey, time)
 
-        _other, acc ->
-          acc
-      end)
+            _other, acc ->
+              acc
+          end)
+
+        :error ->
+          %{}
+      end
     end)
     |> Enum.reduce(protocol_accounts, fn {:ok, new_map}, acc_times ->
       Map.merge(acc_times, new_map, fn _k, v1, v2 ->
@@ -79,5 +84,16 @@ defmodule AeMdw.Migrations.AddAccountCreationTable do
       }
     end)
     |> then(fn {_state, count} -> {:ok, count} end)
+  end
+
+  defp fetch_tx_location(tx_hash) do
+    try do
+      case :aec_db.find_tx_with_location(tx_hash) do
+        {_block_hash, signed_tx} -> {:ok, signed_tx}
+        :none -> :error
+      end
+    catch
+      :exit, _reason -> :error
+    end
   end
 end

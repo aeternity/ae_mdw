@@ -20,27 +20,35 @@ defmodule AeMdw.Migrations.GenerateContractCounts do
           state
           |> Collection.stream(Model.Block, :backward, nil, nil)
           |> Stream.filter(fn {_height, idx} -> idx == -1 end)
-          |> Stream.map(fn {height, idx} ->
+          |> Stream.flat_map(fn {height, idx} ->
             Model.block(hash: hash) = State.fetch!(state, Model.Block, {height, idx})
-            block = :aec_db.get_block(hash)
-            time = :aec_blocks.time_in_msecs(block)
 
-            contracts_created =
-              if height != top_block_height do
-                {:ok, Model.delta_stat(contracts_created: contracts_created)} =
-                  State.get(state, Model.DeltaStat, height)
+            case fetch_block(hash) do
+              {:ok, block} ->
+                time = :aec_blocks.time_in_msecs(block)
 
-                contracts_created
-              else
-                0
-              end
+                contracts_created =
+                  if height != top_block_height do
+                    {:ok, Model.delta_stat(contracts_created: contracts_created)} =
+                      State.get(state, Model.DeltaStat, height)
 
-            time
-            |> Stats.time_intervals()
-            |> Enum.map(fn {interval, interval_start} ->
-              {{:contracts, interval, interval_start}, contracts_created}
-            end)
-            |> StatisticsMutation.new()
+                    contracts_created
+                  else
+                    0
+                  end
+
+                [
+                  time
+                  |> Stats.time_intervals()
+                  |> Enum.map(fn {interval, interval_start} ->
+                    {{:contracts, interval, interval_start}, contracts_created}
+                  end)
+                  |> StatisticsMutation.new()
+                ]
+
+              :error ->
+                []
+            end
           end)
           |> Stream.chunk_every(1000)
           |> Enum.reduce({state, 0}, fn mutations, {acc_state, count} ->
@@ -54,6 +62,17 @@ defmodule AeMdw.Migrations.GenerateContractCounts do
 
       :none ->
         {:ok, 0}
+    end
+  end
+
+  defp fetch_block(hash) do
+    try do
+      case :aec_db.get_block(hash) do
+        block when is_tuple(block) -> {:ok, block}
+        _missing_block -> :error
+      end
+    catch
+      :exit, _reason -> :error
     end
   end
 end

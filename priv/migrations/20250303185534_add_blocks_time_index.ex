@@ -18,20 +18,22 @@ defmodule AeMdw.Migrations.AddBlocksTimeIndex do
     end)
     |> Stream.chunk_every(1000)
     |> Task.async_stream(fn blocks ->
-      Enum.map(blocks, fn Model.block(index: {height, _mbi}, hash: hash) ->
-        header =
-          :aec_db.get_header(hash)
+      Enum.flat_map(blocks, fn Model.block(index: {height, _mbi}, hash: hash) ->
+        case fetch_header(hash) do
+          {:ok, header} ->
+            time = :aec_headers.time_in_msecs(header)
+            miner = :aec_headers.beneficiary(header)
 
-        time =
-          :aec_headers.time_in_msecs(header)
+            [
+              WriteMutation.new(
+                Model.KeyBlockTime,
+                Model.key_block_time(index: time, height: height, miner: miner)
+              )
+            ]
 
-        miner =
-          :aec_headers.beneficiary(header)
-
-        WriteMutation.new(
-          Model.KeyBlockTime,
-          Model.key_block_time(index: time, height: height, miner: miner)
-        )
+          :error ->
+            []
+        end
       end)
     end)
     |> Stream.map(fn {:ok, mutations} ->
@@ -40,5 +42,16 @@ defmodule AeMdw.Migrations.AddBlocksTimeIndex do
     end)
     |> Enum.sum()
     |> then(&{:ok, &1})
+  end
+
+  defp fetch_header(hash) do
+    try do
+      case :aec_db.get_header(hash) do
+        header when is_tuple(header) -> {:ok, header}
+        _missing_header -> :error
+      end
+    catch
+      :exit, _reason -> :error
+    end
   end
 end

@@ -20,24 +20,37 @@ defmodule AeMdw.Migrations.FixNameAndSymbolSwappedInAexnContracts do
                             index: {aexn_type, contract_pk},
                             txi_idx: {txi, _idx}
                           ) = aexn_contract ->
-      Model.tx(block_index: bi) = State.fetch!(state, Model.Tx, txi)
-      Model.block(hash: block_hash) = State.fetch!(state, Model.Block, bi)
+      case State.get(state, Model.Tx, txi) do
+        {:ok, tx} ->
+          case Model.tx(tx, :block_index) do
+            nil ->
+              []
 
-      aexn_type
-      |> AexnContracts.call_meta_info(contract_pk, block_hash)
-      |> case do
-        {:ok, new_meta_info} ->
-          [
-            WriteMutation.new(
-              Model.AexnContract,
-              Model.aexn_contract(
-                aexn_contract,
-                meta_info: new_meta_info
-              )
-            )
-          ]
+            block_index ->
+              case State.get(state, Model.Block, block_index) do
+                {:ok, Model.block(hash: block_hash)} ->
+                  case AexnContracts.call_meta_info(aexn_type, contract_pk, block_hash) do
+                    {:ok, new_meta_info} ->
+                      [
+                        WriteMutation.new(
+                          Model.AexnContract,
+                          Model.aexn_contract(
+                            aexn_contract,
+                            meta_info: new_meta_info
+                          )
+                        )
+                      ]
 
-        :error ->
+                    :error ->
+                      []
+                  end
+
+                :not_found ->
+                  []
+              end
+          end
+
+        :not_found ->
           []
       end
     end)

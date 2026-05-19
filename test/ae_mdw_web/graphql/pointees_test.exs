@@ -29,7 +29,7 @@ defmodule AeMdwWeb.GraphQL.PointeesTest do
     end
   end
 
-  test "name pointees basic" do
+  test "name pointers basic" do
     st = state()
 
     if st do
@@ -39,18 +39,14 @@ defmodule AeMdwWeb.GraphQL.PointeesTest do
       name = get_in(names, [:data, "names", "data", Access.at(0), "name"])
 
       if name do
-        {:ok, res} =
-          Absinthe.run("{ name(id:\"#{name}\"){ hash } }", @schema, context: %{state: st})
-
-        hash = get_in(res, [:data, "name", "hash"])
-
-        if hash do
+          if name do
           {:ok, res2} =
-            Absinthe.run("{ namePointees(id:\"#{hash}\"){ active { key id } } }", @schema,
+              Absinthe.run("{ name(id:\"#{name}\"){ pointers } }", @schema,
               context: %{state: st}
             )
 
           assert Map.get(res2, :errors, []) == []
+          _ = get_in(res2, [:data, "name", "pointers"])
         end
       end
     else

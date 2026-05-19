@@ -8,11 +8,7 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
   alias AeMdw.Db.Model
   alias AeMdw.Node.Db, as: NodeDb
 
-  import Record, only: [defrecord: 2]
-
   require Model
-
-  defrecord(:tx, index: nil, id: nil, block_index: nil, time: nil)
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
@@ -21,8 +17,13 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
     |> Stream.chunk_every(1000)
     |> Task.async_stream(
       fn txs ->
-        Enum.map(txs, fn tx(index: index, id: id, block_index: block_index, time: time) ->
-          fee = NodeDb.get_tx_fee(id)
+        Enum.map(txs, fn tx_record ->
+          index = Model.tx(tx_record, :index)
+          id = Model.tx(tx_record, :id)
+          block_index = Model.tx(tx_record, :block_index)
+          time = Model.tx(tx_record, :time)
+
+          fee = if(id, do: NodeDb.get_tx_fee(id), else: nil) || tx_fee(tx_record)
           tx = Model.tx(index: index, id: id, block_index: block_index, time: time, fee: fee)
 
           WriteMutation.new(Model.Tx, tx)
@@ -38,4 +39,9 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
     |> Enum.sum()
     |> then(&{:ok, &1})
   end
+
+  defp tx_fee(tx_record) when tuple_size(tx_record) == tuple_size(Model.tx()),
+    do: Model.tx(tx_record, :fee)
+
+  defp tx_fee(_tx_record), do: nil
 end

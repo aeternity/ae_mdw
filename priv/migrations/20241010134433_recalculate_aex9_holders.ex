@@ -23,71 +23,80 @@ defmodule AeMdw.Migrations.RecalculateAex9Holders do
     )
     |> Task.async_stream(
       fn Model.stat(index: {:aex9_holder_count, contract_pk}) ->
-        {:ok, create_txi} = Origin.tx_index(State.mem_state(), {:contract, contract_pk})
+        case Origin.tx_index(State.mem_state(), {:contract, contract_pk}) do
+          {:ok, create_txi} ->
+            key_boundary =
+              Collection.generate_key_boundary(
+                {create_txi, Collection.integer(), Collection.integer()}
+              )
 
-        key_boundary =
-          Collection.generate_key_boundary(
-            {create_txi, Collection.integer(), Collection.integer()}
-          )
+            holders =
+              Model.ContractLog
+              |> AeMdw.Db.RocksDbCF.stream(key_boundary: key_boundary)
+              |> Enum.reduce(%{}, fn Model.contract_log(
+                                       index: {^create_txi, _txi, _idx},
+                                       args: args,
+                                       hash: event_hash
+                                     ),
+                                     balances_transfers ->
+                event_name = AeMdw.AexnContracts.event_name(event_hash) || event_hash
 
-        holders =
-          Model.ContractLog
-          |> AeMdw.Db.RocksDbCF.stream(key_boundary: key_boundary)
-          |> Enum.reduce(%{}, fn Model.contract_log(
-                                   index: {^create_txi, _txi, _idx},
-                                   args: args,
-                                   hash: event_hash
-                                 ),
-                                 balances_transfers ->
-            event_name = AeMdw.AexnContracts.event_name(event_hash) || event_hash
+                case {event_name, args} do
+                  {"Transfer", [from_pk, to_pk, <<transfered_value::256>>]} ->
+                    balances_transfers
+                    |> update_balance(from_pk, -transfered_value)
+                    |> update_balance(to_pk, transfered_value)
 
-            case {event_name, args} do
-              {"Transfer", [from_pk, to_pk, <<transfered_value::256>>]} ->
-                balances_transfers
-                |> update_balance(from_pk, -transfered_value)
-                |> update_balance(to_pk, transfered_value)
+                  # Mint
+                  {mint_event, [to_pk, <<mint_value::256>>]}
+                  when mint_event in ["Deposit", "Mint"] ->
+                    balances_transfers
+                    |> update_balance(to_pk, mint_value)
 
-              # Mint
-              {mint_event, [to_pk, <<mint_value::256>>]} when mint_event in ["Deposit", "Mint"] ->
-                balances_transfers
-                |> update_balance(to_pk, mint_value)
+                  # Burn
+                  {burn_event, [from_pk, <<burn_value::256>>]}
+                  when burn_event in ["Withdrawal", "Burn"] ->
+                    balances_transfers
+                    |> update_balance(from_pk, -burn_value)
 
-              # Burn
-              {burn_event, [from_pk, <<burn_value::256>>]}
-              when burn_event in ["Withdrawal", "Burn"] ->
-                balances_transfers
-                |> update_balance(from_pk, -burn_value)
+                  {_other_event, _args} ->
+                    balances_transfers
+                end
+              end)
+              |> Enum.count(fn {_pk, balance} -> balance > 0 end)
 
-              {_other_event, _args} ->
-                balances_transfers
-            end
-          end)
-          |> Enum.count(fn {_pk, balance} -> balance > 0 end)
+            {contract_pk, holders}
 
-        {contract_pk, holders}
+          :not_found ->
+            nil
+        end
       end,
       timeout: :infinity
     )
-    |> Stream.flat_map(fn {:ok, {contract_pk, holders}} ->
-      write_mutation =
-        WriteMutation.new(
-          Model.Stat,
-          Model.stat(index: {:aex9_holder_count, contract_pk}, payload: holders)
-        )
+    |> Stream.flat_map(fn
+      {:ok, {contract_pk, holders}} ->
+        write_mutation =
+          WriteMutation.new(
+            Model.Stat,
+            Model.stat(index: {:aex9_holder_count, contract_pk}, payload: holders)
+          )
 
-      case State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk}) do
-        {:ok, Model.aexn_invalid_contract(reason: ^invalid_number_of_holder_reason)} ->
-          [
-            write_mutation,
-            DeleteKeysMutation.new(%{Model.AexnInvalidContract => [{:aex9, contract_pk}]})
-          ]
+        case State.get(state, Model.AexnInvalidContract, {:aex9, contract_pk}) do
+          {:ok, Model.aexn_invalid_contract(reason: ^invalid_number_of_holder_reason)} ->
+            [
+              write_mutation,
+              DeleteKeysMutation.new(%{Model.AexnInvalidContract => [{:aex9, contract_pk}]})
+            ]
 
-        {:ok, _another_reason} ->
-          [write_mutation]
+          {:ok, _another_reason} ->
+            [write_mutation]
 
-        :not_found ->
-          [write_mutation]
-      end
+          :not_found ->
+            [write_mutation]
+        end
+
+      {:ok, nil} ->
+        []
     end)
     |> Stream.chunk_every(1000)
     |> Enum.reduce({state, 0}, fn mutations, {acc_state, count} ->
