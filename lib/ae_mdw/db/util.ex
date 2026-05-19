@@ -69,6 +69,9 @@ defmodule AeMdw.Db.Util do
     end
   end
 
+  # Reads time from MDW index tables first (Model.Time, Model.KeyBlockTime) to
+  # avoid a node DB call via block_time/1. Falls back to approximation when the
+  # state is sparse (test fixtures) and none of the time tables are populated.
   @spec last_gen_and_time(state()) :: {:ok, {Blocks.height(), Blocks.time()}} | :no_blocks
   def last_gen_and_time(state) do
     case {State.prev(state, Model.Block, nil), State.prev(state, Model.Time, nil),
@@ -262,6 +265,9 @@ defmodule AeMdw.Db.Util do
 
   def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
 
+  # Nil-safe variant of read_node_tx_details/2. Used in GraphQL resolvers where the
+  # MDW state may be sparse (e.g. in tests with synthetic fixtures that have no
+  # corresponding node-DB entries). Returns nil instead of raising on a missing tx.
   @spec read_node_tx_details_safe(state(), Txs.txi_idx() | txi()) ::
           {Node.tx(), Node.tx_type(), Txs.tx_hash(), Node.tx_type(), Blocks.block_hash()} | nil
   def read_node_tx_details_safe(state, {txi, -1}) do
@@ -367,10 +373,14 @@ defmodule AeMdw.Db.Util do
          {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
       {:ok, height}
     else
+      # In production the node always has the block; this fallback only triggers
+      # in sparse test states where synthetic hashes are absent from the node DB.
       _error_or_invalid_height -> find_block_height_in_state(state, hash, type)
     end
   end
 
+  # Scans the MDW Block collection to locate a block by hash when the node DB
+  # cannot find it (sparse test state). In production this is never reached.
   defp find_block_height_in_state(state, hash, type) do
     with {:ok, last_gen} <- last_gen(state),
          block_index when not is_nil(block_index) <-
@@ -451,6 +461,8 @@ defmodule AeMdw.Db.Util do
     |> :aec_headers.time_in_msecs()
   end
 
+  # Wraps block_time/1 to return :error instead of raising when the hash is absent
+  # from the node DB (e.g. synthetic hashes in sparse test fixtures).
   defp fetch_block_time(block_hash) do
     try do
       {:ok, block_time(block_hash)}
@@ -480,7 +492,7 @@ defmodule AeMdw.Db.Util do
       {:ok, {last_height, last_micro_time}} ->
         relative_height_time(height, last_height, last_micro_time)
 
-      :none ->
+      :no_blocks ->
         approximate_height_time(height)
     end
   end

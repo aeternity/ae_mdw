@@ -851,9 +851,11 @@ defmodule AeMdw.Names do
     cond do
       Keyword.get(opts, :v3?, false) ->
         with {:ok, tx} <- Txs.fetch(state, txi, opts),
-             {:ok, Model.tx(id: tx_hash)} <- State.get(state, Model.Tx, txi) do
+             {:ok, tx_rec} <- State.get(state, Model.Tx, txi) do
+          tx_hash = Model.tx(tx_rec, :id)
+
           tx
-          |> Map.put("tx_hash", tx_hash && Enc.encode(:tx_hash, tx_hash))
+          |> Map.put("tx_hash", maybe_encode_tx_hash(tx_hash))
           |> Map.drop(["tx_index"])
         else
           _missing_tx -> nil
@@ -867,12 +869,21 @@ defmodule AeMdw.Names do
 
       Keyword.get(opts, :tx_hash?, false) ->
         case State.get(state, Model.Tx, txi) do
-          {:ok, Model.tx(id: tx_hash)} -> Enc.encode(:tx_hash, tx_hash)
+          {:ok, tx_rec} -> maybe_encode_tx_hash(Model.tx(tx_rec, :id))
           :not_found -> nil
         end
 
       true ->
         txi
+    end
+  end
+
+  defp maybe_encode_tx_hash(tx_hash) do
+    try do
+      Enc.encode(:tx_hash, tx_hash)
+    rescue
+      ArgumentError -> nil
+      FunctionClauseError -> nil
     end
   end
 

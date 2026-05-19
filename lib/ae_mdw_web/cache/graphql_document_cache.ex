@@ -32,7 +32,7 @@ defmodule AeMdwWeb.Cache.GraphQLDocumentCache do
 
   @spec init() :: :ok
   def init do
-    :ets.new(@table, [:named_table, :set, :public, {:read_concurrency, true}])
+    _ets_table = :ets.new(@table, [:named_table, :set, :public, {:read_concurrency, true}])
     :ok
   end
 

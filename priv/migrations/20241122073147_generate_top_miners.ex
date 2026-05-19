@@ -15,21 +15,16 @@ defmodule AeMdw.Migrations.GenerateTopMiners do
       Model.Block
       |> RocksDbCF.stream()
       |> Stream.filter(fn Model.block(index: {_key_index, micro_index}) -> micro_index == -1 end)
-      |> Stream.flat_map(fn Model.block(hash: hash) ->
-        case fetch_block(hash) do
-          {:ok, key_block} ->
-            time = :aec_blocks.time_in_msecs(key_block)
+      |> Stream.map(fn Model.block(hash: hash) ->
+        {:ok, key_block} = :aec_chain.get_block(hash)
+        time = :aec_blocks.time_in_msecs(key_block)
 
-            miner =
-              key_block
-              |> :aec_blocks.to_header()
-              |> :aec_headers.beneficiary()
+        miner =
+          key_block
+          |> :aec_blocks.to_header()
+          |> :aec_headers.beneficiary()
 
-            [TopMinerStatsMutation.new([miner], time)]
-
-          :error ->
-            []
-        end
+        TopMinerStatsMutation.new([miner], time)
       end)
       |> Stream.chunk_every(1000)
       |> Stream.map(fn mutations ->
@@ -40,18 +35,5 @@ defmodule AeMdw.Migrations.GenerateTopMiners do
       |> Enum.sum()
 
     {:ok, count}
-  end
-
-  defp fetch_block(nil), do: :error
-
-  defp fetch_block(hash) do
-    try do
-      case :aec_chain.get_block(hash) do
-        {:ok, key_block} -> {:ok, key_block}
-        _missing_block -> :error
-      end
-    catch
-      :exit, _reason -> :error
-    end
   end
 end

@@ -8,6 +8,10 @@ for kv <- [{:txi, 0}, {:kbi, 0}] do
   :ets.insert_new(:counters, kv)
 end
 
+if :persistent_term.get({:aec_db, :backend_module}, nil) == nil do
+  :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+end
+
 # Optional heavy reset only when explicitly requested to avoid races with running sync processes.
 if System.get_env("AE_MDW_FORCE_DB_RESET") == "1" do
   IO.puts("[test_helper] Forcing DB reset (AE_MDW_FORCE_DB_RESET=1)")

@@ -7,7 +7,24 @@ defmodule AeMdw.Migrations.IndexAuctionsClaimsCount do
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
 
+  import Record, only: [defrecord: 2]
+
   require Model
+
+  defrecord :auction_bid,
+    index: nil,
+    start_height: nil,
+    block_index_txi_idx: nil,
+    expire_height: nil,
+    owner: nil
+
+  defrecord :name,
+    index: nil,
+    active: nil,
+    expire: nil,
+    revoke: nil,
+    auction_timeout: 0,
+    owner: nil
 
   @dialyzer {:nowarn_function, run: 2}
 
@@ -17,11 +34,12 @@ defmodule AeMdw.Migrations.IndexAuctionsClaimsCount do
       state
       |> Collection.stream(Model.AuctionBid, nil)
       |> Stream.map(fn plain_name ->
-        auction = State.fetch!(state, Model.AuctionBid, plain_name)
-        start_height = Model.auction_bid(auction, :start_height)
-        block_index_txi_idx = Model.auction_bid(auction, :block_index_txi_idx)
-        expire_height = Model.auction_bid(auction, :expire_height)
-        owner = Model.auction_bid(auction, :owner)
+        auction_bid(
+          start_height: start_height,
+          block_index_txi_idx: block_index_txi_idx,
+          expire_height: expire_height,
+          owner: owner
+        ) = State.fetch!(state, Model.AuctionBid, plain_name)
 
         claims_count =
           state
@@ -52,13 +70,15 @@ defmodule AeMdw.Migrations.IndexAuctionsClaimsCount do
       |> Stream.map(&{State.fetch!(state, source, &1), source})
     end)
     |> Collection.merge(:forward)
-    |> Stream.transform(<<>>, fn {name_record, source}, first_char_acc ->
-      plain_name = Model.name(name_record, :index)
-      active = Model.name(name_record, :active)
-      expire = Model.name(name_record, :expire)
-      revoke = Model.name(name_record, :revoke)
-      auction_timeout = Model.name(name_record, :auction_timeout)
-      owner = Model.name(name_record, :owner)
+    |> Stream.transform(<<>>, fn {name, source}, first_char_acc ->
+      name(
+        index: plain_name,
+        active: active,
+        expire: expire,
+        revoke: revoke,
+        auction_timeout: auction_timeout,
+        owner: owner
+      ) = name
 
       first_char = String.at(plain_name, 0)
 

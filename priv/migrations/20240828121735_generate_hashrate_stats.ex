@@ -20,28 +20,22 @@ defmodule AeMdw.Migrations.GenerateHashrateStats do
       |> Stream.map(fn {height, idx} ->
         State.fetch!(state, Model.Block, {height, idx})
       end)
-      |> Stream.flat_map(fn Model.block(hash: hash) ->
-        case fetch_block(hash) do
-          {:ok, block} ->
-            hashrate =
-              block
-              |> :aec_blocks.difficulty()
-              |> Node.difficulty_to_hashrate()
+      |> Stream.map(fn Model.block(hash: hash) ->
+        block = :aec_db.get_block(hash)
 
-            time = :aec_blocks.time_in_msecs(block)
+        hashrate =
+          block
+          |> :aec_blocks.difficulty()
+          |> Node.difficulty_to_hashrate()
 
-            [
-              time
-              |> Stats.time_intervals()
-              |> Enum.map(fn {interval, interval_start} ->
-                {{:hashrate, interval, interval_start}, hashrate}
-              end)
-              |> StatisticsMutation.new()
-            ]
+        time = :aec_blocks.time_in_msecs(block)
 
-          :error ->
-            []
-        end
+        time
+        |> Stats.time_intervals()
+        |> Enum.map(fn {interval, interval_start} ->
+          {{:hashrate, interval, interval_start}, hashrate}
+        end)
+        |> StatisticsMutation.new()
       end)
       |> Stream.chunk_every(1000)
       |> Enum.reduce({state, 0}, fn mutations, {acc_state, count} ->
@@ -52,16 +46,5 @@ defmodule AeMdw.Migrations.GenerateHashrateStats do
       end)
 
     {:ok, block_hashrates_added}
-  end
-
-  defp fetch_block(hash) do
-    try do
-      case :aec_db.get_block(hash) do
-        block when is_tuple(block) -> {:ok, block}
-        _missing_block -> :error
-      end
-    catch
-      :exit, _reason -> :error
-    end
   end
 end

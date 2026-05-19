@@ -19,24 +19,17 @@ defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
       |> Stream.map(fn {height, idx} ->
         State.fetch!(state, Model.Block, {height, idx})
       end)
-      |> Stream.flat_map(fn Model.block(hash: hash) ->
-        case fetch_block(hash) do
-          {:ok, block} ->
-            difficulty = :aec_blocks.difficulty(block)
-            time = :aec_blocks.time_in_msecs(block)
+      |> Stream.map(fn Model.block(hash: hash) ->
+        block = :aec_db.get_block(hash)
+        difficulty = :aec_blocks.difficulty(block)
+        time = :aec_blocks.time_in_msecs(block)
 
-            [
-              time
-              |> Stats.time_intervals()
-              |> Enum.map(fn {interval, interval_start} ->
-                {{:difficulty, interval, interval_start}, difficulty}
-              end)
-              |> StatisticsMutation.new()
-            ]
-
-          :error ->
-            []
-        end
+        time
+        |> Stats.time_intervals()
+        |> Enum.map(fn {interval, interval_start} ->
+          {{:difficulty, interval, interval_start}, difficulty}
+        end)
+        |> StatisticsMutation.new()
       end)
       |> Stream.chunk_every(1000)
       |> Enum.reduce({state, 0}, fn mutations, {acc_state, count} ->
@@ -47,16 +40,5 @@ defmodule AeMdw.Migrations.GenerateBlockDifficultyStats do
       end)
 
     {:ok, block_difficulties_added}
-  end
-
-  defp fetch_block(hash) do
-    try do
-      case :aec_db.get_block(hash) do
-        block when is_tuple(block) -> {:ok, block}
-        _missing_block -> :error
-      end
-    catch
-      :exit, _reason -> :error
-    end
   end
 end

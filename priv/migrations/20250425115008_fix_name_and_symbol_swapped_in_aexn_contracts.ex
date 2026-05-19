@@ -16,7 +16,31 @@ defmodule AeMdw.Migrations.FixNameAndSymbolSwappedInAexnContracts do
   def run(state, _from_start?) do
     Model.AexnContract
     |> RocksDbCF.stream()
-    |> Stream.flat_map(fn aexn_contract -> updated_contract_mutations(state, aexn_contract) end)
+    |> Stream.flat_map(fn Model.aexn_contract(
+                            index: {aexn_type, contract_pk},
+                            txi_idx: {txi, _idx}
+                          ) = aexn_contract ->
+      Model.tx(block_index: bi) = State.fetch!(state, Model.Tx, txi)
+      Model.block(hash: block_hash) = State.fetch!(state, Model.Block, bi)
+
+      aexn_type
+      |> AexnContracts.call_meta_info(contract_pk, block_hash)
+      |> case do
+        {:ok, new_meta_info} ->
+          [
+            WriteMutation.new(
+              Model.AexnContract,
+              Model.aexn_contract(
+                aexn_contract,
+                meta_info: new_meta_info
+              )
+            )
+          ]
+
+        :error ->
+          []
+      end
+    end)
     |> Stream.chunk_every(1000)
     |> Stream.map(fn mutations ->
       _state = State.commit_db(state, mutations)
@@ -26,25 +50,5 @@ defmodule AeMdw.Migrations.FixNameAndSymbolSwappedInAexnContracts do
     |> then(fn count ->
       {:ok, count}
     end)
-  end
-
-  defp updated_contract_mutations(
-         state,
-         Model.aexn_contract(index: {aexn_type, contract_pk}, txi_idx: {txi, _idx}) =
-           aexn_contract
-       ) do
-    with {:ok, tx} <- State.get(state, Model.Tx, txi),
-         block_index when not is_nil(block_index) <- Model.tx(tx, :block_index),
-         {:ok, Model.block(hash: block_hash)} <- State.get(state, Model.Block, block_index),
-         {:ok, new_meta_info} <- AexnContracts.call_meta_info(aexn_type, contract_pk, block_hash) do
-      [
-        WriteMutation.new(
-          Model.AexnContract,
-          Model.aexn_contract(aexn_contract, meta_info: new_meta_info)
-        )
-      ]
-    else
-      _missing_data -> []
-    end
   end
 end

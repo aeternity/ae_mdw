@@ -315,8 +315,9 @@ defmodule AeMdw.Blocks do
   end
 
   defp render_micro_block(state, height, mbi) do
-    Model.block(tx_index: first_tx_index, hash: mb_hash) =
-      State.fetch!(state, Model.Block, {height, mbi})
+    block_rec = State.fetch!(state, Model.Block, {height, mbi})
+    Model.block(tx_index: first_tx_index) = block_rec
+    mb_hash = Model.block(block_rec, :hash)
 
     txs_count =
       case State.next(state, @table, {height, mbi}) do
@@ -334,15 +335,46 @@ defmodule AeMdw.Blocks do
           end
       end
 
-    block = :aec_db.get_block(mb_hash)
-    header = :aec_blocks.to_header(block)
-    gas = :aec_blocks.gas(block)
+    case fetch_micro_block_data(mb_hash) do
+      {:ok, block, header} ->
+        header
+        |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
+        |> Map.put(:micro_block_index, mbi)
+        |> Map.put(:transactions_count, txs_count)
+        |> Map.put(:gas, :aec_blocks.gas(block))
 
-    header
-    |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
-    |> Map.put(:micro_block_index, mbi)
-    |> Map.put(:transactions_count, txs_count)
-    |> Map.put(:gas, gas)
+      :error ->
+        %{
+          gas: 0,
+          hash: maybe_encode_micro_block_hash(mb_hash),
+          height: height,
+          micro_block_index: mbi,
+          time: DbUtil.block_index_to_time(state, {height, mbi}),
+          transactions_count: txs_count
+        }
+    end
+  end
+
+  defp maybe_encode_micro_block_hash(block_hash) do
+    try do
+      Enc.encode(:micro_block_hash, block_hash)
+    rescue
+      ArgumentError -> nil
+      FunctionClauseError -> nil
+    end
+  end
+
+  defp fetch_micro_block_data(block_hash) do
+    try do
+      block = :aec_db.get_block(block_hash)
+      {:ok, block, :aec_blocks.to_header(block)}
+    rescue
+      ArgumentError -> :error
+      UndefinedFunctionError -> :error
+      FunctionClauseError -> :error
+    catch
+      :exit, _reason -> :error
+    end
   end
 
   defp render_blocks(state, range) do
