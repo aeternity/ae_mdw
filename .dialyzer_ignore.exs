@@ -13,5 +13,10 @@
 
   # contract_resolver.ex: the same opaque-type loss causes dialyzer to type state
   # as `any()`, which then also fails the positional contract check (:call warning).
-  ~r{graphql/resolvers/contract_resolver\.ex:\d+:call\b}
+  ~r{graphql/resolvers/contract_resolver\.ex:\d+:call\b},
+
+  # blocks.ex: sparse-state fixtures store Model.block rows with hash: nil even
+  # though Blocks.block_hash() is typed as <<_::256>>. The nil-hash clause in
+  # render_key_block/2 is a deliberate runtime guard, not an unreachable pattern.
+  ~r{lib/ae_mdw/blocks\.ex:\d+:pattern_match}
 ]
