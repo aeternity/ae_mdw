@@ -294,21 +294,24 @@ defmodule AeMdw.Db.Name do
 
     for {_bi, txi_idx, _ptr_k} = p_keys <- pointee_keys(state, pk), reduce: {%{}, %{}} do
       {active, inactive} ->
-        {name_update_tx, _inner_tx_type, _tx_hash, _tx_type, _block_hash} =
-          DbUtil.read_node_tx_details(state, txi_idx)
+        case DbUtil.read_node_tx_details_safe(state, txi_idx) do
+          {name_update_tx, _inner_tx_type, _tx_hash, _tx_type, _block_hash} ->
+            name_hash = :aens_update_tx.name_hash(name_update_tx)
+            plain_name = plain_name!(state, name_hash)
 
-        name_hash = :aens_update_tx.name_hash(name_update_tx)
-        plain_name = plain_name!(state, name_hash)
+            case locate_name_or_auction(state, plain_name) do
+              {_bid_key, Model.AuctionBid} ->
+                {active, inactive}
 
-        case locate_name_or_auction(state, plain_name) do
-          {_bid_key, Model.AuctionBid} ->
+              {m_name, Model.ActiveName} ->
+                {push.(active, m_name, p_keys), inactive}
+
+              {m_name, Model.InactiveName} ->
+                {active, push.(inactive, m_name, p_keys)}
+            end
+
+          nil ->
             {active, inactive}
-
-          {m_name, Model.ActiveName} ->
-            {push.(active, m_name, p_keys), inactive}
-
-          {m_name, Model.InactiveName} ->
-            {active, push.(inactive, m_name, p_keys)}
         end
     end
   end

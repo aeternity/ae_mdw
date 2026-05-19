@@ -38,7 +38,26 @@ defmodule AeMdw.Db.Format do
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
   def to_raw_map(state, Model.tx(id: hash) = mdw_tx),
-    do: to_raw_map(state, mdw_tx, AE.Db.get_tx_data(hash))
+    do: to_raw_map(state, mdw_tx, safe_get_tx_data(hash))
+
+  def to_raw_map(
+        state,
+        Model.tx(index: index, id: hash, block_index: block_index, time: mb_time),
+        nil
+      ) do
+    {kb_index, mb_index} = normalize_block_index(block_index)
+
+    %{
+      block_hash: maybe_block_hash(state, block_index),
+      signatures: [],
+      hash: hash,
+      block_height: kb_index,
+      micro_index: mb_index,
+      micro_time: mb_time,
+      tx_index: index,
+      tx: maybe_raw_tx_type(state, index)
+    }
+  end
 
   def to_raw_map(
         state,
@@ -169,6 +188,67 @@ defmodule AeMdw.Db.Format do
   defp custom_raw_data(_state, _tx_type, tx, _tx_rec, _signed_tx, _block_hash),
     do: tx
 
+  defp maybe_block_hash(_state, nil), do: nil
+
+  defp maybe_block_hash(state, block_index) do
+    case State.get(state, Model.Block, block_index) do
+      {:ok, Model.block(hash: block_hash)} -> block_hash
+      :not_found -> nil
+    end
+  end
+
+  defp maybe_encode_block_hash(_state, nil), do: nil
+
+  defp maybe_encode_block_hash(state, block_index) do
+    case maybe_block_hash(state, block_index) do
+      nil -> nil
+      block_hash -> Enc.encode(:micro_block_hash, block_hash)
+    end
+  end
+
+  defp normalize_block_index({kb_index, mb_index}), do: {kb_index, mb_index}
+  defp normalize_block_index(nil), do: {nil, nil}
+
+  defp maybe_raw_tx_type(state, txi) do
+    case persisted_tx_type(state, txi) do
+      nil -> nil
+      tx_type -> %{type: tx_type}
+    end
+  end
+
+  defp maybe_client_tx_type(state, txi) do
+    case persisted_tx_type(state, txi) do
+      nil -> nil
+      tx_type -> %{"type" => AE.tx_name(tx_type)}
+    end
+  end
+
+  defp safe_get_tx_data(nil), do: nil
+
+  defp safe_get_tx_data(hash) do
+    try do
+      AE.Db.get_tx_data(hash)
+    rescue
+      ArgumentError -> nil
+      UndefinedFunctionError -> nil
+    catch
+      :exit, _reason -> nil
+    end
+  end
+
+  defp maybe_encode_tx_hash(nil), do: nil
+  defp maybe_encode_tx_hash(hash), do: Enc.encode(:tx_hash, hash)
+
+  defp persisted_tx_type(state, txi) do
+    Enum.find_value(AE.tx_types(), fn tx_type ->
+      cond do
+        State.exists?(state, Model.Type, {tx_type, txi}) -> tx_type
+        State.exists?(state, Model.InnerType, {tx_type, txi}) -> tx_type
+        true -> nil
+      end
+    end)
+  end
+
   defp format_call_info(signed_tx, contract_pk, block_hash, txi) do
     case Contract.call_rec(signed_tx, contract_pk, block_hash) do
       {:ok, call_rec} ->
@@ -191,8 +271,31 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
+  def to_map(state, Model.tx(id: nil) = rec),
+    do: to_map(state, rec, nil)
+
   def to_map(state, Model.tx(id: hash) = rec),
-    do: to_map(state, rec, AE.Db.get_tx_data(hash))
+    do: to_map(state, rec, safe_get_tx_data(hash))
+
+  def to_map(
+        state,
+        Model.tx(index: index, id: hash, block_index: block_index, time: mb_time),
+        nil
+      ) do
+    {kb_index, mb_index} = normalize_block_index(block_index)
+
+    %{
+      "block_hash" => maybe_encode_block_hash(state, block_index),
+      "block_height" => kb_index,
+      "encoded_tx" => nil,
+      "hash" => maybe_encode_tx_hash(hash),
+      "micro_index" => mb_index,
+      "micro_time" => mb_time,
+      "signatures" => [],
+      "tx" => maybe_client_tx_type(state, index),
+      "tx_index" => index
+    }
+  end
 
   def to_map(
         state,
@@ -206,7 +309,13 @@ defmodule AeMdw.Db.Format do
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
     |> update_in(["tx"], fn tx ->
-      custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
+      tx = custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
+
+      if Map.has_key?(tx, "type") do
+        tx
+      else
+        Map.put(tx, "type", AE.tx_name(type))
+      end
     end)
   end
 

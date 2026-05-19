@@ -29,7 +29,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
   @spec key_block_by_id(any(), map(), Absinthe.Resolution.t()) ::
           {:ok, term()} | {:error, String.t()}
   def key_block_by_id(_parent, %{id: id}, %{context: %{state: state}}) do
-    case Blocks.fetch_key_block(state, id) do
+    case Blocks.fetch_key_block(state, id, strict_hash?: false) do
       {:ok, _} = ok -> Helpers.make_single(ok)
       {:error, _} -> {:error, "key_block_error"}
     end
@@ -83,6 +83,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
   end
 
   defp key_block_by_id(state, id) do
-    Blocks.fetch_key_block(state, id) |> Helpers.make_single()
+    Blocks.fetch_key_block(state, id, strict_hash?: false) |> Helpers.make_single()
   end
 end

@@ -15,6 +15,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Util
   alias AeMdw.Validate
   alias AeMdw.Txs
+  alias :aeser_api_encoder, as: Enc
 
   require Model
 
@@ -60,10 +61,15 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  @spec fetch_key_block(state(), binary()) :: {:ok, block()} | {:error, Error.t()}
-  def fetch_key_block(state, hash_or_kbi) do
-    with {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi) do
-      {:ok, render_key_block(state, height)}
+  @spec fetch_key_block(state(), binary(), keyword()) :: {:ok, block()} | {:error, Error.t()}
+  def fetch_key_block(state, hash_or_kbi, opts \\ []) do
+    with {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi),
+         :ok <- ensure_hash_key_block_available(state, height, hash_or_kbi, opts),
+         %{} = key_block <- render_key_block(state, height) do
+      {:ok, key_block}
+    else
+      nil -> {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -142,9 +148,7 @@ defmodule AeMdw.Blocks do
   @spec fetch(State.t(), block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
   def fetch(_state, block_hash) when is_binary(block_hash) do
     with {:ok, encoded_hash} <- Validate.id(block_hash),
-         {:ok, _block} <- :aec_chain.get_block(encoded_hash) do
-      header = :aec_db.get_header(encoded_hash)
-
+         {:ok, header} <- fetch_header(encoded_hash) do
       {:ok, :aec_headers.serialize_for_client(header, Db.prev_block_type(header))}
     else
       :error -> {:error, Error.Input.NotFound.exception(value: block_hash)}
@@ -156,6 +160,19 @@ defmodule AeMdw.Blocks do
     case State.get(state, @table, block_index) do
       {:ok, Model.block(hash: block_hash)} -> fetch(state, block_hash)
       :not_found -> {:error, Error.Input.NotFound.exception(value: block_index)}
+    end
+  end
+
+  defp fetch_header(block_hash) do
+    try do
+      with {:ok, _block} <- :aec_chain.get_block(block_hash) do
+        {:ok, :aec_db.get_header(block_hash)}
+      end
+    rescue
+      ArgumentError -> :error
+      UndefinedFunctionError -> :error
+    catch
+      :exit, _reason -> :error
     end
   end
 
@@ -187,44 +204,99 @@ defmodule AeMdw.Blocks do
     hash
   end
 
-  defp render_key_blocks(state, range), do: Enum.map(range, &render_key_block(state, &1))
+  defp render_key_blocks(state, range) do
+    range
+    |> Enum.map(&render_key_block(state, &1))
+    |> Enum.reject(&is_nil/1)
+  end
 
   defp render_key_block(state, gen) do
-    mbi_count =
-      case State.prev(state, @table, {gen + 1, -1}) do
-        {:ok, {^gen, mbi}} -> mbi + 1
-        {:ok, _block_index} -> 0
-        :none -> 0
+    with {:ok, Model.block(hash: hash, tx_index: first_tx_index)} <- State.get(state, @table, {gen, -1}) do
+      mbi_count =
+        case State.prev(state, @table, {gen + 1, -1}) do
+          {:ok, {^gen, mbi}} -> mbi + 1
+          {:ok, _block_index} -> 0
+          :none -> 0
+        end
+
+      txs_count =
+        case State.prev(state, @table, {gen + 1, 0}) do
+          {:ok, block_index} ->
+            case State.get(state, @table, block_index) do
+              {:ok, Model.block(tx_index: next_tx_index)}
+              when is_integer(next_tx_index) and is_integer(first_tx_index) ->
+                next_tx_index - first_tx_index
+
+              :not_found -> 0
+
+              _other_block -> 0
+            end
+
+          :none ->
+            0
+        end
+
+      block_reward =
+        case State.get(state, Model.DeltaStat, gen) do
+          {:ok, Model.delta_stat(block_reward: block_reward)} ->
+            block_reward
+
+          :not_found ->
+            IntTransfer.read_block_reward(state, gen)
+        end
+
+      case fetch_key_header(hash) do
+        {:ok, header} ->
+          header
+          |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
+          |> Map.put(:micro_blocks_count, mbi_count)
+          |> Map.put(:transactions_count, txs_count)
+          |> Map.put(:beneficiary_reward, block_reward)
+
+        :error ->
+          %{
+            beneficiary_reward: block_reward,
+            hash: Enc.encode(:key_block_hash, hash),
+            height: gen,
+            micro_blocks_count: mbi_count,
+            time: DbUtil.block_index_to_time(state, {gen, -1}),
+            transactions_count: txs_count
+          }
       end
+    else
+      :not_found -> nil
+    end
+  end
 
-    txs_count =
-      case State.prev(state, @table, {gen + 1, 0}) do
-        {:ok, block_index} ->
-          Model.block(tx_index: next_tx_index) = State.fetch!(state, @table, block_index)
-          Model.block(tx_index: first_tx_index) = State.fetch!(state, @table, {gen, -1})
-          next_tx_index - first_tx_index
+  defp fetch_key_header(block_hash) do
+    try do
+      {:ok, :aec_db.get_header(block_hash)}
+    rescue
+      ArgumentError -> :error
+      UndefinedFunctionError -> :error
+    catch
+      :exit, _reason -> :error
+    end
+  end
 
-        :none ->
-          0
-      end
+  defp ensure_hash_key_block_available(state, height, hash_or_kbi, opts) do
+    strict_hash? = Keyword.get(opts, :strict_hash?, true)
 
-    Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
-    header = :aec_db.get_header(hash)
+    case Util.parse_int(hash_or_kbi) do
+      {:ok, _height} ->
+        :ok
 
-    block_reward =
-      case State.get(state, Model.DeltaStat, gen) do
-        {:ok, Model.delta_stat(block_reward: block_reward)} ->
-          block_reward
+      :error when strict_hash? ->
+        with {:ok, Model.block(hash: hash)} <- State.get(state, @table, {height, -1}),
+             {:ok, _header} <- fetch_key_header(hash) do
+          :ok
+        else
+          _missing_header -> {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+        end
 
-        :not_found ->
-          IntTransfer.read_block_reward(state, gen)
-      end
-
-    header
-    |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
-    |> Map.put(:micro_blocks_count, mbi_count)
-    |> Map.put(:transactions_count, txs_count)
-    |> Map.put(:beneficiary_reward, block_reward)
+      :error ->
+        :ok
+    end
   end
 
   defp render_micro_block(state, height, mbi) do
