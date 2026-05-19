@@ -1,6 +1,8 @@
 defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
   use ExUnit.Case, async: false
-  alias AeMdw.Db.{State, Model, Util}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util
   require Model
 
   @schema AeMdwWeb.GraphQL.Schema
@@ -9,7 +11,7 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
   defp ctx_state do
     case State.mem_state() do
       %State{} = st -> st
-      _ -> nil
+      _no_state -> nil
     end
   end
 
@@ -19,15 +21,14 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
 
   # Find a key block height that has at least one micro block
   defp sample_kb_with_micro(state, last_gen, attempts \\ 50) do
-    Enum.find(0..attempts, fn offset ->
-      h = max(last_gen - offset, 0)
+    case Enum.find(0..attempts, fn offset ->
+           h = max(last_gen - offset, 0)
 
-      case State.get(state, Model.Block, {h, 0}) do
-        {:ok, _} -> true
-        :not_found -> false
-      end
-    end)
-    |> case do
+           case State.get(state, Model.Block, {h, 0}) do
+             {:ok, _} -> true
+             :not_found -> false
+           end
+         end) do
       nil -> nil
       offset -> max(last_gen - offset, 0)
     end

@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.TransferQueries do
+  @moduledoc false
+
   use Absinthe.Schema.Notation
 
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros

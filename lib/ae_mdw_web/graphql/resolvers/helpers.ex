@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
+  @moduledoc false
+
   alias AeMdw.Error
 
   @min_page_limit 1
@@ -10,13 +12,13 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   # gen block does not exist yet).
   @max_gen 999_999_999
 
+  @spec build_query(map(), [atom()]) :: map()
   def build_query(args, keys) do
     Enum.reduce(keys, %{}, fn key, acc ->
       maybe_put(
         acc,
         Atom.to_string(key),
-        Map.get(args, key)
-        |> maybe_map(fn
+        maybe_map(Map.get(args, key), fn
           v when is_atom(v) -> Atom.to_string(v)
           v -> v
         end)
@@ -24,6 +26,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end)
   end
 
+  @spec pagination_args(map()) :: %{pagination: term(), cursor: term()}
   def pagination_args(args) do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
@@ -33,6 +36,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     %{:pagination => pagination, :cursor => cursor}
   end
 
+  @spec pagination_args_with_scope(map()) :: %{pagination: term(), cursor: term(), scope: term()}
   def pagination_args_with_scope(args) do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
@@ -43,6 +47,12 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     %{:pagination => pagination, :cursor => cursor, :scope => scope}
   end
 
+  @spec pagination_args_all_with_scope(map()) :: %{
+          direction: term(),
+          limit: integer(),
+          cursor: term(),
+          scope: term()
+        }
   def pagination_args_all_with_scope(args) do
     limit = clamp_page_limit(Map.get(args, :limit))
     cursor = Map.get(args, :cursor)
@@ -61,6 +71,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     end
   end
 
+  @spec make_scope(map()) :: {:gen, Range.t()} | nil
   def make_scope(args) do
     from_height = Map.get(args, :from_height)
     to_height = Map.get(args, :to_height)
@@ -76,6 +87,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   defp make_scope(nil, to) when not is_nil(to), do: {:gen, 0..to}
   defp make_scope(nil, nil), do: nil
 
+  @spec make_page(term()) :: {:ok, map()} | {:error, String.t()}
   def make_page({:ok, {prev, items, next}}) do
     {:ok,
      %{
@@ -88,9 +100,11 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
   def make_page({:error, err}), do: {:error, format_err(err)}
   def make_page({_prev, _items, _next} = res), do: make_page({:ok, res})
 
+  @spec make_single(term()) :: {:ok, term()} | {:error, String.t()}
   def make_single({:ok, item}), do: {:ok, normalize_map(item)}
   def make_single({:error, err}), do: {:error, format_err(err)}
 
+  @spec format_err(term()) :: String.t()
   def format_err({reason, val}), do: Error.to_string(reason, val)
   def format_err(%{__exception__: true, message: message}) when is_binary(message), do: message
 
@@ -100,15 +114,19 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Helpers do
     "unrecognized_error"
   end
 
+  @spec cursor_val(term()) :: term()
   def cursor_val(nil), do: nil
   def cursor_val({val, _rev}), do: val
 
+  @spec maybe_put(map(), term(), term()) :: map()
   def maybe_put(map, _k, nil), do: map
   def maybe_put(map, k, v), do: Map.put(map, k, v)
 
+  @spec maybe_map(term(), (term() -> term())) :: term()
   def maybe_map(nil, _fun), do: nil
   def maybe_map(value, fun), do: fun.(value)
 
+  @spec normalize_map(term()) :: term()
   def normalize_map(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} ->

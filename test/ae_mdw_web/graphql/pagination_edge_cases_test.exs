@@ -45,7 +45,7 @@ defmodule AeMdwWeb.GraphQL.PaginationEdgeCasesTest do
           context: %{state: st}
         )
 
-      _ = get_in(res, [:data, "names", "data"]) || []
+      _names = get_in(res, [:data, "names", "data"]) || []
       # Just ensure no internal errors captured
       assert Map.get(res, :errors, []) == []
     else

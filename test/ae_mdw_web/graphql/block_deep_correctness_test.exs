@@ -1,9 +1,11 @@
 defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
   use ExUnit.Case, async: false
 
-  alias AeMdw.Db.{State, Model, Util}
-  require Model
   alias AeMdw.Blocks
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util
+  require Model
 
   @moduletag :graphql
   @moduletag :integration
@@ -20,7 +22,7 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
 
         {:ok, %{state: state, last_gen: last_gen}}
 
-      _ ->
+      _no_state ->
         :ok
     end
   end
@@ -28,7 +30,7 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
   defp gql!(query, ctx), do: Absinthe.run(query, @schema, context: %{state: ctx.state})
 
   defp key_block_expected_heights(last_gen, limit) do
-    Enum.take(Stream.iterate(last_gen, &(&1 - 1)), limit) |> Enum.filter(&(&1 >= 0))
+    Enum.filter(Enum.take(Stream.iterate(last_gen, &(&1 - 1)), limit), &(&1 >= 0))
   end
 
   test "first page heights match descending sequence", %{last_gen: last_gen} = ctx do
@@ -57,7 +59,7 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
       end
 
       {heights, _cursor} =
-        Enum.reduce(1..total_pages, {[], nil}, fn _, {acc, cur} ->
+        Enum.reduce(1..total_pages, {[], nil}, fn _page_number, {acc, cur} ->
           {:ok, %{data: %{"key_blocks" => %{"nextCursor" => nc, "data" => ds}}}} =
             gql!(q.(cur && elem(cur, 0)), ctx)
 
@@ -84,7 +86,9 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
 
   defp micro_block_count(state, gen) do
     # Count micro block indexes by probing forward until miss
-    Stream.iterate(0, &(&1 + 1))
+    indices = Stream.iterate(0, &(&1 + 1))
+
+    indices
     |> Stream.map(fn mbi -> {mbi, State.get(state, Model.Block, {gen, mbi})} end)
     |> Stream.take_while(fn {_mbi, res} -> match?({:ok, _}, res) end)
     |> Enum.count()

@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Helpers.Macros do
+  @moduledoc false
+
   # Matches the resolver default in AeMdwWeb.GraphQL.Resolvers.Helpers.
   @default_limit 10
 

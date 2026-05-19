@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.WealthQueries do
+  @moduledoc false
+
   use Absinthe.Schema.Notation
 
   object :wealth_queries do

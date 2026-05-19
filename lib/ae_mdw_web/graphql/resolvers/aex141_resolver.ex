@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
+  @moduledoc false
+
   alias AeMdw.Aex141
   alias AeMdw.AexnTokens
   alias AeMdw.AexnTransfers
@@ -30,14 +32,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     query = Helpers.build_query(args, [:prefix, :exact])
 
-    AexnTokens.fetch_contracts(state, pagination, :aex141, query, order_by, cursor, true)
-    |> Helpers.make_page()
+    Helpers.make_page(
+      AexnTokens.fetch_contracts(state, pagination, :aex141, query, order_by, cursor, true)
+    )
   end
 
   @spec aex141_contract(any(), map(), Absinthe.Resolution.t()) ::
           {:ok, term()} | {:error, String.t()}
   def aex141_contract(_parent, %{id: id}, %{context: %{state: state}}) do
-    AexnTokens.fetch_contract(state, :aex141, id, true) |> Helpers.make_single()
+    Helpers.make_single(AexnTokens.fetch_contract(state, :aex141, id, true))
   end
 
   @spec aex141_transfers(any(), map(), Absinthe.Resolution.t()) ::
@@ -110,7 +113,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
   def aex141_contract_token(_parent, %{contract_id: contract_id, token_id: token_id}, %{
         context: %{state: state}
       }) do
-    Aex141.fetch_nft(state, contract_id, token_id, v3?: true) |> Helpers.make_single()
+    Helpers.make_single(Aex141.fetch_nft(state, contract_id, token_id, v3?: true))
   end
 
   @spec aex141_contract_tokens(any(), map(), Absinthe.Resolution.t()) ::
@@ -122,8 +125,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     case AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
       {:ok, contract_pk} ->
-        Aex141.fetch_collection_owners(state, contract_pk, cursor, pagination)
-        |> Helpers.make_page()
+        Helpers.make_page(Aex141.fetch_collection_owners(state, contract_pk, cursor, pagination))
 
       {:error, err} ->
         {:error, Helpers.format_err(err)}
@@ -139,7 +141,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     query = Helpers.build_query(args, [:contract])
 
-    Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query) |> Helpers.make_page()
+    Helpers.make_page(Aex141.fetch_owned_tokens(state, account_id, cursor, pagination, query))
   end
 
   @spec aex141_contract_templates(any(), map(), Absinthe.Resolution.t()) ::
@@ -151,8 +153,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     case AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
       {:ok, contract_pk} ->
-        Aex141.fetch_templates(state, contract_pk, cursor, pagination)
-        |> Helpers.make_page()
+        Helpers.make_page(Aex141.fetch_templates(state, contract_pk, cursor, pagination))
 
       {:error, err} ->
         {:error, Helpers.format_err(err)}
@@ -170,8 +171,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex141Resolver do
 
     case AeMdw.Validate.id(contract_id, [:contract_pubkey]) do
       {:ok, contract_pk} ->
-        Aex141.fetch_template_tokens(state, contract_pk, template_id, cursor, pagination)
-        |> Helpers.make_page()
+        Helpers.make_page(
+          Aex141.fetch_template_tokens(state, contract_pk, template_id, cursor, pagination)
+        )
 
       {:error, err} ->
         {:error, Helpers.format_err(err)}

@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Types.BlockTypes do
+  @moduledoc false
+
   use Absinthe.Schema.Notation
 
   alias AeMdwWeb.GraphQL.Schema.Helpers.Macros

@@ -10,7 +10,7 @@ defmodule AeMdwWeb.GraphQL.BlockAdvancedQueriesTest do
     ctx =
       case State.mem_state() do
         %State{} = st -> %{state: st}
-        _ -> %{}
+        _no_state -> %{}
       end
 
     Absinthe.run(query, @schema, context: ctx)
@@ -61,13 +61,13 @@ defmodule AeMdwWeb.GraphQL.BlockAdvancedQueriesTest do
            true <- is_list(d1) and length(d1) > 0 and nc do
         {:ok, page2} = run("{ key_blocks(limit: 2, cursor: \"#{nc}\") { data { height } } }")
         d2 = get_in(page2, [:data, "key_blocks", "data"]) || []
-        h1 = Enum.map(d1, & &1["height"]) |> MapSet.new()
-        h2 = Enum.map(d2, & &1["height"]) |> MapSet.new()
+        h1 = MapSet.new(Enum.map(d1, & &1["height"]))
+        h2 = MapSet.new(Enum.map(d2, & &1["height"]))
 
         # Expect disjoint sets (no overlap) under normal operation; if overlap occurs due to reorg, we don't fail hard
         assert MapSet.disjoint?(h1, h2) or h1 == h2
       else
-        _ -> assert true
+        _no_pagination -> assert true
       end
     end
   end

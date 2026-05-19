@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
+  @moduledoc false
+
   alias AeMdw.AexnTokens
   alias AeMdw.Aex9
   alias AeMdw.Db.Model
@@ -27,14 +29,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
 
     query = Helpers.build_query(args, [:prefix, :exact])
 
-    AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true)
-    |> Helpers.make_page()
+    Helpers.make_page(
+      AexnTokens.fetch_contracts(state, pagination, :aex9, query, order_by, cursor, true)
+    )
   end
 
   @spec aex9_contract(any(), map(), Absinthe.Resolution.t()) ::
           {:ok, term()} | {:error, String.t()}
   def aex9_contract(_parent, %{id: id}, %{context: %{state: state}}) do
-    AexnTokens.fetch_contract(state, :aex9, id, true) |> Helpers.make_single()
+    Helpers.make_single(AexnTokens.fetch_contract(state, :aex9, id, true))
   end
 
   @spec aex9_contract_balances(any(), map(), Absinthe.Resolution.t()) ::
@@ -45,8 +48,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
 
     query = Helpers.build_query(args, [:block_hash])
 
-    Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query)
-    |> Helpers.make_page()
+    Helpers.make_page(Aex9.fetch_event_balances(state, id, pagination, cursor, order_by, query))
   end
 
   @spec aex9_balance_history(any(), map(), Absinthe.Resolution.t()) ::
@@ -59,8 +61,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
 
     with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
          {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]) do
-      Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination)
-      |> Helpers.make_page()
+      Helpers.make_page(
+        Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination)
+      )
     else
       {:error, err} ->
         {:error, Helpers.format_err(err)}
@@ -73,7 +76,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
     with {:ok, contract_pk} <- AeMdw.Validate.id(cid, [:contract_pubkey]),
          {:ok, account_pk} <- AeMdw.Validate.id(aid, [:account_pubkey]),
          {:ok, height_hash} <- resolve_block_hash(args) do
-      Aex9.fetch_balance(contract_pk, account_pk, height_hash) |> Helpers.make_single()
+      Helpers.make_single(Aex9.fetch_balance(contract_pk, account_pk, height_hash))
     else
       {:error, err} ->
         {:error, Helpers.format_err(err)}
@@ -87,7 +90,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.Aex9Resolver do
 
     case AeMdw.Validate.id(aid, [:account_pubkey]) do
       {:ok, account_pk} ->
-        Aex9.fetch_account_balances(state, account_pk, cursor, pagination) |> Helpers.make_page()
+        Helpers.make_page(Aex9.fetch_account_balances(state, account_pk, cursor, pagination))
 
       {:error, err} ->
         {:error, Helpers.format_err(err)}

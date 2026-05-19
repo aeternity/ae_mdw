@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.GraphQL.NumericTypesTest do
   use ExUnit.Case, async: false
-  alias AeMdw.Db.{State, Model}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   require Model
 
   @schema AeMdwWeb.GraphQL.Schema
@@ -74,8 +75,8 @@ defmodule AeMdwWeb.GraphQL.NumericTypesTest do
 
       mb_hash =
         case txs do
-          [t | _] -> t["block_hash"] || t["hash"]
-          _ -> nil
+          [t | _rest] -> t["block_hash"] || t["hash"]
+          _no_transactions -> nil
         end
 
       Enum.each(txs, fn t ->

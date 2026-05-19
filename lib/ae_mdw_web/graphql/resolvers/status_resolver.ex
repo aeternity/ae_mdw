@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.StatusResolver do
+  @moduledoc false
+
   alias AeMdw.Db.Status
 
   @spec status(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}

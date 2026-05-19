@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.TransferResolver do
+  @moduledoc false
+
   alias AeMdw.Transfers
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
@@ -9,7 +11,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransferResolver do
 
     query = Helpers.build_query(args, [:account, :kind])
 
-    Transfers.fetch_transfers(state, pagination, scope, query, cursor)
-    |> Helpers.make_page()
+    Helpers.make_page(Transfers.fetch_transfers(state, pagination, scope, query, cursor))
   end
 end

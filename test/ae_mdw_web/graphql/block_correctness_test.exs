@@ -1,9 +1,11 @@
 defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
   use ExUnit.Case, async: false
 
-  alias AeMdw.Db.{State, Model, Util}
-  require Model
   alias AeMdw.Blocks
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util
+  require Model
 
   @schema AeMdwWeb.GraphQL.Schema
 
@@ -18,7 +20,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
           %State{} = s ->
             s
 
-          _ ->
+          _no_state ->
             Process.sleep(200 * attempt)
             false
         end
@@ -41,7 +43,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
   defp gql(query, ctx), do: Absinthe.run(query, @schema, context: %{state: ctx.state})
 
   defp assert_ok({:ok, %{data: data}}, path), do: get_in(data, path)
-  defp assert_ok(other, _), do: flunk("unexpected: #{inspect(other)}")
+  defp assert_ok(other, _path), do: flunk("unexpected: #{inspect(other)}")
 
   describe "key_block field correctness" do
     test "single key_block fields match Blocks context",
@@ -118,7 +120,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
             ["key_blocks"]
           )
 
-        hs = Enum.map(page["data"], & &1["height"]) |> Enum.uniq()
+        hs = Enum.uniq(Enum.map(page["data"], & &1["height"]))
         assert hs == [target]
       else
         assert true
@@ -211,7 +213,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
 
                   assert mb["gas"] == base_mb[:gas]
 
-                _ ->
+                _unexpected_result ->
                   assert true
               end
 

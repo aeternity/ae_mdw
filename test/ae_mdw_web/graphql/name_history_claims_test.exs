@@ -30,7 +30,7 @@ defmodule AeMdwWeb.GraphQL.NameHistoryClaimsTest do
               context: %{state: st}
             )
 
-          _ = get_in(res, [:data, "nameHistory", "data"])
+          _history_entries = get_in(res, [:data, "nameHistory", "data"])
           assert Map.get(res, :errors, []) == []
       end
     else
@@ -54,7 +54,7 @@ defmodule AeMdwWeb.GraphQL.NameHistoryClaimsTest do
               context: %{state: st}
             )
 
-          _ = get_in(res, [:data, "nameClaims", "data"])
+          _claim_entries = get_in(res, [:data, "nameClaims", "data"])
           assert Map.get(res, :errors, []) == []
       end
     else

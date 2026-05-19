@@ -9,7 +9,7 @@ defmodule AeMdwWeb.GraphQL.MultiQueryTest do
     ctx =
       case State.mem_state() do
         %State{} = st -> %{state: st}
-        _ -> %{}
+        _no_state -> %{}
       end
 
     Absinthe.run(query, @schema, context: ctx)
@@ -24,14 +24,12 @@ defmodule AeMdwWeb.GraphQL.MultiQueryTest do
     data_a = get_in(res, [:data, "a", "data"]) || []
     data_b = get_in(res, [:data, "b", "data"]) || []
 
-    cond do
-      data_a == [] or data_b == [] ->
-        assert true
-
-      true ->
-        [%{"height" => h} | _] = data_a
-        [%{"height" => h2} | _] = data_b
-        assert is_integer(h) and is_integer(h2)
+    if data_a == [] or data_b == [] do
+      assert true
+    else
+      [%{"height" => h} | _rest_a] = data_a
+      [%{"height" => h2} | _rest_b] = data_b
+      assert is_integer(h) and is_integer(h2)
     end
   end
 end

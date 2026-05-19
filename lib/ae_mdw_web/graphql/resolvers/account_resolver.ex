@@ -1,7 +1,10 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.AccountResolver do
+  @moduledoc false
+
   alias AeMdw.Activities
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Validate
-  alias AeMdw.Db.{State, Model}
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
   require Model
@@ -32,14 +35,15 @@ defmodule AeMdwWeb.GraphQL.Resolvers.AccountResolver do
 
     query = Helpers.build_query(args, [:owned_only, :type])
 
-    Activities.fetch_account_activities(
-      state,
-      id,
-      pagination,
-      scope,
-      query,
-      cursor
+    Helpers.make_page(
+      Activities.fetch_account_activities(
+        state,
+        id,
+        pagination,
+        scope,
+        query,
+        cursor
+      )
     )
-    |> Helpers.make_page()
   end
 end

@@ -12,11 +12,11 @@ end
 if System.get_env("AE_MDW_FORCE_DB_RESET") == "1" do
   IO.puts("[test_helper] Forcing DB reset (AE_MDW_FORCE_DB_RESET=1)")
   # Best effort shutdown to reduce lingering processes; ignore errors.
-  _ =
+  _stop_result =
     try do
       Application.stop(:aecore)
     rescue
-      _ -> :ok
+      _stop_error -> :ok
     end
 
   for kv <- [{:txi, 0}, {:kbi, 0}] do
@@ -24,11 +24,11 @@ if System.get_env("AE_MDW_FORCE_DB_RESET") == "1" do
   end
 
   # Close & reopen RocksDB defensively
-  _ =
+  _close_result =
     try do
       AeMdw.Db.RocksDb.close()
     rescue
-      _ -> :ok
+      _close_error -> :ok
     end
 
   case AeMdw.Db.RocksDb.open(true) do

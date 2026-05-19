@@ -285,7 +285,8 @@ defmodule AeMdw.Db.Util do
 
   def read_node_tx_details_safe(state, {txi, local_idx}) do
     with {:ok, Model.tx(id: tx_hash)} <- State.get(state, Model.Tx, txi),
-         {:ok, Model.int_contract_call(tx: aetx)} <- State.get(state, Model.IntContractCall, {txi, local_idx}),
+         {:ok, Model.int_contract_call(tx: aetx)} <-
+           State.get(state, Model.IntContractCall, {txi, local_idx}),
          {block_hash, tx_type, _signed_tx, _tx_rec} <- Db.get_tx_data(tx_hash) do
       {inner_type, tx} = :aetx.specialize_type(aetx)
 
@@ -382,7 +383,8 @@ defmodule AeMdw.Db.Util do
                  :micro_block_hash -> mbi >= 0
                end
 
-             matches_type? and match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
+             matches_type? and
+               match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
            end) do
       {:ok, elem(block_index, 0)}
     else

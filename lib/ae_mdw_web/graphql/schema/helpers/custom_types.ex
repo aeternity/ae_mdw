@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
+  @moduledoc false
+
   use Absinthe.Schema.Notation
 
   enum :direction do
@@ -16,10 +18,10 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
       %Absinthe.Blueprint.Input.String{value: v} ->
         case Integer.parse(v) do
           {int, ""} -> {:ok, int}
-          _ -> :error
+          _parse_error -> :error
         end
 
-      _ ->
+      _invalid_input ->
         :error
     end)
 
@@ -30,7 +32,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
       v when is_binary(v) ->
         case Integer.parse(v) do
           {_int, ""} -> v
-          _ -> raise Absinthe.SerializationError, "Invalid BigInt binary"
+          _parse_error -> raise Absinthe.SerializationError, "Invalid BigInt binary"
         end
 
       other ->
@@ -42,7 +44,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
   scalar :json, name: "JSON" do
     parse(fn
       %{value: value} -> {:ok, value}
-      _ -> :error
+      _invalid_json -> :error
     end)
 
     serialize(fn value -> value end)

@@ -39,14 +39,12 @@ defmodule AeMdwWeb.GraphQL.PointeesTest do
       name = get_in(names, [:data, "names", "data", Access.at(0), "name"])
 
       if name do
-          if name do
+        if name do
           {:ok, res2} =
-              Absinthe.run("{ name(id:\"#{name}\"){ pointers } }", @schema,
-              context: %{state: st}
-            )
+            Absinthe.run("{ name(id:\"#{name}\"){ pointers } }", @schema, context: %{state: st})
 
           assert Map.get(res2, :errors, []) == []
-          _ = get_in(res2, [:data, "name", "pointers"])
+          _pointers = get_in(res2, [:data, "name", "pointers"])
         end
       end
     else

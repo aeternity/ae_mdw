@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
+  @moduledoc false
+
   alias AeMdw.Blocks
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
@@ -83,6 +85,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.BlockResolver do
   end
 
   defp key_block_by_id(state, id) do
-    Blocks.fetch_key_block(state, id, strict_hash?: false) |> Helpers.make_single()
+    Helpers.make_single(Blocks.fetch_key_block(state, id, strict_hash?: false))
   end
 end

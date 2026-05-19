@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema.Queries.StatusQueries do
+  @moduledoc false
+
   use Absinthe.Schema.Notation
 
   object :status_queries do

@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.GraphQL.MicroBlockTransactionsTest do
   use ExUnit.Case, async: false
-  alias AeMdw.Db.{State, Model}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   require Model
 
   @schema AeMdwWeb.GraphQL.Schema
@@ -11,14 +12,12 @@ defmodule AeMdwWeb.GraphQL.MicroBlockTransactionsTest do
   defp first_micro_block_hash(state) do
     # naive scan from latest backwards for a micro block with txs or empty
     with %State{} = st <- state do
-      Enum.find_value(0..100, fn offset ->
-        case State.prev(st, Model.Block, nil) do
-          {:ok, {h, _}} -> h - offset
-          :none -> 0
-        end
-      end)
-      # Fallback simple: look at height 0, mbi 0
-      |> case do
+      case Enum.find_value(0..100, fn offset ->
+             case State.prev(st, Model.Block, nil) do
+               {:ok, {h, _last_mbi}} -> h - offset
+               :none -> 0
+             end
+           end) do
         h when is_integer(h) and h >= 0 ->
           case State.get(st, Model.Block, {h, 0}) do
             {:ok, Model.block(hash: mb_hash)} ->
@@ -28,7 +27,7 @@ defmodule AeMdwWeb.GraphQL.MicroBlockTransactionsTest do
               nil
           end
 
-        _ ->
+        _missing_height ->
           nil
       end
     end

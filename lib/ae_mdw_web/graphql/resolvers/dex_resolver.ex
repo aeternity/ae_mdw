@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
+  @moduledoc false
+
   alias AeMdw.Dex
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
 
@@ -7,7 +9,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    Dex.fetch_swaps(state, pagination, scope, cursor) |> Helpers.make_page()
+    Helpers.make_page(Dex.fetch_swaps(state, pagination, scope, cursor))
   end
 
   @spec account_swaps(any(), map(), Absinthe.Resolution.t()) ::
@@ -18,8 +20,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
 
     query = Helpers.build_query(args, [:token_symbol])
 
-    Dex.fetch_account_swaps(state, account_id, pagination, scope, cursor, query)
-    |> Helpers.make_page()
+    Helpers.make_page(
+      Dex.fetch_account_swaps(state, account_id, pagination, scope, cursor, query)
+    )
   end
 
   @spec contract_swaps(any(), map(), Absinthe.Resolution.t()) ::
@@ -28,7 +31,6 @@ defmodule AeMdwWeb.GraphQL.Resolvers.DexResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    Dex.fetch_contract_swaps(state, contract_id, pagination, scope, cursor)
-    |> Helpers.make_page()
+    Helpers.make_page(Dex.fetch_contract_swaps(state, contract_id, pagination, scope, cursor))
   end
 end

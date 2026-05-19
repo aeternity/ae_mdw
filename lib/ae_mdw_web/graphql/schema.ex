@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Schema do
+  @moduledoc false
+
   use Absinthe.Schema
 
   import_types(AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes)

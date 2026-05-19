@@ -211,60 +211,75 @@ defmodule AeMdw.Blocks do
   end
 
   defp render_key_block(state, gen) do
-    with {:ok, Model.block(hash: hash, tx_index: first_tx_index)} <- State.get(state, @table, {gen, -1}) do
-      mbi_count =
-        case State.prev(state, @table, {gen + 1, -1}) do
-          {:ok, {^gen, mbi}} -> mbi + 1
-          {:ok, _block_index} -> 0
-          :none -> 0
-        end
+    case State.get(state, @table, {gen, -1}) do
+      {:ok, Model.block(hash: hash, tx_index: first_tx_index)} ->
+        mbi_count = micro_blocks_count(state, gen)
+        txs_count = key_block_transactions_count(state, gen, first_tx_index)
+        block_reward = key_block_reward(state, gen)
 
-      txs_count =
-        case State.prev(state, @table, {gen + 1, 0}) do
-          {:ok, block_index} ->
-            case State.get(state, @table, block_index) do
-              {:ok, Model.block(tx_index: next_tx_index)}
-              when is_integer(next_tx_index) and is_integer(first_tx_index) ->
-                next_tx_index - first_tx_index
+        render_key_block_payload(state, gen, hash, mbi_count, txs_count, block_reward)
 
-              :not_found -> 0
+      :not_found ->
+        nil
+    end
+  end
 
-              _other_block -> 0
-            end
+  defp micro_blocks_count(state, gen) do
+    case State.prev(state, @table, {gen + 1, -1}) do
+      {:ok, {^gen, mbi}} -> mbi + 1
+      {:ok, _block_index} -> 0
+      :none -> 0
+    end
+  end
 
-          :none ->
+  defp key_block_transactions_count(state, gen, first_tx_index) do
+    case State.prev(state, @table, {gen + 1, 0}) do
+      {:ok, block_index} ->
+        case State.get(state, @table, block_index) do
+          {:ok, Model.block(tx_index: next_tx_index)}
+          when is_integer(next_tx_index) and is_integer(first_tx_index) ->
+            next_tx_index - first_tx_index
+
+          :not_found ->
+            0
+
+          _other_block ->
             0
         end
 
-      block_reward =
-        case State.get(state, Model.DeltaStat, gen) do
-          {:ok, Model.delta_stat(block_reward: block_reward)} ->
-            block_reward
+      :none ->
+        0
+    end
+  end
 
-          :not_found ->
-            IntTransfer.read_block_reward(state, gen)
-        end
+  defp key_block_reward(state, gen) do
+    case State.get(state, Model.DeltaStat, gen) do
+      {:ok, Model.delta_stat(block_reward: block_reward)} ->
+        block_reward
 
-      case fetch_key_header(hash) do
-        {:ok, header} ->
-          header
-          |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
-          |> Map.put(:micro_blocks_count, mbi_count)
-          |> Map.put(:transactions_count, txs_count)
-          |> Map.put(:beneficiary_reward, block_reward)
+      :not_found ->
+        IntTransfer.read_block_reward(state, gen)
+    end
+  end
 
-        :error ->
-          %{
-            beneficiary_reward: block_reward,
-            hash: Enc.encode(:key_block_hash, hash),
-            height: gen,
-            micro_blocks_count: mbi_count,
-            time: DbUtil.block_index_to_time(state, {gen, -1}),
-            transactions_count: txs_count
-          }
-      end
-    else
-      :not_found -> nil
+  defp render_key_block_payload(state, gen, hash, mbi_count, txs_count, block_reward) do
+    case fetch_key_header(hash) do
+      {:ok, header} ->
+        header
+        |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
+        |> Map.put(:micro_blocks_count, mbi_count)
+        |> Map.put(:transactions_count, txs_count)
+        |> Map.put(:beneficiary_reward, block_reward)
+
+      :error ->
+        %{
+          beneficiary_reward: block_reward,
+          hash: Enc.encode(:key_block_hash, hash),
+          height: gen,
+          micro_blocks_count: mbi_count,
+          time: DbUtil.block_index_to_time(state, {gen, -1}),
+          transactions_count: txs_count
+        }
     end
   end
 

@@ -99,7 +99,7 @@ defmodule AeMdw.Validate do
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
   @spec plain_name(State.t(), String.t()) ::
-    {:ok, Names.plain_name()} | {:error, Error.t()}
+          {:ok, Names.plain_name()} | {:error, Error.t()}
   def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
@@ -146,9 +146,10 @@ defmodule AeMdw.Validate do
       ]
       |> Enum.reject(&(&1 in [nil, ""]))
       |> Enum.flat_map(fn cand ->
-        cond do
-          String.ends_with?(cand, "_tx") -> [cand]
-          true -> [cand <> "_tx", cand]
+        if String.ends_with?(cand, "_tx") do
+          [cand]
+        else
+          [cand <> "_tx", cand]
         end
       end)
       |> Enum.uniq()
@@ -159,8 +160,8 @@ defmodule AeMdw.Validate do
         atom = String.to_existing_atom(cand)
 
         case tx_type(atom) do
-          {:ok, _} = ok -> {:halt, ok}
-          _ -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
+          {:ok, _tx_type} = ok -> {:halt, ok}
+          _invalid_type -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
         end
       rescue
         ArgumentError -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}

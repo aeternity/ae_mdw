@@ -38,46 +38,7 @@ defmodule AeMdw.Migrations.ActiveAccountsStats do
       Model.Tx
       |> RocksDbCF.stream()
       |> Task.async_stream(fn Model.tx(id: tx_hash, time: time) ->
-        if is_integer(time) do
-          case fetch_tx_location(tx_hash) do
-            {:ok, signed_tx} ->
-              signed_tx
-              |> AeMdw.Sync.Transaction.get_ids_from_tx()
-              |> Enum.reduce([], fn
-                {:id, :account, pubkey}, acc ->
-                  intervals =
-                    case :ets.lookup(:time_intervals, time) do
-                      [{^time, intervals}] ->
-                        intervals
-
-                      [] ->
-                        intervals = AeMdw.Db.Sync.Stats.time_intervals(time)
-                        :ets.insert(:time_intervals, {time, intervals})
-                        intervals
-                    end
-
-                  for interval <- intervals do
-                    :ets.insert(:active_account_counter, {interval, pubkey})
-                  end
-
-                  [
-                    WriteMutation.new(
-                      Model.AccountActivity,
-                      Model.account_activity(index: {pubkey, time})
-                    )
-                    | acc
-                  ]
-
-                _other, acc ->
-                  acc
-              end)
-
-            :error ->
-              []
-          end
-        else
-          []
-        end
+        account_activity_mutations(tx_hash, time)
       end)
       |> Stream.flat_map(fn {:ok, x} -> x end)
       |> Stream.chunk_every(1000)
@@ -128,6 +89,48 @@ defmodule AeMdw.Migrations.ActiveAccountsStats do
     :ets.delete(:active_account_counter)
 
     {:ok, created_account_activity_entries + statistic_entries}
+  end
+
+  defp account_activity_mutations(tx_hash, time) when is_integer(time) do
+    case fetch_tx_location(tx_hash) do
+      {:ok, signed_tx} ->
+        intervals = intervals_for_time(time)
+
+        signed_tx
+        |> AeMdw.Sync.Transaction.get_ids_from_tx()
+        |> Enum.reduce([], fn
+          {:id, :account, pubkey}, acc ->
+            Enum.each(intervals, &:ets.insert(:active_account_counter, {&1, pubkey}))
+
+            [
+              WriteMutation.new(
+                Model.AccountActivity,
+                Model.account_activity(index: {pubkey, time})
+              )
+              | acc
+            ]
+
+          _other, acc ->
+            acc
+        end)
+
+      :error ->
+        []
+    end
+  end
+
+  defp account_activity_mutations(_tx_hash, _time), do: []
+
+  defp intervals_for_time(time) do
+    case :ets.lookup(:time_intervals, time) do
+      [{^time, intervals}] ->
+        intervals
+
+      [] ->
+        intervals = AeMdw.Db.Sync.Stats.time_intervals(time)
+        :ets.insert(:time_intervals, {time, intervals})
+        intervals
+    end
   end
 
   defp fetch_tx_location(tx_hash) do

@@ -1,4 +1,6 @@
 defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
+  @moduledoc false
+
   alias AeMdw.Txs
   alias AeMdw.Validate
   alias AeMdwWeb.GraphQL.Resolvers.Helpers
@@ -7,7 +9,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
 
   @spec transaction(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
   def transaction(parent, %{id: id} = args, ctx) do
-    transaction(parent, Map.merge(args, %{hash: id}) |> Map.delete(:id), ctx)
+    transaction(parent, Map.delete(Map.put(args, :hash, id), :id), ctx)
   end
 
   def transaction(_parent, %{hash: hash}, %{context: %{state: state}}) do
@@ -42,14 +44,16 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
         :entrypoint
       ])
 
-    with {:ok, types} <- build_type_set(args) do
-      query = Helpers.maybe_put(query, :types, types)
+    case build_type_set(args) do
+      {:ok, types} ->
+        query = Helpers.maybe_put(query, :types, types)
 
-      opts = [render_v3?: true, add_spendtx_details?: Map.has_key?(args, :account)]
+        opts = [render_v3?: true, add_spendtx_details?: Map.has_key?(args, :account)]
 
-      Txs.fetch_txs(state, pagination, scope, query, cursor, opts) |> Helpers.make_page()
-    else
-      {:error, err} -> {:error, Helpers.format_err(err)}
+        Helpers.make_page(Txs.fetch_txs(state, pagination, scope, query, cursor, opts))
+
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
     end
   end
 
@@ -59,10 +63,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
 
     try do
-      NodeStore.new()
-      |> State.new()
-      |> Txs.fetch_pending_txs(pagination, nil, cursor)
-      |> Helpers.make_page()
+      Helpers.make_page(
+        Txs.fetch_pending_txs(State.new(NodeStore.new()), pagination, nil, cursor)
+      )
     rescue
       err ->
         require Logger
@@ -89,7 +92,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
   def transactions_count(_parent, args, %{context: %{state: state}}) do
     scope = Helpers.make_scope(args)
     query = Helpers.build_query(args, [:id, :type, :type_group])
-    Txs.count(state, scope, query) |> Helpers.make_single()
+    Helpers.make_single(Txs.count(state, scope, query))
   end
 
   @spec micro_block_transactions(any(), map(), Absinthe.Resolution.t()) ::
@@ -98,15 +101,17 @@ defmodule AeMdwWeb.GraphQL.Resolvers.TransactionResolver do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
     query = %{}
 
-    with {:ok, types} <- build_type_set(args) do
-      query = Helpers.maybe_put(query, :types, types)
+    case build_type_set(args) do
+      {:ok, types} ->
+        query = Helpers.maybe_put(query, :types, types)
 
-      case Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
-        {:ok, _} = ok -> Helpers.make_page(ok)
-        {:error, _} -> {:error, "micro_block_transactions_error"}
-      end
-    else
-      {:error, err} -> {:error, Helpers.format_err(err)}
+        case Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
+          {:ok, _} = ok -> Helpers.make_page(ok)
+          {:error, _} -> {:error, "micro_block_transactions_error"}
+        end
+
+      {:error, err} ->
+        {:error, Helpers.format_err(err)}
     end
   end
 

@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.GraphQL.TransactionsCountsPendingTest do
   use ExUnit.Case, async: false
-  alias AeMdw.Db.{State, Model}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   require Model
 
   @schema AeMdwWeb.GraphQL.Schema
