@@ -1,5 +1,14 @@
 import Config
 
+# ae_plugin reads the node's sys.config at startup and applies it with
+# application:set_env, which overwrites anything set in Mix config.
+# We use a setup hook at phase 999 (just before aecore's set_app_ctrl_mode
+# hook at phase 1000) to re-apply maintenance mode, preventing aesync from
+# starting and causing "Timeout adding_synced block" crashes mid-test-run.
+config :ae_mdw, :"$setup_hooks", [
+  {:normal, [{999, {AeMdw.AecoreTestConfig, :configure, []}}]}
+]
+
 # Sync
 config :ae_mdw,
   sync: false,

@@ -2432,7 +2432,7 @@ defmodule AeMdwWeb.TxControllerTest do
       end
 
       # create a mnesia table
-      table = :ets.new(:mempool, [:set, :named_table, :ordered_set])
+      table = :ets.new(:mempool, [:ordered_set, :named_table, :public])
 
       on_exit(fn ->
         case :ets.whereis(:mempool) do

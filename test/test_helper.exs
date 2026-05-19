@@ -1,5 +1,10 @@
 ExUnit.start()
 
+# Ranch is a direct OTP dependency of aecore and starts regardless of app_ctrl
+# mode. The aec_peer listener fires errors when aec_keys isn't ready in tests.
+# There is no startup config to prevent this; suppress at the OTP logger level.
+:logger.set_application_level(:ranch, :none)
+
 unless :ets.whereis(:counters) != :undefined do
   :ets.new(:counters, [:named_table, :set, :public])
 end
