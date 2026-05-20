@@ -26,7 +26,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.Macros do
       arg(:direction, :direction, default_value: :backward)
 
       complexity(fn args, child_complexity ->
-        Map.get(args, :limit, unquote(default_limit)) * child_complexity + 1
+        (Map.get(args, :limit) || unquote(default_limit)) * child_complexity + 1
       end)
     end
   end

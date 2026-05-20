@@ -80,6 +80,7 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
       |> sync_body_params_into_params()
     rescue
       Plug.Parsers.ParseError -> conn
+      Plug.Parsers.UnsupportedMediaTypeError -> conn
     end
   end
 

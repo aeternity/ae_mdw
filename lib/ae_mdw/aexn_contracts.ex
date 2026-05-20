@@ -122,7 +122,7 @@ defmodule AeMdw.AexnContracts do
       {:ok, height} ->
         call_contract(contract_pk, method, args, {:micro, height, mb_hash})
 
-      :none ->
+      _not_found_or_error ->
         Log.warn("#{method} call error for #{encode_contract(contract_pk)}: block not found")
         {:error, :block_not_found}
     end

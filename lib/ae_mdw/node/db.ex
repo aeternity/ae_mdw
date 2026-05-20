@@ -319,17 +319,17 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec find_block_height(Blocks.block_hash()) :: {:ok, Blocks.height()} | :none
+  @spec find_block_height(Blocks.block_hash()) :: {:ok, Blocks.height()} | :none | :error
   def find_block_height(block_hash) do
     try do
       with {:value, header} <- :aec_db.find_header(block_hash) do
         {:ok, :aec_headers.height(header)}
       end
     rescue
-      ArgumentError -> :none
-      UndefinedFunctionError -> :none
+      ArgumentError -> :error
+      UndefinedFunctionError -> :error
     catch
-      :exit, _reason -> :none
+      :exit, _reason -> :error
     end
   end
 

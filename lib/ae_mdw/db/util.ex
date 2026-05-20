@@ -373,9 +373,15 @@ defmodule AeMdw.Db.Util do
          {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
       {:ok, height}
     else
-      # In production the node always has the block; this fallback only triggers
-      # in sparse test states where synthetic hashes are absent from the node DB.
-      _error_or_invalid_height -> find_block_height_in_state(state, hash, type)
+      # Block genuinely absent from the node DB – return not-found immediately
+      # without doing an O(chain_length) scan of MDW state.
+      :none ->
+        :error
+
+      # Node DB unavailable (e.g. in sparse test fixtures) – fall back to
+      # scanning the MDW Block collection. In production this is never reached.
+      _error_or_invalid_height ->
+        find_block_height_in_state(state, hash, type)
     end
   end
 
