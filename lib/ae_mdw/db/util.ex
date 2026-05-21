@@ -323,19 +323,18 @@ defmodule AeMdw.Db.Util do
   end
 
   defp find_block_height_in_state(state, hash, type) do
+    {start_mbi, end_mbi} =
+      case type do
+        :key_block_hash -> {-1, -1}
+        :micro_block_hash -> {0, Util.max_int()}
+      end
+
     with {:ok, last_gen} <- last_gen(state),
          block_index when not is_nil(block_index) <-
            state
-           |> Collection.stream(Model.Block, :forward, {{0, -1}, {last_gen, Util.max_int()}}, nil)
-           |> Enum.find(fn {_, mbi} = block_index ->
-             matches_type? =
-               case type do
-                 :key_block_hash -> mbi == -1
-                 :micro_block_hash -> mbi >= 0
-               end
-
-             matches_type? and
-               match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
+           |> Collection.stream(Model.Block, :forward, {{0, start_mbi}, {last_gen, end_mbi}}, nil)
+           |> Enum.find(fn block_index ->
+             match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
            end) do
       {:ok, elem(block_index, 0)}
     else
