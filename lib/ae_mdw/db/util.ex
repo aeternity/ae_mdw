@@ -304,12 +304,42 @@ defmodule AeMdw.Db.Util do
 
   defp extract_block_height(state, encoded_hash, type) do
     with {:ok, hash} <- Validate.hash(encoded_hash, type),
-         {:ok, last_gen} <- last_gen(state),
-         {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
+         {:ok, height} <- find_block_height(state, hash, type) do
       {:ok, height, hash}
     else
       {:error, reason} -> {:error, reason}
       _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: encoded_hash)}
+    end
+  end
+
+  defp find_block_height(state, hash, type) do
+    with {:ok, last_gen} <- last_gen(state),
+         {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
+      {:ok, height}
+    else
+      _error_or_invalid_height ->
+        find_block_height_in_state(state, hash, type)
+    end
+  end
+
+  defp find_block_height_in_state(state, hash, type) do
+    with {:ok, last_gen} <- last_gen(state),
+         block_index when not is_nil(block_index) <-
+           state
+           |> Collection.stream(Model.Block, :forward, {{0, -1}, {last_gen, Util.max_int()}}, nil)
+           |> Enum.find(fn {_, mbi} = block_index ->
+             matches_type? =
+               case type do
+                 :key_block_hash -> mbi == -1
+                 :micro_block_hash -> mbi >= 0
+               end
+
+             matches_type? and
+               match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
+           end) do
+      {:ok, elem(block_index, 0)}
+    else
+      _not_found -> :error
     end
   end
 
