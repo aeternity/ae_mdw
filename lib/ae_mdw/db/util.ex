@@ -378,15 +378,21 @@ defmodule AeMdw.Db.Util do
       :none ->
         :error
 
-      # Node DB unavailable (e.g. in sparse test fixtures) – fall back to
-      # scanning the MDW Block collection. In production this is never reached.
-      _error_or_invalid_height ->
+      # Block is in the node DB but beyond MDW's current indexed height –
+      # not yet visible to the middleware, treat as not-found without scanning.
+      {:ok, _height_beyond_mdw} ->
+        :error
+
+      # Node DB temporarily unavailable (e.g. node restart or sparse test
+      # fixtures) – fall back to scanning the MDW Block collection.
+      _error ->
         find_block_height_in_state(state, hash, type)
     end
   end
 
   # Scans the MDW Block collection to locate a block by hash when the node DB
-  # cannot find it (sparse test state). In production this is never reached.
+  # is temporarily unavailable (e.g. during a node restart or in sparse test
+  # fixtures where aec_db is not fully initialised).
   defp find_block_height_in_state(state, hash, type) do
     with {:ok, last_gen} <- last_gen(state),
          block_index when not is_nil(block_index) <-
