@@ -11,6 +11,14 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
   import Mock
   import AeMdw.TestUtil, only: [change_store: 2]
 
+  setup_all do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that reach
+    # :aec_db.get_backend_module/0 via AexnCreateContractMutation need the
+    # persistent_term seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+    :ok
+  end
+
   describe "execute" do
     test "successful for aex9 contract", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)

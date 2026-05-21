@@ -24,6 +24,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   @aex141_token_id encode_contract(<<311::256>>)
 
   setup_all _context do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that reach
+    # :aec_db.get_backend_module/0 need the persistent_term seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+
     store =
       Enum.reduce(200..230, empty_store(), fn i, store ->
         meta_info =

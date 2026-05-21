@@ -17,6 +17,10 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   require Model
 
   setup_all do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that reach
+    # :aec_db.get_backend_module/0 need the persistent_term seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+
     store =
       Enum.reduce(100..125, MemStore.new(NullStore.new()), fn i, store ->
         meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
