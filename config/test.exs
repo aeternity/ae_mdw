@@ -12,7 +12,12 @@ config :ae_mdw, :"$setup_hooks", [
 # Sync
 config :ae_mdw,
   sync: false,
-  endpoint_timeout: 500
+  endpoint_timeout: 500,
+  # Do not start aecore node services (aehttp/aesync/...) in tests. Combined with
+  # app_ctrl maintenance mode (see AeMdw.Application), this keeps aesync from
+  # syncing and crashing the node mid-suite ("Timeout adding_synced block"), which
+  # would erase the {:aec_db, *} persistent_terms and cause flaky test failures.
+  start_node_services: false
 
 # Enable the MDW Block-index scan fallback for block-hash lookups. In tests,
 # fixtures populate the index without node-DB entries and a syncing node can

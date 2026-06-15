@@ -35,12 +35,19 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
 
     init_public(:contract_cache)
-    init(:app_ctrl_server)
+    :app_ctrl_server.start()
 
     if Application.get_env(:ae_mdw, :start_node_services, true) do
+      # Activate the node: this also starts the "active" role apps (aesync, ...).
+      :app_ctrl.set_mode(:normal)
       init(:aecore_services)
       init(:aesync)
     else
+      # Keep the node in maintenance mode so the app_ctrl server does not start
+      # the "active" role apps (notably aesync). A syncing aesync in tests crashes
+      # with "Timeout adding_synced block", which tears down aecore and erases the
+      # {:aec_db, *} persistent_terms, causing flaky failures in unrelated tests.
+      :app_ctrl.set_mode(:maintenance)
       Logger.info("[AeMdw] Skipping aecore/aesync services in test mode")
     end
 
@@ -73,11 +80,6 @@ defmodule AeMdw.Application do
     {:ok, _apps1} = Application.ensure_all_started(:aehttp)
     {:ok, _apps2} = Application.ensure_all_started(:aestratum)
     {:ok, _apps3} = Application.ensure_all_started(:aemon)
-  end
-
-  defp init(:app_ctrl_server) do
-    :app_ctrl_server.start()
-    :app_ctrl.set_mode(:normal)
   end
 
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
