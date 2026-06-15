@@ -8,7 +8,7 @@ defmodule AeMdwWeb.Plugs.DeprecationLoggerPlug do
 
   require Logger
 
-  @updated_prefixes ~w(status v2 v3)
+  @updated_prefixes ~w(status v2 v3 graphql graphiql)
 
   @spec init([]) :: []
   def init(opts), do: opts
