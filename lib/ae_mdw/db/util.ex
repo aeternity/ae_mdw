@@ -373,19 +373,16 @@ defmodule AeMdw.Db.Util do
          {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
       {:ok, height}
     else
-      # Block genuinely absent from the node DB – return not-found immediately
-      # without doing an O(chain_length) scan of MDW state.
-      :none ->
-        :error
-
       # Block is in the node DB but beyond MDW's current indexed height –
       # not yet visible to the middleware, treat as not-found without scanning.
       {:ok, _height_beyond_mdw} ->
         :error
 
-      # Node DB temporarily unavailable (e.g. node restart or sparse test
-      # fixtures) – fall back to scanning the MDW Block collection.
-      _error ->
+      # Block missing (:none) or the node DB is temporarily unavailable (:error,
+      # e.g. node restart, a transient reorg during active sync, or sparse test
+      # fixtures). MDW's own index is the source of truth for what the API
+      # exposes, so fall back to the bounded scan of the MDW Block collection.
+      _missing_or_error ->
         find_block_height_in_state(state, hash, type)
     end
   end
