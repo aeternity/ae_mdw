@@ -14,6 +14,12 @@ config :ae_mdw,
   sync: false,
   endpoint_timeout: 500
 
+# Enable the MDW Block-index scan fallback for block-hash lookups. In tests,
+# fixtures populate the index without node-DB entries and a syncing node can
+# transiently lag the index, so this fallback is needed. Disabled in production
+# to avoid O(chain_length) scans on unknown hashes (a DoS vector).
+config :ae_mdw, scan_block_state_fallback: true
+
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,
   host: "localhost",
