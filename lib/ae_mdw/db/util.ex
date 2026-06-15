@@ -30,6 +30,14 @@ defmodule AeMdw.Db.Util do
 
   @approximate_key_block_rate 3 * 60 * 1_000
 
+  # In :test, fixtures populate the MDW Block index without the corresponding
+  # node-DB entries, and a live syncing node can transiently return :none for a
+  # hash MDW has already indexed. There we fall back to scanning the MDW Block
+  # collection. In production this scan is disabled: an unknown hash must resolve
+  # to not-found without an O(chain_length) scan (a DoS vector), so :none is
+  # treated as not-found directly.
+  @scan_state_fallback Mix.env() == :test
+
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
 
@@ -378,18 +386,25 @@ defmodule AeMdw.Db.Util do
       {:ok, _height_beyond_mdw} ->
         :error
 
-      # Block missing (:none) or the node DB is temporarily unavailable (:error,
-      # e.g. node restart, a transient reorg during active sync, or sparse test
-      # fixtures). MDW's own index is the source of truth for what the API
-      # exposes, so fall back to the bounded scan of the MDW Block collection.
+      # Block missing (:none) or node DB temporarily unavailable (:error, e.g.
+      # node restart, a transient reorg during active sync, or sparse test
+      # fixtures). Only outside production do we fall back to scanning the MDW
+      # Block index (the source of truth in tests). In production an unknown
+      # hash resolves to not-found directly, avoiding an O(chain_length) scan
+      # that could be abused as a DoS vector with arbitrary unknown hashes.
       _missing_or_error ->
-        find_block_height_in_state(state, hash, type)
+        if @scan_state_fallback do
+          find_block_height_in_state(state, hash, type)
+        else
+          :error
+        end
     end
   end
 
-  # Scans the MDW Block collection to locate a block by hash when the node DB
-  # is temporarily unavailable (e.g. during a node restart or in sparse test
-  # fixtures where aec_db is not fully initialised).
+  # Scans the MDW Block collection to locate a block by hash. Only used outside
+  # production (see @scan_state_fallback) where the node DB is unavailable or
+  # lags the MDW index – e.g. during a node restart or in sparse test fixtures
+  # where aec_db is not fully initialised.
   defp find_block_height_in_state(state, hash, type) do
     with {:ok, last_gen} <- last_gen(state),
          block_index when not is_nil(block_index) <-
