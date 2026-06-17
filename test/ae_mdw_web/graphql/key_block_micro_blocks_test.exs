@@ -11,7 +11,7 @@ defmodule AeMdwWeb.GraphQL.KeyBlockMicroBlocksTest do
   defp ctx_state do
     case State.mem_state() do
       %State{} = st -> st
-      _no_state -> nil
+      _ -> nil
     end
   end
 

@@ -22,7 +22,7 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
 
         {:ok, %{state: state, last_gen: last_gen}}
 
-      _no_state ->
+      _ ->
         :ok
     end
   end
@@ -59,7 +59,7 @@ defmodule AeMdwWeb.GraphQL.BlockDeepCorrectnessTest do
       end
 
       {heights, _cursor} =
-        Enum.reduce(1..total_pages, {[], nil}, fn _page_number, {acc, cur} ->
+        Enum.reduce(1..total_pages, {[], nil}, fn _, {acc, cur} ->
           {:ok, %{data: %{"key_blocks" => %{"nextCursor" => nc, "data" => ds}}}} =
             gql!(q.(cur && elem(cur, 0)), ctx)
 

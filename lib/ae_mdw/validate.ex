@@ -160,8 +160,8 @@ defmodule AeMdw.Validate do
         atom = String.to_existing_atom(cand)
 
         case tx_type(atom) do
-          {:ok, _tx_type} = ok -> {:halt, ok}
-          _invalid_type -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
+          {:ok, _} = ok -> {:halt, ok}
+          _ -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
         end
       rescue
         ArgumentError -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}

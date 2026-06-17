@@ -14,7 +14,7 @@ defmodule AeMdwWeb.GraphQL.MicroBlockTransactionsTest do
     with %State{} = st <- state do
       case Enum.find_value(0..100, fn offset ->
              case State.prev(st, Model.Block, nil) do
-               {:ok, {h, _last_mbi}} -> h - offset
+               {:ok, {h, _}} -> h - offset
                :none -> 0
              end
            end) do
@@ -27,7 +27,7 @@ defmodule AeMdwWeb.GraphQL.MicroBlockTransactionsTest do
               nil
           end
 
-        _missing_height ->
+        _ ->
           nil
       end
     end

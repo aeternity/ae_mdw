@@ -18,10 +18,10 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
       %Absinthe.Blueprint.Input.String{value: v} ->
         case Integer.parse(v) do
           {int, ""} -> {:ok, int}
-          _parse_error -> :error
+          _ -> :error
         end
 
-      _invalid_input ->
+      _ ->
         :error
     end)
 
@@ -32,7 +32,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
       v when is_binary(v) ->
         case Integer.parse(v) do
           {_int, ""} -> v
-          _parse_error -> raise Absinthe.SerializationError, "Invalid BigInt binary"
+          _ -> raise Absinthe.SerializationError, "Invalid BigInt binary"
         end
 
       other ->
@@ -44,7 +44,7 @@ defmodule AeMdwWeb.GraphQL.Schema.Helpers.CustomTypes do
   scalar :json, name: "JSON" do
     parse(fn
       %{value: value} -> {:ok, value}
-      _invalid_json -> :error
+      _ -> :error
     end)
 
     serialize(fn value -> value end)

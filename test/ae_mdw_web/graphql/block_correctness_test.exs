@@ -20,7 +20,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
           %State{} = s ->
             s
 
-          _no_state ->
+          _ ->
             Process.sleep(200 * attempt)
             false
         end
@@ -43,7 +43,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
   defp gql(query, ctx), do: Absinthe.run(query, @schema, context: %{state: ctx.state})
 
   defp assert_ok({:ok, %{data: data}}, path), do: get_in(data, path)
-  defp assert_ok(other, _path), do: flunk("unexpected: #{inspect(other)}")
+  defp assert_ok(other, _), do: flunk("unexpected: #{inspect(other)}")
 
   describe "key_block field correctness" do
     test "single key_block fields match Blocks context",
@@ -213,7 +213,7 @@ defmodule AeMdwWeb.GraphQL.BlockCorrectnessTest do
 
                   assert mb["gas"] == base_mb[:gas]
 
-                _unexpected_result ->
+                _ ->
                   assert true
               end
 

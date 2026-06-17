@@ -75,8 +75,8 @@ defmodule AeMdwWeb.GraphQL.NumericTypesTest do
 
       mb_hash =
         case txs do
-          [t | _rest] -> t["block_hash"] || t["hash"]
-          _no_transactions -> nil
+          [t | _] -> t["block_hash"] || t["hash"]
+          _ -> nil
         end
 
       Enum.each(txs, fn t ->

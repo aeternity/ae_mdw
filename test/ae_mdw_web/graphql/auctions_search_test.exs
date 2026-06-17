@@ -16,7 +16,7 @@ defmodule AeMdwWeb.GraphQL.AuctionsSearchTest do
           context: %{state: st}
         )
 
-      _auctions = get_in(res, [:data, "auctions", "data"]) || []
+      _ = get_in(res, [:data, "auctions", "data"]) || []
       assert Map.get(res, :errors, []) == []
     else
       assert true

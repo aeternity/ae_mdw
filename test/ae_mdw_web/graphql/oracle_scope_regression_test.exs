@@ -22,7 +22,7 @@ defmodule AeMdwWeb.GraphQL.OracleScopeRegressionTest do
     ctx =
       case State.mem_state() do
         %State{} = st -> %{state: st}
-        _no_state -> %{}
+        _ -> %{}
       end
 
     Absinthe.run(query, @schema, context: ctx)

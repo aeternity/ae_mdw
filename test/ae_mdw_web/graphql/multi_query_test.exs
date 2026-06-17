@@ -9,7 +9,7 @@ defmodule AeMdwWeb.GraphQL.MultiQueryTest do
     ctx =
       case State.mem_state() do
         %State{} = st -> %{state: st}
-        _no_state -> %{}
+        _ -> %{}
       end
 
     Absinthe.run(query, @schema, context: ctx)
@@ -27,8 +27,8 @@ defmodule AeMdwWeb.GraphQL.MultiQueryTest do
     if data_a == [] or data_b == [] do
       assert true
     else
-      [%{"height" => h} | _rest_a] = data_a
-      [%{"height" => h2} | _rest_b] = data_b
+      [%{"height" => h} | _] = data_a
+      [%{"height" => h2} | _] = data_b
       assert is_integer(h) and is_integer(h2)
     end
   end

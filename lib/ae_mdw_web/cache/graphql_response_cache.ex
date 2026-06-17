@@ -33,10 +33,10 @@ defmodule AeMdwWeb.Cache.GraphQLResponseCache do
 
         case EtsCache.get(@table, key) do
           {body, insert_time} when now - insert_time <= ttl_ms -> {:ok, body}
-          _cache_miss -> :miss
+          _ -> :miss
         end
 
-      _disabled_ttl_ms ->
+      _ ->
         :miss
     end
   end

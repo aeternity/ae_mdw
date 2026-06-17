@@ -10,7 +10,7 @@ defmodule AeMdwWeb.GraphQL.BlockAdvancedQueriesTest do
     ctx =
       case State.mem_state() do
         %State{} = st -> %{state: st}
-        _no_state -> %{}
+        _ -> %{}
       end
 
     Absinthe.run(query, @schema, context: ctx)
@@ -67,7 +67,7 @@ defmodule AeMdwWeb.GraphQL.BlockAdvancedQueriesTest do
         # Expect disjoint sets (no overlap) under normal operation; if overlap occurs due to reorg, we don't fail hard
         assert MapSet.disjoint?(h1, h2) or h1 == h2
       else
-        _no_pagination -> assert true
+        _ -> assert true
       end
     end
   end

@@ -7,7 +7,7 @@ defmodule AeMdwWeb.GraphQL.TestUtil do
   def state do
     case State.mem_state() do
       %State{} = st -> st
-      _no_state -> %{}
+      _ -> %{}
     end
   end
 end
