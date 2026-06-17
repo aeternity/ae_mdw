@@ -36,7 +36,7 @@ defmodule AeMdwWeb.Cache.GraphQLResponseCache do
           _ -> :miss
         end
 
-      _ ->
+      _ttl_ms ->
         :miss
     end
   end
