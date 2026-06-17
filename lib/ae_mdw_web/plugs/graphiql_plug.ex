@@ -34,12 +34,12 @@ defmodule AeMdwWeb.Plugs.GraphiQLPlug do
             "react/":            "https://esm.sh/react@19.2.7/",
             "react-dom":         "https://esm.sh/react-dom@19.2.7",
             "react-dom/":        "https://esm.sh/react-dom@19.2.7/",
-            "graphiql":          "https://esm.sh/graphiql@5.2.4?standalone&external=react,react-dom,@graphiql/react,graphql",
+            "graphiql":          "https://esm.sh/graphiql@5.2.4?standalone&external=react,react-dom,@graphiql/react,graphql,@emotion/is-prop-valid",
             "graphiql/":         "https://esm.sh/graphiql@5.2.4/",
             "@graphiql/react":   "https://esm.sh/@graphiql/react@0.37.7?standalone&external=react,react-dom,graphql,@graphiql/toolkit,@emotion/is-prop-valid",
             "@graphiql/toolkit": "https://esm.sh/@graphiql/toolkit@0.12.1?standalone&external=graphql",
             "graphql":           "https://esm.sh/graphql@16.14.2",
-            "@emotion/is-prop-valid": "data:text/javascript,"
+            "@emotion/is-prop-valid": "data:text/javascript,export default () => true;"
           }
         }
       </script>

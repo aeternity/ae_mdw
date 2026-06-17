@@ -80,22 +80,15 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
         conn
 
       accepts ->
-        normalized =
-          for value <- accepts,
-              filtered =
-                value
-                |> String.split(",")
-                |> Enum.reject(&String.starts_with?(String.trim(&1), "multipart/mixed"))
-                |> Enum.join(","),
-              filtered != "",
-              do: filtered
+        full = Enum.join(accepts, ",")
 
-        %{conn | req_headers: set_header(conn.req_headers, "accept", normalized)}
+        if String.contains?(full, "multipart/mixed") or
+             String.contains?(full, "application/graphql-response+json") do
+          %{conn | req_headers: set_header(conn.req_headers, "accept", ["application/json"])}
+        else
+          conn
+        end
     end
-  end
-
-  defp set_header(headers, name, []) do
-    Enum.reject(headers, fn {k, _v} -> k == name end)
   end
 
   defp set_header(headers, name, [value]) do
@@ -103,11 +96,6 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
       {^name, _v} -> {name, value}
       other -> other
     end)
-  end
-
-  defp set_header(headers, name, values) do
-    base = Enum.reject(headers, fn {k, _v} -> k == name end)
-    base ++ Enum.map(values, &{name, &1})
   end
 
   # Parse the body for application/json requests; pass through for everything
