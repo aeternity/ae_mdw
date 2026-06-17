@@ -50,7 +50,7 @@ defmodule AeMdwWeb.Plugs.GraphiQLPlug do
         import { createGraphiQLFetcher } from '@graphiql/toolkit';
         import 'graphiql/setup-workers/esm.sh';
 
-        const fetcher = createGraphiQLFetcher({ url: '/graphql' });
+        const fetcher = createGraphiQLFetcher({ url: 'graphql' });
 
         ReactDOM.createRoot(document.getElementById('graphiql')).render(
           React.createElement(GraphiQL, { fetcher, defaultEditorToolsVisibility: true })
