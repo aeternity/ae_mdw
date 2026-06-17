@@ -46,6 +46,12 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
 
   @impl Plug
   def call(conn, _opts) do
+    # Normalize the Accept header: strip multipart/mixed (used by GraphiQL 5.x
+    # for incremental delivery / @defer) which Absinthe does not support. This
+    # lets the browser's default Accept negotiation fall back to application/json
+    # without needing a custom fetcher on the client side.
+    conn = normalize_accept(conn)
+
     # Decode JSON body into body_params so Absinthe.Plug.Request can read the
     # query from there instead of attempting a second raw-body read.
     conn = parse_body(conn)
@@ -67,6 +73,42 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
   end
 
   # ---------------------------------------------------------------------------
+
+  defp normalize_accept(conn) do
+    case Plug.Conn.get_req_header(conn, "accept") do
+      [] ->
+        conn
+
+      accepts ->
+        normalized =
+          for value <- accepts,
+              filtered =
+                value
+                |> String.split(",")
+                |> Enum.reject(&String.starts_with?(String.trim(&1), "multipart/mixed"))
+                |> Enum.join(","),
+              filtered != "",
+              do: filtered
+
+        %{conn | req_headers: set_header(conn.req_headers, "accept", normalized)}
+    end
+  end
+
+  defp set_header(headers, name, []) do
+    Enum.reject(headers, fn {k, _v} -> k == name end)
+  end
+
+  defp set_header(headers, name, [value]) do
+    Enum.map(headers, fn
+      {^name, _v} -> {name, value}
+      other -> other
+    end)
+  end
+
+  defp set_header(headers, name, values) do
+    base = Enum.reject(headers, fn {k, _v} -> k == name end)
+    base ++ Enum.map(values, &{name, &1})
+  end
 
   # Parse the body for application/json requests; pass through for everything
   # else (application/graphql bodies are read directly by Absinthe).
@@ -115,7 +157,7 @@ defmodule AeMdwWeb.Plugs.GraphQLPlug do
       # correct responses for the full TTL.
       with 200 <- conn.status,
            {:ok, body} <- Jason.decode(conn.resp_body),
-           false <- match?(%{"errors" => [_ | _]}, body) do
+           false <- match?(%{"errors" => [_head | _tail]}, body) do
         GraphQLResponseCache.store(cache_key, conn.resp_body)
       end
 

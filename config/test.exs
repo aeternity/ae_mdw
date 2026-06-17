@@ -25,6 +25,9 @@ config :ae_mdw,
 # to avoid O(chain_length) scans on unknown hashes (a DoS vector).
 config :ae_mdw, scan_block_state_fallback: true
 
+# Tesla: suppress soft-deprecation warning for `use Tesla` (test-only client)
+config :tesla, disable_deprecated_builder_warning: true
+
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,
   host: "localhost",
