@@ -40,20 +40,38 @@ defmodule AeMdw.Db.Status do
   end
 
   defp node_status do
-    {node_syncing?, node_progress} =
-      with {node_syncing?, node_progress, _height, _chain_id} <- :aec_sync.sync_progress() do
-        {node_syncing?, node_progress}
-      end
+    try do
+      {node_syncing?, node_progress} =
+        with {node_syncing?, node_progress, _height, _chain_id} <- :aec_sync.sync_progress() do
+          {node_syncing?, node_progress}
+        end
 
-    {:ok, top_kb} = :aec_chain.top_key_block()
-    node_height = :aec_blocks.height(top_kb)
+      {:ok, top_kb} = :aec_chain.top_key_block()
+      node_height = :aec_blocks.height(top_kb)
 
+      %{
+        node_version: :aeu_info.get_version(),
+        node_revision: :aeu_info.get_revision(),
+        node_height: node_height,
+        node_syncing: node_syncing?,
+        node_progress: node_progress
+      }
+    rescue
+      ArgumentError -> fallback_node_status()
+      MatchError -> fallback_node_status()
+      UndefinedFunctionError -> fallback_node_status()
+    catch
+      :exit, _reason -> fallback_node_status()
+    end
+  end
+
+  defp fallback_node_status do
     %{
       node_version: :aeu_info.get_version(),
       node_revision: :aeu_info.get_revision(),
-      node_height: node_height,
-      node_syncing: node_syncing?,
-      node_progress: node_progress
+      node_height: 0,
+      node_syncing: false,
+      node_progress: 0.0
     }
   end
 

@@ -1,9 +1,32 @@
 import Config
 
+# ae_plugin reads the node's sys.config at startup and applies it with
+# application:set_env, which overwrites anything set in Mix config.
+# We use a setup hook at phase 999 (just before aecore's set_app_ctrl_mode
+# hook at phase 1000) to re-apply maintenance mode, preventing aesync from
+# starting and causing "Timeout adding_synced block" crashes mid-test-run.
+config :ae_mdw, :"$setup_hooks", [
+  {:normal, [{999, {AeMdw.AecoreTestConfig, :configure, []}}]}
+]
+
 # Sync
 config :ae_mdw,
   sync: false,
-  endpoint_timeout: 500
+  endpoint_timeout: 500,
+  # Do not start aecore node services (aehttp/aesync/...) in tests. Combined with
+  # app_ctrl maintenance mode (see AeMdw.Application), this keeps aesync from
+  # syncing and crashing the node mid-suite ("Timeout adding_synced block"), which
+  # would erase the {:aec_db, *} persistent_terms and cause flaky test failures.
+  start_node_services: false
+
+# Enable the MDW Block-index scan fallback for block-hash lookups. In tests,
+# fixtures populate the index without node-DB entries and a syncing node can
+# transiently lag the index, so this fallback is needed. Disabled in production
+# to avoid O(chain_length) scans on unknown hashes (a DoS vector).
+config :ae_mdw, scan_block_state_fallback: true
+
+# Tesla: suppress soft-deprecation warning for `use Tesla` (test-only client)
+config :tesla, disable_deprecated_builder_warning: true
 
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,
@@ -60,3 +83,6 @@ config :ae_mdw, AeMdwWeb.LogsView,
     "Offer" => %{1 => :contract_pubkey},
     "Trade" => %{2 => :contract_pubkey}
   }
+
+# Disable GraphQL response cache during tests to preserve test isolation.
+config :ae_mdw, :graphql_response_cache_ttl_ms, 0

@@ -7,6 +7,7 @@ defmodule AeMdwWeb.DexControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Util.Encoding
+  alias AeMdw.Validate
 
   require Model
 

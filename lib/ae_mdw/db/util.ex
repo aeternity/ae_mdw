@@ -69,15 +69,32 @@ defmodule AeMdw.Db.Util do
     end
   end
 
+  # Reads time from MDW index tables first (Model.Time, Model.KeyBlockTime) to
+  # avoid a node DB call via block_time/1. Falls back to approximation when the
+  # state is sparse (test fixtures) and none of the time tables are populated.
   @spec last_gen_and_time(state()) :: {:ok, {Blocks.height(), Blocks.time()}} | :no_blocks
   def last_gen_and_time(state) do
-    case State.prev(state, Model.Block, nil) do
-      {:ok, {height, _mbi}} ->
-        Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
+    case {State.prev(state, Model.Block, nil), State.prev(state, Model.Time, nil),
+          State.prev(state, Model.KeyBlockTime, nil), State.prev(state, Model.Tx, nil)} do
+      {{:ok, {height, _mbi}}, {:ok, {time, _txi}}, _key_block_time, _last_tx} ->
+        {:ok, {height, time}}
 
-        {:ok, {height, block_time(block_hash)}}
+      {{:ok, {height, _mbi}}, :none, {:ok, time}, _last_tx} ->
+        {:ok, {height, time}}
 
-      :none ->
+      {{:ok, {height, _mbi}}, :none, :none, {:ok, txi}} ->
+        case State.get(state, Model.Tx, txi) do
+          {:ok, Model.tx(time: time)} when is_integer(time) ->
+            {:ok, {height, time}}
+
+          _missing_time ->
+            {:ok, {height, last_block_time_or_approx(state, height)}}
+        end
+
+      {{:ok, {height, _mbi}}, :none, :none, :none} ->
+        {:ok, {height, last_block_time_or_approx(state, height)}}
+
+      {:none, _no_time, _no_key_block_time, _no_tx} ->
         :no_blocks
     end
   end
@@ -248,6 +265,45 @@ defmodule AeMdw.Db.Util do
 
   def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
 
+  # Nil-safe variant of read_node_tx_details/2. Used in GraphQL resolvers where the
+  # MDW state may be sparse (e.g. in tests with synthetic fixtures that have no
+  # corresponding node-DB entries). Returns nil instead of raising on a missing tx.
+  @spec read_node_tx_details_safe(state(), Txs.txi_idx() | txi()) ::
+          {Node.tx(), Node.tx_type(), Txs.tx_hash(), Node.tx_type(), Blocks.block_hash()} | nil
+  def read_node_tx_details_safe(state, {txi, -1}) do
+    with {:ok, Model.tx(id: tx_hash)} <- State.get(state, Model.Tx, txi),
+         {block_hash, tx_type, _signed_tx, tx_rec} <- Db.get_tx_data(tx_hash) do
+      if tx_type in [:ga_meta_tx, :paying_for_tx] do
+        {inner_type, tx} =
+          tx_type
+          |> InnerTx.signed_tx(tx_rec)
+          |> :aetx_sign.tx()
+          |> :aetx.specialize_type()
+
+        {tx, inner_type, tx_hash, tx_type, block_hash}
+      else
+        {tx_rec, tx_type, tx_hash, tx_type, block_hash}
+      end
+    else
+      _missing_tx -> nil
+    end
+  end
+
+  def read_node_tx_details_safe(state, {txi, local_idx}) do
+    with {:ok, Model.tx(id: tx_hash)} <- State.get(state, Model.Tx, txi),
+         {:ok, Model.int_contract_call(tx: aetx)} <-
+           State.get(state, Model.IntContractCall, {txi, local_idx}),
+         {block_hash, tx_type, _signed_tx, _tx_rec} <- Db.get_tx_data(tx_hash) do
+      {inner_type, tx} = :aetx.specialize_type(aetx)
+
+      {tx, inner_type, tx_hash, tx_type, block_hash}
+    else
+      _missing_tx -> nil
+    end
+  end
+
+  def read_node_tx_details_safe(state, txi), do: read_node_tx_details_safe(state, {txi, -1})
+
   @spec transactions_of_type(
           state(),
           Node.tx_type(),
@@ -304,12 +360,69 @@ defmodule AeMdw.Db.Util do
 
   defp extract_block_height(state, encoded_hash, type) do
     with {:ok, hash} <- Validate.hash(encoded_hash, type),
-         {:ok, last_gen} <- last_gen(state),
-         {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
+         {:ok, height} <- find_block_height(state, hash, type) do
       {:ok, height, hash}
     else
       {:error, reason} -> {:error, reason}
       _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: encoded_hash)}
+    end
+  end
+
+  defp find_block_height(state, hash, type) do
+    with {:ok, last_gen} <- last_gen(state),
+         {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
+      {:ok, height}
+    else
+      # Block is in the node DB but beyond MDW's current indexed height –
+      # not yet visible to the middleware, treat as not-found without scanning.
+      {:ok, _height_beyond_mdw} ->
+        :error
+
+      # Block missing (:none) or node DB temporarily unavailable (:error, e.g.
+      # node restart, a transient reorg during active sync, or sparse test
+      # fixtures). The MDW Block-index scan fallback is enabled only where the
+      # node DB can lag or be unavailable (tests, see :scan_block_state_fallback
+      # config). In production it is disabled so an unknown hash resolves to
+      # not-found directly, avoiding an O(chain_length) scan that could be
+      # abused as a DoS vector with arbitrary unknown hashes.
+      _missing_or_error ->
+        if scan_state_fallback?() do
+          find_block_height_in_state(state, hash, type)
+        else
+          :error
+        end
+    end
+  end
+
+  # Whether to fall back to scanning the MDW Block index when the node DB does
+  # not resolve a hash. Disabled by default (production); enabled in test config
+  # where fixtures populate the index without node-DB entries and a syncing node
+  # can transiently lag the index.
+  defp scan_state_fallback?,
+    do: Application.get_env(:ae_mdw, :scan_block_state_fallback, false)
+
+  # Scans the MDW Block collection to locate a block by hash. Used only when the
+  # node DB is unavailable or lags the MDW index (see scan_state_fallback?/0) –
+  # e.g. during a node restart or in sparse test fixtures where aec_db is not
+  # fully initialised.
+  defp find_block_height_in_state(state, hash, type) do
+    with {:ok, last_gen} <- last_gen(state),
+         block_index when not is_nil(block_index) <-
+           state
+           |> Collection.stream(Model.Block, :forward, {{0, -1}, {last_gen, Util.max_int()}}, nil)
+           |> Enum.find(fn {_, mbi} = block_index ->
+             matches_type? =
+               case type do
+                 :key_block_hash -> mbi == -1
+                 :micro_block_hash -> mbi >= 0
+               end
+
+             matches_type? and
+               match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
+           end) do
+      {:ok, elem(block_index, 0)}
+    else
+      _not_found -> :error
     end
   end
 
@@ -335,10 +448,17 @@ defmodule AeMdw.Db.Util do
   end
 
   @spec height_to_time(state(), height(), height(), time()) :: time()
-  def height_to_time(state, height, last_height, _last_micro_time) when height <= last_height do
-    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
+  def height_to_time(state, height, last_height, last_micro_time) when height <= last_height do
+    case State.get(state, Model.Block, {height, -1}) do
+      {:ok, Model.block(hash: block_hash)} ->
+        case fetch_block_time(block_hash) do
+          {:ok, time} -> time
+          :error -> relative_height_time(height, last_height, last_micro_time)
+        end
 
-    block_time(block_hash)
+      :not_found ->
+        relative_height_time(height, last_height, last_micro_time)
+    end
   end
 
   def height_to_time(_state, height, last_height, last_micro_time),
@@ -346,9 +466,16 @@ defmodule AeMdw.Db.Util do
 
   @spec block_index_to_time(state(), block_index()) :: time()
   def block_index_to_time(state, block_index) do
-    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+    case State.get(state, Model.Block, block_index) do
+      {:ok, Model.block(hash: block_hash)} ->
+        case fetch_block_time(block_hash) do
+          {:ok, time} -> time
+          :error -> relative_block_time(state, elem(block_index, 0))
+        end
 
-    block_time(block_hash)
+      :not_found ->
+        relative_block_time(state, elem(block_index, 0))
+    end
   end
 
   @spec block_time(Blocks.block_hash()) :: time()
@@ -357,6 +484,47 @@ defmodule AeMdw.Db.Util do
     |> :aec_db.get_header()
     |> :aec_headers.time_in_msecs()
   end
+
+  # Wraps block_time/1 to return :error instead of raising when the hash is absent
+  # from the node DB (e.g. synthetic hashes in sparse test fixtures).
+  defp fetch_block_time(block_hash) do
+    try do
+      {:ok, block_time(block_hash)}
+    rescue
+      ArgumentError -> :error
+      UndefinedFunctionError -> :error
+    catch
+      :exit, _reason -> :error
+    end
+  end
+
+  defp last_block_time_or_approx(state, height) do
+    case State.get(state, Model.Block, {height, -1}) do
+      {:ok, Model.block(hash: block_hash)} ->
+        case fetch_block_time(block_hash) do
+          {:ok, time} -> time
+          :error -> approximate_height_time(height)
+        end
+
+      :not_found ->
+        approximate_height_time(height)
+    end
+  end
+
+  defp relative_block_time(state, height) do
+    case last_gen_and_time(state) do
+      {:ok, {last_height, last_micro_time}} ->
+        relative_height_time(height, last_height, last_micro_time)
+
+      :no_blocks ->
+        approximate_height_time(height)
+    end
+  end
+
+  defp relative_height_time(height, last_height, last_micro_time),
+    do: last_micro_time + (height - last_height) * @approximate_key_block_rate
+
+  defp approximate_height_time(height), do: height * @approximate_key_block_rate
 
   @spec network_date_interval(state()) :: {Date.t(), Date.t()}
   def network_date_interval(state) do

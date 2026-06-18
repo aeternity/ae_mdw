@@ -2426,8 +2426,20 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "pending_txs" do
     setup do
+      case :ets.whereis(:mempool) do
+        :undefined -> :ok
+        _table -> :ets.delete(:mempool)
+      end
+
       # create a mnesia table
-      table = :ets.new(:mempool, [:set, :named_table, :ordered_set])
+      table = :ets.new(:mempool, [:ordered_set, :named_table, :public])
+
+      on_exit(fn ->
+        case :ets.whereis(:mempool) do
+          :undefined -> :ok
+          _table -> :ets.delete(:mempool)
+        end
+      end)
 
       pending_txs = TS.pending_txs()
 

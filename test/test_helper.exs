@@ -1,21 +1,52 @@
-config = ExUnit.configuration()
-included_tests = Keyword.fetch!(config, :include)
+ExUnit.start()
 
-if Enum.all?(~w(integration iteration devmode)a, &(&1 not in included_tests)) do
-  IO.puts("Stopping :aecore..")
-  Application.stop(:aecore)
+# Ranch is a direct OTP dependency of aecore and starts regardless of app_ctrl
+# mode. The aec_peer listener fires errors when aec_keys isn't ready in tests.
+# There is no startup config to prevent this; suppress at the OTP logger level.
+:logger.set_application_level(:ranch, :none)
 
+unless :ets.whereis(:counters) != :undefined do
   :ets.new(:counters, [:named_table, :set, :public])
-  :ets.insert(:counters, {:txi, 0})
-  :ets.insert(:counters, {:kbi, 0})
+end
 
-  # reset database
-  :ok = AeMdw.Db.RocksDb.close()
-  :ok = AeMdw.Db.RocksDb.open(true)
+for kv <- [{:txi, 0}, {:kbi, 0}] do
+  :ets.insert_new(:counters, kv)
+end
 
-  # init for tests without sync
+if :persistent_term.get({:aec_db, :backend_module}, nil) == nil do
   :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
 end
 
-ExUnit.start()
+# Optional heavy reset only when explicitly requested to avoid races with running sync processes.
+if System.get_env("AE_MDW_FORCE_DB_RESET") == "1" do
+  IO.puts("[test_helper] Forcing DB reset (AE_MDW_FORCE_DB_RESET=1)")
+  # Best effort shutdown to reduce lingering processes; ignore errors.
+  _ =
+    try do
+      Application.stop(:aecore)
+    rescue
+      _ -> :ok
+    end
+
+  for kv <- [{:txi, 0}, {:kbi, 0}] do
+    :ets.insert(:counters, kv)
+  end
+
+  # Close & reopen RocksDB defensively
+  _ =
+    try do
+      AeMdw.Db.RocksDb.close()
+    rescue
+      _ -> :ok
+    end
+
+  case AeMdw.Db.RocksDb.open(true) do
+    :ok ->
+      :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+
+    other ->
+      IO.puts("[test_helper] Skipping persistent_term init, open returned: #{inspect(other)}")
+  end
+end
+
 Mneme.start()

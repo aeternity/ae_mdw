@@ -36,6 +36,22 @@ defmodule AeMdwWeb.Router do
     plug HyperchainPlug, %{reverse?: true}
   end
 
+  pipeline :graphql do
+    plug :build_graphql_context
+  end
+
+  defp build_graphql_context(conn, _opts) do
+    Absinthe.Plug.put_options(conn, context: %{state: conn.assigns[:state]})
+  end
+
+  # GraphQL endpoints (mounted before versioned REST routes)
+  scope "/" do
+    pipe_through [:api, :graphql]
+
+    forward "/graphql", AeMdwWeb.Plugs.GraphQLPlug
+    forward "/graphiql", AeMdwWeb.Plugs.GraphiQLPlug
+  end
+
   scope "/", AeMdwWeb do
     pipe_through :api
 

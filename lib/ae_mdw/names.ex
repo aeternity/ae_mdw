@@ -153,16 +153,16 @@ defmodule AeMdw.Names do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash),
          plain_name <- get_index(name_or_auction),
          {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
-      paginated_history =
+      {prev_cursor, history, next_cursor} =
         state
         |> build_history_streamer(plain_name, cursor)
         |> Collection.paginate(
           pagination,
-          &render_nested_resource(state, &1),
+          & &1,
           &serialize_history_cursor(plain_name, &1)
         )
 
-      {:ok, paginated_history}
+      {:ok, {prev_cursor, render_nested_resources(state, history), next_cursor}}
     end
   end
 
@@ -207,7 +207,7 @@ defmodule AeMdw.Names do
         end
         |> Collection.paginate(pagination, & &1, &serialize_name_claims_cursor/1)
 
-      {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
+      {:ok, {prev_cursor, render_nested_resources(state, claims), next_cursor}}
     end
   end
 
@@ -227,7 +227,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, render_nested_resources(state, claims), next_cursor}}
 
       {:error, reason} ->
         {:error, reason}
@@ -253,7 +253,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(updates, &render_nested_resource(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, render_nested_resources(state, updates), next_cursor}}
 
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
@@ -279,7 +279,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(updates, &render_nested_resource(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, render_nested_resources(state, updates), next_cursor}}
 
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
@@ -850,19 +850,40 @@ defmodule AeMdw.Names do
   defp expand_txi_idx(state, {txi, _idx}, opts) do
     cond do
       Keyword.get(opts, :v3?, false) ->
-        state
-        |> Txs.fetch!(txi, opts)
-        |> Map.put("tx_hash", Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi)))
-        |> Map.drop(["tx_index"])
+        with {:ok, tx} <- Txs.fetch(state, txi, opts),
+             {:ok, tx_rec} <- State.get(state, Model.Tx, txi) do
+          tx_hash = Model.tx(tx_rec, :id)
+
+          tx
+          |> Map.put("tx_hash", maybe_encode_tx_hash(tx_hash))
+          |> Map.drop(["tx_index"])
+        else
+          _missing_tx -> nil
+        end
 
       Keyword.get(opts, :expand?, false) ->
-        Txs.fetch!(state, txi)
+        case Txs.fetch(state, txi, []) do
+          {:ok, tx} -> tx
+          {:error, _reason} -> nil
+        end
 
       Keyword.get(opts, :tx_hash?, false) ->
-        Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+        case State.get(state, Model.Tx, txi) do
+          {:ok, tx_rec} -> maybe_encode_tx_hash(Model.tx(tx_rec, :id))
+          :not_found -> nil
+        end
 
       true ->
         txi
+    end
+  end
+
+  defp maybe_encode_tx_hash(tx_hash) do
+    try do
+      Enc.encode(:tx_hash, tx_hash)
+    rescue
+      ArgumentError -> nil
+      FunctionClauseError -> nil
     end
   end
 
@@ -923,22 +944,30 @@ defmodule AeMdw.Names do
         Model.NameTransfer -> :name_transfer_tx
       end
 
-    {tx_rec, ^tx_type, tx_hash, chain_tx_type, block_hash} =
-      DbUtil.read_node_tx_details(state, txi_idx)
+    case {DbUtil.read_node_tx_details_safe(state, txi_idx), State.get(state, Model.Tx, txi)} do
+      {{tx_rec, ^tx_type, tx_hash, chain_tx_type, block_hash},
+       {:ok, Model.tx(block_index: {height, _mbi})}} ->
+        tx_mod = Node.tx_mod(tx_type)
 
-    tx_mod = Node.tx_mod(tx_type)
+        %{
+          active_from: render_active_from(maybe_active_from, state, tx_mod, tx_rec),
+          height: height,
+          block_hash: Enc.encode(:micro_block_hash, block_hash),
+          source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+          source_tx_type: Node.tx_name(chain_tx_type),
+          internal_source: chain_tx_type != tx_type,
+          tx: tx_mod.for_client(tx_rec)
+        }
 
-    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
+      _missing_tx_details ->
+        nil
+    end
+  end
 
-    %{
-      active_from: render_active_from(maybe_active_from, state, tx_mod, tx_rec),
-      height: height,
-      block_hash: Enc.encode(:micro_block_hash, block_hash),
-      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Node.tx_name(chain_tx_type),
-      internal_source: chain_tx_type != tx_type,
-      tx: tx_mod.for_client(tx_rec)
-    }
+  defp render_nested_resources(state, resources) do
+    resources
+    |> Enum.map(&render_nested_resource(state, &1))
+    |> Enum.reject(&is_nil/1)
   end
 
   defp render_active_from(active_from, _state, _tx_mod, _tx_rec) when not is_nil(active_from) do

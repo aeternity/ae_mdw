@@ -99,7 +99,7 @@ defmodule AeMdw.Validate do
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
   @spec plain_name(State.t(), String.t()) ::
-          {:ok, pubkey()} | {:error, Error.t()}
+          {:ok, Names.plain_name()} | {:error, Error.t()}
   def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
@@ -117,7 +117,7 @@ defmodule AeMdw.Validate do
     end
   end
 
-  @spec plain_name!(State.t(), String.t()) :: pubkey()
+  @spec plain_name!(State.t(), String.t()) :: Names.plain_name()
   def plain_name!(state, name_ident), do: unwrap!(&plain_name(state, &1), name_ident)
 
   @spec tx_type(tx_type() | binary()) :: {:ok, tx_type()} | {:error, ErrInput.t()}
@@ -125,12 +125,48 @@ defmodule AeMdw.Validate do
     do: (type in AE.tx_types() && {:ok, type}) || {:error, ErrInput.TxType.exception(value: type)}
 
   def tx_type(type) when is_binary(type) do
-    try do
-      tx_type(String.to_existing_atom(type <> "_tx"))
-    rescue
-      ArgumentError ->
-        {:error, ErrInput.TxType.exception(value: type)}
-    end
+    # Accept different user facing variants:
+    #  * "SpendTx" (CamelCase + Tx suffix)
+    #  * "spend_tx" (snake case with _tx)
+    #  * "spend" (base name without _tx)
+    #  * "Spend" (CamelCase without Tx)
+    # We try a sequence of normalized candidates until one maps to an existing atom
+    # present in AE.tx_types().
+    import Macro, only: [underscore: 1]
+
+    base = type
+    underscored = underscore(type)
+
+    candidates =
+      [
+        base,
+        underscored,
+        underscored |> String.replace_suffix("_tx", ""),
+        base |> String.replace_suffix("Tx", "") |> underscore()
+      ]
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.flat_map(fn cand ->
+        if String.ends_with?(cand, "_tx") do
+          [cand]
+        else
+          [cand <> "_tx", cand]
+        end
+      end)
+      |> Enum.uniq()
+
+    Enum.reduce_while(candidates, {:error, ErrInput.TxType.exception(value: type)}, fn cand,
+                                                                                       _acc ->
+      try do
+        atom = String.to_existing_atom(cand)
+
+        case tx_type(atom) do
+          {:ok, _} = ok -> {:halt, ok}
+          _ -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
+        end
+      rescue
+        ArgumentError -> {:cont, {:error, ErrInput.TxType.exception(value: type)}}
+      end
+    end)
   end
 
   @spec tx_group(tx_group() | binary()) :: {:ok, tx_group()} | {:error, ErrInput.t()}

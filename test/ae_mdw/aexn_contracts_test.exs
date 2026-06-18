@@ -6,6 +6,14 @@ defmodule AeMdw.AexnContractsTest do
   import Mock
   import AeMdw.AexnFixtures
 
+  setup_all do
+    # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that reach
+    # :aec_db.get_backend_module/0 (e.g. via AeMdw.Node.Db.top_height_hash/1)
+    # need the persistent_term seeded.
+    :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+    :ok
+  end
+
   defp max_height, do: AeMdw.Util.max_int()
 
   describe "call_meta_info/2" do

@@ -58,6 +58,8 @@ defmodule AeMdw.Db.RocksDb do
   def open(delete_existing?) do
     with :ok <- create_dir_if_missing(delete_existing?),
          {:ok, db_ref, cf_ref_list} <- open_db() do
+      :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
+
       # keep db handle
       :persistent_term.put({__MODULE__, :db_ref}, db_ref)
 

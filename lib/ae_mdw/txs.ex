@@ -615,6 +615,8 @@ defmodule AeMdw.Txs do
     |> Map.delete("tx_index")
   end
 
+  defp maybe_add_spendtx_details(_state, %{"tx" => nil} = block), do: block
+
   defp maybe_add_spendtx_details(state, %{"tx" => block_tx, "tx_index" => tx_index} = block) do
     recipient_id = block_tx["recipient_id"] || ""
 

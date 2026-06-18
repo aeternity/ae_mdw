@@ -2063,7 +2063,7 @@ defmodule AeMdwWeb.NameControllerTest do
       owner_pk = <<1::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
 
-      with_blockchain %{}, mb: [] do
+      with_blockchain %{}, kb: [mb: []] do
         %{block: block} = blocks[:mb]
         {:ok, block_hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
