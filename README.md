@@ -30,6 +30,8 @@
 - [Statistics](#statistics)
 - [Activities](#activities)
 - [Websocket interface](#websocket-interface)
+- [GraphQL interface](#graphql-interface)
+- [Middleware Environment Variables](#middleware-environment-variables)
 - [Tests](#tests)
 - [Auto-generated Documentation](#auto-generated-documentation)
 
@@ -147,7 +149,8 @@ GET /v3/key-blocks                           - key blocks with micro blocks and 
 GET /v3/key-blocks/:hash_or_kbi              - key block by hash or height
 GET /v3/key-blocks/:hash_or_kbi/micro-blocks - micro block belonging to key block
 GET /v3/micro-blocks/:hash                   - micro block with transaction count
-GET /v3/micro-blocks/:hash/transactions      - micro block transactions
+GET /v3/micro-blocks/:hash/transactions      - micro block transactions (paginated, full tx objects)
+GET /v3/micro-blocks/:hash/txs               - micro block transactions (paginated, compact format)
 
 GET /v3/transactions                            - transactions in any direction
 GET /v3/transactions/:hash                      - transaction by hash
@@ -3791,6 +3794,76 @@ Default limits (all configurable — see [Middleware Environment Variables](#mid
 #### Idle timeout
 
 Long-lived monitoring connections should still send `{"op":"Ping"}` every **~10 minutes** to reset reverse-proxy idle timers that may be stricter than the server.
+
+## GraphQL interface
+
+The middleware exposes a GraphQL API at `/graphql` powered by Absinthe. It provides a typed, queryable interface to blocks, transactions, accounts, names, tokens (AEX-9 and AEX-141), channels, oracles, stats, DEX swaps, transfers, wealth, and system status.
+
+### Endpoints
+
+| Path | Purpose |
+|------|---------|
+| `/graphql` | HTTP query endpoint (always available, accepts `POST`) |
+| `/graphiql` | Interactive playground UI (opt-in, see below) |
+
+On the hosted testnet the playground is enabled at:
+`https://testnet.aeternity.io/mdw/graphiql`
+
+### Pagination
+
+All paginated GraphQL queries return a page object:
+
+```graphql
+{
+  data: [T]
+  prevCursor: String
+  nextCursor: String
+}
+```
+
+Pass `nextCursor` as the `cursor` argument to advance to the next page. The `limit` argument is clamped to 1–100 (default 10).
+
+### Query complexity limit
+
+Every request is scored for complexity before execution. The default maximum is **1 000** complexity points (one point per selected field; list fields multiply by the requested `limit`). Queries that exceed this limit are rejected with an error — this limit was not previously enforced and may affect existing deep or wide queries.
+
+The limit can be raised on self-hosted deployments via the `GRAPHQL_MAX_COMPLEXITY` environment variable.
+
+### GraphiQL playground
+
+The interactive playground is disabled by default. Enable it by setting `GRAPHIQL_ENABLED=true` (or `1`) before starting the node and navigating to `/graphiql`. The route is always mounted; only the flag controls whether the UI is served or a 404 is returned.
+
+For full schema documentation, example queries, error handling details, and how to generate static docs with SpectaQL, see [docs/graphql.md](docs/graphql.md).
+
+## Middleware Environment Variables
+
+All env vars are read once at node startup from `config/runtime.exs`. Changing a variable on a running node has no effect — restart to pick up changes.
+
+### GraphQL
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GRAPHIQL_ENABLED` | `false` | Set to `true` or `1` to serve the GraphiQL playground UI at `/graphiql`. |
+| `GRAPHQL_MAX_COMPLEXITY` | `1000` | Maximum Absinthe query complexity score. Queries exceeding this are rejected. |
+| `GRAPHQL_RESPONSE_CACHE_TTL_MS` | `5000` | Milliseconds to cache successful GraphQL responses in ETS. Set to `0` to disable caching. |
+
+### WebSocket
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAX_SUBS_PER_CONN` | `100000` | Maximum subscriptions per WebSocket connection. |
+| `MAX_WS_CONNECTIONS` | `1000` | Maximum total concurrent WebSocket connections. |
+| `MAX_WS_CONNECTIONS_PER_IP` | `50` | Maximum WebSocket connections from a single IP address. |
+| `MAX_TOTAL_WS_SUBS` | `2000000` | Maximum total subscriptions across all connections. |
+| `MAX_WS_CLIENT_BACKLOG` | `2000` | Maximum queued messages per WebSocket client before shedding. |
+| `MAX_PING_LIMIT` | `1000` | Maximum subscription entries returned in a Ping/Pong response. |
+| `WS_SUBS_FULL_LIST_REPLY` | `false` | Legacy compatibility: set to `true` to restore pre-v1.105 behaviour where subscribe/unsubscribe replies echoed the full subscription list. Will be removed in a future version. |
+
+### Other
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEALTH_RANK_SIZE` | `200` | Number of accounts tracked in the wealth-rank index. |
 
 ## Tests
 
