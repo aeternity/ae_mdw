@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.107.0](https://github.com/aeternity/ae_mdw/compare/v1.106.2...v1.107.0) (2026-06-19)
+
+
+### Features
+
+* implement GraphQL interface to the middleware DB ([d444e64](https://github.com/aeternity/ae_mdw/commit/d444e647b11848b48d299775a068b7e61eab1609))
+
+
+### Miscellaneous
+
+* update docs ([d344d73](https://github.com/aeternity/ae_mdw/commit/d344d73141e393c33bf691f80764b089858e10d3))
+
 ## [1.106.2](https://github.com/aeternity/ae_mdw/compare/v1.106.1...v1.106.2) (2026-04-25)
 
 
