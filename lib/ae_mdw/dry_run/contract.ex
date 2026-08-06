@@ -42,12 +42,6 @@ defmodule AeMdw.DryRun.Contract do
     |> Util.ok!()
   end
 
-  @spec call_tx_base_gas(AeMdw.Blocks.height()) :: pos_integer()
-  def call_tx_base_gas(height) do
-    protocol = :aec_hard_forks.protocol_effective_at_height(height)
-    :aec_governance.tx_base_gas(:contract_call_tx, protocol, abi_version())
-  end
-
   defp min_gas_price do
     protocol = :aec_hard_forks.protocol_effective_at_height(1)
 

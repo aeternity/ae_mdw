@@ -26,6 +26,18 @@ defmodule AeMdw.DryRun.Runner do
   @amount trunc(:math.pow(10, 35))
   @extension_methods ["aex9_extensions", "aex141_extensions"]
 
+  # Execution budget for the AEX-N introspection calls. They return a
+  # fixed-size tuple and never iterate a collection, so the only input-dependent
+  # cost is loading the contract's state register, which is charged per byte.
+  # 6_000_000 is the protocol's default per-microblock gas limit: no contract
+  # call the chain itself would accept can consume more than this, so it is an
+  # upper bound on honest work while still capping a looping contract during
+  # sync. It is a constant rather than a read of
+  # `:aec_governance.block_gas_limit/0` so that a node configured with a lower
+  # gas limit cannot shrink it - the metadata is resolved once, at contract
+  # creation, and an `out_of_gas` result is written to the index permanently.
+  @introspection_gas 6_000_000
+
   @spec call_contract(DBN.pubkey(), method_name(), method_args()) ::
           {:ok, call_return()} | {:error, call_error()} | :revert
   def call_contract(contract_pk, function_name, args),
@@ -33,9 +45,9 @@ defmodule AeMdw.DryRun.Runner do
 
   @spec call_contract(DBN.pubkey(), DBN.height_hash(), method_name(), method_args()) ::
           {:ok, call_return()} | {:error, call_error()} | :revert
-  def call_contract(contract_pk, {_type, height, block_hash}, function_name, args) do
+  def call_contract(contract_pk, {_type, _height, block_hash}, function_name, args) do
     contract_pk
-    |> new_contract_call_tx(height, function_name, args)
+    |> new_contract_call_tx(function_name, args)
     |> dry_run(block_hash)
     |> case do
       {:ok, {[contract_call_tx: {:ok, call_res}], _events}} ->
@@ -70,20 +82,18 @@ defmodule AeMdw.DryRun.Runner do
     :aec_dry_run.dry_run(block_hash, accounts, txs, tx_events: false)
   end
 
-  defp new_contract_call_tx(contract_pk, height, function_name, args)
+  defp new_contract_call_tx(contract_pk, function_name, args)
        when function_name == "meta_info" or function_name in @extension_methods do
-    base_gas = Contract.call_tx_base_gas(height)
-
     Contract.new_call_tx(
       @runner_pk,
       contract_pk,
       function_name,
       args,
-      base_gas
+      @introspection_gas
     )
   end
 
-  defp new_contract_call_tx(contract_pk, _height, function_name, args) do
+  defp new_contract_call_tx(contract_pk, function_name, args) do
     Contract.new_call_tx(@runner_pk, contract_pk, function_name, args)
   end
 end
