@@ -26,16 +26,9 @@ defmodule AeMdw.DryRun.Runner do
   @amount trunc(:math.pow(10, 35))
   @extension_methods ["aex9_extensions", "aex141_extensions"]
 
-  # Execution budget for the AEX-N introspection calls. They return a
-  # fixed-size tuple and never iterate a collection, so the only input-dependent
-  # cost is loading the contract's state register, which is charged per byte.
-  # 6_000_000 is the protocol's default per-microblock gas limit: no contract
-  # call the chain itself would accept can consume more than this, so it is an
-  # upper bound on honest work while still capping a looping contract during
-  # sync. It is a constant rather than a read of
-  # `:aec_governance.block_gas_limit/0` so that a node configured with a lower
-  # gas limit cannot shrink it - the metadata is resolved once, at contract
-  # creation, and an `out_of_gas` result is written to the index permanently.
+  # The protocol's default per-microblock gas limit, so no call the chain would
+  # accept can exceed it. A literal and not `:aec_governance.block_gas_limit/0`
+  # because that is tunable, and an out_of_gas result here is indexed permanently.
   @introspection_gas 6_000_000
 
   @spec call_contract(DBN.pubkey(), method_name(), method_args()) ::

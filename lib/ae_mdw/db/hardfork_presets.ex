@@ -40,12 +40,8 @@ defmodule AeMdw.Db.HardforkPresets do
   @doc """
   Sum of the accounts migrated into the chain at a hardfork.
 
-  Only Roma, Minerva, Fortuna and Lima ever shipped migrated accounts; every
-  protocol since mints nothing at the fork itself. A protocol this module does
-  not name is treated the same way instead of raising, because
-  `AeMdw.Node.token_supply_delta/0` folds over every protocol the node reports
-  and feeds total supply on each generation - a node configured with a protocol
-  newer than the ones above must not take the sync down.
+  Protocols this module does not name return 0 rather than raising: the raise
+  would take sync down through `AeMdw.Node.token_supply_delta/0`.
   """
   @spec mint_sum(hardfork() | atom()) :: non_neg_integer()
   def mint_sum(hardfork) do
