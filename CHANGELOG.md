@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.107.1](https://github.com/aeternity/ae_mdw/compare/v1.107.0...v1.107.1) (2026-08-19)
+
+
+### Miscellaneous
+
+* bump node version to 7.3.0-rc8 ([#2186](https://github.com/aeternity/ae_mdw/issues/2186)) ([22d8c13](https://github.com/aeternity/ae_mdw/commit/22d8c13a6c9c0b4aa4be938b255e19e7333d701f))
+
 ## [1.107.0](https://github.com/aeternity/ae_mdw/compare/v1.106.2...v1.107.0) (2026-06-19)
 
 
