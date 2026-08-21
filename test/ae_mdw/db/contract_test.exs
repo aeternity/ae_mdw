@@ -569,6 +569,49 @@ defmodule AeMdw.Db.ContractTest do
                State.get(state, Model.Aex9EventBalance, {remote_pk2, account_pk2})
     end
 
+    test "gh-2155 repro: initial supply is counted once when the aex9 contract is created inside this same call" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      recipient_pk = :crypto.strong_rand_bytes(32)
+      initial_supply = 100
+
+      # a contract minting directly to the recipient and also logging a
+      # redundant Transfer for the same mint is a common AEX9 template pattern
+      call_rec =
+        call_rec("logs", contract_pk, Enum.random(100_000..999_999), nil, [
+          {contract_pk, [aexn_event_hash(:mint), recipient_pk, <<initial_supply::256>>], ""},
+          {contract_pk,
+           [aexn_event_hash(:transfer), contract_pk, recipient_pk, <<initial_supply::256>>], ""}
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      txi = Enum.random(100_000_000..999_999_999)
+
+      state =
+        empty_state()
+        # contract_pk was created as an internal call WITHIN this same tx (txi),
+        # e.g. a factory's ordinary contract_call_tx doing Chain.create
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(Model.Tx, Model.tx(index: txi, time: 1_704_100_546_000))
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
+        )
+        |> Contract.logs_write(txi, txi, call_rec, false)
+
+      # balance updates from the mint/transfer events are skipped for a
+      # contract created within this same tx - the authoritative balance is
+      # meant to come from the separate dry-run backfill (aex9_init_event_balances),
+      # not from summing these events, which would double the real amount
+      assert :not_found ==
+               State.get(state, Model.Aex9EventBalance, {contract_pk, recipient_pk})
+    end
+
     test "does not update the balance when transfer accounts are the same" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
