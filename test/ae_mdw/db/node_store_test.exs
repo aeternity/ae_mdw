@@ -10,8 +10,12 @@ defmodule AeMdw.Db.NodeStoreTest do
   @table Model.Mempool
 
   setup do
+    # a previous run's table can outlive its owning process; clear it first
+    if :ets.whereis(:mempool) != :undefined, do: :ets.delete(:mempool)
+
     # create a mnesia table
     table = :ets.new(:mempool, [:set, :named_table, :ordered_set])
+    on_exit(fn -> if :ets.whereis(:mempool) != :undefined, do: :ets.delete(:mempool) end)
 
     # insert some data
     true = :ets.insert(table, {1, {:val1, :val2}})
