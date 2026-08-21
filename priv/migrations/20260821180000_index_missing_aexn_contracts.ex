@@ -7,6 +7,10 @@ defmodule AeMdw.Migrations.IndexMissingAexnContracts do
   of gas before the meta_info/extensions gas budget fix. Every still-unindexed
   contract_create_tx contract is cheaply classified first, so the actual
   dry-run calls only run for the ones that are AEX-9/AEX-141-shaped.
+
+  Classification alone still touches every contract ever created (mainnet has
+  ~200k), so when started from the application (from_start? = true) the work
+  is pushed to a supervised task and the API becomes available immediately.
   """
 
   alias AeMdw.AexnContracts
@@ -18,48 +22,53 @@ defmodule AeMdw.Migrations.IndexMissingAexnContracts do
 
   require Model
 
-  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()} | {:async, [fun()]}
+  def run(state, true = _from_start?) do
+    {:async, [fn -> do_run(state) end]}
+  end
+
   def run(state, _from_start?) do
-    count =
-      Model.Origin
-      |> RocksDbCF.stream()
-      |> Stream.filter(fn Model.origin(index: {tx_type, _contract_pk}) ->
-        tx_type == :contract_create_tx
-      end)
-      |> Stream.reject(fn Model.origin(index: {_tx_type, contract_pk}) ->
-        State.exists?(state, Model.AexnContract, {:aex9, contract_pk}) or
-          State.exists?(state, Model.AexnContract, {:aex141, contract_pk})
-      end)
-      |> Stream.flat_map(fn Model.origin(
-                              index: {_tx_type, contract_pk},
-                              txi_idx: {txi, _idx} = txi_idx
-                            ) ->
-        Model.tx(block_index: {height, _mbi} = block_index) = State.fetch!(state, Model.Tx, txi)
+    {:ok, do_run(state)}
+  end
 
-        if aexn_shaped?(height, contract_pk) do
-          Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+  defp do_run(state) do
+    Model.Origin
+    |> RocksDbCF.stream()
+    |> Stream.filter(fn Model.origin(index: {tx_type, _contract_pk}) ->
+      tx_type == :contract_create_tx
+    end)
+    |> Stream.reject(fn Model.origin(index: {_tx_type, contract_pk}) ->
+      State.exists?(state, Model.AexnContract, {:aex9, contract_pk}) or
+        State.exists?(state, Model.AexnContract, {:aex141, contract_pk})
+    end)
+    |> Stream.flat_map(fn Model.origin(
+                            index: {_tx_type, contract_pk},
+                            txi_idx: {txi, _idx} = txi_idx
+                          ) ->
+      Model.tx(block_index: {height, _mbi} = block_index) = State.fetch!(state, Model.Tx, txi)
 
-          case SyncContract.aexn_create_contract_mutation(
-                 contract_pk,
-                 block_hash,
-                 block_index,
-                 txi_idx
-               ) do
-            nil -> []
-            mutation -> [mutation]
-          end
-        else
-          []
+      if aexn_shaped?(height, contract_pk) do
+        Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
+        case SyncContract.aexn_create_contract_mutation(
+               contract_pk,
+               block_hash,
+               block_index,
+               txi_idx
+             ) do
+          nil -> []
+          mutation -> [mutation]
         end
-      end)
-      |> Stream.chunk_every(100)
-      |> Stream.map(fn mutations ->
-        _state = State.commit_db(state, mutations)
-        length(mutations)
-      end)
-      |> Enum.sum()
-
-    {:ok, count}
+      else
+        []
+      end
+    end)
+    |> Stream.chunk_every(100)
+    |> Stream.map(fn mutations ->
+      _state = State.commit_db(state, mutations)
+      length(mutations)
+    end)
+    |> Enum.sum()
   end
 
   defp aexn_shaped?(height, contract_pk) do
