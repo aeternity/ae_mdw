@@ -37,7 +37,13 @@ defmodule AeMdw.Db.HardforkPresets do
     |> Map.get(hf_vsn)
   end
 
-  @spec mint_sum(hardfork()) :: pos_integer
+  @doc """
+  Sum of the accounts migrated into the chain at a hardfork.
+
+  Protocols this module does not name return 0 rather than raising: the raise
+  would take sync down through `AeMdw.Node.token_supply_delta/0`.
+  """
+  @spec mint_sum(hardfork() | atom()) :: non_neg_integer()
   def mint_sum(hardfork) do
     hardfork
     |> accounts()
@@ -61,8 +67,8 @@ defmodule AeMdw.Db.HardforkPresets do
       Node.lima_extra_accounts()
   end
 
-  defp accounts(:iris), do: %{}
-  defp accounts(:ceres), do: %{}
+  # Iris, Ceres and anything after them migrate no accounts.
+  defp accounts(_hardfork), do: %{}
 
   defp do_import_account_presets() do
     if :aec_governance.get_network_id() in ["ae_uat", "ae_mainnet"] do
