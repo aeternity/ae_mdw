@@ -2426,20 +2426,14 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "pending_txs" do
     setup do
-      case :ets.whereis(:mempool) do
-        :undefined -> :ok
-        _table -> :ets.delete(:mempool)
-      end
+      # a concurrent test can create/delete this same named table; a plain
+      # existence check still races, so make both directions idempotent instead
+      safe_delete_mempool()
 
       # create a mnesia table
       table = :ets.new(:mempool, [:ordered_set, :named_table, :public])
 
-      on_exit(fn ->
-        case :ets.whereis(:mempool) do
-          :undefined -> :ok
-          _table -> :ets.delete(:mempool)
-        end
-      end)
+      on_exit(&safe_delete_mempool/0)
 
       pending_txs = TS.pending_txs()
 
@@ -2504,6 +2498,12 @@ defmodule AeMdwWeb.TxControllerTest do
                |> get(prev_prev_url)
                |> json_response(200)
     end
+  end
+
+  defp safe_delete_mempool do
+    :ets.delete(:mempool)
+  rescue
+    ArgumentError -> :ok
   end
 
   defp channel_payload(round) do
