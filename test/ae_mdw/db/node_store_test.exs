@@ -10,12 +10,13 @@ defmodule AeMdw.Db.NodeStoreTest do
   @table Model.Mempool
 
   setup do
-    # a previous run's table can outlive its owning process; clear it first
-    if :ets.whereis(:mempool) != :undefined, do: :ets.delete(:mempool)
+    # a concurrent test can create/delete this same named table; a plain
+    # existence check still races, so make both directions idempotent instead
+    safe_delete_mempool()
 
     # create a mnesia table
     table = :ets.new(:mempool, [:set, :named_table, :ordered_set])
-    on_exit(fn -> if :ets.whereis(:mempool) != :undefined, do: :ets.delete(:mempool) end)
+    on_exit(&safe_delete_mempool/0)
 
     # insert some data
     true = :ets.insert(table, {1, {:val1, :val2}})
@@ -27,6 +28,12 @@ defmodule AeMdw.Db.NodeStoreTest do
     true = :ets.insert(table, {7, {:val7, :val8}})
 
     %{table: table}
+  end
+
+  defp safe_delete_mempool do
+    :ets.delete(:mempool)
+  rescue
+    ArgumentError -> :ok
   end
 
   describe "when empty fallback" do
