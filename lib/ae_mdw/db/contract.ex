@@ -306,9 +306,12 @@ defmodule AeMdw.Db.Contract do
           write_swap_tokens(state, create_txi, txi, log_idx, args, data)
 
         aex9_contract_pk != nil ->
-          # for parent contracts on contract creation or for child contracts on contract calls,
-          # the balance is updated via dry-run to get minted tokens without events
-          update_balance? = not is_contract_creation?
+          # for parent contracts on contract creation, or for child contracts
+          # created within this same call (e.g. a factory's ordinary call doing
+          # Chain.create), the balance is updated via dry-run to get minted
+          # tokens without events double-counting it on top of that
+          update_balance? =
+            not is_contract_creation? and not created_within_this_tx?(state, addr, txi)
 
           state2
           |> SyncStats.increment_aex9_logs(aex9_contract_pk)
@@ -321,6 +324,10 @@ defmodule AeMdw.Db.Contract do
           state2
       end
     end)
+  end
+
+  defp created_within_this_tx?(state, contract_pk, txi) do
+    State.cache_get(state, :ct_create_sync_cache, contract_pk) == {:ok, txi}
   end
 
   @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil

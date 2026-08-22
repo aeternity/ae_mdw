@@ -18,5 +18,11 @@
   # blocks.ex: sparse-state fixtures store Model.block rows with hash: nil even
   # though Blocks.block_hash() is typed as <<_::256>>. The nil-hash clause in
   # render_key_block/2 is a deliberate runtime guard, not an unreachable pattern.
-  ~r{lib/ae_mdw/blocks\.ex:\d+:pattern_match}
+  ~r{lib/ae_mdw/blocks\.ex:\d+:pattern_match},
+
+  # fix_aex9_nested_creation_double_counted_balances.ex: dialyzer infers the
+  # Aex9Balances.get_balances/2 dry-run call can never return {:ok, _, _} here,
+  # even though the identical call succeeds elsewhere (aexn_create_contract_mutation.ex).
+  # A false positive, not a real unreachable path.
+  ~r{fix_aex9_nested_creation_double_counted_balances\.ex}
 ]
