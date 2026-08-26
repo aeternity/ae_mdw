@@ -15,11 +15,44 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   import AeMdw.Node.ContractCallFixtures
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Util.Encoding, only: [encode_account: 1]
+  import Mock
 
   require Model
 
   @burn_caller_pk <<234, 90, 164, 101, 3, 211, 169, 40, 246, 51, 6, 203, 132, 12, 34, 114, 203,
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
+
+  # stubs the dry-run boundary (AeMdw.Node.Db) so refresh_aex9_balances/5 gets a
+  # canned balances map for the given block_index instead of hitting a real node
+  defp with_aex9_balances({kbi, mbi} = _block_index, balances_map, fun) do
+    with_aex9_balances_by_contract({kbi, mbi}, fn _contract_pk -> balances_map end, fun)
+  end
+
+  # same as with_aex9_balances/3, but resolves the canned balances per contract_pk,
+  # useful when a single call touches multiple aex9 contracts (e.g. nested calls)
+  defp with_aex9_balances_by_contract({kbi, mbi} = _block_index, balances_by_contract, fun) do
+    next_height = kbi + 1
+    kb_hash = :crypto.strong_rand_bytes(32)
+    next_hash = :crypto.strong_rand_bytes(32)
+
+    with_mocks [
+      {AeMdw.Node.Db, [:passthrough],
+       [
+         get_key_block_hash: fn ^next_height -> kb_hash end,
+         get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
+         aex9_balances: fn contract_pk, {:micro, ^kbi, ^next_hash} ->
+           balances_map = balances_by_contract.(contract_pk)
+
+           node_balances =
+             Map.new(balances_map, fn {account_pk, amount} -> {{:address, account_pk}, amount} end)
+
+           {:ok, node_balances}
+         end
+       ]}
+    ] do
+      fun.()
+    end
+  end
 
   setup do
     global_state_ref = :persistent_term.get(:global_state, nil)
@@ -77,14 +110,20 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
+      block_index = {500_000, 0}
+
       store =
         store
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
-        |> change_store([mutation])
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
+
+      store =
+        with_aex9_balances(block_index, %{account_pk => 1}, fn ->
+          change_store(store, [mutation])
+        end)
 
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
@@ -102,14 +141,20 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
+      block_index = {500_000, 0}
+
       store =
         store
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
-        |> change_store([mutation])
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
+
+      store =
+        with_aex9_balances(block_index, %{account_pk => 1}, fn ->
+          change_store(store, [mutation])
+        end)
 
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
@@ -127,14 +172,20 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
+      block_index = {500_000, 0}
+
       store =
         store
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
-        |> change_store([mutation])
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
+
+      store =
+        with_aex9_balances(block_index, %{account_pk => 0}, fn ->
+          change_store(store, [mutation])
+        end)
 
       assert {:ok,
               Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
@@ -208,11 +259,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert :not_found = Store.get(store, Model.Stat, Stats.aex9_holder_count_key(remote_pk))
 
+      block_index = {height, 0}
+      new_amount = previous_balance + amount
+
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
@@ -221,9 +275,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, remote_pk, call_txi - 2})
         )
-        |> change_store([mutation])
 
-      new_amount = previous_balance + amount
+      store =
+        with_aex9_balances(block_index, %{account_pk => new_amount}, fn ->
+          change_store(store, [mutation])
+        end)
 
       m_new_balance =
         Model.aex9_event_balance(m_balance,
@@ -326,11 +382,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           txi: call_txi - 1
         )
 
+      block_index = {height, 0}
+
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
@@ -339,7 +397,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
-        |> change_store([mutation])
+
+      store =
+        with_aex9_balances(block_index, %{account_pk => 100_000}, fn ->
+          change_store(store, [mutation])
+        end)
 
       m_new_balance =
         Model.aex9_event_balance(m_balance,
@@ -432,10 +494,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           amount: amount
         )
 
+      block_index = {height, 0}
+
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
-        |> Store.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
@@ -444,7 +508,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
-        |> change_store([mutation])
+
+      store =
+        with_aex9_balances(block_index, %{account_pk => 0}, fn ->
+          change_store(store, [mutation])
+        end)
 
       m_new_balance =
         Model.aex9_event_balance(m_balance,
@@ -515,14 +583,20 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           amount: amount + 100_000
         )
 
+      block_index = {height, 0}
+
       state =
         NullStore.new()
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.Aex9EventBalance, m_balance)
-        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-        |> State.commit_mem([mutation])
+
+      state =
+        with_aex9_balances(block_index, %{account_pk => 100_000}, fn ->
+          State.commit_mem(state, [mutation])
+        end)
 
       m_new_balance =
         Model.aex9_event_balance(m_balance,
@@ -585,13 +659,19 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
+      block_index = {height, 0}
+
       state =
         NullStore.new()
         |> MemStore.new()
         |> State.new()
-        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-        |> State.commit_mem([mutation])
+
+      state =
+        with_aex9_balances(block_index, %{from_pk => 0, to_pk => amount}, fn ->
+          State.commit_mem(state, [mutation])
+        end)
 
       assert State.exists?(
                state,
@@ -668,6 +748,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk2, {type_info, nil, nil})
 
       from_amount1 = amount1 + 1
+      block_index = {height, 0}
 
       state =
         NullStore.new()
@@ -685,14 +766,22 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Aex9EventBalance,
           Model.aex9_event_balance(index: {remote_pk2, from_pk2}, amount: amount2)
         )
-        |> State.put(Model.Tx, Model.tx(index: call_txi, time: 1))
+        |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
 
-      state = ContractCallMutation.execute(mutation, state)
-
       new_amount1 = from_amount1 - amount1
+
+      balances_by_contract = fn
+        ^remote_pk1 -> %{from_pk1 => new_amount1, to_pk1 => amount1}
+        ^remote_pk2 -> %{from_pk2 => 0, to_pk2 => amount2}
+      end
+
+      state =
+        with_aex9_balances_by_contract(block_index, balances_by_contract, fn ->
+          ContractCallMutation.execute(mutation, state)
+        end)
 
       m_bal_acc =
         Model.aex9_balance_account(

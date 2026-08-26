@@ -24,5 +24,9 @@
   # Aex9Balances.get_balances/2 dry-run call can never return {:ok, _, _} here,
   # even though the identical call succeeds elsewhere (aexn_create_contract_mutation.ex).
   # A false positive, not a real unreachable path.
-  ~r{fix_aex9_nested_creation_double_counted_balances\.ex}
+  ~r{fix_aex9_nested_creation_double_counted_balances\.ex},
+
+  # recompute_all_aex9_balances_from_dry_run.ex: same false positive as above,
+  # now for the broad migration that supersedes it.
+  ~r{recompute_all_aex9_balances_from_dry_run\.ex}
 ]
