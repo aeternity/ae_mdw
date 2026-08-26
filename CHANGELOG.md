@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.107.2](https://github.com/aeternity/ae_mdw/compare/v1.107.1...v1.107.2) (2026-08-26)
+
+
+### Bug Fixes
+
+* always re-derive aex9 balances from a dry-run instead of per-event arithmetic ([#2192](https://github.com/aeternity/ae_mdw/issues/2192)) ([53686f5](https://github.com/aeternity/ae_mdw/commit/53686f560510d66142c2af75cc0bfbfb99ccec58))
+* give the AEX-N metadata dry-runs an execution gas budget ([#2185](https://github.com/aeternity/ae_mdw/issues/2185)) ([8cfd586](https://github.com/aeternity/ae_mdw/commit/8cfd586f096292b64b7f0010a76de2604b487032))
+* run the missing AEX-N contracts backfill asynchronously on boot ([#2190](https://github.com/aeternity/ae_mdw/issues/2190)) ([dc47a74](https://github.com/aeternity/ae_mdw/commit/dc47a745490c44632fe489948eaff8e9e9273ef2))
+* skip aex9 event balance updates for tokens created within this same call ([#2191](https://github.com/aeternity/ae_mdw/issues/2191)) ([0891314](https://github.com/aeternity/ae_mdw/commit/08913143497bfc21b7f9dc0593aed866e6889821))
+
+
+### Miscellaneous
+
+* bump node version to 7.3.0-rc10 ([#2193](https://github.com/aeternity/ae_mdw/issues/2193)) ([3cf2b5e](https://github.com/aeternity/ae_mdw/commit/3cf2b5e1d1446ea0d86735313f991f7b88eff263))
+* bump node version to 7.3.0-rc9 ([#2188](https://github.com/aeternity/ae_mdw/issues/2188)) ([e77fe84](https://github.com/aeternity/ae_mdw/commit/e77fe84c68c134350c9eaac4eb81d46af60a8d87))
+
 ## [1.107.1](https://github.com/aeternity/ae_mdw/compare/v1.107.0...v1.107.1) (2026-08-19)
 
 
