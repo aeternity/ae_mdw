@@ -192,9 +192,16 @@ defmodule AeMdw.Sync.Server do
         {:next_state, {:syncing_db, ref}, state_data}
 
       db_height >= max_db_height and mem_hash != chain_hash ->
-        Log.info("[sync_mem] started from height #{db_height}")
+        ref =
+          if is_binary(mem_hash) and chain_extends_mem?(mem_hash, chain_hash) do
+            Log.info("[sync_mem] resuming from mem_hash=#{inspect(mem_hash)}")
 
-        ref = spawn_mem_sync(db_height, chain_hash)
+            spawn_mem_sync_resume(chain_hash)
+          else
+            Log.info("[sync_mem] started from height #{db_height}")
+
+            spawn_mem_sync(db_height, chain_hash)
+          end
 
         {:next_state, {:syncing_mem, ref}, state_data}
 
@@ -304,8 +311,20 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp spawn_mem_sync(from_height, last_hash) do
+    spawn_mem_sync_from(State.create_mem_state(), from_height, last_hash)
+  end
+
+  # Resumes syncing on top of the already-built mem overlay instead of
+  # rebuilding the whole unfinalized (last @mem_gens) window from scratch -
+  # only safe when the chain merely extended past mem_hash (checked by the
+  # caller via chain_extends_mem?/2), never on an actual reorg.
+  defp spawn_mem_sync_resume(last_hash) do
+    mem_state = State.mem_state()
+    spawn_mem_sync_from(mem_state, AeMdw.Db.Util.synced_height(mem_state) + 1, last_hash)
+  end
+
+  defp spawn_mem_sync_from(mem_state, from_height, last_hash) do
     spawn_task(fn ->
-      mem_state = State.create_mem_state()
       from_txi = Block.next_txi(mem_state)
 
       from_mbi =
@@ -324,6 +343,22 @@ defmodule AeMdw.Sync.Server do
 
       last_hash
     end)
+  end
+
+  # True only if mem_hash is still an ancestor of chain_hash, i.e. the chain
+  # simply extended past it with no competing fork in between - resuming the
+  # existing mem overlay is then equivalent to a full rebuild, just cheaper.
+  # Any exception (e.g. a pruned/unknown hash) is treated as "can't prove it's
+  # safe" and falls back to the always-correct full rebuild.
+  defp chain_extends_mem?(mem_hash, chain_hash) do
+    case :aec_chain.find_common_ancestor(mem_hash, chain_hash) do
+      {:ok, ^mem_hash} -> true
+      _other -> false
+    end
+  rescue
+    _ -> false
+  catch
+    _, _ -> false
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
