@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.108.0](https://github.com/aeternity/ae_mdw/compare/v1.107.4...v1.108.0) (2026-09-08)
+
+
+### Features
+
+* make separate access log opt-in via ACCESS_LOG_FILE_PATH ([#2205](https://github.com/aeternity/ae_mdw/issues/2205)) ([bfe10ef](https://github.com/aeternity/ae_mdw/commit/bfe10efdbb562b491c438e5d639f4c25db903070))
+* route HTTP access logs to a separate file ([#2199](https://github.com/aeternity/ae_mdw/issues/2199)) ([34d1758](https://github.com/aeternity/ae_mdw/commit/34d1758ab729334e7743877cbeffb35d9346b855))
+
+
+### Bug Fixes
+
+* avoid length/1 on a lazy Stream in exec_all_mem_mutations ([#2203](https://github.com/aeternity/ae_mdw/issues/2203)) ([4c38200](https://github.com/aeternity/ae_mdw/commit/4c38200469344440a1ebc3278424fa018df4f5b4))
+
 ## [1.107.4](https://github.com/aeternity/ae_mdw/compare/v1.107.3...v1.107.4) (2026-09-07)
 
 
