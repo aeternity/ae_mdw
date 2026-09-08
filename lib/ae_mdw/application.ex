@@ -54,7 +54,7 @@ defmodule AeMdw.Application do
     init(:tables)
     init(:formatters)
 
-    AeMdw.APM.AccessLogger.attach()
+    if Application.get_env(:logger, :access_log), do: AeMdw.APM.AccessLogger.attach()
 
     persist = Application.get_env(:aecore, :persist, true)
     :ok = RocksDb.open(!persist)
