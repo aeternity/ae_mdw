@@ -10,9 +10,10 @@ defmodule AeMdw.APM.AccessLogger do
   @spec attach() :: :ok
   def attach do
     # Phoenix.Logger's own handlers would otherwise duplicate these lines
-    # untagged in the main log.
-    :telemetry.detach({Phoenix.Logger, [:phoenix, :endpoint, :start]})
-    :telemetry.detach({Phoenix.Logger, [:phoenix, :endpoint, :stop]})
+    # untagged in the main log. Ignore {:error, :not_found} - harmless if
+    # already detached (e.g. hot code reload).
+    _ = :telemetry.detach({Phoenix.Logger, [:phoenix, :endpoint, :start]})
+    _ = :telemetry.detach({Phoenix.Logger, [:phoenix, :endpoint, :stop]})
 
     :telemetry.attach(
       {__MODULE__, [:phoenix, :endpoint, :stop]},
