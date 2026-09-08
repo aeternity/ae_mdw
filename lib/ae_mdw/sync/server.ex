@@ -333,7 +333,7 @@ defmodule AeMdw.Sync.Server do
         blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
-        :ok = profile_sync("sync_db", height, ts, blocks_mutations)
+        :ok = profile_sync("sync_db", height, ts, blocks_mutations, 1)
 
         add_tx_fees_job(new_state)
       end)
@@ -432,7 +432,7 @@ defmodule AeMdw.Sync.Server do
             |> add_tx_fees_job()
           end)
 
-        :ok = profile_sync("sync_mem", height, ts, gen_mutations)
+        :ok = profile_sync("sync_mem", height, ts, gen_mutations, 1)
 
         commited_state
       end)
@@ -458,7 +458,7 @@ defmodule AeMdw.Sync.Server do
         State.commit_mem(state, all_mutations)
       end)
 
-    :ok = profile_sync("sync_mem", height, ts, blocks_mutations)
+    :ok = profile_sync("sync_mem", height, ts, blocks_mutations, length(gens_mutations))
 
     broadcast_blocks(gens_mutations)
 
@@ -504,7 +504,7 @@ defmodule AeMdw.Sync.Server do
     end
   end
 
-  defp profile_sync(sync_type, height, exec_ts, blocks_mutations) do
+  defp profile_sync(sync_type, height, exec_ts, blocks_mutations, gens_in_batch) do
     mutations = Enum.map(blocks_mutations, &elem(&1, 2))
 
     _lookup_return =
@@ -525,7 +525,7 @@ defmodule AeMdw.Sync.Server do
         mutations_count = length(mutations)
 
         Log.info(
-          "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
+          "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, gens_in_batch=#{gens_in_batch}, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
         )
       end
 
