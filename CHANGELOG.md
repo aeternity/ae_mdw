@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.108.1](https://github.com/aeternity/ae_mdw/compare/v1.108.0...v1.108.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* don't crash exec_all_mem_mutations on an empty batch ([#2206](https://github.com/aeternity/ae_mdw/issues/2206)) ([96c410a](https://github.com/aeternity/ae_mdw/commit/96c410a3e4ef0ef22ba11ad4d87cd8dfb8a9c76b))
+
 ## [1.108.0](https://github.com/aeternity/ae_mdw/compare/v1.107.4...v1.108.0) (2026-09-08)
 
 
