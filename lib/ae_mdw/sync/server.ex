@@ -491,22 +491,31 @@ defmodule AeMdw.Sync.Server do
       |> List.flatten()
       |> maybe_add_accounts_balance_mutations()
 
-    {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
-    Log.info("[sync_mem] exec until height=#{height}")
+    # An empty batch (no blocks to apply - e.g. a resume/extension check that
+    # turns out to have nothing new past the already-synced height) is a
+    # legitimate no-op, not an error - List.last/1 would return nil and crash
+    # the match below if this weren't guarded.
+    case List.last(blocks_mutations) do
+      nil ->
+        state
 
-    {ts, new_state} =
-      :timer.tc(fn ->
-        all_mutations =
-          Enum.map(blocks_mutations, fn {_height, _block, mutations} -> mutations end)
+      {{height, _mbi}, _block, _mutations} ->
+        Log.info("[sync_mem] exec until height=#{height}")
 
-        State.commit_mem(state, all_mutations)
-      end)
+        {ts, new_state} =
+          :timer.tc(fn ->
+            all_mutations =
+              Enum.map(blocks_mutations, fn {_height, _block, mutations} -> mutations end)
 
-    :ok = profile_sync("sync_mem", height, ts, blocks_mutations, gens_in_batch)
+            State.commit_mem(state, all_mutations)
+          end)
 
-    broadcast_blocks(gens_mutations)
+        :ok = profile_sync("sync_mem", height, ts, blocks_mutations, gens_in_batch)
 
-    new_state
+        broadcast_blocks(gens_mutations)
+
+        new_state
+    end
   end
 
   defp spawn_task(fun) do
