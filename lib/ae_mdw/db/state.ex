@@ -15,6 +15,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.MemStoreCreator
@@ -42,6 +43,9 @@ defmodule AeMdw.Db.State do
           }
 
   @state_pm_key :global_state
+  # :persistent_term writes are O(total VM term/heap size), not O(this term) - flag
+  # when one takes long enough to suspect it's the dominant cost of a mem-sync tick.
+  @slow_persistent_term_put_us 50_000
 
   @spec new(Store.t()) :: t()
   def new(store \\ DbStore.new()),
@@ -104,7 +108,13 @@ defmodule AeMdw.Db.State do
 
     enqueue_jobs(jobs, only_new: false)
 
-    :persistent_term.put(@state_pm_key, state2)
+    {put_time, :ok} = :timer.tc(fn -> :persistent_term.put(@state_pm_key, state2) end)
+
+    if put_time > @slow_persistent_term_put_us do
+      Log.info(
+        "[commit_mem] slow :persistent_term.put took #{div(put_time, 1_000)}ms (mutations=#{length(mutations)})"
+      )
+    end
 
     %__MODULE__{state2 | jobs: %{}}
   end
