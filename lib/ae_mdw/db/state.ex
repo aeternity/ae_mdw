@@ -99,12 +99,21 @@ defmodule AeMdw.Db.State do
 
   @spec commit_mem(t(), [Mutation.t()]) :: t()
   def commit_mem(state, mutations) do
-    state2 =
-      %__MODULE__{jobs: jobs} =
+    flat_mutations =
       mutations
       |> List.flatten()
       |> Enum.reject(&is_nil/1)
-      |> Enum.reduce(state, &Mutation.execute/2)
+
+    {reduce_time, state2} =
+      :timer.tc(fn -> Enum.reduce(flat_mutations, state, &Mutation.execute/2) end)
+
+    %__MODULE__{jobs: jobs} = state2
+
+    if reduce_time > @slow_persistent_term_put_us do
+      Log.info(
+        "[commit_mem] slow mutations reduce took #{div(reduce_time, 1_000)}ms (mutations=#{length(flat_mutations)})"
+      )
+    end
 
     enqueue_jobs(jobs, only_new: false)
 
@@ -112,7 +121,7 @@ defmodule AeMdw.Db.State do
 
     if put_time > @slow_persistent_term_put_us do
       Log.info(
-        "[commit_mem] slow :persistent_term.put took #{div(put_time, 1_000)}ms (mutations=#{length(mutations)})"
+        "[commit_mem] slow :persistent_term.put took #{div(put_time, 1_000)}ms (mutations=#{length(flat_mutations)})"
       )
     end
 
