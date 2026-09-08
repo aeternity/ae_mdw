@@ -477,9 +477,18 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_all_mem_mutations(state, gens_mutations) do
+    # gens_mutations is an Enumerable.t() (may be a lazy Stream), so it's
+    # traversed exactly once here - both to flatten it and to count the
+    # generations in this batch, instead of calling length/1 on it (which
+    # requires a proper list and would raise on a Stream).
+    {per_gen_blocks_mutations, gens_in_batch} =
+      Enum.map_reduce(gens_mutations, 0, fn {_height, blocks_mutations}, count ->
+        {blocks_mutations, count + 1}
+      end)
+
     blocks_mutations =
-      gens_mutations
-      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+      per_gen_blocks_mutations
+      |> List.flatten()
       |> maybe_add_accounts_balance_mutations()
 
     {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
@@ -493,7 +502,7 @@ defmodule AeMdw.Sync.Server do
         State.commit_mem(state, all_mutations)
       end)
 
-    :ok = profile_sync("sync_mem", height, ts, blocks_mutations, length(gens_mutations))
+    :ok = profile_sync("sync_mem", height, ts, blocks_mutations, gens_in_batch)
 
     broadcast_blocks(gens_mutations)
 
