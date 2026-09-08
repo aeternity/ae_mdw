@@ -148,6 +148,7 @@
         {Credo.Check.Warning.IoInspect, []},
         {Credo.Check.Warning.LazyLogging, false},
         {Credo.Check.Warning.MapGetUnsafePass, []},
+        {Credo.Check.Warning.MissedMetadataKeyInLoggerConfig, [metadata_keys: [:mdw_access]]},
         {Credo.Check.Warning.MixEnv, []},
         {Credo.Check.Warning.OperationOnSameValues, []},
         {Credo.Check.Warning.OperationWithConstantResult, []},

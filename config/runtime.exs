@@ -71,15 +71,27 @@ log_file_path =
      Path.join(File.cwd!(), "log/info.log"))
   |> Path.expand()
 
+access_log_file_path =
+  (System.get_env("ACCESS_LOG_FILE_PATH") ||
+     Path.join(File.cwd!(), "log/access.log"))
+  |> Path.expand()
+
 config :logger, :info,
   path: log_file_path,
   metadata: [:request_id],
+  metadata_reject: [mdw_access: true],
+  format: "$date $time $metadata[$level] $message\n"
+
+config :logger, :access_log,
+  path: access_log_file_path,
+  metadata: [:request_id],
+  metadata_filter: [mdw_access: true],
   format: "$date $time $metadata[$level] $message\n"
 
 base_logger_backends =
   :logger
   |> Application.get_env(:backends, [])
-  |> Kernel.++([{LoggerFileBackend, :info}])
+  |> Kernel.++([{LoggerFileBackend, :info}, {LoggerFileBackend, :access_log}])
 
 logger_backends =
   if enable_console_log,
