@@ -318,9 +318,13 @@ defmodule AeMdw.Sync.Server do
   # rebuilding the whole unfinalized (last @mem_gens) window from scratch -
   # only safe when the chain merely extended past mem_hash (checked by the
   # caller via chain_extends_mem?/2), never on an actual reorg.
+  #
+  # Resumes AT the last synced generation because that generation is still
+  # open - blocks_mutations/5 skips its already-processed micro-blocks via
+  # from_mbi.
   defp spawn_mem_sync_resume(last_hash) do
     mem_state = State.mem_state()
-    spawn_mem_sync_from(mem_state, AeMdw.Db.Util.synced_height(mem_state) + 1, last_hash)
+    spawn_mem_sync_from(mem_state, AeMdw.Db.Util.synced_height(mem_state), last_hash)
   end
 
   defp spawn_mem_sync_from(mem_state, from_height, last_hash) do
