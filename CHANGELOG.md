@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.108.2](https://github.com/aeternity/ae_mdw/compare/v1.108.1...v1.108.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* resume mem-sync at the open generation ([#2208](https://github.com/aeternity/ae_mdw/issues/2208)) ([b446ff1](https://github.com/aeternity/ae_mdw/commit/b446ff185e38917e10fe27bdcb11cb006f7c654f))
+
 ## [1.108.1](https://github.com/aeternity/ae_mdw/compare/v1.108.0...v1.108.1) (2026-09-08)
 
 
