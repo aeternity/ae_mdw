@@ -34,15 +34,35 @@ defmodule AeMdw.Db.MinerRewardsMutation do
   defp increment_total_reward(state, beneficiary_pk, reward) do
     case State.get(state, Model.Miner, beneficiary_pk) do
       {:ok, Model.miner(total_reward: old_reward) = miner} ->
-        {State.put(state, Model.Miner, Model.miner(miner, total_reward: old_reward + reward)),
-         false}
+        total_reward = old_reward + reward
+
+        state
+        |> State.put(
+          Model.Miner,
+          Model.miner(miner, total_reward: total_reward)
+        )
+        |> State.delete(Model.RewardMiner, {old_reward, beneficiary_pk})
+        |> State.put(
+          Model.RewardMiner,
+          Model.reward_miner(index: {total_reward, beneficiary_pk})
+        )
+        |> then(fn st ->
+          {st, false}
+        end)
 
       :not_found ->
-        {State.put(
-           state,
-           Model.Miner,
-           Model.miner(index: beneficiary_pk, total_reward: reward)
-         ), true}
+        state
+        |> State.put(
+          Model.RewardMiner,
+          Model.reward_miner(index: {reward, beneficiary_pk})
+        )
+        |> State.put(
+          Model.Miner,
+          Model.miner(index: beneficiary_pk, total_reward: reward)
+        )
+        |> then(fn st ->
+          {st, true}
+        end)
     end
   end
 
