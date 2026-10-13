@@ -188,6 +188,86 @@ defmodule AeMdw.Db.NameTest do
     end
   end
 
+  describe "pointees/2" do
+    test "only lists pointees from the latest update of the current name cycle" do
+      pk = <<1::256>>
+      other_pk = <<2::256>>
+      key = "account_pubkey"
+      active_from = 100
+      expire = 1_000
+      block_index = {1, 0}
+
+      superseded = "superseded.chain"
+      previous_cycle = "previouscycle.chain"
+      current = "current.chain"
+      revoked = "revoked.chain"
+
+      # {txi, name, pointee pubkey, name cycle the update belongs to}
+      updates = [
+        {10, superseded, pk, active_from},
+        {11, superseded, other_pk, active_from},
+        {20, previous_cycle, pk, 50},
+        {30, current, pk, active_from},
+        {40, revoked, pk, active_from}
+      ]
+
+      txs =
+        Map.new(updates, fn {txi, name, pointee_pk, _active} ->
+          {:ok, name_hash} = :aens.get_name_hash(name)
+
+          {:ok, aetx} =
+            :aens_update_tx.new(%{
+              account_id: :aeser_id.create(:account, <<3::256>>),
+              nonce: txi,
+              name_id: :aeser_id.create(:name, name_hash),
+              name_ttl: 1_000,
+              pointers: [{:pointer, key, :aeser_id.create(:account, pointee_pk)}],
+              client_ttl: 1_000,
+              fee: 5_000
+            })
+
+          {_mod, tx_rec} = :aetx.specialize_type(aetx)
+          {<<txi::256>>, tx_rec}
+        end)
+
+      store =
+        Enum.reduce(updates, MemStore.new(NullStore.new()), fn {txi, name, pointee_pk, active},
+                                                               store ->
+          {:ok, name_hash} = :aens.get_name_hash(name)
+
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active, {txi, -1}}))
+          |> Store.put(
+            Model.Pointee,
+            Model.pointee(index: {pointee_pk, {block_index, {txi, -1}}, key})
+          )
+        end)
+
+      m_name = &Model.name(index: &1, active: active_from, expire: expire)
+
+      store =
+        store
+        |> Store.put(Model.ActiveName, m_name.(superseded))
+        |> Store.put(Model.ActiveName, m_name.(previous_cycle))
+        |> Store.put(Model.ActiveName, m_name.(current))
+        |> Store.put(Model.InactiveName, m_name.(revoked))
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [get_tx_data: fn hash -> {nil, :name_update_tx, nil, Map.fetch!(txs, hash)} end]},
+        {Format, [:passthrough], [to_raw_map: fn _state, _key -> %{} end]}
+      ] do
+        assert {%{^key => [%{name: ^current}]}, %{^key => [%{name: ^revoked}]}} =
+                 Name.pointees(State.new(store), pk)
+
+        assert {%{^key => [%{name: ^superseded}]}, %{}} =
+                 Name.pointees(State.new(store), other_pk)
+      end
+    end
+  end
+
   describe "last_update_pointee_pubkey/2" do
     test "returns the account pointee pubkey if present" do
       name = "nameaccountpointee.chain"

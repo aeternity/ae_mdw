@@ -299,15 +299,16 @@ defmodule AeMdw.Db.Name do
             name_hash = :aens_update_tx.name_hash(name_update_tx)
             plain_name = plain_name!(state, name_hash)
 
-            case locate_name_or_auction(state, plain_name) do
-              {_bid_key, Model.AuctionBid} ->
-                {active, inactive}
-
-              {m_name, Model.ActiveName} ->
-                {push.(active, m_name, p_keys), inactive}
-
-              {m_name, Model.InactiveName} ->
-                {active, push.(inactive, m_name, p_keys)}
+            # Each update replaces all pointers, so only the latest update of the current cycle counts.
+            with {m_name, source} when source != Model.AuctionBid <-
+                   locate_name_or_auction(state, plain_name),
+                 true <- last_update(state, plain_name, Model.name(m_name, :active)) == txi_idx do
+              case source do
+                Model.ActiveName -> {push.(active, m_name, p_keys), inactive}
+                Model.InactiveName -> {active, push.(inactive, m_name, p_keys)}
+              end
+            else
+              _not_current -> {active, inactive}
             end
 
           nil ->
