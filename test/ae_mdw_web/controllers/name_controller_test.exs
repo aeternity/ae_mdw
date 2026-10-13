@@ -1977,29 +1977,84 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "renders 404 for a name in auction", %{conn: conn, store: store} do
+    test "get inactive name in auction", %{conn: conn, store: store} do
       name = "alice.chain"
-      start_height = 100
-      bid_expire = 200
 
-      store =
-        store
-        |> Store.put(
-          Model.AuctionBid,
-          Model.auction_bid(
-            index: name,
-            start_height: start_height,
-            block_index_txi_idx: {{start_height, -1}, 1},
-            expire_height: bid_expire
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx: name_tx(:name_claim_tx, :alice, name)
+        ] do
+        %{txs: [tx], block: mb_block} = blocks[:mb]
+        {:ok, mb_hash} = mb_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+        block_time = mb_block |> :aec_blocks.to_header() |> :aec_headers.time_in_msecs()
+        {:id, :account, alice_pk} = accounts[:alice]
+        start_height = blocks[:mb][:height]
+        claim_txi = 100
+        expire = 10_000
+        bid_txi = Enum.random(100..1_000)
+        {:ok, block_hash} = mb_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+        bid_expire =
+          :aec_governance.name_claim_bid_timeout(name, :aec_hard_forks.protocol_vsn(:lima) + 1)
+
+        store =
+          store
+          |> Store.put(
+            Model.InactiveName,
+            Model.name(
+              index: name,
+              owner: alice_pk,
+              active: start_height,
+              expire: expire,
+              owner: alice_pk
+            )
           )
-        )
-        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
+          |> Store.put(
+            Model.AuctionBid,
+            Model.auction_bid(
+              index: name,
+              start_height: start_height,
+              block_index_txi_idx: {{start_height, -1}, bid_txi},
+              expire_height: bid_expire
+            )
+          )
+          |> Store.put(
+            Model.NameClaim,
+            Model.name_claim(index: {name, start_height, {claim_txi, -1}})
+          )
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {name, start_height, {bid_txi, -1}})
+          )
+          |> Store.put(Model.AuctionOwner, Model.owner(index: {alice_pk, name}))
+          |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: bid_txi, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.Block,
+            Model.block(index: {start_height, -1}, hash: mb_hash, tx_index: 2)
+          )
+          |> Store.put(
+            Model.Block,
+            Model.block(index: {bid_expire, -1}, hash: mb_hash, tx_index: 2)
+          )
+          |> Store.put(Model.Block, Model.block(index: {expire, -1}, hash: block_hash))
 
-      assert %{"error" => _msg} =
-               conn
-               |> with_store(store)
-               |> get("/v3/names/#{name}")
-               |> json_response(404)
+        assert %{
+                 "name" => ^name,
+                 "active" => false,
+                 "auction" => %{
+                   "auction_end" => ^bid_expire,
+                   "approximate_expire_time" => ^block_time
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names/#{name}")
+                 |> json_response(200)
+      end
     end
 
     test "get name info by encoded hash ", %{conn: conn, store: store} do
@@ -3363,6 +3418,57 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
         assert %{"data" => ^claims} = conn |> get(hash_prev_url) |> json_response(200)
+      end
+    end
+
+    test "it returns the current auction claims of a name that was claimed before", %{
+      conn: conn,
+      store: store
+    } do
+      account_id = :aeser_id.create(:account, TS.address(0))
+      plain_name = "asd.chain"
+      {:ok, name_hash_id} = :aens.get_name_hash(plain_name)
+
+      {:ok, aetx} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 1,
+          name: plain_name,
+          name_salt: 1,
+          name_fee: 33_333,
+          fee: 333_333
+        })
+
+      {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+
+      store =
+        store
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: plain_name))
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(index: plain_name, active: 300, expire: 400, owner: TS.address(0))
+        )
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, 300, {567, -1}}))
+        |> Store.put(
+          Model.AuctionBid,
+          Model.auction_bid(index: plain_name, start_height: 500, claims_count: 1)
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, 500, {788, -1}})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {500, 0}, id: <<2::256>>))
+        |> Store.put(Model.Block, Model.block(index: {500, 0}, hash: <<1::256>>))
+
+      with_mocks [
+        {Db, [],
+         [get_tx_data: fn <<2::256>> -> {"", :name_claim_tx, :aetx_sign.new(aetx, []), tx} end]}
+      ] do
+        assert %{"data" => [%{"height" => 500, "tx" => %{"fee" => 333_333}}]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names/auctions/#{plain_name}/claims")
+                 |> json_response(200)
       end
     end
   end

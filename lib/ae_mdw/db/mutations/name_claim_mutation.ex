@@ -147,7 +147,6 @@ defmodule AeMdw.Db.NameClaimMutation do
             m_auction_exp = Model.expiration(index: {auction_end, plain_name})
 
             state3
-            |> Name.delete_inactive(plain_name)
             |> State.inc_stat(:auctions_started)
             |> State.put(Model.AuctionBidClaim, auction_claim)
             |> State.put(Model.AuctionBid, m_auction_bid)

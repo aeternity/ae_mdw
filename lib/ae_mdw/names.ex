@@ -214,8 +214,10 @@ defmodule AeMdw.Names do
   @spec fetch_auction_claims(state(), binary(), pagination(), scope(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do
-    case locate_name_or_auction(state, plain_name_or_hash) do
-      {:ok, Model.auction_bid(index: plain_name, start_height: start_height)} ->
+    plain_name = resolve_plain_name(state, plain_name_or_hash)
+
+    case Name.locate_bid(state, plain_name) do
+      Model.auction_bid(start_height: start_height) ->
         {prev_cursor, claims, next_cursor} =
           paginate_nested_resource(
             state,
@@ -229,10 +231,7 @@ defmodule AeMdw.Names do
 
         {:ok, {prev_cursor, render_nested_resources(state, claims), next_cursor}}
 
-      {:error, reason} ->
-        {:error, reason}
-
-      {:ok, Model.name()} ->
+      nil ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
     end
   end
@@ -1070,18 +1069,21 @@ defmodule AeMdw.Names do
   end
 
   defp locate_name_or_auction_source(state, plain_name_or_hash) do
-    plain_name =
-      with {:ok, hash_bin} <- Validate.name_id(plain_name_or_hash),
-           {:ok, Model.plain_name(value: plain_name)} <-
-             State.get(state, Model.PlainName, hash_bin) do
-        plain_name
-      else
-        _no_hash -> plain_name_or_hash
-      end
+    plain_name = resolve_plain_name(state, plain_name_or_hash)
 
     case Name.locate_name_or_auction(state, plain_name) do
       {name_or_auction, source} -> {:ok, name_or_auction, source}
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
+    end
+  end
+
+  defp resolve_plain_name(state, plain_name_or_hash) do
+    with {:ok, hash_bin} <- Validate.name_id(plain_name_or_hash),
+         {:ok, Model.plain_name(value: plain_name)} <-
+           State.get(state, Model.PlainName, hash_bin) do
+      plain_name
+    else
+      _no_hash -> plain_name_or_hash
     end
   end
 
