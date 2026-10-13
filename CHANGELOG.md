@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.108.3](https://github.com/aeternity/ae_mdw/compare/v1.108.2...v1.108.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* live auction claims, pointees and spelling handling for names ([#2210](https://github.com/aeternity/ae_mdw/issues/2210)) ([d912be5](https://github.com/aeternity/ae_mdw/commit/d912be5bb99cb1df0c7a63c4beddf5a41885d4f7))
+
 ## [1.108.2](https://github.com/aeternity/ae_mdw/compare/v1.108.1...v1.108.2) (2026-09-09)
 
 
