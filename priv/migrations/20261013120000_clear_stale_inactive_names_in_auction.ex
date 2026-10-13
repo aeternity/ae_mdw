@@ -47,9 +47,12 @@ defmodule AeMdw.Migrations.ClearStaleInactiveNamesInAuction do
         {[WriteMutation.new(Model.PreviousName, prev_name) | write_mutations], delete_keys}
       end)
 
-    if write_mutations != [] do
-      State.commit_db(state, [DeleteKeysMutation.new(delete_keys) | write_mutations])
-    end
+    _state =
+      if write_mutations == [] do
+        state
+      else
+        State.commit_db(state, [DeleteKeysMutation.new(delete_keys) | write_mutations])
+      end
 
     {:ok, length(write_mutations)}
   end
