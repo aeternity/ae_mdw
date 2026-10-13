@@ -1977,84 +1977,29 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
-    test "get inactive name in auction", %{conn: conn, store: store} do
+    test "renders 404 for a name in auction", %{conn: conn, store: store} do
       name = "alice.chain"
+      start_height = 100
+      bid_expire = 200
 
-      with_blockchain %{alice: 1_000},
-        mb: [
-          tx: name_tx(:name_claim_tx, :alice, name)
-        ] do
-        %{txs: [tx], block: mb_block} = blocks[:mb]
-        {:ok, mb_hash} = mb_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
-        block_time = mb_block |> :aec_blocks.to_header() |> :aec_headers.time_in_msecs()
-        {:id, :account, alice_pk} = accounts[:alice]
-        start_height = blocks[:mb][:height]
-        claim_txi = 100
-        expire = 10_000
-        bid_txi = Enum.random(100..1_000)
-        {:ok, block_hash} = mb_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+      store =
+        store
+        |> Store.put(
+          Model.AuctionBid,
+          Model.auction_bid(
+            index: name,
+            start_height: start_height,
+            block_index_txi_idx: {{start_height, -1}, 1},
+            expire_height: bid_expire
+          )
+        )
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
 
-        bid_expire =
-          :aec_governance.name_claim_bid_timeout(name, :aec_hard_forks.protocol_vsn(:lima) + 1)
-
-        store =
-          store
-          |> Store.put(
-            Model.InactiveName,
-            Model.name(
-              index: name,
-              owner: alice_pk,
-              active: start_height,
-              expire: expire,
-              owner: alice_pk
-            )
-          )
-          |> Store.put(
-            Model.AuctionBid,
-            Model.auction_bid(
-              index: name,
-              start_height: start_height,
-              block_index_txi_idx: {{start_height, -1}, bid_txi},
-              expire_height: bid_expire
-            )
-          )
-          |> Store.put(
-            Model.NameClaim,
-            Model.name_claim(index: {name, start_height, {claim_txi, -1}})
-          )
-          |> Store.put(
-            Model.AuctionBidClaim,
-            Model.auction_bid_claim(index: {name, start_height, {bid_txi, -1}})
-          )
-          |> Store.put(Model.AuctionOwner, Model.owner(index: {alice_pk, name}))
-          |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: bid_txi, id: :aetx_sign.hash(tx), block_index: {1, 1})
-          )
-          |> Store.put(
-            Model.Block,
-            Model.block(index: {start_height, -1}, hash: mb_hash, tx_index: 2)
-          )
-          |> Store.put(
-            Model.Block,
-            Model.block(index: {bid_expire, -1}, hash: mb_hash, tx_index: 2)
-          )
-          |> Store.put(Model.Block, Model.block(index: {expire, -1}, hash: block_hash))
-
-        assert %{
-                 "name" => ^name,
-                 "active" => false,
-                 "auction" => %{
-                   "auction_end" => ^bid_expire,
-                   "approximate_expire_time" => ^block_time
-                 }
-               } =
-                 conn
-                 |> with_store(store)
-                 |> get("/v3/names/#{name}")
-                 |> json_response(200)
-      end
+      assert %{"error" => _msg} =
+               conn
+               |> with_store(store)
+               |> get("/v3/names/#{name}")
+               |> json_response(404)
     end
 
     test "get name info by encoded hash ", %{conn: conn, store: store} do

@@ -1,9 +1,7 @@
 defmodule AeMdw.Migrations.ClearStaleInactiveNamesInAuction do
   @moduledoc """
-  Archives leftover InactiveName records for names that are currently being
-  auctioned again (bug: starting a new auction didn't clear the previous
-  cycle's InactiveName entry, so lookups kept returning stale data instead
-  of the live auction).
+  Archives the InactiveName of names that are currently being auctioned again
+  into PreviousName, so lookups return the live auction.
   """
 
   alias AeMdw.Collection
@@ -49,8 +47,9 @@ defmodule AeMdw.Migrations.ClearStaleInactiveNamesInAuction do
         {[WriteMutation.new(Model.PreviousName, prev_name) | write_mutations], delete_keys}
       end)
 
-    mutations = [DeleteKeysMutation.new(delete_keys) | write_mutations]
-    _state = State.commit_db(state, mutations)
+    if write_mutations != [] do
+      State.commit_db(state, [DeleteKeysMutation.new(delete_keys) | write_mutations])
+    end
 
     {:ok, length(write_mutations)}
   end
