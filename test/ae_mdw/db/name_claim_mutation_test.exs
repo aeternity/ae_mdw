@@ -81,6 +81,77 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     end
   end
 
+  test "starting a new auction clears the stale inactive name from a previous cycle", %{
+    store: store
+  } do
+    plain_name = "claimnew.test"
+    name_hash = :crypto.strong_rand_bytes(32)
+    owner_pk = :crypto.strong_rand_bytes(32)
+    old_owner_pk = :crypto.strong_rand_bytes(32)
+    name_fee = 1_000_000_000_000
+    protocol_version = 6
+    txi = 1234
+    txi_idx = {txi, -1}
+
+    claim_height = 23
+    block_index = {claim_height, 0}
+    old_expire = claim_height - 1
+
+    inactive_name =
+      Model.name(
+        index: plain_name,
+        active: 1,
+        expire: old_expire,
+        owner: old_owner_pk,
+        claims_count: 1
+      )
+
+    state =
+      store
+      |> Store.put(Model.InactiveName, inactive_name)
+      |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {old_expire, plain_name}))
+      |> Store.put(Model.InactiveNameOwner, Model.owner(index: {old_owner_pk, plain_name}))
+      |> Store.put(
+        Model.InactiveNameOwnerDeactivation,
+        Model.owner(index: {old_owner_pk, old_expire, plain_name})
+      )
+      |> State.new()
+
+    mutation =
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        txi_idx,
+        block_index,
+        protocol_version
+      )
+
+    state = Mutation.execute(mutation, state)
+
+    refute State.exists?(state, Model.InactiveName, plain_name)
+    refute State.exists?(state, Model.InactiveNameOwner, {old_owner_pk, plain_name})
+    refute State.exists?(state, Model.InactiveNameExpiration, {old_expire, plain_name})
+
+    refute State.exists?(
+             state,
+             Model.InactiveNameOwnerDeactivation,
+             {old_owner_pk, old_expire, plain_name}
+           )
+
+    assert State.exists?(state, Model.PreviousName, {plain_name, 1})
+
+    assert {:ok,
+            Model.auction_bid(
+              index: ^plain_name,
+              start_height: ^claim_height,
+              owner: ^owner_pk,
+              claims_count: 1
+            )} = State.get(state, Model.AuctionBid, plain_name)
+  end
+
   test "claim new name with timeout > 0", %{store: store} do
     plain_name = "claimnew.test"
     name_hash = :crypto.strong_rand_bytes(32)
