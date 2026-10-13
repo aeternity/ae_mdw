@@ -186,6 +186,60 @@ defmodule AeMdw.Db.NameTest do
                  )
       end
     end
+
+    test "ignores contract updates that were recorded without pointers" do
+      name = "internalupdate.chain"
+      active_height = 123
+      update_hash = :crypto.strong_rand_bytes(32)
+      call_hash = :crypto.strong_rand_bytes(32)
+      pointer_id = :aeser_id.create(:account, <<1::256>>)
+      {:ok, name_hash} = :aens.get_name_hash(name)
+
+      update_aetx = fn pointers ->
+        {:ok, aetx} =
+          :aens_update_tx.new(%{
+            account_id: :aeser_id.create(:account, <<2::256>>),
+            nonce: 1,
+            name_id: :aeser_id.create(:name, name_hash),
+            name_ttl: 1_000,
+            pointers: pointers,
+            client_ttl: 1_000,
+            fee: 5_000
+          })
+
+        aetx
+      end
+
+      {_mod, update_tx} =
+        [{:pointer, "account_pubkey", pointer_id}]
+        |> update_aetx.()
+        |> :aetx.specialize_callback()
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_tx_data: fn
+             ^update_hash -> {nil, :name_update_tx, nil, update_tx}
+             ^call_hash -> {nil, :contract_call_tx, nil, nil}
+           end
+         ]}
+      ] do
+        store =
+          NullStore.new()
+          |> MemStore.new()
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: update_hash, block_index: {1, 1}))
+          |> Store.put(Model.Tx, Model.tx(index: 3, id: call_hash, block_index: {1, 2}))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, -1}}))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {3, 0}}))
+          |> Store.put(
+            Model.IntContractCall,
+            Model.int_contract_call(index: {3, 0}, fname: "AENS.update", tx: update_aetx.([]))
+          )
+
+        assert %{"account_pubkey" => Format.enc_id(pointer_id)} ==
+                 Name.pointers(State.new(store), Model.name(index: name, active: active_height))
+      end
+    end
   end
 
   describe "pointees/2" do

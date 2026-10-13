@@ -258,7 +258,7 @@ defmodule AeMdw.Db.Name do
           state
           |> stream_nested_resource(Model.NameUpdate, plain_name)
           |> Stream.drop_while(&match?({txi, _idx} when txi > time_reference_txi, &1))
-          |> Enum.at(0)
+          |> Enum.find(&changes_pointers?(state, &1))
 
         if update_txi_idx do
           {:ok, fetch_account_pointee(state, update_txi_idx)}
@@ -349,7 +349,14 @@ defmodule AeMdw.Db.Name do
   defp last_update(state, plain_name, height) do
     state
     |> stream_nested_resource(Model.NameUpdate, plain_name, height)
-    |> Enum.at(0)
+    |> Enum.find(&changes_pointers?(state, &1))
+  end
+
+  # A contract's AENS.update with no pointers keeps them on chain but is recorded with an empty list.
+  defp changes_pointers?(_state, {_txi, -1}), do: true
+
+  defp changes_pointers?(state, txi_idx) do
+    state |> DbUtil.read_node_tx(txi_idx) |> :aens_update_tx.pointers() != []
   end
 
   defp last_transfer(state, plain_name, height) do
