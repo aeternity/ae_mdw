@@ -285,16 +285,19 @@ defmodule AeMdw.Activities do
 
   defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
     with {:ok, Model.plain_name(value: plain_name)} <-
-           State.get(state, Model.PlainName, name_hash),
-         {_record, source} <- Name.locate_name_or_auction(state, plain_name) do
-      claims =
-        case source do
-          Model.AuctionBid ->
-            Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name)
-
-          _name_table ->
-            Name.stream_nested_resource(state, Model.NameClaim, plain_name)
+           State.get(state, Model.PlainName, name_hash) do
+      live_auction_claims =
+        if Name.locate_bid(state, plain_name) do
+          Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name)
+        else
+          []
         end
+
+      claims =
+        Enum.concat(
+          live_auction_claims,
+          Name.stream_nested_resource(state, Model.NameClaim, plain_name)
+        )
 
       claims = Enum.reverse(claims)
 
@@ -326,7 +329,6 @@ defmodule AeMdw.Activities do
       Stream.map(claims, fn {txi, idx} -> {txi, {:claim, idx}} end)
     else
       :not_found -> []
-      nil -> []
     end
   end
 

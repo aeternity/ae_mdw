@@ -170,13 +170,16 @@ defmodule AeMdw.Names do
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {plain_name, table} =
+      {plain_name, tables} =
         case name_or_auction do
           Model.name(index: plain_name) ->
-            {plain_name, Model.NameClaim}
+            live_auction_tables =
+              if Name.locate_bid(state, plain_name), do: [Model.AuctionBidClaim], else: []
+
+            {plain_name, [Model.NameClaim | live_auction_tables]}
 
           Model.auction_bid(index: plain_name) ->
-            {plain_name, Model.AuctionBidClaim}
+            {plain_name, [Model.AuctionBidClaim]}
         end
 
       key_boundary =
@@ -201,9 +204,13 @@ defmodule AeMdw.Names do
 
       {prev_cursor, claims, next_cursor} =
         fn direction ->
-          state
-          |> Collection.stream(table, direction, key_boundary, cursor)
-          |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+          tables
+          |> Enum.map(fn table ->
+            state
+            |> Collection.stream(table, direction, key_boundary, cursor)
+            |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+          end)
+          |> Collection.merge(direction)
         end
         |> Collection.paginate(pagination, & &1, &serialize_name_claims_cursor/1)
 
@@ -949,7 +956,7 @@ defmodule AeMdw.Names do
         tx_mod = Node.tx_mod(tx_type)
 
         %{
-          active_from: render_active_from(maybe_active_from, state, tx_mod, tx_rec),
+          active_from: render_active_from(maybe_active_from, state, txi_idx, tx_mod, tx_rec),
           height: height,
           block_hash: Enc.encode(:micro_block_hash, block_hash),
           source_tx_hash: Enc.encode(:tx_hash, tx_hash),
@@ -969,16 +976,23 @@ defmodule AeMdw.Names do
     |> Enum.reject(&is_nil/1)
   end
 
-  defp render_active_from(active_from, _state, _tx_mod, _tx_rec) when not is_nil(active_from) do
+  defp render_active_from(active_from, _state, _txi_idx, _tx_mod, _tx_rec)
+       when not is_nil(active_from) do
     active_from
   end
 
-  defp render_active_from(nil, state, tx_mod, tx_rec) do
+  defp render_active_from(nil, state, txi_idx, tx_mod, tx_rec) do
     plain_name = tx_mod.name(tx_rec)
 
-    case locate_name_or_auction(state, plain_name) do
-      {:ok, Model.name(active: active_from)} -> active_from
-      {:ok, Model.auction_bid(start_height: active_from)} -> active_from
+    with Model.auction_bid(start_height: start_height) <- Name.locate_bid(state, plain_name),
+         true <- State.exists?(state, Model.AuctionBidClaim, {plain_name, start_height, txi_idx}) do
+      start_height
+    else
+      _not_a_live_auction_claim ->
+        case locate_name_or_auction(state, plain_name) do
+          {:ok, Model.name(active: active_from)} -> active_from
+          {:ok, Model.auction_bid(start_height: active_from)} -> active_from
+        end
     end
   end
 
