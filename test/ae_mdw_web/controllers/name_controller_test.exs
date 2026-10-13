@@ -3420,6 +3420,130 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => ^claims} = conn |> get(hash_prev_url) |> json_response(200)
       end
     end
+
+    test "it returns the current auction claims of a name that was claimed before", %{
+      conn: conn,
+      store: store
+    } do
+      account_id = :aeser_id.create(:account, TS.address(0))
+      plain_name = "asd.chain"
+      {:ok, name_hash_id} = :aens.get_name_hash(plain_name)
+
+      {:ok, aetx} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 1,
+          name: plain_name,
+          name_salt: 1,
+          name_fee: 33_333,
+          fee: 333_333
+        })
+
+      {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+
+      store =
+        store
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: plain_name))
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(index: plain_name, active: 300, expire: 400, owner: TS.address(0))
+        )
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, 300, {567, -1}}))
+        |> Store.put(
+          Model.AuctionBid,
+          Model.auction_bid(index: plain_name, start_height: 500, claims_count: 1)
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, 500, {788, -1}})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {500, 0}, id: <<2::256>>))
+        |> Store.put(Model.Block, Model.block(index: {500, 0}, hash: <<1::256>>))
+
+      with_mocks [
+        {Db, [],
+         [get_tx_data: fn <<2::256>> -> {"", :name_claim_tx, :aetx_sign.new(aetx, []), tx} end]}
+      ] do
+        assert %{"data" => [%{"height" => 500, "tx" => %{"fee" => 333_333}}]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names/auctions/#{plain_name}/claims")
+                 |> json_response(200)
+      end
+    end
+
+    test "name claims and account claims include the live auction claims", %{
+      conn: conn,
+      store: store
+    } do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      account = :aeapi.format_account_pubkey(account_pk)
+      plain_name = "asd.chain"
+      {:ok, name_hash_id} = :aens.get_name_hash(plain_name)
+
+      claim_tx = fn fee ->
+        {:ok, aetx} =
+          :aens_claim_tx.new(%{
+            account_id: account_id,
+            nonce: 1,
+            name: plain_name,
+            name_salt: 1,
+            name_fee: fee,
+            fee: fee
+          })
+
+        {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+        {aetx, tx}
+      end
+
+      {old_aetx, old_tx} = claim_tx.(111_111)
+      {new_aetx, new_tx} = claim_tx.(333_333)
+
+      store =
+        store
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash_id, value: plain_name))
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(index: plain_name, active: 300, expire: 400, owner: account_pk)
+        )
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, 300, {567, -1}}))
+        |> Store.put(
+          Model.AuctionBid,
+          Model.auction_bid(index: plain_name, start_height: 500, claims_count: 1)
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, 500, {788, -1}})
+        )
+        |> Store.put(Model.Field, Model.field(index: {:name_claim_tx, 1, account_pk, 788}))
+        |> Store.put(Model.Tx, Model.tx(index: 567, block_index: {300, 0}, id: <<0::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {500, 0}, id: <<2::256>>))
+        |> Store.put(Model.Block, Model.block(index: {300, 0}, hash: <<0::256>>))
+        |> Store.put(Model.Block, Model.block(index: {500, 0}, hash: <<1::256>>))
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             <<0::256>> -> {"", :name_claim_tx, :aetx_sign.new(old_aetx, []), old_tx}
+             <<2::256>> -> {"", :name_claim_tx, :aetx_sign.new(new_aetx, []), new_tx}
+           end
+         ]}
+      ] do
+        conn = with_store(conn, store)
+
+        assert %{"data" => [old_claim, %{"height" => 500, "tx" => %{"fee" => 333_333}}]} =
+                 conn
+                 |> get("/v3/names/#{plain_name}/claims", direction: "forward")
+                 |> json_response(200)
+
+        assert %{"height" => 300, "tx" => %{"fee" => 111_111}} = old_claim
+
+        assert %{"data" => [%{"active_from" => 500, "height" => 500}]} =
+                 conn |> get("/v3/accounts/#{account}/names/claims") |> json_response(200)
+      end
+    end
   end
 
   describe "name_v2" do

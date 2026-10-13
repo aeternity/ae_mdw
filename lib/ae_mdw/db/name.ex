@@ -258,7 +258,7 @@ defmodule AeMdw.Db.Name do
           state
           |> stream_nested_resource(Model.NameUpdate, plain_name)
           |> Stream.drop_while(&match?({txi, _idx} when txi > time_reference_txi, &1))
-          |> Enum.at(0)
+          |> Enum.find(&changes_pointers?(state, &1))
 
         if update_txi_idx do
           {:ok, fetch_account_pointee(state, update_txi_idx)}
@@ -299,15 +299,16 @@ defmodule AeMdw.Db.Name do
             name_hash = :aens_update_tx.name_hash(name_update_tx)
             plain_name = plain_name!(state, name_hash)
 
-            case locate_name_or_auction(state, plain_name) do
-              {_bid_key, Model.AuctionBid} ->
-                {active, inactive}
-
-              {m_name, Model.ActiveName} ->
-                {push.(active, m_name, p_keys), inactive}
-
-              {m_name, Model.InactiveName} ->
-                {active, push.(inactive, m_name, p_keys)}
+            # Each update replaces all pointers, so only the latest update of the current cycle counts.
+            with {m_name, source} when source != Model.AuctionBid <-
+                   locate_name_or_auction(state, plain_name),
+                 true <- last_update(state, plain_name, Model.name(m_name, :active)) == txi_idx do
+              case source do
+                Model.ActiveName -> {push.(active, m_name, p_keys), inactive}
+                Model.InactiveName -> {active, push.(inactive, m_name, p_keys)}
+              end
+            else
+              _not_current -> {active, inactive}
             end
 
           nil ->
@@ -348,7 +349,14 @@ defmodule AeMdw.Db.Name do
   defp last_update(state, plain_name, height) do
     state
     |> stream_nested_resource(Model.NameUpdate, plain_name, height)
-    |> Enum.at(0)
+    |> Enum.find(&changes_pointers?(state, &1))
+  end
+
+  # A contract's AENS.update with no pointers keeps them on chain but is recorded with an empty list.
+  defp changes_pointers?(_state, {_txi, -1}), do: true
+
+  defp changes_pointers?(state, txi_idx) do
+    state |> DbUtil.read_node_tx(txi_idx) |> :aens_update_tx.pointers() != []
   end
 
   defp last_transfer(state, plain_name, height) do

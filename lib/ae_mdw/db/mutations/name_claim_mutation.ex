@@ -75,7 +75,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
-          plain_name: plain_name,
+          plain_name: claimed_name,
           name_hash: name_hash,
           owner_pk: owner_pk,
           name_fee: name_fee,
@@ -86,6 +86,13 @@ defmodule AeMdw.Db.NameClaimMutation do
         },
         state
       ) do
+    # The node normalizes spellings (IDNA) into one name hash, so keep the first spelling seen.
+    plain_name =
+      case State.get(state, Model.PlainName, name_hash) do
+        {:ok, Model.plain_name(value: known_name)} -> known_name
+        :not_found -> claimed_name
+      end
+
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
 
     state2 = State.put(state, Model.PlainName, m_plain_name)

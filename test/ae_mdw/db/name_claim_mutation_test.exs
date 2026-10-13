@@ -81,6 +81,78 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     end
   end
 
+  test "bids with another spelling of the same name hit the same auction", %{store: store} do
+    # U+F900 is a CJK compatibility ideograph that the node normalizes to U+8C48
+    first_spelling = "\u{F900}.chain"
+    second_spelling = "\u{8C48}.chain"
+    {:ok, name_hash} = :aens.get_name_hash(first_spelling)
+    assert {:ok, ^name_hash} = :aens.get_name_hash(second_spelling)
+
+    owner_pk = :crypto.strong_rand_bytes(32)
+    name_fee = 1_000_000_000_000
+    protocol_version = 6
+    claim_height = 23
+    claim_txi_idx = {1234, -1}
+    bid_txi_idx = {1235, -1}
+
+    claim_mutation =
+      NameClaimMutation.new(
+        first_spelling,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        claim_txi_idx,
+        {claim_height, 0},
+        protocol_version
+      )
+
+    bid_mutation =
+      NameClaimMutation.new(
+        second_spelling,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        bid_txi_idx,
+        {claim_height, 0},
+        protocol_version
+      )
+
+    {:ok, claim_aetx} =
+      :aens_claim_tx.new(%{
+        account_id: :aeser_id.create(:account, <<0::256>>),
+        nonce: 1,
+        name: first_spelling,
+        name_salt: 0,
+        name_fee: name_fee,
+        fee: 5_000
+      })
+
+    {:name_claim_tx, claim_tx} = :aetx.specialize_type(claim_aetx)
+
+    state =
+      store
+      |> State.new()
+      |> State.put(Model.Tx, Model.tx(index: 1234, id: <<1::256>>))
+      |> State.put(Model.Tx, Model.tx(index: 1235, id: <<2::256>>))
+
+    with_mocks [
+      {AeMdw.Node.Db, [:passthrough],
+       [get_tx_data: fn _tx_hash -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
+    ] do
+      state = Enum.reduce([claim_mutation, bid_mutation], state, &Mutation.execute/2)
+
+      assert {:ok, Model.auction_bid(index: ^first_spelling, claims_count: 2)} =
+               State.get(state, Model.AuctionBid, first_spelling)
+
+      refute State.exists?(state, Model.AuctionBid, second_spelling)
+
+      assert {:ok, Model.plain_name(value: ^first_spelling)} =
+               State.get(state, Model.PlainName, name_hash)
+    end
+  end
+
   test "claim new name with timeout > 0", %{store: store} do
     plain_name = "claimnew.test"
     name_hash = :crypto.strong_rand_bytes(32)

@@ -284,49 +284,52 @@ defmodule AeMdw.Activities do
   end
 
   defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
-    with {:ok, Model.plain_name(value: plain_name)} <-
-           State.get(state, Model.PlainName, name_hash),
-         {_record, source} <- Name.locate_name_or_auction(state, plain_name) do
-      claims =
-        case source do
-          Model.AuctionBid ->
+    case State.get(state, Model.PlainName, name_hash) do
+      {:ok, Model.plain_name(value: plain_name)} ->
+        live_auction_claims =
+          if Name.locate_bid(state, plain_name) do
             Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name)
+          else
+            []
+          end
 
-          _name_table ->
+        claims =
+          Enum.concat(
+            live_auction_claims,
             Name.stream_nested_resource(state, Model.NameClaim, plain_name)
-        end
+          )
 
-      claims = Enum.reverse(claims)
+        claims = Enum.reverse(claims)
 
-      claims =
-        case txi_scope do
-          nil ->
-            claims
+        claims =
+          case txi_scope do
+            nil ->
+              claims
 
-          {first_txi, last_txi} ->
-            claims
-            |> Enum.drop_while(fn {txi, _idx} -> txi < first_txi end)
-            |> Enum.take_while(fn {txi, _idx} -> txi < last_txi end)
-        end
+            {first_txi, last_txi} ->
+              claims
+              |> Enum.drop_while(fn {txi, _idx} -> txi < first_txi end)
+              |> Enum.take_while(fn {txi, _idx} -> txi < last_txi end)
+          end
 
-      claims = if direction == :forward, do: claims, else: Enum.reverse(claims)
+        claims = if direction == :forward, do: claims, else: Enum.reverse(claims)
 
-      claims =
-        case txi_cursor do
-          nil ->
-            claims
+        claims =
+          case txi_cursor do
+            nil ->
+              claims
 
-          _txi_cursor ->
-            Enum.drop_while(claims, fn
-              {txi, _idx} when direction == :forward -> txi < txi_cursor
-              {txi, _idx} when direction == :backward -> txi > txi_cursor
-            end)
-        end
+            _txi_cursor ->
+              Enum.drop_while(claims, fn
+                {txi, _idx} when direction == :forward -> txi < txi_cursor
+                {txi, _idx} when direction == :backward -> txi > txi_cursor
+              end)
+          end
 
-      Stream.map(claims, fn {txi, idx} -> {txi, {:claim, idx}} end)
-    else
-      :not_found -> []
-      nil -> []
+        Stream.map(claims, fn {txi, idx} -> {txi, {:claim, idx}} end)
+
+      :not_found ->
+        []
     end
   end
 
