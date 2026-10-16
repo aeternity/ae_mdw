@@ -204,8 +204,9 @@ defmodule AeMdw.Node do
   end
 
   # The calculation is the same as in the node in aehttp_dispatch_ext.erl
+  # Not memoized: difficulty changes almost every generation.
   @spec difficulty_to_hashrate(difficulty()) :: hashrate()
-  defmemo difficulty_to_hashrate(difficulty) do
+  def difficulty_to_hashrate(difficulty) do
     round(difficulty * 42 / :aec_governance.expected_block_mine_rate() / 1000)
   end
 
@@ -253,8 +254,9 @@ defmodule AeMdw.Node do
     :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
   end
 
+  # Not memoized: called once per height.
   @spec token_supply_delta(height()) :: amount()
-  defmemo token_supply_delta(height) do
+  def token_supply_delta(height) do
     Map.get(token_supply_delta(), height, 0)
   end
 
@@ -363,8 +365,9 @@ defmodule AeMdw.Node do
     |> MapSet.new()
   end
 
+  # Not memoized: the epoch comes from the request; a past-the-top error would stay cached.
   @spec epoch_length(epoch()) :: {:ok, non_neg_integer()} | {:error, atom()}
-  defmemo epoch_length(epoch) do
+  def epoch_length(epoch) do
     :aec_chain_hc.epoch_length(epoch)
   end
 
