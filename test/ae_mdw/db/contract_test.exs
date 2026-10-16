@@ -2,6 +2,7 @@ defmodule AeMdw.Db.ContractTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Aex9
+  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
@@ -973,6 +974,66 @@ defmodule AeMdw.Db.ContractTest do
       assert :none == State.prev(state, Model.NftOwnership, {account_pk2, contract_pk, nil})
       assert :none == State.prev(state, Model.NftTemplate, {contract_pk, nil})
       assert :none == State.prev(state, Model.NftTemplateToken, {contract_pk, template_id, nil})
+    end
+
+    test "checks if the contract is aex9 once per call, and only when it has logs" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      logs = for _i <- 1..3, do: {contract_pk, [:crypto.strong_rand_bytes(32), <<1::256>>], ""}
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mock AexnContracts, [:passthrough], [] do
+        no_logs_call_rec = call_rec("logs", contract_pk, height, nil, [])
+        state = Contract.logs_write(empty_state(), txi, txi + 1, no_logs_call_rec, false)
+
+        assert_not_called(AexnContracts.aex9?(contract_pk))
+
+        logs_call_rec = call_rec("logs", contract_pk, height, nil, logs)
+        state = Contract.logs_write(state, txi, txi + 1, logs_call_rec, false)
+
+        assert_called_exactly(AexnContracts.aex9?(contract_pk), 1)
+        assert 3 = Stats.fetch_aex9_logs_count(state, contract_pk)
+      end
+    end
+
+    test "checks if the contract is aex141 only for aexn events" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+      template_id = Enum.random(100..999)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [:crypto.strong_rand_bytes(32), <<1::256>>], ""},
+          {contract_pk, [aexn_event_hash(:template_creation), <<template_id::256>>], ""}
+        ])
+
+      state =
+        State.put(
+          empty_state(),
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex141, contract_pk})
+        )
+
+      with_mock State, [:passthrough], [] do
+        state = Contract.logs_write(state, txi, txi, call_rec, false)
+
+        assert_called_exactly(
+          State.exists?(:_, Model.AexnContract, {:aex141, contract_pk}),
+          1
+        )
+
+        assert State.exists?(state, Model.ContractLog, {txi, txi, 0})
+        assert State.exists?(state, Model.NftTemplate, {contract_pk, template_id})
+      end
     end
   end
 

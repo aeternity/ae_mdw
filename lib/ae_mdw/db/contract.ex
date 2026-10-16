@@ -251,9 +251,10 @@ defmodule AeMdw.Db.Contract do
   @spec logs_write(state(), txi(), txi(), Contract.call(), boolean()) :: state()
   def logs_write(state, create_txi, txi, call_rec, _is_contract_creation?) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
+    logs = :aect_call.log(call_rec)
+    contract_aex9? = logs != [] and AexnContracts.aex9?(contract_pk)
 
-    call_rec
-    |> :aect_call.log()
+    logs
     |> Enum.reverse()
     |> Enum.with_index()
     |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, log_idx} = log, state ->
@@ -280,7 +281,7 @@ defmodule AeMdw.Db.Contract do
         |> State.put(Model.IdxContractLog, m_idx_log)
         |> maybe_index_remote_log(contract_pk, txi, log)
 
-      aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
+      aex9_contract_pk = which_aex9_contract_pubkey(contract_aex9?, contract_pk, addr)
 
       event_type =
         Map.get(Node.aexn_event_hash_types(), evt_hash) ||
@@ -304,7 +305,7 @@ defmodule AeMdw.Db.Contract do
           |> SyncStats.increment_aex9_logs(aex9_contract_pk)
           |> write_aex9_records(event_type, addr, txi, log_idx, args)
 
-        State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
+        event_type != nil and State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
           write_aex141_records(state2, event_type, addr, txi, log_idx, args)
 
         true ->
@@ -313,14 +314,11 @@ defmodule AeMdw.Db.Contract do
     end)
   end
 
-  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
-  def which_aex9_contract_pubkey(contract_pk, addr) do
-    if AexnContracts.aex9?(contract_pk) do
-      contract_pk
-    else
-      # remotely called contract is aex9?
-      if addr != contract_pk and AexnContracts.aex9?(addr), do: addr
-    end
+  defp which_aex9_contract_pubkey(true, contract_pk, _addr), do: contract_pk
+
+  # remotely called contract is aex9?
+  defp which_aex9_contract_pubkey(false, contract_pk, addr) do
+    if addr != contract_pk and AexnContracts.aex9?(addr), do: addr
   end
 
   @spec call_fun_arg_res(State.t(), pubkey(), txi()) :: Contract.fun_arg_res()
@@ -701,13 +699,15 @@ defmodule AeMdw.Db.Contract do
 
     case Aex9Balances.get_balances(contract_pk, block_index) do
       {:ok, balances, _purged_balances} ->
-        balances_map = Map.new(balances)
-
         Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
           Model.aex9_event_balance(amount: old_amount) =
             get_aex9_event_balance(state, contract_pk, account_pk)
 
-          new_amount = Map.get(balances_map, account_pk, 0)
+          new_amount =
+            case List.keyfind(balances, account_pk, 0) do
+              {_account_pk, amount} -> amount
+              nil -> 0
+            end
 
           m_balance =
             Model.aex9_event_balance(
