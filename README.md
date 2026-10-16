@@ -26,7 +26,7 @@
 - [Oracles](#oracles)
 - [Channels](#channels)
 - [AEX9 tokens](#aex9-tokens)
-- [NFTs](#aex141)
+- [NFTs](#nfts-aex-141-contracts-and-tokens)
 - [Statistics](#statistics)
 - [Activities](#activities)
 - [Websocket interface](#websocket-interface)
@@ -3631,7 +3631,7 @@ $ curl https://mainnet.aeternity.io/mdw/v3/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
 
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 Each event is notified twice: firstly when the Node has synced the block or transaction and after when AeMdw indexation is done.
-In order to differentiate, please check the "source" field on [Publishing Message format](#pub-message-format).
+In order to differentiate, please check the "source" field on [Publishing Message format](#publishing-message-format).
 
 ### Subscription Message format
 
