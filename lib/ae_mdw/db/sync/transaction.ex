@@ -82,9 +82,10 @@ defmodule AeMdw.Db.Sync.Transaction do
           Contract.grouped_events()
         ) :: [Mutation.t()]
   def transaction_mutations(signed_tx, txi, block_index, block_hash, mb_time, mb_events) do
-    {type, tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    aetx = :aetx_sign.tx(signed_tx)
+    {type, tx} = :aetx.specialize_type(aetx)
     tx_hash = :aetx_sign.hash(signed_tx)
-    fee = Db.get_tx_fee(tx_hash)
+    fee = :aetx.fee(aetx)
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time, fee: fee)
 
     tx_context =

@@ -30,8 +30,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   setup_all do
     # Maintenance-mode boot skips aec_db:put_backend_module/1; tests reaching
-    # :aec_db (via Node.Db.get_tx_fee/1 or aexn contract creation paths) crash
-    # unless the persistent_term is seeded.
+    # :aec_db (via aexn contract creation paths) crash unless the
+    # persistent_term is seeded.
     :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
     :ok
   end
@@ -117,6 +117,44 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   end
 
   describe "transaction_mutations/6" do
+    test "stores the tx with the fee of the signed tx" do
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, TS.address(0)),
+          recipient_id: :aeser_id.create(:account, TS.address(1)),
+          amount: 1,
+          fee: 20_000,
+          nonce: 1,
+          payload: <<>>
+        })
+
+      signed_tx = :aetx_sign.new(aetx, [])
+      tx_hash = :aetx_sign.hash(signed_tx)
+      txi = 1
+      block_index = {2, 3}
+      mb_time = 4
+
+      mutations =
+        Transaction.transaction_mutations(
+          signed_tx,
+          txi,
+          block_index,
+          TS.micro_block_hash(0),
+          mb_time,
+          %{}
+        )
+
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> change_store(mutations)
+
+      m_tx =
+        Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time, fee: 20_000)
+
+      assert {:ok, ^m_tx} = Store.get(store, Model.Tx, txi)
+    end
+
     test "creates aex9 contract on :contract_call_tx" do
       signed_tx = signed_tx(:contract_call_tx, :aex9_create)
       tx_hash = :aetx_sign.hash(signed_tx)
