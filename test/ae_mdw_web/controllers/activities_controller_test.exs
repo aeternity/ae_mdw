@@ -9,6 +9,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync.Transaction
+  alias AeMdw.Fields
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -2040,6 +2043,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
       next_account_pk = TS.address(1)
+      paying_for_recipient_pos = Fields.field_pos_mask(:paying_for_tx, 2)
+      ga_meta_recipient_pos = Fields.field_pos_mask(:ga_meta_tx, 2)
       height = 398
       mbi = 2
       kb_hash = TS.key_block_hash(0)
@@ -2068,6 +2073,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.Field,
           Model.field(index: {:spend_tx, 2, account_pk, 7})
         )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, paying_for_recipient_pos, account_pk, 8})
+        )
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 8}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:ga_meta_tx, ga_meta_recipient_pos, account_pk, 9})
+        )
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 9}))
         |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
         |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
 
@@ -2076,6 +2091,441 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                |> with_store(store)
                |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
                |> json_response(200)
+    end
+
+    test "it returns ga_meta and paying_for transactions where the account is in the inner transaction",
+         %{conn: conn} do
+      account_pk = TS.address(0)
+      payer_pk = TS.address(1)
+      ga_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+      payer = Enc.encode(:account_pubkey, payer_pk)
+      ga = Enc.encode(:account_pubkey, ga_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      payer_id = :aeser_id.create(:account, payer_pk)
+      ga_id = :aeser_id.create(:account, ga_pk)
+      inner_sender_pos = Fields.field_pos_mask(:paying_for_tx, 1)
+      inner_recipient_pos = Fields.field_pos_mask(:ga_meta_tx, 2)
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+
+      {:ok, spend_from_account_aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: ga_id,
+          amount: 1,
+          fee: 2,
+          nonce: 3,
+          payload: ""
+        })
+
+      {:ok, spend_to_account_aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: ga_id,
+          recipient_id: account_id,
+          amount: 1,
+          fee: 2,
+          nonce: 3,
+          payload: ""
+        })
+
+      {:ok, paying_for_aetx} =
+        :aec_paying_for_tx.new(%{
+          payer_id: payer_id,
+          nonce: 1,
+          fee: 100,
+          tx: :aetx_sign.new(spend_from_account_aetx, [])
+        })
+
+      {:ok, ga_meta_aetx} =
+        :aega_meta_tx.new(%{
+          ga_id: ga_id,
+          auth_data: <<1::256>>,
+          abi_version: 1,
+          gas: 20_000,
+          gas_price: 1_000,
+          fee: 100,
+          tx: :aetx_sign.new(spend_to_account_aetx, [])
+        })
+
+      {:ok, self_paying_for_aetx} =
+        :aec_paying_for_tx.new(%{
+          payer_id: account_id,
+          nonce: 1,
+          fee: 100,
+          tx: :aetx_sign.new(spend_from_account_aetx, [])
+        })
+
+      aetxs = %{
+        "tx-hash1" => paying_for_aetx,
+        "tx-hash2" => ga_meta_aetx,
+        "tx-hash3" => self_paying_for_aetx
+      }
+
+      store =
+        empty_store()
+        |> Store.put(Model.Field, Model.field(index: {:paying_for_tx, 1, payer_pk, 1}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, inner_sender_pos, account_pk, 1})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
+        |> Store.put(Model.Type, Model.type(index: {:paying_for_tx, 1}))
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 1}))
+        |> Store.put(Model.Field, Model.field(index: {:ga_meta_tx, 1, ga_pk, 2}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:ga_meta_tx, inner_recipient_pos, account_pk, 2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
+        |> Store.put(Model.Type, Model.type(index: {:ga_meta_tx, 2}))
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 2}))
+        |> Store.put(Model.Field, Model.field(index: {:paying_for_tx, 1, account_pk, 3}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, inner_sender_pos, account_pk, 3})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "tx-hash3"))
+        |> Store.put(Model.Type, Model.type(index: {:paying_for_tx, 3}))
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 3}))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn tx_hash ->
+             aetx = Map.fetch!(aetxs, tx_hash)
+             {tx_type, tx_rec} = :aetx.specialize_type(aetx)
+
+             {"", tx_type, :aetx_sign.new(aetx, []), tx_rec}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {:aec_chain, [:passthrough],
+         get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:error, :not_found} end},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [:passthrough],
+         [
+           serialize_for_client: fn :header, signed_tx ->
+             aetx = :aetx_sign.tx(signed_tx)
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/activities", direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "PayingForTxEvent",
+                 "payload" => %{
+                   "tx" => %{
+                     "payer_id" => ^payer,
+                     "tx" => %{"tx" => %{"sender_id" => ^account, "type" => "SpendTx"}}
+                   }
+                 }
+               } = tx1
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "GAMetaTxEvent",
+                 "payload" => %{
+                   "tx" => %{
+                     "ga_id" => ^ga,
+                     "tx" => %{"tx" => %{"recipient_id" => ^account, "type" => "SpendTx"}}
+                   }
+                 }
+               } = tx2
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "PayingForTxEvent",
+                 "payload" => %{
+                   "tx" => %{
+                     "payer_id" => ^account,
+                     "tx" => %{"tx" => %{"sender_id" => ^account, "type" => "SpendTx"}}
+                   }
+                 }
+               } = tx3
+      end
+    end
+
+    test "when ownership_only param given, it skips inner transaction fields not owned by the account",
+         %{conn: conn} do
+      account_pk = TS.address(0)
+      payer_pk = TS.address(1)
+      account = Enc.encode(:account_pubkey, account_pk)
+      contract = Enc.encode(:contract_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      payer_id = :aeser_id.create(:account, payer_pk)
+      inner_sender_pos = Fields.field_pos_mask(:paying_for_tx, 1)
+      inner_recipient_pos = Fields.field_pos_mask(:paying_for_tx, 2)
+
+      inner_contract_pos =
+        Fields.field_pos_mask(:paying_for_tx, Node.tx_ids(:contract_call_tx).contract_id)
+
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, spend_from_account_aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: payer_id,
+          amount: 1,
+          fee: 2,
+          nonce: 3,
+          payload: ""
+        })
+
+      {:ok, spend_to_account_aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: payer_id,
+          recipient_id: account_id,
+          amount: 1,
+          fee: 2,
+          nonce: 3,
+          payload: ""
+        })
+
+      {:ok, contract_call_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: payer_id,
+          nonce: 2,
+          contract_id: :aeser_id.create(:contract, account_pk),
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      aetxs =
+        [spend_from_account_aetx, spend_to_account_aetx, contract_call_aetx]
+        |> Enum.with_index(1)
+        |> Map.new(fn {inner_aetx, txi} ->
+          {:ok, paying_for_aetx} =
+            :aec_paying_for_tx.new(%{
+              payer_id: payer_id,
+              nonce: 1,
+              fee: 100,
+              tx: :aetx_sign.new(inner_aetx, [])
+            })
+
+          {"tx-hash#{txi}", paying_for_aetx}
+        end)
+
+      store =
+        empty_store()
+        # Owned: the account is the inner tx sender
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, inner_sender_pos, account_pk, 1})
+        )
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 1}))
+        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
+        # Skipped: the account is the inner tx recipient
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, inner_recipient_pos, account_pk, 2})
+        )
+        |> Store.put(Model.InnerType, Model.type(index: {:spend_tx, 2}))
+        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
+        # Owned: same as for a non-wrapped contract call
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:paying_for_tx, inner_contract_pos, account_pk, 3})
+        )
+        |> Store.put(Model.InnerType, Model.type(index: {:contract_call_tx, 3}))
+        |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "tx-hash3"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn tx_hash ->
+             aetx = Map.fetch!(aetxs, tx_hash)
+             {tx_type, tx_rec} = :aetx.specialize_type(aetx)
+
+             {"", tx_type, :aetx_sign.new(aetx, []), tx_rec}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {DbContract, [],
+         [
+           call_fun_arg_res: fn _state, ^account_pk, _txi ->
+             %{
+               function: "fun",
+               arguments: [],
+               result: :ok,
+               return: :ok
+             }
+           end,
+           get_aexn_type: fn _state, ^account_pk -> nil end
+         ]},
+        {Contract, [:passthrough],
+         call_rec: fn _signed_tx, ^account_pk, _block_hash -> {:error, :nocallrec} end},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [:passthrough],
+         [
+           serialize_for_client: fn :header, signed_tx ->
+             aetx = :aetx_sign.tx(signed_tx)
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1, tx3], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "type" => "PayingForTxEvent",
+                 "payload" => %{"tx" => %{"tx" => %{"tx" => %{"sender_id" => ^account}}}}
+               } = tx1
+
+        assert %{
+                 "type" => "PayingForTxEvent",
+                 "payload" => %{"tx" => %{"tx" => %{"tx" => %{"contract_id" => ^contract}}}}
+               } = tx3
+      end
+    end
+
+    test "it labels nested wrapper transactions with the outer transaction type", %{conn: conn} do
+      account_pk = TS.address(0)
+      payer_pk = TS.address(1)
+      ga_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+      payer = Enc.encode(:account_pubkey, payer_pk)
+      ga = Enc.encode(:account_pubkey, ga_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      payer_id = :aeser_id.create(:account, payer_pk)
+      ga_id = :aeser_id.create(:account, ga_pk)
+      auth_data = "auth-data"
+      auth_id = :aec_hash.hash(:pubkey, <<ga_pk::binary, auth_data::binary>>)
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      {:ok, spend_aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: ga_id,
+          recipient_id: account_id,
+          amount: 1,
+          fee: 2,
+          nonce: 3,
+          payload: ""
+        })
+
+      {:ok, ga_meta_aetx} =
+        :aega_meta_tx.new(%{
+          ga_id: ga_id,
+          auth_data: auth_data,
+          abi_version: 1,
+          gas: 20_000,
+          gas_price: 1_000,
+          fee: 100,
+          tx: :aetx_sign.new(spend_aetx, [])
+        })
+
+      {:ok, paying_for_aetx} =
+        :aec_paying_for_tx.new(%{
+          payer_id: payer_id,
+          nonce: 1,
+          fee: 100,
+          tx: :aetx_sign.new(ga_meta_aetx, [])
+        })
+
+      {:paying_for_tx, paying_for_tx} = :aetx.specialize_type(paying_for_aetx)
+      signed_paying_for_tx = :aetx_sign.new(paying_for_aetx, [])
+      tx_hash = :aetx_sign.hash(signed_paying_for_tx)
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_fee: fn ^tx_hash -> 100 end,
+           get_tx_data: fn ^tx_hash ->
+             {"", :paying_for_tx, signed_paying_for_tx, paying_for_tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {:aec_chain, [:passthrough],
+         get_ga_call: fn ^ga_pk, ^auth_id, _block_hash ->
+           {:ok, :aega_call.new(ga_id, auth_id, 1, 2, 3, :ok, "")}
+         end},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [:passthrough],
+         [
+           serialize_for_client: fn :header, signed_tx ->
+             aetx = :aetx_sign.tx(signed_tx)
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
+      ] do
+        # PayingFor(GAMeta(Spend)) as indexed by the sync
+        store =
+          empty_store()
+          |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+          |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+          |> change_store(
+            Transaction.transaction_mutations(
+              signed_paying_for_tx,
+              1,
+              {height, mbi},
+              mb_hash,
+              0,
+              %{}
+            )
+          )
+
+        for {id, direction} <- [{account, "forward"}, {ga, "forward"}, {ga, "backward"}] do
+          assert %{"prev" => nil, "data" => [activity], "next" => _next_url} =
+                   conn
+                   |> with_store(store)
+                   |> get("/v3/accounts/#{id}/activities", direction: direction)
+                   |> json_response(200)
+
+          assert %{
+                   "type" => "PayingForTxEvent",
+                   "payload" => %{
+                     "tx" => %{
+                       "type" => "PayingForTx",
+                       "payer_id" => ^payer,
+                       "tx" => %{
+                         "tx" => %{
+                           "ga_id" => ^ga,
+                           "tx" => %{"tx" => %{"recipient_id" => ^account}}
+                         }
+                       }
+                     }
+                   }
+                 } = activity
+        end
+      end
     end
 
     test "when filtering by activity type, it returns filtered results", %{conn: conn} do
