@@ -12,7 +12,6 @@ defmodule AeMdw.Miners do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
-  alias AeMdw.Node.Db
   alias AeMdw.Util
 
   require Model
@@ -20,11 +19,8 @@ defmodule AeMdw.Miners do
   @type miner() :: map()
   @type cursor() :: binary() | nil
   @type query() :: %{binary() => binary()}
-  @typep period() :: :day | :week | :month
   @typep state() :: State.t()
-  @typep pubkey() :: Db.pubkey()
   @typep pagination() :: Collection.direction_limit()
-  @typep reward_key() :: {non_neg_integer(), pubkey()}
 
   @periods %{"day" => :day, "week" => :week, "month" => :month}
   @period_msecs %{
@@ -76,7 +72,6 @@ defmodule AeMdw.Miners do
 
   # Ascending list of {reward, miner_pk}, cached per period and chain tip since it
   # sums every block reward in the period but only changes with a new key block.
-  @spec period_rewards(state(), period()) :: [reward_key()]
   defp period_rewards(state, period) do
     case DbUtil.last_gen_and_time(state) do
       {:ok, {top_height, top_time}} ->

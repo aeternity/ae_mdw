@@ -36,33 +36,24 @@ defmodule AeMdw.Db.MinerRewardsMutation do
       {:ok, Model.miner(total_reward: old_reward) = miner} ->
         total_reward = old_reward + reward
 
-        state
-        |> State.put(
-          Model.Miner,
-          Model.miner(miner, total_reward: total_reward)
-        )
-        |> State.delete(Model.RewardMiner, {old_reward, beneficiary_pk})
-        |> State.put(
-          Model.RewardMiner,
-          Model.reward_miner(index: {total_reward, beneficiary_pk})
-        )
-        |> then(fn st ->
-          {st, false}
-        end)
+        new_state =
+          state
+          |> State.put(Model.Miner, Model.miner(miner, total_reward: total_reward))
+          |> State.delete(Model.RewardMiner, {old_reward, beneficiary_pk})
+          |> State.put(
+            Model.RewardMiner,
+            Model.reward_miner(index: {total_reward, beneficiary_pk})
+          )
+
+        {new_state, false}
 
       :not_found ->
-        state
-        |> State.put(
-          Model.RewardMiner,
-          Model.reward_miner(index: {reward, beneficiary_pk})
-        )
-        |> State.put(
-          Model.Miner,
-          Model.miner(index: beneficiary_pk, total_reward: reward)
-        )
-        |> then(fn st ->
-          {st, true}
-        end)
+        new_state =
+          state
+          |> State.put(Model.Miner, Model.miner(index: beneficiary_pk, total_reward: reward))
+          |> State.put(Model.RewardMiner, Model.reward_miner(index: {reward, beneficiary_pk}))
+
+        {new_state, true}
     end
   end
 

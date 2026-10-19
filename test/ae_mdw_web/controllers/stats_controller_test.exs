@@ -1704,12 +1704,12 @@ defmodule AeMdwWeb.StatsControllerTest do
         |> Store.put(Model.Miner, Model.miner(index: miner1, total_reward: 110))
         |> Store.put(Model.RewardMiner, Model.reward_miner(index: {110, miner1}))
 
-      # a former test could have left the same tip in the cache
+      # the cache is keyed by tip, don't reuse one from another test
       :ets.delete_all_objects(:miners_period_rewards)
 
       pks = Map.new([miner1, miner2, miner3], &{&1, :aeapi.format_account_pubkey(&1)})
 
-      {:ok, conn: with_store(conn, store), pks: pks, miners: [miner1, miner2, miner3]}
+      {:ok, conn: with_store(conn, store), pks: pks}
     end
 
     test "it only counts the rewards of the last day", %{conn: conn, pks: pks} do
@@ -1740,10 +1740,7 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"miner" => ^miner3_pk, "total_reward" => 8} = st3
     end
 
-    test "it only counts the rewards of the last month, but not the dev rewards", %{
-      conn: conn,
-      pks: pks
-    } do
+    test "it only counts the rewards of the last month", %{conn: conn, pks: pks} do
       miner1_pk = pks[<<1::256>>]
       miner2_pk = pks[<<2::256>>]
       miner3_pk = pks[<<3::256>>]
@@ -1826,27 +1823,27 @@ defmodule AeMdwWeb.StatsControllerTest do
       assert %{"error" => "invalid query: foo=bar"} =
                conn |> get("/v3/stats/miners", foo: "bar") |> json_response(400)
     end
+  end
 
-    defp put_block_rewards(store, height, rewards) do
-      Enum.reduce(rewards, store, fn {miner_pk, amount}, store ->
-        put_reward(store, "reward_block", height, miner_pk, amount)
-      end)
-    end
+  defp put_block_rewards(store, height, rewards) do
+    Enum.reduce(rewards, store, fn {miner_pk, amount}, store ->
+      put_reward(store, "reward_block", height, miner_pk, amount)
+    end)
+  end
 
-    defp put_dev_reward(store, height, dev_pk, amount),
-      do: put_reward(store, "reward_dev", height, dev_pk, amount)
+  defp put_dev_reward(store, height, dev_pk, amount),
+    do: put_reward(store, "reward_dev", height, dev_pk, amount)
 
-    defp put_reward(store, kind, height, target_pk, amount) do
-      store
-      |> Store.put(
-        Model.IntTransferTx,
-        Model.int_transfer_tx(index: {{height, -1}, kind, target_pk, -1}, amount: amount)
-      )
-      |> Store.put(
-        Model.KindIntTransferTx,
-        Model.kind_int_transfer_tx(index: {kind, {height, -1}, target_pk, -1})
-      )
-    end
+  defp put_reward(store, kind, height, target_pk, amount) do
+    store
+    |> Store.put(
+      Model.IntTransferTx,
+      Model.int_transfer_tx(index: {{height, -1}, kind, target_pk, -1}, amount: amount)
+    )
+    |> Store.put(
+      Model.KindIntTransferTx,
+      Model.kind_int_transfer_tx(index: {kind, {height, -1}, target_pk, -1})
+    )
   end
 
   defp add_transactions_every_5_hours(store, start_txi, end_txi, now) do
