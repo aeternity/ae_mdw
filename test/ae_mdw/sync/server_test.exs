@@ -72,6 +72,47 @@ defmodule AeMdw.Sync.ServerTest do
     end
   end
 
+  describe "mem sync on top of the synced overlay" do
+    test "builds each generation once and broadcasts its blocks in order" do
+      :persistent_term.put(:global_state, state_at(999))
+      gens = [generation(999, 1), generation(1_000, 2)]
+
+      with_mocks sync_mocks(gens) do
+        assert <<1::256>> = sync(mem_sync_data())
+      end
+
+      assert received(:built) == [999, 1_000]
+      assert received(:broadcast) == expected_broadcasts(gens)
+    end
+
+    test "resuming broadcasts the new blocks of the open generation and the next one" do
+      :persistent_term.put(:global_state, state_at(1_000))
+      gens = [generation(1_000, 1), generation(1_001, 2)]
+
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         find_common_ancestor: fn _hash1, _hash2 -> {:ok, <<2::256>>} end}
+        | sync_mocks(gens)
+      ] do
+        assert <<1::256>> = sync(%Server{mem_sync_data() | mem_hash: <<2::256>>})
+      end
+
+      assert received(:built) == [1_000, 1_001]
+      assert received(:broadcast) == expected_broadcasts(gens)
+    end
+
+    test "succeeds without broadcasting when there's nothing to sync" do
+      :persistent_term.put(:global_state, state_at(999))
+
+      with_mocks sync_mocks([]) do
+        assert <<1::256>> = sync(mem_sync_data())
+      end
+
+      assert received(:built) == []
+      assert received(:broadcast) == []
+    end
+  end
+
   defp mem_sync_data do
     %Server{
       chain_height: 1_009,

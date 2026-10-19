@@ -457,25 +457,32 @@ defmodule AeMdw.Sync.Server do
   defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
     # start syncing from memory, then anticipates commit to avoid committing only after 10 gens
     if from_height == AeMdw.Db.Util.synced_height(State.mem_state()) do
-      Enum.reduce(gens_mutations, empty_state, fn {height, gen_mutations}, state ->
-        gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
+      {new_state, gens_blocks} =
+        Enum.reduce(gens_mutations, {empty_state, []}, fn {height, gen_mutations},
+                                                          {state, gens_blocks} ->
+          gen_blocks = gen_blocks(height, gen_mutations)
+          gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
 
-        {ts, commited_state} =
-          :timer.tc(fn ->
-            mutations =
-              Enum.map(gen_mutations, fn {_block_index, _mb, block_mutations} ->
-                block_mutations
-              end)
+          {ts, commited_state} =
+            :timer.tc(fn ->
+              mutations =
+                Enum.map(gen_mutations, fn {_block_index, _mb, block_mutations} ->
+                  block_mutations
+                end)
 
-            state
-            |> State.commit_mem(mutations)
-            |> add_tx_fees_job()
-          end)
+              state
+              |> State.commit_mem(mutations)
+              |> add_tx_fees_job()
+            end)
 
-        :ok = profile_sync("sync_mem", height, ts, gen_mutations, 1)
+          :ok = profile_sync("sync_mem", height, ts, gen_mutations, 1)
 
-        commited_state
-      end)
+          {commited_state, [gen_blocks | gens_blocks]}
+        end)
+
+      broadcast_blocks(Enum.reverse(gens_blocks))
+
+      new_state
     else
       exec_all_mem_mutations(empty_state, gens_mutations)
     end
