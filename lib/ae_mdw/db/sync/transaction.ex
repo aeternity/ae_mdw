@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.Origin
+  alias AeMdw.Db.TransactionFeeMutation
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
@@ -85,7 +86,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     {type, tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     tx_hash = :aetx_sign.hash(signed_tx)
     fee = Db.get_tx_fee(tx_hash)
-    m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time, fee: fee)
 
     tx_context =
       TxContext.new(
@@ -100,7 +100,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       )
 
     [
-      WriteMutation.new(Model.Tx, m_tx),
+      TransactionFeeMutation.new(txi, tx_hash, block_index, mb_time, fee),
       WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
       WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
       WriteFieldsMutation.new(type, tx, block_index, txi)

@@ -55,7 +55,7 @@ defmodule AeMdw.Db.Model do
 
   # index is timestamp (daylight saving order should be handle case by case)
   @typep timestamp :: pos_integer()
-  @type async_task_type :: :update_aex9_state | :store_acc_balance | :migrate | :update_tx_stats
+  @type async_task_type :: :update_aex9_state | :store_acc_balance | :migrate
   @type async_task_index :: {timestamp(), async_task_type()}
   @type async_task_args :: list()
 
@@ -157,8 +157,13 @@ defmodule AeMdw.Db.Model do
           )
 
   # txs table :
-  #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi} time = time, fee = fee
-  @tx_defaults [index: nil, id: nil, block_index: nil, time: nil, fee: nil]
+  #     index = tx_index (0..),
+  #     id = tx_id
+  #     block_index = {kbi, mbi}
+  #     time = time
+  #     fee = fee
+  #     accumulated_fee = sum of previous fees
+  @tx_defaults [index: nil, id: nil, block_index: nil, time: nil, fee: nil, accumulated_fee: nil]
   defrecord :tx, @tx_defaults
 
   @type tx_index() :: txi()
@@ -168,7 +173,8 @@ defmodule AeMdw.Db.Model do
             id: Txs.tx_hash(),
             block_index: block_index(),
             time: Blocks.time(),
-            fee: non_neg_integer()
+            fee: non_neg_integer(),
+            accumulated_fee: non_neg_integer()
           )
 
   # txs time index :
