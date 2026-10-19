@@ -3497,6 +3497,8 @@ Transaction events can also be `InternalContractCallEvent` which represent trans
 
 Optionally the `owned_only=true` parameter might be used to return only activities initiated by the account.
 
+`GAMetaTx` and `PayingForTx` transaction events are also returned for the accounts of the inner transaction (e.g. for the signer of a transaction whose fee is paid by another account). The `owned_only` parameter handles the inner transaction fields the same way as for a non-wrapped transaction.
+
 Additionally, activities can be filtered by any of these types using `?type=<type>` query parameter:
 
 * `transactions` - Transactions containing the account in any of the transaction fields

@@ -38,6 +38,9 @@ defmodule AeMdw.Fields do
     tx_types_pos()
     |> Enum.reject(&(ownership_only? and &1 in @non_owner_fields))
     |> Enum.map(fn {tx_type, tx_field_pos} ->
+      non_owner_inner_types =
+        if ownership_only?, do: non_owner_inner_types(tx_type, tx_field_pos), else: []
+
       scope =
         case txi_scope do
           {first_txi, last_txi} ->
@@ -55,6 +58,9 @@ defmodule AeMdw.Fields do
       |> Collection.stream(Model.Field, direction, scope, cursor)
       |> Stream.filter(fn {^tx_type, ^tx_field_pos, ^account_pk, txi} ->
         tx_type != :contract_create_tx or State.exists?(state, Model.Type, {tx_type, txi})
+      end)
+      |> Stream.reject(fn {^tx_type, ^tx_field_pos, ^account_pk, txi} ->
+        Enum.any?(non_owner_inner_types, &State.exists?(state, Model.InnerType, {&1, txi}))
       end)
       |> Stream.map(fn {^tx_type, ^tx_field_pos, ^account_pk, txi} ->
         {txi, tx_type, tx_field_pos}
@@ -75,13 +81,28 @@ defmodule AeMdw.Fields do
   @spec mdw_field_pos(String.t()) :: pos()
   def mdw_field_pos("entrypoint"), do: @base_mdw_field_pos
 
+  # Inner tx types for which the masked (see field_pos_mask/2) position is a non-owner field
+  defp non_owner_inner_types(tx_type, tx_field_pos) do
+    if tx_type in Txs.wrap_tx_types() and tx_field_pos >= @base_wraptx_field_pos do
+      inner_pos = tx_field_pos - @base_wraptx_field_pos + 1
+
+      for {inner_type, ^inner_pos} <- @non_owner_fields, do: inner_type
+    else
+      []
+    end
+  end
+
   defp tx_types_pos do
     Node.tx_types()
     |> Enum.flat_map(fn tx_type ->
-      types_pos =
-        tx_type
-        |> Node.tx_ids_positions()
-        |> Enum.map(fn field_pos -> {tx_type, field_pos} end)
+      positions =
+        if tx_type in Txs.wrap_tx_types() do
+          Map.fetch!(Node.wrapper_tx_positions(), tx_type)
+        else
+          Node.tx_ids_positions(tx_type)
+        end
+
+      types_pos = Enum.map(positions, fn field_pos -> {tx_type, field_pos} end)
 
       if tx_type in @create_tx_types do
         [{tx_type, nil} | types_pos]

@@ -699,7 +699,7 @@ defmodule AeMdw.Activities do
       |> Txs.fetch!(txi)
       |> Map.delete("tx_index")
 
-    {"#{Node.tx_name(tx_type)}Event", tx}
+    {"#{Node.tx_name(outer_tx_type(state, tx_type, txi))}Event", tx}
   end
 
   defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
@@ -833,6 +833,15 @@ defmodule AeMdw.Activities do
       end
 
     {"DexSwapEvent", %{tx: tx, token_name: name, amount: amount}}
+  end
+
+  # Nested wrapper txs index inner tx fields under the wrapper directly enclosing them
+  defp outer_tx_type(state, tx_type, txi) do
+    if tx_type in Txs.wrap_tx_types() do
+      Enum.find(Txs.wrap_tx_types(), tx_type, &State.exists?(state, Model.Type, {&1, txi}))
+    else
+      tx_type
+    end
   end
 
   defp serialize_cursor({{height, txi, local_idx, _block_type}, _data}),
