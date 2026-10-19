@@ -6,7 +6,6 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
-  alias AeMdw.Node.Db, as: NodeDb
 
   import Record, only: [defrecord: 2]
 
@@ -22,7 +21,7 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
     |> Task.async_stream(
       fn txs ->
         Enum.map(txs, fn tx(index: index, id: id, block_index: block_index, time: time) ->
-          fee = NodeDb.get_tx_fee(id)
+          fee = tx_fee(id)
           tx = Model.tx(index: index, id: id, block_index: block_index, time: time, fee: fee)
 
           WriteMutation.new(Model.Tx, tx)
@@ -37,5 +36,12 @@ defmodule AeMdw.Migrations.AddFeeToTxs do
     end)
     |> Enum.sum()
     |> then(&{:ok, &1})
+  end
+
+  defp tx_fee(tx_hash) do
+    case :aec_db.find_tx_with_location(tx_hash) do
+      {_block_hash, signed_tx} -> signed_tx |> :aetx_sign.tx() |> :aetx.fee()
+      :none -> nil
+    end
   end
 end
