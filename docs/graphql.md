@@ -229,7 +229,7 @@ All time-series stats queries accept `intervalBy` (`day`, `week`, `month`),
 | `aex9TransfersStats` | — | AEX-9 transfer count over time |
 | `totalStats` | pagination | Per-generation stats from chain tip |
 | `deltaStats` | pagination | Aggregated delta stats from chain tip |
-| `minersStats` | pagination | Total rewards per miner |
+| `minersStats` | `period`, pagination | Total rewards per miner, optionally only those paid in the last `day`, `week` or `month` |
 | `topMinersStats` | pagination | Top miners by reward |
 | `topMiners24hStats` | pagination | Top miners in the last 24 hours |
 

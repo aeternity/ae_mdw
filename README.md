@@ -203,7 +203,7 @@ GET /v3/aex141/transfers                               - nft transfers that can 
 
 GET /v3/stats/delta                       - statistics for generations from tip of the chain
 GET /v3/stats/total                       - aggregated statistics for generations from tip of the chain
-GET /v3/stats/miners                       - total rewards for each miner
+GET /v3/stats/miners                       - total rewards for each miner (optionally for the last day, week or month)
 
 GET /v3/stats/transactions                - statistics over time of transactions count
 GET /v3/stats/blocks                      - statistics over time of blocks count
@@ -3360,7 +3360,9 @@ These endpoints allow pagination, with typical `forward/backward` direction or s
 
 ### `/v3/stats/miners`
 
-Total reward given to each chain miner.
+Total reward given to each chain miner, sorted by the reward (highest first by default, use `direction=forward` for the lowest first).
+
+The optional `period` query parameter (`day`, `week` or `month`) only counts the rewards paid during the last 24 hours, 7 days or 30 days up to the latest synced block, instead of all of them since genesis.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
@@ -3371,10 +3373,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
       "total_reward": 76626041292504000000
     }
   ],
-  "next": "/v3/stats/miners?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
+  "next": "/v3/stats/miners?cursor=GDK04RG900001C5HAKURC7G4DK000010HC9JKE38J4ONDDGJEE41C93QFT6JAV5EALCPCKCSUMQK7QDJAL5G",
   "prev": null
 }
 ```
+
+The pagination cursors are opaque, use the `next` and `prev` links as they are.
 
 ### `/v3/stats/blocks`
 

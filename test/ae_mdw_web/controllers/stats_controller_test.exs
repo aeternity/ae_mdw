@@ -5,9 +5,11 @@ defmodule AeMdwWeb.StatsControllerTest do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Collection
+  alias AeMdw.Sync.MemStoreCreator
 
   require Model
 
@@ -1666,6 +1668,184 @@ defmodule AeMdwWeb.StatsControllerTest do
                conn
                |> get(prev_url)
                |> json_response(200)
+    end
+  end
+
+  describe "stats/miners with a period" do
+    setup %{conn: conn, store: store} do
+      miner1 = <<1::256>>
+      miner2 = <<2::256>>
+      miner3 = <<3::256>>
+      now = 1_700_000_000_000
+
+      # height, key block time, block rewards
+      key_blocks = [
+        {100, now - :timer.hours(24 * 10), [{miner1, 100}]},
+        {200, now - :timer.hours(24 * 3), [{miner1, 10}, {miner2, 50}]},
+        {300, now - :timer.hours(2), [{miner2, 5}, {miner3, 7}]},
+        {400, now, [{miner3, 1}]}
+      ]
+
+      store =
+        Enum.reduce(key_blocks, store, fn {height, time, rewards}, store ->
+          store
+          |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: <<height::256>>))
+          |> Store.put(
+            Model.KeyBlockTime,
+            Model.key_block_time(index: time, height: height, miner: miner1)
+          )
+          |> put_block_rewards(height, rewards)
+        end)
+
+      store =
+        store
+        |> put_dev_reward(300, <<9::256>>, 1_000)
+        |> put_dev_reward(400, <<9::256>>, 1_000)
+        |> Store.put(Model.Miner, Model.miner(index: miner1, total_reward: 110))
+        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {110, miner1}))
+
+      # a former test could have left the same tip in the cache
+      :ets.delete_all_objects(:miners_period_rewards)
+
+      pks = Map.new([miner1, miner2, miner3], &{&1, :aeapi.format_account_pubkey(&1)})
+
+      {:ok, conn: with_store(conn, store), pks: pks, miners: [miner1, miner2, miner3]}
+    end
+
+    test "it only counts the rewards of the last day", %{conn: conn, pks: pks} do
+      miner2_pk = pks[<<2::256>>]
+      miner3_pk = pks[<<3::256>>]
+
+      assert %{"prev" => nil, "data" => [st1, st2], "next" => nil} =
+               conn
+               |> get("/v3/stats/miners", period: "day")
+               |> json_response(200)
+
+      assert %{"miner" => ^miner3_pk, "total_reward" => 8} = st1
+      assert %{"miner" => ^miner2_pk, "total_reward" => 5} = st2
+    end
+
+    test "it only counts the rewards of the last week", %{conn: conn, pks: pks} do
+      miner1_pk = pks[<<1::256>>]
+      miner2_pk = pks[<<2::256>>]
+      miner3_pk = pks[<<3::256>>]
+
+      assert %{"prev" => nil, "data" => [st1, st2, st3], "next" => nil} =
+               conn
+               |> get("/v3/stats/miners", period: "week")
+               |> json_response(200)
+
+      assert %{"miner" => ^miner2_pk, "total_reward" => 55} = st1
+      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st2
+      assert %{"miner" => ^miner3_pk, "total_reward" => 8} = st3
+    end
+
+    test "it only counts the rewards of the last month, but not the dev rewards", %{
+      conn: conn,
+      pks: pks
+    } do
+      miner1_pk = pks[<<1::256>>]
+      miner2_pk = pks[<<2::256>>]
+      miner3_pk = pks[<<3::256>>]
+
+      assert %{"prev" => nil, "data" => [st1, st2, st3], "next" => nil} =
+               conn
+               |> get("/v3/stats/miners", period: "month")
+               |> json_response(200)
+
+      assert %{"miner" => ^miner1_pk, "total_reward" => 110} = st1
+      assert %{"miner" => ^miner2_pk, "total_reward" => 55} = st2
+      assert %{"miner" => ^miner3_pk, "total_reward" => 8} = st3
+    end
+
+    test "it keeps returning the total rewards without a period", %{conn: conn, pks: pks} do
+      miner1_pk = pks[<<1::256>>]
+
+      assert %{"data" => [%{"miner" => ^miner1_pk, "total_reward" => 110}]} =
+               conn
+               |> get("/v3/stats/miners")
+               |> json_response(200)
+    end
+
+    test "it paginates in both directions", %{conn: conn, pks: pks} do
+      miner1_pk = pks[<<1::256>>]
+      miner2_pk = pks[<<2::256>>]
+      miner3_pk = pks[<<3::256>>]
+
+      assert page1 =
+               %{"prev" => nil, "data" => [st1, st2], "next" => next_url} =
+               conn
+               |> get("/v3/stats/miners", period: "week", limit: 2)
+               |> json_response(200)
+
+      assert %{"miner" => ^miner2_pk, "total_reward" => 55} = st1
+      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st2
+
+      assert %{"prev" => prev_url, "data" => [st3], "next" => nil} =
+               conn |> get(next_url) |> json_response(200)
+
+      assert %{"miner" => ^miner3_pk, "total_reward" => 8} = st3
+      assert ^page1 = conn |> get(prev_url) |> json_response(200)
+
+      assert %{"data" => [%{"miner" => ^miner3_pk}, %{"miner" => ^miner1_pk}]} =
+               conn
+               |> get("/v3/stats/miners", period: "week", limit: 2, direction: "forward")
+               |> json_response(200)
+    end
+
+    test "it continues from the cursor even if its record changed since", %{
+      conn: conn,
+      pks: pks
+    } do
+      miner3_pk = pks[<<3::256>>]
+
+      # miner1 had 9 when the previous page was served, it has 10 now
+      cursor =
+        {9, <<1::256>>}
+        |> :erlang.term_to_binary()
+        |> Base.hex_encode32(padding: false)
+
+      assert %{"data" => [%{"miner" => ^miner3_pk, "total_reward" => 8}]} =
+               conn
+               |> get("/v3/stats/miners", period: "week", cursor: cursor)
+               |> json_response(200)
+    end
+
+    test "it returns an empty list when there are no blocks", %{conn: conn} do
+      assert %{"data" => [], "next" => nil} =
+               conn
+               |> with_store(MemStoreCreator.create(NullStore.new()))
+               |> get("/v3/stats/miners", period: "day")
+               |> json_response(200)
+    end
+
+    test "it returns an error for an invalid period or unknown params", %{conn: conn} do
+      assert %{"error" => "invalid query: period=year"} =
+               conn |> get("/v3/stats/miners", period: "year") |> json_response(400)
+
+      assert %{"error" => "invalid query: foo=bar"} =
+               conn |> get("/v3/stats/miners", foo: "bar") |> json_response(400)
+    end
+
+    defp put_block_rewards(store, height, rewards) do
+      Enum.reduce(rewards, store, fn {miner_pk, amount}, store ->
+        put_reward(store, "reward_block", height, miner_pk, amount)
+      end)
+    end
+
+    defp put_dev_reward(store, height, dev_pk, amount),
+      do: put_reward(store, "reward_dev", height, dev_pk, amount)
+
+    defp put_reward(store, kind, height, target_pk, amount) do
+      store
+      |> Store.put(
+        Model.IntTransferTx,
+        Model.int_transfer_tx(index: {{height, -1}, kind, target_pk, -1}, amount: amount)
+      )
+      |> Store.put(
+        Model.KindIntTransferTx,
+        Model.kind_int_transfer_tx(index: {kind, {height, -1}, target_pk, -1})
+      )
     end
   end
 

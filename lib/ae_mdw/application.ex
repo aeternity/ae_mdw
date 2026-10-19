@@ -89,6 +89,7 @@ defmodule AeMdw.Application do
   defp init(:tables) do
     BroadcasterCache.init()
     MutationsCache.init()
+    AeMdw.Miners.init_cache()
 
     _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
 

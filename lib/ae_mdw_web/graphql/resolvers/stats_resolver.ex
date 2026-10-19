@@ -115,8 +115,9 @@ defmodule AeMdwWeb.GraphQL.Resolvers.StatsResolver do
   @spec miners(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
   def miners(_parent, args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
+    query = Helpers.build_query(args, [:period])
 
-    Helpers.make_page(Miners.fetch_miners(state, pagination, cursor))
+    Helpers.make_page(Miners.fetch_miners(state, pagination, query, cursor))
   end
 
   @spec top_miners(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
