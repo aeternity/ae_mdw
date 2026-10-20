@@ -1,0 +1,571 @@
+schemas:
+  MiningSummary:
+    description: >-
+      Mining totals of the whole chain and how far the stats have been built, since they
+      are folded in the background from the finalized generations.
+    type: object
+    required:
+      - bucket_size
+      - synced_height
+      - last_bucket
+      - blocks
+      - txs
+      - rewards
+      - fees
+      - miners
+      - beneficiaries
+    properties:
+      bucket_size:
+        description: The number of generations of a bucket
+        type: integer
+        example: 20
+      synced_height:
+        description: The last generation folded into the stats
+        type: integer
+      last_bucket:
+        description: The last bucket with stats
+        type: integer
+        nullable: true
+      blocks:
+        description: The number of key blocks folded
+        type: integer
+      txs:
+        description: The number of transactions processed
+        type: integer
+      rewards:
+        description: The block rewards paid to miners
+        type: integer
+      fees:
+        description: The fees of the transactions processed
+        type: integer
+      miners:
+        description: The number of miner keys seen
+        type: integer
+      beneficiaries:
+        description: The number of beneficiaries seen
+        type: integer
+  MinerEntity:
+    description: A miner, identified by its key or by the beneficiary that gets its rewards
+    type: object
+    required:
+      - id
+      - role
+      - first_height
+      - first_time
+      - last_height
+      - last_time
+      - blocks
+      - txs
+      - rewards
+      - fees
+      - last_info
+      - info_changes
+    properties:
+      id:
+        $ref: '#/components/schemas/AccountAddress'
+      role:
+        $ref: '#/components/schemas/MinerRole'
+      first_height:
+        description: The first generation it mined
+        type: integer
+        nullable: true
+      first_time:
+        description: The time of the first generation it mined
+        type: integer
+        nullable: true
+      last_height:
+        description: The last generation it mined
+        type: integer
+        nullable: true
+      last_time:
+        description: The time of the last generation it mined
+        type: integer
+        nullable: true
+      blocks:
+        description: The number of key blocks mined
+        type: integer
+      txs:
+        description: The number of transactions processed in the generations it mined
+        type: integer
+      rewards:
+        description: The block rewards received. Only beneficiaries get rewards, it is null for miner keys.
+        type: integer
+        nullable: true
+      fees:
+        description: The fees of the transactions processed in the generations it mined
+        type: integer
+      last_info:
+        description: The info of the last key block it mined
+        type: integer
+        nullable: true
+      info_changes:
+        description: How many times the info of its key blocks changed
+        type: integer
+  MinerRole:
+    description: >-
+      The miner key that mined a key block or the beneficiary that gets its rewards, which
+      are different accounts when a pool mines for its members.
+    type: string
+    enum:
+      - miner
+      - beneficiary
+  MinerLink:
+    description: A beneficiary a miner key mined for, or a miner key that mined for a beneficiary
+    type: object
+    required:
+      - id
+      - role
+      - blocks
+      - first_height
+      - last_height
+    properties:
+      id:
+        $ref: '#/components/schemas/AccountAddress'
+      role:
+        $ref: '#/components/schemas/MinerRole'
+      blocks:
+        description: The number of key blocks mined together
+        type: integer
+      first_height:
+        description: The first generation mined together
+        type: integer
+      last_height:
+        description: The last generation mined together
+        type: integer
+  MinerSeriesRow:
+    description: >-
+      The activity of a miner in an interval of buckets, with its totals up to the end of it.
+      Intervals where it neither mined nor got paid are not returned. The id is only there
+      when listing the miners of a bucket.
+    type: object
+    required:
+      - bucket
+      - interval
+      - start_height
+      - end_height
+      - start_time
+      - end_time
+      - blocks
+      - txs
+      - rewards
+      - fees
+      - blocks_total
+      - txs_total
+      - rewards_total
+      - fees_total
+    properties:
+      id:
+        $ref: '#/components/schemas/AccountAddress'
+      bucket:
+        description: The first bucket of the interval
+        type: integer
+      interval:
+        description: The number of buckets of the interval
+        type: integer
+      start_height:
+        description: The first generation of the interval
+        type: integer
+      end_height:
+        description: The last generation of the interval
+        type: integer
+      start_time:
+        description: The time of the first key block folded in the interval
+        type: integer
+        nullable: true
+      end_time:
+        description: The time of the last key block folded in the interval
+        type: integer
+        nullable: true
+      blocks:
+        description: The key blocks mined in the interval
+        type: integer
+      txs:
+        description: The transactions processed in the generations mined in the interval
+        type: integer
+      rewards:
+        description: The rewards received in the interval, null for miner keys
+        type: integer
+        nullable: true
+      fees:
+        description: The fees of the transactions processed in the interval
+        type: integer
+      blocks_total:
+        description: The key blocks mined up to the end of the interval
+        type: integer
+      txs_total:
+        description: The transactions processed up to the end of the interval
+        type: integer
+      rewards_total:
+        description: The rewards received up to the end of the interval, null for miner keys
+        type: integer
+        nullable: true
+      fees_total:
+        description: The fees up to the end of the interval
+        type: integer
+  MiningSeriesRow:
+    description: >-
+      The mining of the whole network in an interval of buckets, with its totals up to the end
+      of it.
+    type: object
+    required:
+      - bucket
+      - interval
+      - start_height
+      - end_height
+      - start_time
+      - end_time
+      - blocks
+      - micro_blocks
+      - txs
+      - rewards
+      - fees
+      - avg_block_time
+      - avg_difficulty
+      - hashrate
+      - active_miners
+      - active_beneficiaries
+      - new_miners
+      - new_beneficiaries
+      - top_miner_blocks
+      - top_beneficiary_blocks
+      - blocks_total
+      - txs_total
+      - rewards_total
+      - fees_total
+      - miners_total
+      - beneficiaries_total
+    properties:
+      bucket:
+        description: The first bucket of the interval
+        type: integer
+      interval:
+        description: The number of buckets of the interval
+        type: integer
+      start_height:
+        description: The first generation folded in the interval
+        type: integer
+      end_height:
+        description: The last generation folded in the interval
+        type: integer
+      start_time:
+        description: The time of the first key block of the interval
+        type: integer
+      end_time:
+        description: The time of the last key block of the interval
+        type: integer
+      blocks:
+        description: The number of key blocks
+        type: integer
+      micro_blocks:
+        description: The number of micro blocks
+        type: integer
+      txs:
+        description: The number of transactions
+        type: integer
+      rewards:
+        description: The block rewards paid to miners
+        type: integer
+      fees:
+        description: The fees of the transactions
+        type: integer
+      avg_block_time:
+        description: The average time between key blocks in milliseconds
+        type: integer
+        nullable: true
+      avg_difficulty:
+        description: The average difficulty of the key blocks
+        type: integer
+        nullable: true
+      hashrate:
+        description: The hashrate estimated from the average difficulty
+        type: integer
+        nullable: true
+      active_miners:
+        description: The miner keys that mined, counted once in an interval
+        type: integer
+      active_beneficiaries:
+        description: The beneficiaries that mined, counted once in an interval
+        type: integer
+      new_miners:
+        description: The miner keys that mined for the first time
+        type: integer
+      new_beneficiaries:
+        description: The beneficiaries that mined for the first time
+        type: integer
+      top_miner_blocks:
+        description: The most blocks mined by a single miner key in a bucket
+        type: integer
+      top_beneficiary_blocks:
+        description: The most blocks mined by a single beneficiary in a bucket
+        type: integer
+      blocks_total:
+        description: The key blocks up to the end of the interval
+        type: integer
+      txs_total:
+        description: The transactions up to the end of the interval
+        type: integer
+      rewards_total:
+        description: The rewards up to the end of the interval
+        type: integer
+      fees_total:
+        description: The fees up to the end of the interval
+        type: integer
+      miners_total:
+        description: The miner keys seen up to the end of the interval
+        type: integer
+      beneficiaries_total:
+        description: The beneficiaries seen up to the end of the interval
+        type: integer
+paths:
+  /stats/mining:
+    get:
+      deprecated: false
+      description: >-
+        Get the mining totals and how far the stats have been built. They are folded in the
+        background from the finalized generations, including the history of the chain.
+      operationId: GetMiningSummary
+      responses:
+        '200':
+          description: Returns the mining summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiningSummary'
+  /stats/mining/series:
+    get:
+      deprecated: false
+      description: >-
+        Get the mining series of the whole network, a row per bucket of 20 generations (about
+        an hour), or per interval of buckets.
+      operationId: GetMiningSeries
+      parameters:
+        - $ref: '#/components/parameters/StatsLimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/MiningIntervalParam'
+        - $ref: '#/components/parameters/MiningIntervalByParam'
+      responses:
+        '200':
+          description: Returns the paginated mining series
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MiningSeriesRow'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats/mining/buckets/{bucket}:
+    get:
+      deprecated: false
+      description: Get a bucket of the mining series.
+      operationId: GetMiningBucket
+      parameters:
+        - $ref: '#/components/parameters/MiningBucketParam'
+      responses:
+        '200':
+          description: Returns the bucket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiningSeriesRow'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /stats/mining/buckets/{bucket}/miners:
+    get:
+      deprecated: false
+      description: Get the miners that mined in a bucket.
+      operationId: GetMiningBucketMiners
+      parameters:
+        - $ref: '#/components/parameters/MiningBucketParam'
+        - $ref: '#/components/parameters/MinerRoleParam'
+        - $ref: '#/components/parameters/StatsLimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the paginated miners of the bucket
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MinerSeriesRow'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /miners:
+    get:
+      deprecated: false
+      description: >-
+        Get the miners, by their key or by their beneficiary, sorted by one of their totals or
+        by when they first or last mined.
+      operationId: GetMiners
+      parameters:
+        - $ref: '#/components/parameters/MinerRoleParam'
+        - name: by
+          description: What to sort the miners by.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - blocks
+              - txs
+              - rewards
+              - fees
+              - first_active
+              - last_active
+            default: blocks
+        - $ref: '#/components/parameters/StatsLimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the paginated miners
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MinerEntity'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /miners/{minerId}:
+    get:
+      deprecated: false
+      description: Get a miner.
+      operationId: GetMiner
+      parameters:
+        - $ref: '#/components/parameters/MinerIdParam'
+        - $ref: '#/components/parameters/MinerRoleParam'
+      responses:
+        '200':
+          description: Returns the miner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MinerEntity'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /miners/{minerId}/links:
+    get:
+      deprecated: false
+      description: >-
+        Get the beneficiaries a miner key mined for, or the miner keys that mined for a
+        beneficiary.
+      operationId: GetMinerLinks
+      parameters:
+        - $ref: '#/components/parameters/MinerIdParam'
+        - $ref: '#/components/parameters/MinerRoleParam'
+        - $ref: '#/components/parameters/StatsLimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the paginated links
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MinerLink'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /miners/{minerId}/series:
+    get:
+      deprecated: false
+      description: >-
+        Get the series of a miner, a row per bucket of 20 generations (about an hour), or per
+        interval of buckets, where it mined or got paid.
+      operationId: GetMinerSeries
+      parameters:
+        - $ref: '#/components/parameters/MinerIdParam'
+        - $ref: '#/components/parameters/MinerRoleParam'
+        - $ref: '#/components/parameters/StatsLimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - $ref: '#/components/parameters/MiningIntervalParam'
+        - $ref: '#/components/parameters/MiningIntervalByParam'
+      responses:
+        '200':
+          description: Returns the paginated series of the miner
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MinerSeriesRow'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

@@ -204,6 +204,8 @@ GET /v3/aex141/transfers                               - nft transfers that can 
 GET /v3/stats/delta                       - statistics for generations from tip of the chain
 GET /v3/stats/total                       - aggregated statistics for generations from tip of the chain
 GET /v3/stats/miners                       - total rewards for each miner (optionally for the last day, week or month)
+GET /v3/stats/mining/series               - mining series of the network (see mining stats)
+GET /v3/miners                            - miners with their totals and series (see mining stats)
 
 GET /v3/stats/transactions                - statistics over time of transactions count
 GET /v3/stats/blocks                      - statistics over time of blocks count
@@ -3379,6 +3381,54 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
 ```
 
 The pagination cursors are opaque, use the `next` and `prev` links as they are.
+
+### Mining stats
+
+Series and totals of the mining, for each miner and for the whole network. They are
+built in the background from the finalized generations, starting at the genesis the first
+time the middleware runs, so they trail the tip of the chain by the finalization depth and
+the history is available once the first run catches up. `GET /v3/stats/mining` tells how
+far they are with `synced_height`.
+
+The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
+Each row of a series has what happened in the bucket, and the totals up to its end.
+The `interval` (a number of buckets, up to 720) or `interval_by` (`day`, `week` or `month`,
+which are 24, 168 and 720 buckets) query parameters merge consecutive buckets into one row.
+The `scope=gen:<from>-<to>` parameter limits the generations, and it is paginated with the
+usual `limit`, `direction` and cursors. The `start_time` and `end_time` are the time of the
+first and last key block of the row.
+
+A key block has the miner key that mined it and the beneficiary that gets its reward, which
+are different accounts when a pool mines for its members. Every endpoint of the miners takes
+`role=miner` (the default) or `role=beneficiary`. Only beneficiaries get rewards, so the
+`rewards` of the miner keys are `null`. The rewards are counted when they are paid, which is
+some generations after the block was mined, like the totals of `/v3/stats/miners`.
+
+```
+GET /v3/stats/mining                           - totals of the chain and how far the stats are built
+GET /v3/stats/mining/series                    - series of the whole network
+GET /v3/stats/mining/buckets/:bucket           - a bucket of the network series
+GET /v3/stats/mining/buckets/:bucket/miners    - the miners that mined in a bucket
+GET /v3/miners                                 - miners sorted by `by=blocks|txs|rewards|fees|first_active|last_active`
+GET /v3/miners/:id                             - a miner, with when it first and last mined
+GET /v3/miners/:id/links                       - the beneficiaries of a miner key or the miner keys of a beneficiary
+GET /v3/miners/:id/series                      - series of a miner
+```
+
+The network series rows have the key and micro blocks, transactions, rewards and fees of
+the bucket, the average block time, difficulty and hashrate, how many miners and beneficiaries
+were active (counted once in a merged row) or new, the most blocks mined by a single miner
+or beneficiary, and the totals up to the end of the row. The fees are the ones of the
+transactions processed in the generations that the miner mined.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval_by=day" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners?role=beneficiary&by=rewards&limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?scope=gen:1000000-1100000&interval_by=week" | jq '.'
+```
+
+The same data is available in GraphQL with the `miningSummary`, `miningSeries`, `miningBucket`,
+`miningBucketMiners`, `miners`, `miner`, `minerLinks` and `minerSeries` queries.
 
 ### `/v3/stats/blocks`
 

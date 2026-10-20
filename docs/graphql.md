@@ -230,6 +230,14 @@ All time-series stats queries accept `intervalBy` (`day`, `week`, `month`),
 | `totalStats` | pagination | Per-generation stats from chain tip |
 | `deltaStats` | pagination | Aggregated delta stats from chain tip |
 | `minersStats` | `period`, pagination | Total rewards per miner, optionally only those paid in the last `day`, `week` or `month` |
+| `miningSummary` | — | Mining totals and how far the mining stats are built |
+| `miningSeries` | `interval`, `intervalBy`, scope, pagination | Mining series of the network per bucket of 20 generations |
+| `miningBucket` | `bucket` | A bucket of the mining series |
+| `miningBucketMiners` | `bucket`, `role`, pagination | Miners that mined in a bucket |
+| `miners` | `role`, `orderBy`, pagination | Miners (by key or beneficiary) sorted by their totals or activity |
+| `miner` | `id`, `role` | A miner with when it first and last mined |
+| `minerLinks` | `id`, `role`, pagination | Beneficiaries of a miner key or miner keys of a beneficiary |
+| `minerSeries` | `id`, `role`, `interval`, `intervalBy`, scope, pagination | Series of a miner |
 | `topMinersStats` | pagination | Top miners by reward |
 | `topMiners24hStats` | pagination | Top miners in the last 24 hours |
 

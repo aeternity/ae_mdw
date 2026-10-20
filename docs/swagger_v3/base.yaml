@@ -51,6 +51,50 @@ components:
         enum:
           - forward
           - backward
+    MinerIdParam:
+      in: path
+      name: minerId
+      description: 'The account of the miner key or of the beneficiary'
+      required: true
+      schema:
+        $ref: '#/components/schemas/AccountAddress'
+    MinerRoleParam:
+      in: query
+      name: role
+      description: 'If the miners are identified by the miner key or by the beneficiary that gets the rewards'
+      schema:
+        type: string
+        enum:
+          - miner
+          - beneficiary
+        default: miner
+    MiningBucketParam:
+      in: path
+      name: bucket
+      description: 'The bucket number, which is the generation divided by the bucket size (20)'
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    MiningIntervalParam:
+      in: query
+      name: interval
+      description: 'The number of consecutive buckets to merge in each row (max 720)'
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 720
+        default: 1
+    MiningIntervalByParam:
+      in: query
+      name: interval_by
+      description: 'The size of the rows in buckets (24 per day, 168 per week and 720 per month)'
+      schema:
+        type: string
+        enum:
+          - day
+          - week
+          - month
   schemas:
     KeyBlockHash:
       description: Key block hash
