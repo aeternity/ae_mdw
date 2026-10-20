@@ -46,11 +46,12 @@ defmodule AeMdw.MinerStats.Folder do
     if last_height > folded_height do
       generations = Enum.map((folded_height + 1)..last_height, &fetch_facts!(db_state, &1))
 
-      TxnDbStore.transaction(fn store ->
-        generations
-        |> Enum.reduce(State.new(store), &Fold.fold(&2, &1))
-        |> State.put(Model.Stat, Model.stat(index: @height_key, payload: last_height))
-      end)
+      _state =
+        TxnDbStore.transaction(fn store ->
+          generations
+          |> Enum.reduce(State.new(store), &Fold.fold(&2, &1))
+          |> State.put(Model.Stat, Model.stat(index: @height_key, payload: last_height))
+        end)
 
       if last_height < State.height(db_state), do: :more, else: :caught_up
     else
@@ -88,7 +89,12 @@ defmodule AeMdw.MinerStats.Folder do
   end
 
   defp schedule(:infinity), do: :ok
-  defp schedule(delay), do: Process.send_after(self(), :fold, delay)
+
+  defp schedule(delay) do
+    _timer = Process.send_after(self(), :fold, delay)
+
+    :ok
+  end
 
   defp fetch_facts!(state, height) do
     case Facts.fetch(state, height) do
