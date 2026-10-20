@@ -1321,6 +1321,114 @@ defmodule AeMdw.Db.Model do
   @type reward_miner_index() :: {non_neg_integer(), pubkey()}
   @type reward_miner() :: record(:reward_miner, index: reward_miner_index())
 
+  # Mining stats, a miner is identified by its key (role :miner) or by the
+  # beneficiary that gets its rewards (role :beneficiary). A bucket is a number
+  # of consecutive generations (see AeMdw.MinerStats).
+  @type miner_role() :: :miner | :beneficiary
+  @type bucket() :: non_neg_integer()
+
+  # miner entity:
+  #     index = {role, pubkey}
+  #     first_height/time = first generation mined, last_height/time = latest one mined
+  #     blocks, txs, rewards and fees = totals (rewards are only received by beneficiaries)
+  #     last_info = latest key block info and info_changes = how many times it changed
+  @miner_entity_defaults [
+    index: nil,
+    first_height: nil,
+    first_time: nil,
+    last_height: nil,
+    last_time: nil,
+    blocks: 0,
+    txs: 0,
+    rewards: 0,
+    fees: 0,
+    last_info: nil,
+    info_changes: 0
+  ]
+  defrecord :miner_entity, @miner_entity_defaults
+
+  @type miner_entity_index() :: {miner_role(), pubkey()}
+  @type miner_entity() :: record(:miner_entity, index: miner_entity_index())
+
+  # miner bucket:
+  #     index = {role, pubkey, bucket}
+  #     blocks, txs, rewards and fees = in the bucket
+  #     *_total = totals of the miner up to the end of the bucket
+  @miner_bucket_defaults [
+    index: nil,
+    blocks: 0,
+    txs: 0,
+    rewards: 0,
+    fees: 0,
+    blocks_total: 0,
+    txs_total: 0,
+    rewards_total: 0,
+    fees_total: 0
+  ]
+  defrecord :miner_bucket, @miner_bucket_defaults
+
+  @type miner_bucket_index() :: {miner_role(), pubkey(), bucket()}
+  @type miner_bucket() :: record(:miner_bucket, index: miner_bucket_index())
+
+  # miners of a bucket: index = {role, bucket, pubkey}
+  @bucket_miner_defaults [:index]
+  defrecord :bucket_miner, @bucket_miner_defaults
+
+  @type bucket_miner_index() :: {miner_role(), bucket(), pubkey()}
+  @type bucket_miner() :: record(:bucket_miner, index: bucket_miner_index())
+
+  # miner key to beneficiary link: index = {miner_pk, beneficiary_pk}
+  @miner_link_defaults [index: nil, blocks: 0, first_height: nil, last_height: nil]
+  defrecord :miner_link, @miner_link_defaults
+
+  @type miner_link_index() :: {pubkey(), pubkey()}
+  @type miner_link() :: record(:miner_link, index: miner_link_index())
+
+  # beneficiary to miner key link: index = {beneficiary_pk, miner_pk}
+  @beneficiary_link_defaults [:index]
+  defrecord :beneficiary_link, @beneficiary_link_defaults
+
+  @type beneficiary_link_index() :: {pubkey(), pubkey()}
+  @type beneficiary_link() :: record(:beneficiary_link, index: beneficiary_link_index())
+
+  # network bucket:
+  #     index = bucket
+  #     start/end_* = first and last generation (and its time) folded into the bucket
+  #     blocks, micro_blocks, txs, rewards and fees = in the bucket
+  #     difficulty_sum = sum of the difficulty of the key blocks of the bucket
+  #     active_* = miners or beneficiaries that mined in the bucket, new_* = the first time they did
+  #     top_*_blocks = most blocks mined by a single miner or beneficiary in the bucket
+  #     *_total = totals up to the end of the bucket
+  @network_bucket_defaults [
+    index: nil,
+    start_height: nil,
+    end_height: nil,
+    start_time: nil,
+    end_time: nil,
+    blocks: 0,
+    micro_blocks: 0,
+    txs: 0,
+    rewards: 0,
+    fees: 0,
+    difficulty_sum: 0,
+    active_miners: 0,
+    active_beneficiaries: 0,
+    new_miners: 0,
+    new_beneficiaries: 0,
+    top_miner_blocks: 0,
+    top_beneficiary_blocks: 0,
+    blocks_total: 0,
+    txs_total: 0,
+    rewards_total: 0,
+    fees_total: 0,
+    miners_total: 0,
+    beneficiaries_total: 0
+  ]
+  defrecord :network_bucket, @network_bucket_defaults
+
+  @type network_bucket_index() :: bucket()
+  @type network_bucket() :: record(:network_bucket, index: network_bucket_index())
+
   ### Node tables
   defrecord(:mempool_tx, :tx, hash: nil, signed_tx: nil, failures: nil)
 
@@ -1451,7 +1559,13 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.KindIntTransferTx,
       AeMdw.Db.Model.TargetKindIntTransferTx,
       AeMdw.Db.Model.Miner,
-      AeMdw.Db.Model.RewardMiner
+      AeMdw.Db.Model.RewardMiner,
+      AeMdw.Db.Model.MinerEntity,
+      AeMdw.Db.Model.MinerBucket,
+      AeMdw.Db.Model.BucketMiner,
+      AeMdw.Db.Model.MinerLink,
+      AeMdw.Db.Model.BeneficiaryLink,
+      AeMdw.Db.Model.NetworkBucket
     ]
   end
 
@@ -1692,6 +1806,12 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.RewardMiner), do: :reward_miner
+  def record(AeMdw.Db.Model.MinerEntity), do: :miner_entity
+  def record(AeMdw.Db.Model.MinerBucket), do: :miner_bucket
+  def record(AeMdw.Db.Model.BucketMiner), do: :bucket_miner
+  def record(AeMdw.Db.Model.MinerLink), do: :miner_link
+  def record(AeMdw.Db.Model.BeneficiaryLink), do: :beneficiary_link
+  def record(AeMdw.Db.Model.NetworkBucket), do: :network_bucket
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
   def record(AeMdw.Db.Model.Mempool), do: :mempool
   def record(AeMdw.Db.Model.DexPair), do: :dex_pair

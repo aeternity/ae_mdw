@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.Supervisor do
 
   use Supervisor
 
+  alias AeMdw.MinerStats.Folder, as: MinerStatsFolder
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
   alias AeMdw.Sync.SyncingQueue
@@ -26,6 +27,11 @@ defmodule AeMdw.Sync.Supervisor do
       AsyncStoreServer,
       {Task.Supervisor, name: Server.task_supervisor()}
     ]
+
+    children =
+      if Application.fetch_env!(:ae_mdw, :sync),
+        do: children ++ [MinerStatsFolder],
+        else: children
 
     Supervisor.init(children, strategy: :one_for_one)
   end
