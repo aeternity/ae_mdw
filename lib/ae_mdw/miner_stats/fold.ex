@@ -151,9 +151,14 @@ defmodule AeMdw.MinerStats.Fold do
         fees_total: fees
       )
 
-    state
-    |> State.put(Model.MinerBucket, row)
-    |> State.put(Model.BucketMiner, Model.bucket_miner(index: {role, bucket, pk}))
+    state = State.put(state, Model.MinerBucket, row)
+
+    # only the ones that mined in the bucket, not the ones that were just paid
+    if Model.miner_bucket(row, :blocks) > 0 do
+      State.put(state, Model.BucketMiner, Model.bucket_miner(index: {role, bucket, pk}))
+    else
+      state
+    end
   end
 
   defp update_network(state, facts, bucket, miner_tick, beneficiary_tick) do

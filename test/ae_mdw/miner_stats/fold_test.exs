@@ -187,6 +187,9 @@ defmodule AeMdw.MinerStats.FoldTest do
 
       assert {:ok, Model.network_bucket(active_beneficiaries: 1)} =
                State.get(state, Model.NetworkBucket, 2)
+
+      refute State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b2})
+      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b3})
     end
   end
 

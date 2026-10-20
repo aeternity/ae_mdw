@@ -181,6 +181,24 @@ defmodule AeMdwWeb.Router do
           get "/top-24h", StatsController, :top_miners_24hs
           get "/", StatsController, :miners_stats
         end
+
+        scope "/mining" do
+          pipe_through :not_hyperchain
+
+          get "/", MinerStatsController, :summary
+          get "/series", MinerStatsController, :network_series
+          get "/buckets/:bucket", MinerStatsController, :bucket
+          get "/buckets/:bucket/miners", MinerStatsController, :bucket_miners
+        end
+      end
+
+      scope "/miners" do
+        pipe_through :not_hyperchain
+
+        get "/", MinerStatsController, :miners
+        get "/:id", MinerStatsController, :miner
+        get "/:id/links", MinerStatsController, :links
+        get "/:id/series", MinerStatsController, :miner_series
       end
 
       get "/api", UtilController, :static_file,
