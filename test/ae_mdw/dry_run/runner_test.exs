@@ -1,6 +1,7 @@
 defmodule AeMdw.DryRun.RunnerTest do
   use ExUnit.Case
 
+  import AeMdw.Node.ContractCallFixtures, only: [reverted_call_rec: 0]
   import Mock
 
   alias AeMdw.Node.Db, as: DBN
@@ -23,6 +24,21 @@ defmodule AeMdw.DryRun.RunnerTest do
     test "returs error when contract does not exist" do
       assert {:error, :contract_does_not_exist} =
                Runner.call_contract(<<123_456::256>>, DBN.top_height_hash(false), "balances", [])
+    end
+
+    test "returns an error when the call reverts" do
+      with_mock :aec_dry_run, [:passthrough],
+        dry_run: fn @block_hash, _accounts, [{:tx, _aetx}], _opts ->
+          {:ok, {[contract_call_tx: {:ok, reverted_call_rec()}], []}}
+        end do
+        assert {:error, :revert} =
+                 Runner.call_contract(
+                   @contract_pk,
+                   {:micro, @height, @block_hash},
+                   "balances",
+                   []
+                 )
+      end
     end
 
     test "gives the AEX-N introspection calls an execution budget, not the call tx base gas" do
