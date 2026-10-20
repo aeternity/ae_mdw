@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.108.4](https://github.com/aeternity/ae_mdw/compare/v1.108.3...v1.108.4) (2026-10-20)
+
+
+### Bug Fixes
+
+* broadcast blocks when mem-sync resumes on top of the synced overlay ([e7baa13](https://github.com/aeternity/ae_mdw/commit/e7baa13f608b70f825e0e6775b5fd18777701021))
+* list GaMetaTx and PayingForTx activities for inner tx accounts ([#2212](https://github.com/aeternity/ae_mdw/issues/2212)) ([e51cf1a](https://github.com/aeternity/ae_mdw/commit/e51cf1a5e3683a2f8a6d31606c91e6a32c2b50db)), closes [#2154](https://github.com/aeternity/ae_mdw/issues/2154)
+
+
+### Testing
+
+* cover building and broadcasting synced generations ([0eae250](https://github.com/aeternity/ae_mdw/commit/0eae250060078175a9b9172fa4d7709d75e4b45c))
+* drop mock of removed Node.Db.get_tx_fee/1 ([#2220](https://github.com/aeternity/ae_mdw/issues/2220)) ([4788df4](https://github.com/aeternity/ae_mdw/commit/4788df41f6dd9f835efd44bf287b78db99a95b7d))
+
 ## [1.108.3](https://github.com/aeternity/ae_mdw/compare/v1.108.2...v1.108.3) (2026-10-13)
 
 
