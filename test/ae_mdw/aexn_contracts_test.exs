@@ -5,6 +5,7 @@ defmodule AeMdw.AexnContractsTest do
 
   import Mock
   import AeMdw.AexnFixtures
+  import AeMdw.Node.ContractCallFixtures, only: [reverted_call_rec: 0]
 
   setup_all do
     # Maintenance-mode boot skips aec_db:put_backend_module/1; tests that reach
@@ -381,6 +382,27 @@ defmodule AeMdw.AexnContractsTest do
       ] do
         assert {:ok, {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
+      end
+    end
+
+    test "returns out of gas error when the meta_info call reverts" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
+        {:aec_dry_run, [:passthrough],
+         [
+           dry_run: fn ^mb_hash, _accounts, [{:tx, _aetx}], _opts ->
+             {:ok, {[contract_call_tx: {:ok, reverted_call_rec()}], []}}
+           end
+         ]}
+      ] do
+        assert {:ok, {:out_of_gas_error, :out_of_gas_error, nil}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
