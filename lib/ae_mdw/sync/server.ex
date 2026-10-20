@@ -366,18 +366,19 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
-    new_state =
+    {new_state, gens_blocks} =
       gens_mutations
-      |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+      |> Enum.reduce({initial_state, []}, fn {height, blocks_mutations}, {state, gens_blocks} ->
+        gen_blocks = gen_blocks(height, blocks_mutations)
         blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
         :ok = profile_sync("sync_db", height, ts, blocks_mutations, 1)
 
-        add_tx_fees_job(new_state)
+        {add_tx_fees_job(new_state), [gen_blocks | gens_blocks]}
       end)
 
-    broadcast_blocks(gens_mutations)
+    broadcast_blocks(Enum.reverse(gens_blocks))
 
     new_state
   end
@@ -456,39 +457,48 @@ defmodule AeMdw.Sync.Server do
   defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
     # start syncing from memory, then anticipates commit to avoid committing only after 10 gens
     if from_height == AeMdw.Db.Util.synced_height(State.mem_state()) do
-      Enum.reduce(gens_mutations, empty_state, fn {height, gen_mutations}, state ->
-        gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
+      {new_state, gens_blocks} =
+        Enum.reduce(gens_mutations, {empty_state, []}, fn {height, gen_mutations},
+                                                          {state, gens_blocks} ->
+          gen_blocks = gen_blocks(height, gen_mutations)
+          gen_mutations = maybe_add_accounts_balance_mutations(gen_mutations)
 
-        {ts, commited_state} =
-          :timer.tc(fn ->
-            mutations =
-              Enum.map(gen_mutations, fn {_block_index, _mb, block_mutations} ->
-                block_mutations
-              end)
+          {ts, commited_state} =
+            :timer.tc(fn ->
+              mutations =
+                Enum.map(gen_mutations, fn {_block_index, _mb, block_mutations} ->
+                  block_mutations
+                end)
 
-            state
-            |> State.commit_mem(mutations)
-            |> add_tx_fees_job()
-          end)
+              state
+              |> State.commit_mem(mutations)
+              |> add_tx_fees_job()
+            end)
 
-        :ok = profile_sync("sync_mem", height, ts, gen_mutations, 1)
+          :ok = profile_sync("sync_mem", height, ts, gen_mutations, 1)
 
-        commited_state
-      end)
+          {commited_state, [gen_blocks | gens_blocks]}
+        end)
+
+      broadcast_blocks(Enum.reverse(gens_blocks))
+
+      new_state
     else
       exec_all_mem_mutations(empty_state, gens_mutations)
     end
   end
 
   defp exec_all_mem_mutations(state, gens_mutations) do
-    # gens_mutations is an Enumerable.t() (may be a lazy Stream), so it's
-    # traversed exactly once here - both to flatten it and to count the
-    # generations in this batch, instead of calling length/1 on it (which
-    # requires a proper list and would raise on a Stream).
-    {per_gen_blocks_mutations, gens_in_batch} =
-      Enum.map_reduce(gens_mutations, 0, fn {_height, blocks_mutations}, count ->
-        {blocks_mutations, count + 1}
+    # The stream rebuilds every mutation on each traversal, so it's traversed
+    # once and the broadcast reuses the blocks kept here.
+    {per_gen_blocks_mutations, gens_blocks} =
+      gens_mutations
+      |> Enum.map(fn {height, blocks_mutations} ->
+        {blocks_mutations, gen_blocks(height, blocks_mutations)}
       end)
+      |> Enum.unzip()
+
+    gens_in_batch = length(gens_blocks)
 
     blocks_mutations =
       per_gen_blocks_mutations
@@ -516,7 +526,7 @@ defmodule AeMdw.Sync.Server do
 
         :ok = profile_sync("sync_mem", height, ts, blocks_mutations, gens_in_batch)
 
-        broadcast_blocks(gens_mutations)
+        broadcast_blocks(gens_blocks)
 
         new_state
     end
@@ -528,30 +538,35 @@ defmodule AeMdw.Sync.Server do
     ref
   end
 
-  defp broadcast_blocks(gens_mutations) do
-    Enum.each(gens_mutations, fn {height, blocks_mutations} ->
-      {mbs_mutations, [{{^height, -1}, key_block, _mutations}]} = Enum.split(blocks_mutations, -1)
+  # Before account mutations are appended, so the key block is still last.
+  defp gen_blocks(height, blocks_mutations) do
+    {mbs_mutations, [{{^height, -1}, key_block, _mutations}]} = Enum.split(blocks_mutations, -1)
 
-      mbs_count = length(mbs_mutations)
+    {key_block, Enum.map(mbs_mutations, &elem(&1, 1))}
+  end
+
+  defp broadcast_blocks(gens_blocks) do
+    Enum.each(gens_blocks, fn {key_block, micro_blocks} ->
+      mbs_count = length(micro_blocks)
       {:ok, kb_hash} = key_block |> :aec_blocks.to_key_header() |> :aec_headers.hash_header()
-      txs_count = get_txs_count(kb_hash, mbs_mutations)
+      txs_count = get_txs_count(kb_hash, micro_blocks)
 
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count, txs_count)
       Broadcaster.broadcast_key_block(key_block, :v2, :mdw, mbs_count, txs_count)
       Broadcaster.broadcast_key_block(key_block, :v3, :mdw, mbs_count, txs_count)
 
-      Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
+      Enum.each(micro_blocks, fn micro_block ->
         Broadcaster.broadcast_micro_block(micro_block, :mdw)
         Broadcaster.broadcast_txs(micro_block, :mdw)
       end)
     end)
   end
 
-  defp get_txs_count(kb_hash, mbs_mutations) do
+  defp get_txs_count(kb_hash, micro_blocks) do
     with nil <- BroadcasterCache.get_txs_count(kb_hash) do
       count =
-        mbs_mutations
-        |> Enum.map(fn {_block_index, micro_block, _mutations} ->
+        micro_blocks
+        |> Enum.map(fn micro_block ->
           length(:aec_blocks.txs(micro_block))
         end)
         |> Enum.sum()
