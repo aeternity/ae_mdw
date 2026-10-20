@@ -744,6 +744,153 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
   end
 
+  describe "aex9_contract_transfers with mints and burns" do
+    setup do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      other_pk = :crypto.strong_rand_bytes(32)
+      create_txi = 20_000_000
+
+      # {txi, sender, recipient, amount} of a mint, a transfer and a burn
+      transfers = [
+        {create_txi + 1, contract_pk, account_pk, 1_000},
+        {create_txi + 2, account_pk, other_pk, 300},
+        {create_txi + 3, account_pk, nil, 200}
+      ]
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex9, contract_pk}))
+
+      store =
+        Enum.reduce(transfers, store, fn {txi, from_pk, to_pk, amount}, store ->
+          store =
+            store
+            |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: {txi, 0}))
+            |> Store.put(
+              Model.AexnTransfer,
+              Model.aexn_transfer(
+                index: {:aex9, from_pk, txi, 0, to_pk, amount},
+                contract_pk: contract_pk
+              )
+            )
+            |> Store.put(
+              Model.AexnContractFromTransfer,
+              Model.aexn_contract_from_transfer(
+                index: {create_txi, from_pk, txi, 0, to_pk, amount}
+              )
+            )
+
+          if to_pk do
+            Store.put(
+              store,
+              Model.AexnContractToTransfer,
+              Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, 0, from_pk, amount})
+            )
+          else
+            store
+          end
+        end)
+
+      %{
+        mint_burn_store: store,
+        contract_id: encode_contract(contract_pk),
+        account_id: encode_account(account_pk),
+        other_id: encode_account(other_pk),
+        minter_id: encode_account(contract_pk)
+      }
+    end
+
+    test "lists the account mints and burns along with its transfers", %{
+      conn: conn,
+      mint_burn_store: store,
+      contract_id: contract_id,
+      account_id: account_id,
+      other_id: other_id,
+      minter_id: minter_id
+    } do
+      assert %{"data" => [burn, transfer, mint], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", account: account_id)
+               |> json_response(200)
+
+      assert %{"sender" => ^account_id, "recipient" => nil, "amount" => 200} = burn
+      assert %{"sender" => ^account_id, "recipient" => ^other_id, "amount" => 300} = transfer
+      assert %{"sender" => ^minter_id, "recipient" => ^account_id, "amount" => 1_000} = mint
+    end
+
+    test "paginates the account transfers across a burn", %{
+      conn: conn,
+      mint_burn_store: store,
+      contract_id: contract_id,
+      account_id: account_id,
+      other_id: other_id
+    } do
+      assert %{"data" => [%{"recipient" => nil} = burn], "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", account: account_id, limit: 1)
+               |> json_response(200)
+
+      assert %{"data" => [%{"recipient" => ^other_id}], "prev" => prev} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert %{"data" => [^burn]} = conn |> with_store(store) |> get(prev) |> json_response(200)
+    end
+
+    test "lists mints as received and burns as sent", %{
+      conn: conn,
+      mint_burn_store: store,
+      contract_id: contract_id,
+      account_id: account_id,
+      other_id: other_id,
+      minter_id: minter_id
+    } do
+      assert %{"data" => [%{"sender" => ^minter_id, "amount" => 1_000}]} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", recipient: account_id)
+               |> json_response(200)
+
+      assert %{
+               "data" => [
+                 %{"recipient" => nil, "amount" => 200},
+                 %{"recipient" => ^other_id, "amount" => 300}
+               ]
+             } =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", sender: account_id)
+               |> json_response(200)
+    end
+
+    test "paginates the sender transfers across a burn", %{
+      conn: conn,
+      mint_burn_store: store,
+      contract_id: contract_id,
+      account_id: account_id,
+      other_id: other_id
+    } do
+      assert %{"data" => [%{"recipient" => ^other_id}], "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 sender: account_id,
+                 direction: "forward",
+                 limit: 1
+               )
+               |> json_response(200)
+
+      assert %{"data" => [%{"recipient" => nil, "amount" => 200}], "next" => nil} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+    end
+  end
+
   describe "aex141_transfers_from" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
       sender_id = encode_account(@from_pk1)
