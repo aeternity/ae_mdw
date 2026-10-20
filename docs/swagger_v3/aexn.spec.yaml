@@ -293,6 +293,46 @@ schemas:
       - amount
     title: Response for AEX9 transfers
     type: object
+  Aex9ContractTransfer:
+    description: AEX9 transfer, mint or burn of a token
+    type: object
+    required:
+      - amount
+      - block_height
+      - contract_id
+      - log_idx
+      - micro_index
+      - micro_time
+      - recipient
+      - sender
+      - tx_hash
+    properties:
+      amount:
+        type: integer
+        example: 31622776601683792319
+      block_height:
+        type: integer
+        example: 636510
+      contract_id:
+        $ref: '#/components/schemas/ContractAddress'
+      log_idx:
+        type: integer
+        example: 7
+      micro_index:
+        type: integer
+        example: 17
+      micro_time:
+        type: integer
+        example: 1659515279144
+      recipient:
+        description: Receiver of the tokens, null for burns
+        nullable: true
+        $ref: '#/components/schemas/AccountAddress'
+      sender:
+        description: Sender of the tokens, the contract itself for mints
+        $ref: '#/components/schemas/AccountAddress'
+      tx_hash:
+        $ref: '#/components/schemas/TransactionHash'
   Aex9BalanceResponse:
     description: Response Schema for AEX9 balance responses
     example:
@@ -848,6 +888,69 @@ paths:
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /aex9/{contractId}/transfers:
+    get:
+      deprecated: false
+      description: >-
+        Get AEX9 transfers, mints and burns of a token involving an account. One of
+        `account`, `sender` or `recipient` is required. A mint is sent by the contract itself
+        and a burn has no recipient.
+      operationId: GetAex9ContractTransfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Contract id
+          in: path
+          name: contractId
+          required: true
+          schema:
+            $ref: '#/components/schemas/ContractAddress'
+        - description: Account that either sent or received the tokens
+          in: query
+          name: account
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+        - description: Account that sent the tokens
+          in: query
+          name: sender
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+        - description: Account that received the tokens
+          in: query
+          name: recipient
+          required: false
+          schema:
+            $ref: '#/components/schemas/AccountAddress'
+      responses:
+        '200':
+          description: Returns paginated AEX9 transfers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Aex9ContractTransfer'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
           content:
             application/json:
               schema:
