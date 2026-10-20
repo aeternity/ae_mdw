@@ -2464,7 +2464,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       with_mocks [
         {Db, [:passthrough],
          [
-           get_tx_fee: fn ^tx_hash -> 100 end,
            get_tx_data: fn ^tx_hash ->
              {"", :paying_for_tx, signed_paying_for_tx, paying_for_tx}
            end,
