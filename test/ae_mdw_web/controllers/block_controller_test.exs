@@ -423,6 +423,40 @@ defmodule AeMdwWeb.BlockControllerTest do
       end
     end
 
+    test "it returns the index of each micro block within its generation", %{
+      conn: conn,
+      store: store
+    } do
+      with_blockchain %{alice: 10_000, bob: 20_000},
+        kb1: [
+          mb1: [t1: spend_tx(:alice, :bob, 1_000)],
+          mb2: [t2: spend_tx(:bob, :alice, 1_000)],
+          mb3: [t3: spend_tx(:alice, :bob, 1_000)]
+        ] do
+        %{hash: kb_hash, height: kbi} = blocks[:kb1]
+        mb_hashes = for name <- [:mb1, :mb2, :mb3], do: blocks[name].hash
+
+        store =
+          [kb_hash | mb_hashes]
+          |> Enum.with_index(-1)
+          |> Enum.reduce(store, fn {hash, mbi}, store ->
+            Store.put(
+              store,
+              Model.Block,
+              Model.block(index: {kbi, mbi}, hash: Validate.id!(hash), tx_index: 0)
+            )
+          end)
+
+        for {mb_hash, mbi} <- Enum.with_index(mb_hashes) do
+          assert %{"hash" => ^mb_hash, "micro_block_index" => ^mbi} =
+                   conn
+                   |> with_store(store)
+                   |> get("/v3/micro-blocks/#{mb_hash}")
+                   |> json_response(200)
+        end
+      end
+    end
+
     test "it returns 404 when not found", %{conn: conn, store: store} do
       decoded_hash = TS.micro_block_hash(0)
       encoded_hash = :aeser_api_encoder.encode(:micro_block_hash, decoded_hash)
