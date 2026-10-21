@@ -55,5 +55,51 @@ defmodule AeMdw.Db.TotalStatisticsMutationTest do
 
       assert day4_count - day2_count == 11
     end
+
+    test "it increments an existing statistic without adding the previous one again" do
+      indexfn = fn interval_start -> {{:total_transactions, :all}, :day, interval_start} end
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+
+      mutation1 = TotalStatisticsMutation.new([{indexfn.(1), 1}, {indexfn.(2), 5}])
+      mutation2 = TotalStatisticsMutation.new([{indexfn.(2), 3}])
+
+      new_state = State.commit_mem(state, [mutation1, mutation2])
+
+      assert {:ok, Model.statistic(count: 1)} = State.get(new_state, Model.Statistic, indexfn.(1))
+      assert {:ok, Model.statistic(count: 9)} = State.get(new_state, Model.Statistic, indexfn.(2))
+    end
+
+    test "it doesn't carry over counts from other tx types or intervals" do
+      all_day_index = {{:total_transactions, :all}, :day, 1}
+      all_week_index = {{:total_transactions, :all}, :week, 0}
+      spend_day_index = {{:total_transactions, :spend_tx}, :day, 2}
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+
+      mutation =
+        TotalStatisticsMutation.new([
+          {all_day_index, 4},
+          {all_week_index, 3},
+          {spend_day_index, 2}
+        ])
+
+      new_state = State.commit_mem(state, [mutation])
+
+      assert {:ok, Model.statistic(count: 4)} =
+               State.get(new_state, Model.Statistic, all_day_index)
+
+      assert {:ok, Model.statistic(count: 3)} =
+               State.get(new_state, Model.Statistic, all_week_index)
+
+      assert {:ok, Model.statistic(count: 2)} =
+               State.get(new_state, Model.Statistic, spend_day_index)
+    end
   end
 end
