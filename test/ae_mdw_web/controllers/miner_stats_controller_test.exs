@@ -1,10 +1,12 @@
 defmodule AeMdwWeb.MinerStatsControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.MinerStats.Fold
   alias AeMdw.MinerStatsFixtures
   alias AeMdw.Node
+  alias AeMdw.Sync.MemStoreCreator
 
   @m1 <<1::256>>
   @m2 <<2::256>>
@@ -140,6 +142,70 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
 
       assert %{"error" => ~s(invalid cursor: %{"x" => "1"})} =
                conn |> get("/v3/miners/#{id(@b1)}/links?cursor[x]=1") |> json_response(400)
+    end
+  end
+
+  describe "GET /v3/miners sorted by a total or activity" do
+    setup %{conn: conn} do
+      store = MemStoreCreator.create(NullStore.new())
+
+      # the order of each field is neither the one of the pubkeys nor its reverse
+      Enum.reduce([{101, @m2, 9, 1}, {102, @m3, 1, 50}, {103, @m1, 5, 20}], State.new(store), fn
+        {height, miner, txs, fees}, state ->
+          Fold.fold(state, %{
+            height: height,
+            time: height * 1_000,
+            miner: miner,
+            beneficiary: @b1,
+            difficulty: 100,
+            micro_blocks: 0,
+            txs: txs,
+            fees: fees,
+            rewards: %{}
+          })
+      end)
+
+      {:ok, conn: with_store(conn, store)}
+    end
+
+    test "it sorts them by txs, fees, or when they first or last mined", %{conn: conn} do
+      [m1, m2, m3] = Enum.map([@m1, @m2, @m3], &id/1)
+
+      for {by, direction, ids} <- [
+            {"txs", "backward", [m2, m1, m3]},
+            {"fees", "backward", [m3, m1, m2]},
+            {"fees", "forward", [m2, m1, m3]},
+            {"first_active", "forward", [m2, m3, m1]},
+            {"last_active", "backward", [m1, m3, m2]}
+          ] do
+        assert %{"data" => data} =
+                 conn |> get("/v3/miners", by: by, direction: direction) |> json_response(200)
+
+        assert ^ids = Enum.map(data, & &1["id"])
+      end
+    end
+
+    test "its cursor is the value and the account of the first miner of the page", %{
+      conn: conn
+    } do
+      [m1, m2] = Enum.map([@m1, @m2], &id/1)
+
+      assert %{"next" => next} =
+               conn |> get("/v3/miners", by: "fees", limit: 1) |> json_response(200)
+
+      assert %{"cursor" => cursor} =
+               next |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      assert cursor == "20:#{m1}"
+
+      # the cursor still works after the miner moved
+      assert %{"data" => [%{"id" => ^m1}, %{"id" => ^m2}]} =
+               conn |> get("/v3/miners", by: "fees", cursor: "25:#{m2}") |> json_response(200)
+
+      for cursor <- [m1, "x:#{m1}", "20:ak_nope", "20:#{m1}:1", "20"] do
+        assert %{"error" => "invalid cursor: " <> _cursor} =
+                 conn |> get("/v3/miners", cursor: cursor) |> json_response(400)
+      end
     end
   end
 

@@ -243,7 +243,7 @@ defmodule AeMdw.MinerStats.FoldTest do
                  State.get(state, Model.MinerBucket, {:beneficiary, @b2, interval, 0})
 
         assert State.exists?(state, Model.BucketMiner, {:miner, interval, 0, @m3})
-        refute State.exists?(state, Model.BucketMiner, {:beneficiary, interval, 0, <<99::256>>})
+        refute State.exists?(state, Model.BucketMiner, {:miner, interval, 0, @b1})
       end
     end
 

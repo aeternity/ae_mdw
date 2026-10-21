@@ -1,8 +1,12 @@
 defmodule AeMdwWeb.GraphQL.MinerStatsTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Store
   alias AeMdw.MinerStatsFixtures
+
+  require Model
 
   @schema AeMdwWeb.GraphQL.Schema
 
@@ -77,6 +81,50 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
     test "it returns the error of an invalid cursor", %{state: state} do
       assert {:ok, %{errors: [%{message: "invalid cursor: nope"}]}} =
                run(state, ~s|{ miners(cursor: "nope") { data { id } } }|)
+    end
+  end
+
+  describe "minersStats" do
+    test "it only counts the rewards of the period" do
+      now = 1_700_000_000_000
+      [m1, m2] = [<<1::256>>, <<2::256>>]
+
+      store =
+        Enum.reduce(
+          [{500, now - :timer.hours(24 * 10), m1, 100}, {600, now, m2, 5}],
+          empty_store(),
+          fn {height, time, miner_pk, reward}, store ->
+            store
+            |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: <<height::256>>))
+            |> Store.put(
+              Model.KeyBlockTime,
+              Model.key_block_time(index: time, height: height, miner: miner_pk)
+            )
+            |> Store.put(
+              Model.IntTransferTx,
+              Model.int_transfer_tx(
+                index: {{height, -1}, "reward_block", miner_pk, -1},
+                amount: reward
+              )
+            )
+            |> Store.put(
+              Model.KindIntTransferTx,
+              Model.kind_int_transfer_tx(index: {"reward_block", {height, -1}, miner_pk, -1})
+            )
+          end
+        )
+
+      :ets.delete_all_objects(:miners_period_rewards)
+
+      assert {:ok, %{data: %{"minersStats" => %{"data" => [miner]}}} = res} =
+               run(
+                 State.new(store),
+                 "{ minersStats(period: DAY) { data { miner totalReward } } }"
+               )
+
+      refute res[:errors]
+      assert %{"miner" => id, "totalReward" => "5"} = miner
+      assert id == :aeapi.format_account_pubkey(m2)
     end
   end
 
