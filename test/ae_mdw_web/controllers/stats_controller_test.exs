@@ -4,6 +4,7 @@ defmodule AeMdwWeb.StatsControllerTest do
   import Mock
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Db.MinerRewardsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
@@ -1590,14 +1591,13 @@ defmodule AeMdwWeb.StatsControllerTest do
       miner2_pk = :aeapi.format_account_pubkey(miner2)
       miner3_pk = :aeapi.format_account_pubkey(miner3)
 
-      store =
-        store
-        |> Store.put(Model.Miner, Model.miner(index: miner1, total_reward: 10))
-        |> Store.put(Model.Miner, Model.miner(index: miner2, total_reward: 20))
-        |> Store.put(Model.Miner, Model.miner(index: miner3, total_reward: 30))
-        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {10, miner1}))
-        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {20, miner2}))
-        |> Store.put(Model.RewardMiner, Model.reward_miner(index: {30, miner3}))
+      # paid twice, miner1 goes from the lowest reward to the highest, so the order
+      # isn't the one of the pubkeys
+      Enum.reduce(
+        [%{miner1 => 10, miner2 => 10, miner3 => 20}, %{miner1 => 20}],
+        State.new(store),
+        &MinerRewardsMutation.execute(MinerRewardsMutation.new(&1), &2)
+      )
 
       conn = with_store(conn, store)
 
@@ -1613,9 +1613,9 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/miners")
                |> json_response(200)
 
-      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st1
-      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
-      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st3
+      assert %{"miner" => ^miner1_pk, "total_reward" => 30} = st1
+      assert %{"miner" => ^miner3_pk, "total_reward" => 20} = st2
+      assert %{"miner" => ^miner2_pk, "total_reward" => 10} = st3
     end
 
     test "it returns the miners sorted by total_reward with limit", %{
@@ -1628,15 +1628,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/miners", limit: 2)
                |> json_response(200)
 
-      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st1
-      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
+      assert %{"miner" => ^miner1_pk, "total_reward" => 30} = st1
+      assert %{"miner" => ^miner3_pk, "total_reward" => 20} = st2
 
       assert %{"prev" => prev_url, "data" => [st3], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st3
+      assert %{"miner" => ^miner2_pk, "total_reward" => 10} = st3
 
       assert ^statistics =
                conn
@@ -1654,15 +1654,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/stats/miners", limit: 2, direction: "forward")
                |> json_response(200)
 
-      assert %{"miner" => ^miner1_pk, "total_reward" => 10} = st1
-      assert %{"miner" => ^miner2_pk, "total_reward" => 20} = st2
+      assert %{"miner" => ^miner2_pk, "total_reward" => 10} = st1
+      assert %{"miner" => ^miner3_pk, "total_reward" => 20} = st2
 
       assert %{"prev" => prev_url, "data" => [st3], "next" => nil} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"miner" => ^miner3_pk, "total_reward" => 30} = st3
+      assert %{"miner" => ^miner1_pk, "total_reward" => 30} = st3
 
       assert ^statistics =
                conn
