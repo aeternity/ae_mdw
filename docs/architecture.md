@@ -577,6 +577,28 @@ Visualization of the different `Server` states:
 
 ###
 
+### Mining stats
+
+The mining stats (`AeMdw.MinerStats`) are not produced by the sync mutations. A background
+process (`AeMdw.MinerStats.Folder`) folds the generations already stored in RocksDb, in
+order, into their own tables: per miner key and per beneficiary (entity, links, and series
+rows per bucket of 20 generations) and for the whole network. The series are indexed for
+each interval (hour, day, week, month and year), so reading any of them is a range read.
+
+Folding from the database, and not from the mutations, keeps the stats consistent:
+
+* The key block mutations of the open generation are built again every time the in-memory
+  sync resumes on it, so counters written by them wouldn't be exact.
+* A single writer in order is the same code for the history and for the new generations: the
+  first run is the backfill from the genesis, without blocking the sync nor the startup.
+* Each chunk of generations is written in a single transaction together with the height it
+  reaches (`Stat` `:miner_stats_height`), so a generation is folded exactly once, also across
+  crashes and restarts.
+
+The stats only include the generations of the database, so they trail the top of the chain by
+the number of generations kept in memory. `AeMdw.Db.Model.NetworkBucket`, `MinerBucket`,
+`BucketMiner`, `MinerEntity`, `MinerLink` and `BeneficiaryLink` hold the data.
+
 ## Database searching
 
 All the functionality described above - database design, syncing  - has one

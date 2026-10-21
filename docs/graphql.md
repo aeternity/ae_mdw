@@ -584,6 +584,36 @@ query {
 }
 ```
 
+### Mining stats
+
+The mining stats of the whole network per day (the intervals are `1`, `24`, `168`, `720` and
+`8760` buckets of 20 generations, `intervalBy` only has `day`, `week` and `month`):
+
+```graphql
+query {
+  miningSeries(interval: 24, limit: 7) {
+    data { bucket startTime blocks txs rewards activeMiners newMiners hashrate minersTotal }
+  }
+}
+```
+
+Miners by their rewards (`role: BENEFICIARY`, the default is the miner key), a miner and its
+series. The amounts are `BigInt`, and the `rewards` of the miner keys are `null`:
+
+```graphql
+query {
+  miners(role: BENEFICIARY, orderBy: REWARDS, limit: 5) {
+    data { id blocks txs rewards firstHeight lastHeight }
+  }
+  miner(id: "ak_...", role: BENEFICIARY) { id blocks rewards lastInfo }
+  minerSeries(id: "ak_...", role: BENEFICIARY, intervalBy: WEEK, limit: 4) {
+    nextCursor
+    data { bucket startTime blocks rewards rewardsTotal }
+  }
+  miningSummary { syncedHeight lastBucket blocks miners beneficiaries }
+}
+```
+
 ### Status / health
 
 ```graphql

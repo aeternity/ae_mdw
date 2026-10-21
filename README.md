@@ -3429,6 +3429,107 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners?role=beneficiary&by=reward
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?scope=gen:1000000-1100000&interval_by=week" | jq '.'
 ```
 
+Example responses (with illustrative values):
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
+{
+  "bucket_size": 20,
+  "synced_height": 1100000,
+  "last_bucket": 55000,
+  "blocks": 1100000,
+  "txs": 52000000,
+  "rewards": 1500000000000000000000000,
+  "fees": 900000000000000000000,
+  "miners": 310,
+  "beneficiaries": 290
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=day&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "bucket": 54984,
+      "interval": 24,
+      "start_height": 1099680,
+      "end_height": 1100159,
+      "start_time": 1741942231653,
+      "end_time": 1742028431653,
+      "blocks": 480,
+      "micro_blocks": 9000,
+      "txs": 12000,
+      "rewards": 1100000000000000000000,
+      "fees": 2000000000000000000,
+      "avg_block_time": 180000,
+      "avg_difficulty": 4400000000000,
+      "hashrate": 10000000000000,
+      "active_miners": 25,
+      "active_beneficiaries": 22,
+      "new_miners": 1,
+      "new_beneficiaries": 0,
+      "top_miner_blocks": 90,
+      "top_beneficiary_blocks": 95,
+      "blocks_total": 1099680,
+      "txs_total": 51990000,
+      "rewards_total": 1499000000000000000000000,
+      "fees_total": 899000000000000000000,
+      "miners_total": 310,
+      "beneficiaries_total": 290
+    }
+  ],
+  "next": "/v3/stats/mining/series?cursor=2290&interval_by=day&limit=1",
+  "prev": null
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "bucket": 55000,
+      "interval": 1,
+      "start_height": 1100000,
+      "end_height": 1100019,
+      "start_time": 1742028431653,
+      "end_time": 1742031731653,
+      "blocks": 3,
+      "txs": 40,
+      "rewards": null,
+      "fees": 7000000000000000,
+      "blocks_total": 12000,
+      "txs_total": 650000,
+      "rewards_total": null,
+      "fees_total": 20000000000000000000
+    }
+  ],
+  "next": "/v3/miners/ak_.../series?cursor=54998&limit=1",
+  "prev": null
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_..." | jq '.'
+{
+  "id": "ak_...",
+  "role": "miner",
+  "first_height": 190000,
+  "first_time": 1600000000000,
+  "last_height": 1100000,
+  "last_time": 1742031731653,
+  "blocks": 12000,
+  "txs": 650000,
+  "rewards": null,
+  "fees": 20000000000000000000,
+  "last_info": 0,
+  "info_changes": 2
+}
+```
+
+Notes:
+
+* A bucket without rows (the miner neither mined nor got paid in it) isn't returned, the `*_total` fields of a row carry what happened before.
+* The series are not available on hyperchain nodes, which have no mining.
+* The `limit` is up to 1000 and the miners are listed with `limit` and `direction` like the other stats.
+* The `info` of a miner is the info field of the key blocks it mined, which usually identifies the software or the pool. The IP of a miner is not on chain, so it can't be known.
+* After upgrading, the background run builds the whole history, which takes a while on mainnet. The rest of the API works meanwhile and the series only have the generations up to `synced_height`.
+
 The same data is available in GraphQL with the `miningSummary`, `miningSeries`, `miningBucket`,
 `miningBucketMiners`, `miners`, `miner`, `minerLinks` and `minerSeries` queries.
 
