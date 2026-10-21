@@ -3401,8 +3401,10 @@ rows, and it is paginated with the usual `limit`, `direction` and cursors. The `
 and `end_time` are the time of the first and last key block of the row.
 
 A key block has the miner key that mined it and the beneficiary that gets its reward, which
-are different accounts when a pool mines for its members. Every endpoint of the miners takes
-`role=miner` (the default) or `role=beneficiary`. Only beneficiaries get rewards, so the
+are different accounts when a pool mines for its members, both are plain accounts (`ak_`).
+Every endpoint of the miners takes `role=miner` or `role=beneficiary`. The lists use the miner
+keys when it isn't given and a single miner (`/v3/miners/:id...`) finds it from the account:
+the miner key, unless the account only has stats as a beneficiary. Only beneficiaries get rewards, so the
 `rewards` of the miner keys are `null` (and `by=rewards` is only for beneficiaries). The rewards are counted when they are paid, which is
 some generations after the block was mined, like the totals of `/v3/stats/miners`.
 

@@ -2,6 +2,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Db.State
+  alias AeMdw.MinerStats.Fold
   alias AeMdw.MinerStatsFixtures
   alias AeMdw.Node
 
@@ -128,6 +129,43 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                conn |> get("/v3/miners/#{b1}", role: "beneficiary") |> json_response(200)
     end
 
+    test "it finds the role of the account when it's not given", %{conn: conn} do
+      [m3, b2] = Enum.map([@m3, @b2], &id/1)
+
+      assert %{"id" => ^m3, "role" => "miner"} =
+               conn |> get("/v3/miners/#{m3}") |> json_response(200)
+
+      assert %{"id" => ^b2, "role" => "beneficiary", "rewards" => 79} =
+               conn |> get("/v3/miners/#{b2}") |> json_response(200)
+    end
+
+    test "it uses the miner when the account is both, unless the role is given", %{
+      conn: conn,
+      store: store
+    } do
+      State.new(store)
+      |> Fold.fold(%{
+        height: 61,
+        time: 7_000,
+        miner: @b1,
+        beneficiary: @b1,
+        info: nil,
+        difficulty: 100,
+        micro_blocks: 0,
+        txs: 0,
+        fees: 0,
+        rewards: %{}
+      })
+
+      b1 = id(@b1)
+
+      assert %{"id" => ^b1, "role" => "miner", "blocks" => 1} =
+               conn |> get("/v3/miners/#{b1}") |> json_response(200)
+
+      assert %{"id" => ^b1, "role" => "beneficiary", "blocks" => 5} =
+               conn |> get("/v3/miners/#{b1}", role: "beneficiary") |> json_response(200)
+    end
+
     test "it returns an error when it's not found or invalid", %{conn: conn} do
       unknown = id(<<99::256>>)
       error = "not found: #{unknown}"
@@ -148,6 +186,13 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                  %{"id" => ^b1, "blocks" => 3, "first_height" => 20, "last_height" => 60}
                ]
              } = conn |> get("/v3/miners/#{id(@m1)}/links") |> json_response(200)
+    end
+
+    test "it finds the role of the account when it's not given", %{conn: conn} do
+      [m1, m2] = Enum.map([@m1, @m2], &id/1)
+
+      assert %{"data" => [%{"id" => ^m2, "role" => "miner"}, %{"id" => ^m1}]} =
+               conn |> get("/v3/miners/#{id(@b1)}/links") |> json_response(200)
     end
 
     test "it returns the miners of a beneficiary and paginates", %{conn: conn} do
@@ -195,6 +240,11 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                "blocks_total" => 2,
                "txs_total" => 3
              } = bucket1
+    end
+
+    test "it finds the role of the account when it's not given", %{conn: conn} do
+      assert %{"data" => [%{"bucket" => 2, "rewards" => 9}, %{"bucket" => 1, "rewards" => 70}]} =
+               conn |> get("/v3/miners/#{id(@b2)}/series") |> json_response(200)
     end
 
     test "it returns the rewards of a beneficiary, also in buckets it didn't mine", %{conn: conn} do

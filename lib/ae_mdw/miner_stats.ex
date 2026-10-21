@@ -91,7 +91,7 @@ defmodule AeMdw.MinerStats do
   @spec fetch_miners(state(), pagination(), query(), order_by() | nil, cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_miners(state, pagination, query, order_by, cursor) do
-    with {:ok, role, rest} <- split_role(query),
+    with {:ok, role, rest} <- split_role(query, :miner),
          :ok <- check_params(rest, []),
          :ok <- check_order(role, order_by),
          {:ok, cursor} <- Miners.deserialize_cursor(cursor) do
@@ -117,6 +117,7 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query),
          :ok <- check_params(rest, []),
          {:ok, pk} <- Validate.id(id, [:account_pubkey]),
+         role = detect_role(state, role, pk),
          {:ok, entity} <- found(State.get(state, Model.MinerEntity, {role, pk}), id) do
       {:ok, render_miner(entity)}
     end
@@ -132,6 +133,7 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query),
          :ok <- check_params(rest, []),
          {:ok, pk} <- Validate.id(id, [:account_pubkey]),
+         role = detect_role(state, role, pk),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
       table = if role == :miner, do: Model.MinerLink, else: Model.BeneficiaryLink
       boundary = {{pk, <<>>}, {pk, Util.max_256bit_bin()}}
@@ -159,6 +161,7 @@ defmodule AeMdw.MinerStats do
   def fetch_miner_series(state, pagination, id, scope, query, cursor) do
     with {:ok, role, rest} <- split_role(query),
          {:ok, pk} <- Validate.id(id, [:account_pubkey]),
+         role = detect_role(state, role, pk),
          {:ok, interval} <- convert_interval(rest) do
       series(
         state,
@@ -203,7 +206,7 @@ defmodule AeMdw.MinerStats do
   @spec fetch_bucket_miners(state(), pagination(), Model.bucket(), query(), cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_bucket_miners(state, pagination, bucket, query, cursor) do
-    with {:ok, role, rest} <- split_role(query),
+    with {:ok, role, rest} <- split_role(query, :miner),
          :ok <- check_params(rest, []),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
       boundary = {{role, 1, bucket, <<>>}, {role, 1, bucket, Util.max_256bit_bin()}}
@@ -451,16 +454,28 @@ defmodule AeMdw.MinerStats do
   defp drop_after(sorted, nil), do: sorted
   defp drop_after(sorted, cursor), do: Enum.drop_while(sorted, &(&1 > cursor))
 
-  defp split_role(query) do
+  defp split_role(query, default \\ nil) do
     case Map.pop(query, "role") do
       {nil, rest} ->
-        {:ok, :miner, rest}
+        {:ok, default, rest}
 
       {role, rest} ->
         case Map.fetch(@roles, role) do
           {:ok, role} -> {:ok, role, rest}
           :error -> {:error, ErrInput.Query.exception(value: "role=#{role}")}
         end
+    end
+  end
+
+  # Miner keys and beneficiaries are both accounts, the miner is used unless there are only
+  # stats of the account as a beneficiary.
+  defp detect_role(_state, role, _pk) when not is_nil(role), do: role
+
+  defp detect_role(state, nil, pk) do
+    cond do
+      State.exists?(state, Model.MinerEntity, {:miner, pk}) -> :miner
+      State.exists?(state, Model.MinerEntity, {:beneficiary, pk}) -> :beneficiary
+      true -> :miner
     end
   end
 

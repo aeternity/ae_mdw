@@ -61,13 +61,16 @@ components:
     MinerRoleParam:
       in: query
       name: role
-      description: 'If the miners are identified by the miner key or by the beneficiary that gets the rewards'
+      description: >-
+        If the miners are identified by the miner key or by the beneficiary that gets the
+        rewards, both are accounts. When listing miners it is the miner key by default, and
+        for a single miner it is found from the account: the miner key unless it only has
+        stats as a beneficiary.
       schema:
         type: string
         enum:
           - miner
           - beneficiary
-        default: miner
     MiningBucketParam:
       in: path
       name: bucket
