@@ -499,7 +499,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/MinerRoleParam'
         - name: by
-          description: What to sort the miners by.
+          description: What to sort the miners by. The rewards are only for the beneficiaries.
           in: query
           required: false
           schema:

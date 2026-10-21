@@ -84,14 +84,13 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       assert id == ids.b1
     end
 
-    test "it returns an error when it's not found", %{state: state, ids: ids} do
+    test "it returns an error when it's not found", %{state: state} do
       unknown = :aeapi.format_account_pubkey(<<99::256>>)
 
       assert {:ok, %{errors: [%{message: message}]}} =
                run(state, ~s|{ miner(id: "#{unknown}") { id } }|)
 
       assert message == "not found: #{unknown}"
-      assert ids.m1 != unknown
     end
 
     test "it returns the beneficiaries of a miner", %{state: state, ids: ids} do

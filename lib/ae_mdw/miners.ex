@@ -12,6 +12,7 @@ defmodule AeMdw.Miners do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
+  alias AeMdw.Node.Db
   alias AeMdw.Util
 
   require Model
@@ -21,6 +22,7 @@ defmodule AeMdw.Miners do
   @type query() :: %{binary() => binary()}
   @typep state() :: State.t()
   @typep pagination() :: Collection.direction_limit()
+  @typep pubkey() :: Db.pubkey()
 
   @periods %{"day" => :day, "week" => :week, "month" => :month}
   @period_msecs %{
@@ -130,15 +132,18 @@ defmodule AeMdw.Miners do
 
   defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
 
-  defp serialize_cursor({total_reward, miner_pk}) do
+  @spec serialize_cursor({non_neg_integer(), pubkey()}) :: binary()
+  def serialize_cursor({total_reward, miner_pk}) do
     {total_reward, miner_pk}
     |> :erlang.term_to_binary()
     |> Base.hex_encode32(padding: false)
   end
 
-  defp deserialize_cursor(nil), do: {:ok, nil}
+  @spec deserialize_cursor(binary() | nil) ::
+          {:ok, {non_neg_integer(), pubkey()} | nil} | {:error, Error.t()}
+  def deserialize_cursor(nil), do: {:ok, nil}
 
-  defp deserialize_cursor(cursor_hex) do
+  def deserialize_cursor(cursor_hex) do
     with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
          {total_reward, <<miner_pk::256>>}
          when is_integer(total_reward) <-

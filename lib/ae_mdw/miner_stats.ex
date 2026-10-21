@@ -13,6 +13,7 @@ defmodule AeMdw.MinerStats do
   alias AeMdw.EtsCache
   alias AeMdw.MinerStats.Fold
   alias AeMdw.MinerStats.Folder
+  alias AeMdw.Miners
   alias AeMdw.Node
   alias AeMdw.Util
   alias AeMdw.Validate
@@ -92,7 +93,8 @@ defmodule AeMdw.MinerStats do
   def fetch_miners(state, pagination, query, order_by, cursor) do
     with {:ok, role, rest} <- split_role(query),
          :ok <- check_params(rest, []),
-         {:ok, cursor} <- deserialize_miner_cursor(cursor) do
+         :ok <- check_order(role, order_by),
+         {:ok, cursor} <- Miners.deserialize_cursor(cursor) do
       sorted = sorted_miners(state, role, order_by || :blocks)
 
       stream_fn = fn
@@ -104,7 +106,7 @@ defmodule AeMdw.MinerStats do
       |> Collection.paginate(
         pagination,
         fn {_value, pk} -> render_miner(State.fetch!(state, Model.MinerEntity, {role, pk})) end,
-        &serialize_miner_cursor/1
+        &Miners.serialize_cursor/1
       )
       |> then(&{:ok, &1})
     end
@@ -225,8 +227,6 @@ defmodule AeMdw.MinerStats do
     end
   end
 
-  # Series
-
   # Every interval is indexed, with the group in the last place of the key, which is also
   # what the cursor is.
   defp series(state, pagination, scope, interval, cursor, table, key_fun, render_fun) do
@@ -250,8 +250,6 @@ defmodule AeMdw.MinerStats do
 
   defp group_range({:gen, first_gen..last_gen//_step}, interval),
     do: {div(Fold.bucket(first_gen), interval), div(Fold.bucket(last_gen), interval)}
-
-  # Rendering
 
   defp render_miner(
          Model.miner_entity(
@@ -412,8 +410,6 @@ defmodule AeMdw.MinerStats do
   defp found({:ok, entity}, _id), do: {:ok, entity}
   defp found(:not_found, id), do: {:error, ErrInput.NotFound.exception(value: id)}
 
-  # Sorted miners
-
   # Ascending [{value, pubkey}] of the role, cached while there's nothing new folded.
   defp sorted_miners(state, role, order_by) do
     cache_key = {role, order_by, Folder.folded_height(state)}
@@ -455,8 +451,6 @@ defmodule AeMdw.MinerStats do
   defp drop_after(sorted, nil), do: sorted
   defp drop_after(sorted, cursor), do: Enum.drop_while(sorted, &(&1 > cursor))
 
-  # Params and cursors
-
   defp split_role(query) do
     case Map.pop(query, "role") do
       {nil, rest} ->
@@ -469,6 +463,10 @@ defmodule AeMdw.MinerStats do
         end
     end
   end
+
+  # Only beneficiaries get rewards.
+  defp check_order(:miner, :rewards), do: {:error, ErrInput.Query.exception(value: "by=rewards")}
+  defp check_order(_role, _order_by), do: :ok
 
   defp check_params(query, allowed_keys) do
     case Enum.find(query, fn {key, _val} -> key not in allowed_keys end) do
@@ -531,26 +529,6 @@ defmodule AeMdw.MinerStats do
   end
 
   def parse_bucket(bucket), do: {:error, ErrInput.Query.exception(value: "bucket=#{bucket}")}
-
-  defp serialize_miner_cursor({value, pk}) do
-    {value, pk}
-    |> :erlang.term_to_binary()
-    |> Base.hex_encode32(padding: false)
-  end
-
-  defp deserialize_miner_cursor(nil), do: {:ok, nil}
-
-  defp deserialize_miner_cursor(cursor_hex) do
-    with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
-         {value, <<pk::256>>} when is_integer(value) <-
-           :erlang.binary_to_term(cursor_bin, [:safe]) do
-      {:ok, {value, <<pk::256>>}}
-    else
-      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
-    end
-  rescue
-    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
-  end
 
   defp deserialize_pubkey_cursor(nil), do: {:ok, nil}
 

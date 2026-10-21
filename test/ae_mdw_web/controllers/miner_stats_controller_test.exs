@@ -106,6 +106,9 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"error" => "invalid query: by=speed"} =
                conn |> get("/v3/miners", by: "speed") |> json_response(400)
 
+      assert %{"error" => "invalid query: by=rewards"} =
+               conn |> get("/v3/miners", by: "rewards") |> json_response(400)
+
       assert %{"error" => "invalid query: foo=bar"} =
                conn |> get("/v3/miners", foo: "bar") |> json_response(400)
 

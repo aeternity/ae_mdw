@@ -44,8 +44,6 @@ defmodule AeMdw.MinerStats.Fold do
     Enum.reduce(@intervals, state, &fold_interval(&2, ctx, &1))
   end
 
-  # Entities
-
   defp mine(state, role, pk, facts) do
     entity_key = {role, pk}
 
@@ -125,8 +123,6 @@ defmodule AeMdw.MinerStats.Fold do
   end
 
   defp entity!(state, role, pk), do: State.fetch!(state, Model.MinerEntity, {role, pk})
-
-  # Series
 
   defp fold_interval(state, %{facts: facts} = ctx, interval) do
     group = div(bucket(facts.height), interval)

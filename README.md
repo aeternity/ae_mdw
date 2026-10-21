@@ -3403,7 +3403,7 @@ and `end_time` are the time of the first and last key block of the row.
 A key block has the miner key that mined it and the beneficiary that gets its reward, which
 are different accounts when a pool mines for its members. Every endpoint of the miners takes
 `role=miner` (the default) or `role=beneficiary`. Only beneficiaries get rewards, so the
-`rewards` of the miner keys are `null`. The rewards are counted when they are paid, which is
+`rewards` of the miner keys are `null` (and `by=rewards` is only for beneficiaries). The rewards are counted when they are paid, which is
 some generations after the block was mined, like the totals of `/v3/stats/miners`.
 
 ```
