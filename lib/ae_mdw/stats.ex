@@ -597,7 +597,7 @@ defmodule AeMdw.Stats do
   defp convert_blocks_param({"type", "micro"}), do: {:ok, {:block_type, :micro}}
   defp convert_blocks_param(param), do: convert_param(param)
 
-  defp convert_transactions_param({"tx_type", val}) do
+  defp convert_transactions_param({"tx_type", val}) when is_binary(val) do
     case Validate.tx_type(val) do
       {:ok, tx_type} -> {:ok, {:tx_type, tx_type}}
       {:error, reason} -> {:error, reason}
@@ -613,11 +613,17 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp convert_param({"min_start_date", val}), do: convert_date(:min_start_date, val)
+  defp convert_param({"min_start_date", val}) when is_binary(val),
+    do: convert_date(:min_start_date, val)
 
-  defp convert_param({"max_start_date", val}), do: convert_date(:max_start_date, val)
+  defp convert_param({"max_start_date", val}) when is_binary(val),
+    do: convert_date(:max_start_date, val)
 
-  defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+  defp convert_param({key, val}) when is_binary(val),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp convert_param({key, val}),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{inspect(val)}")}
 
   defp convert_date(key, val) do
     case Date.from_iso8601(val) do

@@ -1116,6 +1116,17 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> json_response(400)
     end
 
+    test "when a param isn't a string, it returns an error", %{conn: conn} do
+      assert %{"error" => ~s(invalid query: type=%{"a" => "b"})} =
+               conn |> get("/v3/stats/blocks?type[a]=b") |> json_response(400)
+
+      assert %{"error" => ~s(invalid query: min_start_date=%{"a" => "b"})} =
+               conn |> get("/v3/stats/blocks?min_start_date[a]=b") |> json_response(400)
+
+      assert %{"error" => ~s(invalid query: tx_type=%{"a" => "b"})} =
+               conn |> get("/v3/stats/transactions?tx_type[a]=b") |> json_response(400)
+    end
+
     test "when limit is less than 1000, it doesn't return an error", %{conn: conn} do
       assert %{"data" => _data} =
                conn
@@ -1819,6 +1830,9 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"error" => "invalid query: foo=bar"} =
                conn |> get("/v3/stats/miners", foo: "bar") |> json_response(400)
+
+      assert %{"error" => ~s(invalid query: period=%{"a" => "b"})} =
+               conn |> get("/v3/stats/miners?period[a]=b") |> json_response(400)
     end
   end
 

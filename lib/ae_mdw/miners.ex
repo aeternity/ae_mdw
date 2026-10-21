@@ -123,14 +123,18 @@ defmodule AeMdw.Miners do
     }
   end
 
-  defp convert_param({"period", period}) do
+  defp convert_param({"period", period}) when is_binary(period) do
     case Map.fetch(@periods, period) do
       {:ok, period} -> {:ok, {:period, period}}
       :error -> {:error, ErrInput.Query.exception(value: "period=#{period}")}
     end
   end
 
-  defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+  defp convert_param({key, val}) when is_binary(val),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp convert_param({key, val}),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{inspect(val)}")}
 
   @spec serialize_cursor({integer(), pubkey()}) :: binary()
   def serialize_cursor({total_reward, miner_pk}),
