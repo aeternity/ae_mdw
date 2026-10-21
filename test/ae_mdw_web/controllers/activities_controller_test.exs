@@ -2600,7 +2600,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
            get_block_time: fn _block_hash ->
              456
            end
-         ]}
+         ]},
+        {Fields, [:passthrough], []}
       ] do
         assert %{"prev" => nil, "data" => [activity1, activity2]} =
                  conn
@@ -2636,6 +2637,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                    "decimals" => 10
                  }
                } = activity2
+
+        assert_not_called(Fields.account_fields_stream(:_, :_, :_, :_, :_, :_))
       end
     end
 
