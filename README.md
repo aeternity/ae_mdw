@@ -3424,8 +3424,9 @@ GET /v3/miners/:id/series                      - series of a miner
 
 The network series rows have the key and micro blocks, transactions, rewards and fees of
 the bucket, the average block time, difficulty and hashrate, how many miners and beneficiaries
-were active or new, and the totals up to the end of the row. The fees are the ones of the
-transactions processed in the generations that the miner mined.
+were active or new, and the totals up to the end of the row. The fees are the `fee` of the
+transactions processed in the generations that the miner mined, the outer one of meta and
+paying-for transactions, without their inner fees nor the gas.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval=24" | jq '.'
@@ -3440,9 +3441,9 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
 {
   "bucket_size": 20,
   "mdw_height": 1100030,
-  "stats_height": 1100000,
-  "last_bucket": 55000,
-  "blocks": 1100000,
+  "stats_height": 1099999,
+  "last_bucket": 54999,
+  "blocks": 1099999,
   "txs": 52000000,
   "rewards": 1500000000000000000000000,
   "fees": 900000000000000000000,
@@ -3457,14 +3458,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval=24&l
       "bucket": 54984,
       "interval": 24,
       "start_height": 1099680,
-      "end_height": 1100159,
+      "end_height": 1099999,
       "start_time": 1741942231653,
-      "end_time": 1742028431653,
-      "blocks": 480,
-      "micro_blocks": 9000,
-      "txs": 12000,
-      "rewards": 1100000000000000000000,
-      "fees": 2000000000000000000,
+      "end_time": 1741999651653,
+      "blocks": 320,
+      "micro_blocks": 6000,
+      "txs": 8000,
+      "rewards": 730000000000000000000,
+      "fees": 1300000000000000000,
       "avg_block_time": 180000,
       "avg_difficulty": 4400000000000,
       "hashrate": 10000000000000,
@@ -3472,10 +3473,10 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval=24&l
       "active_beneficiaries": 22,
       "new_miners": 1,
       "new_beneficiaries": 0,
-      "blocks_total": 1099680,
-      "txs_total": 51990000,
-      "rewards_total": 1499000000000000000000000,
-      "fees_total": 899000000000000000000,
+      "blocks_total": 1099999,
+      "txs_total": 52000000,
+      "rewards_total": 1500000000000000000000000,
+      "fees_total": 900000000000000000000,
       "miners_total": 310,
       "beneficiaries_total": 290
     }
@@ -3488,12 +3489,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?limit=1" | j
 {
   "data": [
     {
-      "bucket": 55000,
+      "bucket": 54999,
       "interval": 1,
-      "start_height": 1100000,
-      "end_height": 1100019,
-      "start_time": 1742028431653,
-      "end_time": 1742031731653,
+      "start_height": 1099980,
+      "end_height": 1099999,
+      "start_time": 1741996231653,
+      "end_time": 1741999651653,
       "blocks": 3,
       "txs": 40,
       "rewards": null,
@@ -3514,8 +3515,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_..." | jq '.'
   "role": "miner",
   "first_height": 190000,
   "first_time": 1600000000000,
-  "last_height": 1100000,
-  "last_time": 1742031731653,
+  "last_height": 1099990,
+  "last_time": 1741998031653,
   "blocks": 12000,
   "txs": 650000,
   "rewards": null,
