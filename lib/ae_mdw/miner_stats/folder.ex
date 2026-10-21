@@ -18,7 +18,6 @@ defmodule AeMdw.MinerStats.Folder do
   alias AeMdw.Log
   alias AeMdw.MinerStats.Facts
   alias AeMdw.MinerStats.Fold
-  alias AeMdw.Sync.Hyperchain
 
   require Model
 
@@ -80,21 +79,15 @@ defmodule AeMdw.MinerStats.Folder do
   end
 
   defp next_delay do
-    if Hyperchain.hyperchain?() do
-      :infinity
-    else
-      case fold_chunk(State.new()) do
-        :more -> @busy_delay
-        {:caught_up, missing} -> missing * @generation_delay
-      end
+    case fold_chunk(State.new()) do
+      :more -> @busy_delay
+      {:caught_up, missing} -> missing * @generation_delay
     end
   rescue
     exception ->
       Log.warn("[miner_stats] fold failed: #{Exception.message(exception)}")
       @generation_delay
   end
-
-  defp schedule(:infinity), do: :ok
 
   defp schedule(delay) do
     _timer = Process.send_after(self(), :fold, delay)
