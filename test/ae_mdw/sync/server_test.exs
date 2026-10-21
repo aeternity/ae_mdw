@@ -1,11 +1,16 @@
 defmodule AeMdw.Sync.ServerTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Db.AccountActivityMutation
+  alias AeMdw.Db.AccountCreationMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Block
+  alias AeMdw.Db.UpdateBalanceAccountMutation
+  alias AeMdw.Node.Db
+  alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
   alias AeMdwWeb.Websocket.Broadcaster
@@ -31,17 +36,37 @@ defmodule AeMdw.Sync.ServerTest do
       gens = [generation(1_000, 2), generation(1_001, 1)]
 
       with_mocks sync_mocks(gens) do
-        sync(%Server{
-          chain_height: 1_011,
-          chain_hash: <<1::256>>,
-          db_state: state_at(999),
-          restarts: 0,
-          rollback?: false
-        })
+        sync(db_sync_data())
       end
 
       assert received(:built) == [1_000, 1_001]
       assert received(:broadcast) == expected_broadcasts(gens)
+    end
+
+    test "commits the account mutations of a generation together" do
+      gens = [generation(1_000, 2)]
+      pubkeys = [<<1::256>>, <<2::256>>]
+      trees = state_trees_with_accounts(pubkeys)
+
+      with_mocks [
+        {WealthRankAccounts, [],
+         micro_block_accounts: fn _micro_block, _mutations -> MapSet.new(pubkeys) end},
+        {:aec_db, [:passthrough],
+         find_block_state_partial: fn _hash, true, [:accounts] -> {:value, trees} end},
+        {Db, [:passthrough], get_block_time: fn _hash -> 0 end}
+        | sync_mocks(gens)
+      ] do
+        sync(db_sync_data())
+      end
+
+      # one commit per block and a single one for all the account mutations
+      assert [[], [], [], account_mutations] = received(:committed)
+
+      assert %{
+               UpdateBalanceAccountMutation => 2,
+               AccountCreationMutation => 2,
+               AccountActivityMutation => 2
+             } == Enum.frequencies_by(account_mutations, & &1.__struct__)
     end
   end
 
@@ -113,6 +138,16 @@ defmodule AeMdw.Sync.ServerTest do
     end
   end
 
+  defp db_sync_data do
+    %Server{
+      chain_height: 1_011,
+      chain_hash: <<1::256>>,
+      db_state: state_at(999),
+      restarts: 0,
+      rollback?: false
+    }
+  end
+
   defp mem_sync_data do
     %Server{
       chain_height: 1_009,
@@ -149,7 +184,10 @@ defmodule AeMdw.Sync.ServerTest do
        end},
       {State, [:passthrough],
        create_mem_state: fn -> state_at(nil) end,
-       commit_db: fn state, _mutations, _clear_mem? -> state end,
+       commit_db: fn state, mutations, _clear_mem? ->
+         send(test_pid, {:committed, mutations})
+         state
+       end,
        commit_mem: fn state, _mutations -> state end},
       {MemStoreCreator, [:passthrough], commit: fn _store -> :ok end},
       {Broadcaster, [:passthrough],
@@ -198,6 +236,17 @@ defmodule AeMdw.Sync.ServerTest do
       end)
 
     {key_block, micro_blocks}
+  end
+
+  defp state_trees_with_accounts(pubkeys) do
+    trees = :aec_trees.new_without_backend()
+
+    accounts_tree =
+      Enum.reduce(pubkeys, :aec_trees.accounts(trees), fn pubkey, accounts_tree ->
+        pubkey |> :aec_accounts.new(10) |> :aec_accounts_trees.enter(accounts_tree)
+      end)
+
+    :aec_trees.set_accounts(trees, accounts_tree)
   end
 
   defp gen_mutations({key_block, micro_blocks}) do

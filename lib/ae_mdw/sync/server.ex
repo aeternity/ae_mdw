@@ -406,7 +406,7 @@ defmodule AeMdw.Sync.Server do
         mb_hash
         |> get_balances_from_node(accounts_set)
         |> Enum.reduce([], fn {account_pk, balance}, acc ->
-          [{block_index, mblock, UpdateBalanceAccountMutation.new(account_pk, balance)} | acc]
+          [UpdateBalanceAccountMutation.new(account_pk, balance) | acc]
         end)
 
       time = Db.get_block_time(mb_hash)
@@ -414,12 +414,14 @@ defmodule AeMdw.Sync.Server do
       account_statistics_mutations =
         Enum.flat_map(accounts_set, fn pubkey ->
           [
-            {block_index, mblock, AccountCreationMutation.new(pubkey, time)},
-            {block_index, mblock, AccountActivityMutation.new(pubkey, time)}
+            AccountCreationMutation.new(pubkey, time),
+            AccountActivityMutation.new(pubkey, time)
           ]
         end)
 
-      gen_mutations ++ account_balances_mutations ++ account_statistics_mutations
+      # a single entry so that db sync commits them in one transaction
+      gen_mutations ++
+        [{block_index, mblock, account_balances_mutations ++ account_statistics_mutations}]
     else
       gen_mutations
     end
