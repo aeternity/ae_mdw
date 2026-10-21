@@ -144,7 +144,7 @@ defmodule AeMdw.Miners do
           {:ok, {integer(), pubkey()} | nil} | {:error, Error.t()}
   def deserialize_cursor(nil), do: {:ok, nil}
 
-  def deserialize_cursor(cursor) do
+  def deserialize_cursor(cursor) when is_binary(cursor) do
     with [total_reward, miner_id] <- String.split(cursor, ":", parts: 2),
          {total_reward, ""} <- Integer.parse(total_reward),
          {:ok, miner_pk} <- Enc.safe_decode(:account_pubkey, miner_id) do
@@ -153,4 +153,6 @@ defmodule AeMdw.Miners do
       _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
+
+  def deserialize_cursor(cursor), do: {:error, ErrInput.Cursor.exception(value: cursor)}
 end

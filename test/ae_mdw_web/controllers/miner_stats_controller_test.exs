@@ -119,6 +119,28 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"error" => "invalid cursor: nope"} =
                conn |> get("/v3/miners", cursor: "nope") |> json_response(400)
     end
+
+    test "it returns an error for params that aren't strings", %{conn: conn} do
+      assert %{"error" => ~s(invalid query: role=%{"x" => "1"})} =
+               conn |> get("/v3/miners?role[x]=1") |> json_response(400)
+
+      assert %{"error" => ~s(invalid cursor: %{"x" => "1"})} =
+               conn |> get("/v3/miners?cursor[x]=1") |> json_response(400)
+
+      path = "/v3/miners/#{id(@m1)}"
+
+      assert %{"error" => ~s(invalid query: role=["x"])} =
+               conn |> get("#{path}?role[]=x") |> json_response(400)
+
+      assert %{"error" => ~s(invalid query: interval=%{"x" => "1"})} =
+               conn |> get("#{path}/series?interval[x]=1") |> json_response(400)
+
+      assert %{"error" => ~s(invalid cursor: %{"x" => "1"})} =
+               conn |> get("#{path}/series?cursor[x]=1") |> json_response(400)
+
+      assert %{"error" => ~s(invalid cursor: %{"x" => "1"})} =
+               conn |> get("/v3/miners/#{id(@b1)}/links?cursor[x]=1") |> json_response(400)
+    end
   end
 
   describe "GET /v3/miners/:id" do

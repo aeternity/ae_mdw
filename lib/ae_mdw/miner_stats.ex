@@ -398,7 +398,7 @@ defmodule AeMdw.MinerStats do
       {role, rest} ->
         case Map.fetch(@roles, role) do
           {:ok, role} -> {:ok, role, rest}
-          :error -> {:error, ErrInput.Query.exception(value: "role=#{role}")}
+          :error -> invalid_query("role", role)
         end
     end
   end
@@ -424,7 +424,7 @@ defmodule AeMdw.MinerStats do
   defp check_params(query, allowed_keys) do
     case Enum.find(query, fn {key, _val} -> key not in allowed_keys end) do
       nil -> :ok
-      {key, val} -> {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+      {key, val} -> invalid_query(key, val)
     end
   end
 
@@ -438,22 +438,19 @@ defmodule AeMdw.MinerStats do
   end
 
   defp interval_param(interval) when is_integer(interval) do
-    if interval in Fold.intervals() do
-      {:ok, interval}
-    else
-      {:error, ErrInput.Query.exception(value: "interval=#{interval}")}
-    end
+    if interval in Fold.intervals(),
+      do: {:ok, interval},
+      else: invalid_query("interval", interval)
   end
 
   defp interval_param(interval) when is_binary(interval) do
     case Integer.parse(interval) do
       {interval, ""} -> interval_param(interval)
-      _invalid -> {:error, ErrInput.Query.exception(value: "interval=#{interval}")}
+      _invalid -> invalid_query("interval", interval)
     end
   end
 
-  defp interval_param(interval),
-    do: {:error, ErrInput.Query.exception(value: "interval=#{interval}")}
+  defp interval_param(interval), do: invalid_query("interval", interval)
 
   @spec parse_bucket(binary() | integer()) :: {:ok, Model.bucket()} | {:error, Error.t()}
   def parse_bucket(bucket) when is_integer(bucket) and bucket >= 0, do: {:ok, bucket}
@@ -461,30 +458,41 @@ defmodule AeMdw.MinerStats do
   def parse_bucket(bucket) when is_binary(bucket) do
     case Integer.parse(bucket) do
       {bucket, ""} -> parse_bucket(bucket)
-      _invalid -> {:error, ErrInput.Query.exception(value: "bucket=#{bucket}")}
+      _invalid -> invalid_query("bucket", bucket)
     end
   end
 
-  def parse_bucket(bucket), do: {:error, ErrInput.Query.exception(value: "bucket=#{bucket}")}
+  def parse_bucket(bucket), do: invalid_query("bucket", bucket)
+
+  # The params that aren't strings are maps or lists, like role[x]=1.
+  defp invalid_query(key, val) when is_binary(val),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp invalid_query(key, val),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{inspect(val)}")}
 
   defp deserialize_pubkey_cursor(nil), do: {:ok, nil}
 
-  defp deserialize_pubkey_cursor(cursor) do
+  defp deserialize_pubkey_cursor(cursor) when is_binary(cursor) do
     case Enc.safe_decode(:account_pubkey, cursor) do
       {:ok, pk} -> {:ok, pk}
       {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
 
+  defp deserialize_pubkey_cursor(cursor), do: {:error, ErrInput.Cursor.exception(value: cursor)}
+
   # The group is the last element of the key of the series rows.
   defp serialize_group_cursor(key), do: key |> elem(tuple_size(key) - 1) |> Integer.to_string()
 
   defp deserialize_group_cursor(nil), do: {:ok, nil}
 
-  defp deserialize_group_cursor(cursor) do
+  defp deserialize_group_cursor(cursor) when is_binary(cursor) do
     case Integer.parse(cursor) do
       {group, ""} when group >= 0 -> {:ok, group}
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
+
+  defp deserialize_group_cursor(cursor), do: {:error, ErrInput.Cursor.exception(value: cursor)}
 end

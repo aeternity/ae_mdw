@@ -1833,6 +1833,9 @@ defmodule AeMdwWeb.StatsControllerTest do
 
       assert %{"error" => ~s(invalid query: period=%{"a" => "b"})} =
                conn |> get("/v3/stats/miners?period[a]=b") |> json_response(400)
+
+      assert %{"error" => ~s(invalid cursor: %{"a" => "b"})} =
+               conn |> get("/v3/stats/miners?cursor[a]=b") |> json_response(400)
     end
   end
 
