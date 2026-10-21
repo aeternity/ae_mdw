@@ -14,9 +14,13 @@ defmodule AeMdw.Sync.Aex9Balances do
   @spec get_balances(pubkey(), block_index()) ::
           {:ok, balances(), balances()}
           | {:error, AeMdw.DryRun.Runner.call_error()}
-  def get_balances(contract_pk, block_index) do
-    {type, height, next_hash} = type_height_hash(block_index)
+  def get_balances(contract_pk, block_index),
+    do: get_balances(contract_pk, block_index, type_height_hash(block_index))
 
+  @spec get_balances(pubkey(), block_index(), NodeDb.height_hash()) ::
+          {:ok, balances(), balances()}
+          | {:error, AeMdw.DryRun.Runner.call_error()}
+  def get_balances(contract_pk, block_index, {type, height, next_hash}) do
     case Aex9BalancesCache.get(contract_pk, block_index, next_hash) do
       {:ok, dry_run_balances} ->
         {:ok, decode_balances(dry_run_balances), []}
@@ -44,7 +48,8 @@ defmodule AeMdw.Sync.Aex9Balances do
     PurgeAex9StateMutation.new(contract_pk, accounts_list)
   end
 
-  defp type_height_hash({kbi, mbi}) do
+  @spec type_height_hash(block_index()) :: NodeDb.height_hash()
+  def type_height_hash({kbi, mbi}) do
     case NodeDb.get_key_block_hash(kbi + 1) do
       nil ->
         NodeDb.top_height_hash(true)

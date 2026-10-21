@@ -696,8 +696,9 @@ defmodule AeMdw.Db.Contract do
 
   defp refresh_aex9_balances(state, contract_pk, txi, log_idx, affected_pubkeys) do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+    {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
-    case Aex9Balances.get_balances(contract_pk, block_index) do
+    case Aex9Balances.get_balances(contract_pk, block_index, type_height_hash) do
       {:ok, balances, _purged_balances} ->
         Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
           Model.aex9_event_balance(amount: old_amount) =
@@ -738,6 +739,21 @@ defmodule AeMdw.Db.Contract do
         )
 
         state
+    end
+  end
+
+  # resolving it reads the generation's micro blocks from the node, so it's
+  # done once per block instead of once per event
+  defp aex9_type_height_hash(state, block_index) do
+    case State.cache_get(state, :aex9_type_height_hash, block_index) do
+      {:ok, type_height_hash} ->
+        {state, type_height_hash}
+
+      :not_found ->
+        type_height_hash = Aex9Balances.type_height_hash(block_index)
+
+        {State.cache_put(state, :aex9_type_height_hash, block_index, type_height_hash),
+         type_height_hash}
     end
   end
 
