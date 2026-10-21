@@ -281,10 +281,10 @@ schemas:
         type: integer
         nullable: true
       active_miners:
-        description: The miner keys that mined, counted once in an interval
+        description: The miner keys that mined
         type: integer
       active_beneficiaries:
-        description: The beneficiaries that mined, counted once in an interval
+        description: The beneficiaries that mined
         type: integer
       new_miners:
         description: The miner keys that mined for the first time
@@ -336,7 +336,7 @@ paths:
       deprecated: false
       description: >-
         Get the mining series of the whole network, a row per bucket of 20 generations (about
-        an hour), or per interval of buckets.
+        an hour), or per interval of buckets (day, week, month or year), all of them indexed.
       operationId: GetMiningSeries
       parameters:
         - $ref: '#/components/parameters/StatsLimitParam'

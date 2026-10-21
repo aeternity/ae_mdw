@@ -52,7 +52,7 @@ defmodule AeMdw.MinerStats.FolderTest do
                State.get(State.new(), Model.MinerEntity, {:miner, <<1::256>>})
 
       assert {:ok, Model.network_bucket(blocks: 3, blocks_total: 3)} =
-               State.get(State.new(), Model.NetworkBucket, 0)
+               State.get(State.new(), Model.NetworkBucket, {1, 0})
     end
 
     test "it doesn't move on when a generation can't be read" do

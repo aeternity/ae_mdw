@@ -3392,11 +3392,13 @@ far they are with `synced_height`.
 
 The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
 Each row of a series has what happened in the bucket, and the totals up to its end.
-The `interval` (a number of buckets, up to 720) or `interval_by` (`day`, `week` or `month`,
-which are 24, 168 and 720 buckets) query parameters merge consecutive buckets into one row.
-The `scope=gen:<from>-<to>` parameter limits the generations, and it is paginated with the
-usual `limit`, `direction` and cursors. The `start_time` and `end_time` are the time of the
-first and last key block of the row.
+The series are also kept (indexed, so reading them costs the same) for longer intervals of
+buckets, selected with `interval` (1, 24, 168, 720 or 8760 buckets) or `interval_by` (`day`,
+`week`, `month` or `year`, which are 24, 168, 720 and 8760 buckets). The groups of an interval
+are aligned to the genesis and not to calendar dates, a day is 24 buckets of 20 generations.
+The `scope=gen:<from>-<to>` parameter selects the rows of the generations, which are whole
+rows, and it is paginated with the usual `limit`, `direction` and cursors. The `start_time`
+and `end_time` are the time of the first and last key block of the row.
 
 A key block has the miner key that mined it and the beneficiary that gets its reward, which
 are different accounts when a pool mines for its members. Every endpoint of the miners takes
@@ -3417,7 +3419,7 @@ GET /v3/miners/:id/series                      - series of a miner
 
 The network series rows have the key and micro blocks, transactions, rewards and fees of
 the bucket, the average block time, difficulty and hashrate, how many miners and beneficiaries
-were active (counted once in a merged row) or new, the most blocks mined by a single miner
+were active or new, the most blocks mined by a single miner
 or beneficiary, and the totals up to the end of the row. The fees are the ones of the
 transactions processed in the generations that the miner mined.
 

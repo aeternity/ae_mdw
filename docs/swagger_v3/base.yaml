@@ -79,22 +79,27 @@ components:
     MiningIntervalParam:
       in: query
       name: interval
-      description: 'The number of consecutive buckets to merge in each row (max 720)'
+      description: 'The number of consecutive buckets of each row'
       schema:
         type: integer
-        minimum: 1
-        maximum: 720
+        enum:
+          - 1
+          - 24
+          - 168
+          - 720
+          - 8760
         default: 1
     MiningIntervalByParam:
       in: query
       name: interval_by
-      description: 'The size of the rows in buckets (24 per day, 168 per week and 720 per month)'
+      description: 'The size of the rows in buckets (24 per day, 168 per week, 720 per month and 8760 per year)'
       schema:
         type: string
         enum:
           - day
           - week
           - month
+          - year
   schemas:
     KeyBlockHash:
       description: Key block hash

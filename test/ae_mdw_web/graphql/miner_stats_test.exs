@@ -138,7 +138,7 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
               %{
                 data: %{
                   "minerSeries" => %{
-                    "data" => [%{"bucket" => 0, "interval" => 24, "blocks" => 2}]
+                    "data" => [%{"bucket" => 0, "interval" => 24, "blocks" => 4}]
                   }
                 }
               }} =
@@ -147,23 +147,24 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
 
     test "it returns the network series", %{state: state} do
       query = """
-      { miningSeries(interval: 2) {
+      { miningSeries(interval: 24) {
           data { bucket interval blocks activeMiners newMiners hashrate minersTotal }
       } }
       """
 
-      assert {:ok, %{data: %{"miningSeries" => %{"data" => [group1, group0]}}} = res} =
-               run(state, query)
+      assert {:ok, %{data: %{"miningSeries" => %{"data" => [day]}}} = res} = run(state, query)
 
       refute res[:errors]
-      assert %{"bucket" => 2, "interval" => 2, "blocks" => 3, "activeMiners" => 2} = group1
-      assert %{"newMiners" => 1, "minersTotal" => 3} = group1
-      assert %{"bucket" => 0, "blocks" => 3} = group0
+      assert %{"bucket" => 0, "interval" => 24, "blocks" => 6, "activeMiners" => 3} = day
+      assert %{"newMiners" => 3, "minersTotal" => 3} = day
     end
 
     test "it returns the error of an invalid interval", %{state: state} do
       assert {:ok, %{errors: [%{message: "invalid query: interval=0"}]}} =
                run(state, "{ miningSeries(interval: 0) { data { bucket } } }")
+
+      assert {:ok, %{errors: [%{message: "invalid query: interval=2"}]}} =
+               run(state, "{ miningSeries(interval: 2) { data { bucket } } }")
     end
   end
 

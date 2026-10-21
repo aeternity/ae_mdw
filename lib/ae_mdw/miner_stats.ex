@@ -28,10 +28,7 @@ defmodule AeMdw.MinerStats do
   @typep order_by() :: :blocks | :txs | :rewards | :fees | :first_active | :last_active
 
   @roles %{"miner" => :miner, "beneficiary" => :beneficiary}
-  # a bucket is about an hour of generations
-  @intervals_by %{"day" => 24, "week" => 24 * 7, "month" => 24 * 30}
-  @max_interval 24 * 30
-  @max_buckets_per_page 20_000
+  @intervals_by %{"day" => 24, "week" => 24 * 7, "month" => 24 * 30, "year" => 24 * 365}
 
   @cache_table :miner_stats_sorted
   @cache_expiration_minutes 10
@@ -57,8 +54,9 @@ defmodule AeMdw.MinerStats do
       beneficiaries: 0
     }
 
-    case State.prev(state, Model.NetworkBucket, nil) do
-      {:ok, bucket} ->
+    # the keys are sorted by interval, so the one before any other is the last bucket
+    case State.prev(state, Model.NetworkBucket, {2, 0}) do
+      {:ok, {1, bucket} = key} ->
         Model.network_bucket(
           blocks_total: blocks,
           txs_total: txs,
@@ -66,7 +64,7 @@ defmodule AeMdw.MinerStats do
           fees_total: fees,
           miners_total: miners,
           beneficiaries_total: beneficiaries
-        ) = State.fetch!(state, Model.NetworkBucket, bucket)
+        ) = State.fetch!(state, Model.NetworkBucket, key)
 
         {:ok,
          %{
@@ -160,20 +158,15 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query),
          {:ok, pk} <- Validate.id(id, [:account_pubkey]),
          {:ok, interval} <- convert_interval(rest) do
-      ctx = %{
-        table: Model.MinerBucket,
-        key: &{role, pk, &1},
-        bucket_of: fn {_role, _pk, bucket} -> bucket end
-      }
-
       series(
         state,
         pagination,
         scope,
         interval,
         cursor,
-        ctx,
-        &render_miner_group(state, &1, role)
+        Model.MinerBucket,
+        &{role, pk, interval, &1},
+        &render_miner_row(state, role, &1)
       )
     end
   end
@@ -182,16 +175,23 @@ defmodule AeMdw.MinerStats do
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_network_series(state, pagination, scope, query, cursor) do
     with {:ok, interval} <- convert_interval(query) do
-      ctx = %{table: Model.NetworkBucket, key: & &1, bucket_of: & &1}
-
-      series(state, pagination, scope, interval, cursor, ctx, &render_network_group(state, &1))
+      series(
+        state,
+        pagination,
+        scope,
+        interval,
+        cursor,
+        Model.NetworkBucket,
+        &{interval, &1},
+        &render_network_row(state, &1)
+      )
     end
   end
 
   @spec fetch_bucket(state(), Model.bucket()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_bucket(state, bucket) do
-    with {:ok, row} <- found(State.get(state, Model.NetworkBucket, bucket), "#{bucket}") do
-      {:ok, render_network_rows(state, bucket, 1, [row])}
+    with {:ok, _row} <- found(State.get(state, Model.NetworkBucket, {1, bucket}), "#{bucket}") do
+      {:ok, render_network_row(state, {1, bucket})}
     end
   end
 
@@ -204,8 +204,8 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query),
          :ok <- check_params(rest, []),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
-      boundary = {{role, bucket, <<>>}, {role, bucket, Util.max_256bit_bin()}}
-      cursor_key = cursor_pk && {role, bucket, cursor_pk}
+      boundary = {{role, 1, bucket, <<>>}, {role, 1, bucket, Util.max_256bit_bin()}}
+      cursor_key = cursor_pk && {role, 1, bucket, cursor_pk}
 
       stream_fn = fn direction ->
         Collection.stream(state, Model.BucketMiner, direction, boundary, cursor_key)
@@ -214,14 +214,12 @@ defmodule AeMdw.MinerStats do
       stream_fn
       |> Collection.paginate(
         pagination,
-        fn {^role, ^bucket, pk} ->
-          row = State.fetch!(state, Model.MinerBucket, {role, pk, bucket})
-
+        fn {^role, 1, ^bucket, pk} ->
           state
-          |> render_miner_group({bucket, 1, [row]}, role)
+          |> render_miner_row(role, {role, pk, 1, bucket})
           |> Map.put(:id, encode(pk))
         end,
-        fn {_role, _bucket, pk} -> encode(pk) end
+        fn {_role, 1, _bucket, pk} -> encode(pk) end
       )
       |> then(&{:ok, &1})
     end
@@ -229,70 +227,29 @@ defmodule AeMdw.MinerStats do
 
   # Series
 
-  defp series(
-         state,
-         {_dir, _rev?, limit, _cursor?} = pagination,
-         scope,
-         interval,
-         cursor,
-         ctx,
-         render
-       ) do
-    with :ok <- check_buckets_per_page(limit, interval),
-         {:ok, cursor_group} <- deserialize_group_cursor(cursor) do
-      {first_bucket, last_bucket} = bucket_range(scope)
+  # Every interval is indexed, with the group in the last place of the key, which is also
+  # what the cursor is.
+  defp series(state, pagination, scope, interval, cursor, table, key_fun, render_fun) do
+    with {:ok, cursor_group} <- deserialize_group_cursor(cursor) do
+      {first_group, last_group} = group_range(scope, interval)
+      boundary = {key_fun.(first_group), key_fun.(last_group)}
 
       stream_fn = fn direction ->
-        cursor_bucket = cursor_group && group_cursor_bucket(cursor_group, interval, direction)
-        boundary = {ctx.key.(first_bucket), ctx.key.(last_bucket)}
+        cursor_key = cursor_group && key_fun.(cursor_group)
 
-        state
-        |> Collection.stream(
-          ctx.table,
-          direction,
-          boundary,
-          cursor_bucket && ctx.key.(cursor_bucket)
-        )
-        |> Stream.chunk_by(&div(ctx.bucket_of.(&1), interval))
-        |> Stream.map(fn [key | _rest] = keys -> {div(ctx.bucket_of.(key), interval), keys} end)
+        Collection.stream(state, table, direction, boundary, cursor_key)
       end
 
       stream_fn
-      |> Collection.paginate(
-        pagination,
-        fn {group, keys} ->
-          render.({group * interval, interval, fetch_rows(state, ctx.table, keys)})
-        end,
-        fn {group, _keys} -> Integer.to_string(group) end
-      )
+      |> Collection.paginate(pagination, render_fun, &serialize_group_cursor/1)
       |> then(&{:ok, &1})
     end
   end
 
-  defp fetch_rows(state, table, keys) do
-    keys
-    |> Enum.map(&State.fetch!(state, table, &1))
-    |> Enum.sort_by(&row_bucket/1)
-  end
+  defp group_range(nil, _interval), do: {0, Util.max_int()}
 
-  defp row_bucket(Model.network_bucket(index: bucket)), do: bucket
-  defp row_bucket(Model.miner_bucket(index: {_role, _pk, bucket})), do: bucket
-
-  defp check_buckets_per_page(limit, interval) when limit * interval <= @max_buckets_per_page,
-    do: :ok
-
-  defp check_buckets_per_page(limit, interval),
-    do: {:error, ErrInput.Query.exception(value: "too many buckets `#{limit * interval}`")}
-
-  defp bucket_range(nil), do: {0, Util.max_int()}
-
-  defp bucket_range({:gen, first_gen..last_gen//_step}),
-    do: {Fold.bucket(first_gen), Fold.bucket(last_gen)}
-
-  # The cursor is the first group of the page, a group of buckets is walked from its
-  # first one going forward and from its last one going backward.
-  defp group_cursor_bucket(group, interval, :forward), do: group * interval
-  defp group_cursor_bucket(group, interval, :backward), do: group * interval + interval - 1
+  defp group_range({:gen, first_gen..last_gen//_step}, interval),
+    do: {div(Fold.bucket(first_gen), interval), div(Fold.bucket(last_gen), interval)}
 
   # Rendering
 
@@ -357,25 +314,31 @@ defmodule AeMdw.MinerStats do
     }
   end
 
-  defp render_miner_group(state, {first_bucket, interval, rows}, role) do
+  defp render_miner_row(state, role, {_role, _pk, interval, group} = key) do
     Model.miner_bucket(
+      blocks: blocks,
+      txs: txs,
+      rewards: rewards,
+      fees: fees,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_total,
       fees_total: fees_total
-    ) = List.last(rows)
+    ) = State.fetch!(state, Model.MinerBucket, key)
+
+    network_row = State.fetch!(state, Model.NetworkBucket, {interval, group})
 
     %{
-      bucket: first_bucket,
+      bucket: group * interval,
       interval: interval,
-      start_height: first_bucket * Fold.bucket_size(),
-      end_height: (first_bucket + interval) * Fold.bucket_size() - 1,
-      start_time: start_time(state, first_bucket, interval),
-      end_time: end_time(state, first_bucket, interval),
-      blocks: sum(rows, &Model.miner_bucket(&1, :blocks)),
-      txs: sum(rows, &Model.miner_bucket(&1, :txs)),
-      rewards: rewards_for(role, sum(rows, &Model.miner_bucket(&1, :rewards))),
-      fees: sum(rows, &Model.miner_bucket(&1, :fees)),
+      start_height: group * interval * Fold.bucket_size(),
+      end_height: (group + 1) * interval * Fold.bucket_size() - 1,
+      start_time: Model.network_bucket(network_row, :start_time),
+      end_time: Model.network_bucket(network_row, :end_time),
+      blocks: blocks,
+      txs: txs,
+      rewards: rewards_for(role, rewards),
+      fees: fees,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_for(role, rewards_total),
@@ -383,49 +346,53 @@ defmodule AeMdw.MinerStats do
     }
   end
 
-  defp render_network_group(state, {first_bucket, interval, rows}),
-    do: render_network_rows(state, first_bucket, interval, rows)
-
-  defp render_network_rows(state, first_bucket, interval, rows) do
-    first = List.first(rows)
-    last = List.last(rows)
-    blocks = sum(rows, &Model.network_bucket(&1, :blocks))
-    difficulty_sum = sum(rows, &Model.network_bucket(&1, :difficulty_sum))
-    start_time = Model.network_bucket(first, :start_time)
-    end_time = Model.network_bucket(last, :end_time)
-
+  defp render_network_row(state, {interval, group} = key) do
     Model.network_bucket(
+      start_height: start_height,
+      end_height: end_height,
+      start_time: start_time,
+      end_time: end_time,
+      blocks: blocks,
+      micro_blocks: micro_blocks,
+      txs: txs,
+      rewards: rewards,
+      fees: fees,
+      difficulty_sum: difficulty_sum,
+      active_miners: active_miners,
+      active_beneficiaries: active_beneficiaries,
+      new_miners: new_miners,
+      new_beneficiaries: new_beneficiaries,
+      top_miner_blocks: top_miner_blocks,
+      top_beneficiary_blocks: top_beneficiary_blocks,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_total,
       fees_total: fees_total,
       miners_total: miners_total,
       beneficiaries_total: beneficiaries_total
-    ) = last
+    ) = State.fetch!(state, Model.NetworkBucket, key)
 
     %{
-      bucket: first_bucket,
+      bucket: group * interval,
       interval: interval,
-      start_height: Model.network_bucket(first, :start_height),
-      end_height: Model.network_bucket(last, :end_height),
+      start_height: start_height,
+      end_height: end_height,
       start_time: start_time,
       end_time: end_time,
       blocks: blocks,
-      micro_blocks: sum(rows, &Model.network_bucket(&1, :micro_blocks)),
-      txs: sum(rows, &Model.network_bucket(&1, :txs)),
-      rewards: sum(rows, &Model.network_bucket(&1, :rewards)),
-      fees: sum(rows, &Model.network_bucket(&1, :fees)),
+      micro_blocks: micro_blocks,
+      txs: txs,
+      rewards: rewards,
+      fees: fees,
       avg_block_time: avg_block_time(start_time, end_time, blocks),
       avg_difficulty: if(blocks > 0, do: div(difficulty_sum, blocks)),
       hashrate: if(blocks > 0, do: Node.difficulty_to_hashrate(div(difficulty_sum, blocks))),
-      active_miners: active(state, :miner, first_bucket, interval, rows),
-      active_beneficiaries: active(state, :beneficiary, first_bucket, interval, rows),
-      new_miners: sum(rows, &Model.network_bucket(&1, :new_miners)),
-      new_beneficiaries: sum(rows, &Model.network_bucket(&1, :new_beneficiaries)),
-      top_miner_blocks:
-        rows |> Enum.map(&Model.network_bucket(&1, :top_miner_blocks)) |> Enum.max(),
-      top_beneficiary_blocks:
-        rows |> Enum.map(&Model.network_bucket(&1, :top_beneficiary_blocks)) |> Enum.max(),
+      active_miners: active_miners,
+      active_beneficiaries: active_beneficiaries,
+      new_miners: new_miners,
+      new_beneficiaries: new_beneficiaries,
+      top_miner_blocks: top_miner_blocks,
+      top_beneficiary_blocks: top_beneficiary_blocks,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_total,
@@ -439,47 +406,6 @@ defmodule AeMdw.MinerStats do
     do: div(end_time - start_time, blocks - 1)
 
   defp avg_block_time(_start_time, _end_time, _blocks), do: nil
-
-  # The ones active in several buckets are only counted once, which can't be told by
-  # adding the buckets up.
-  defp active(_state, role, _first_bucket, _interval, [row]) do
-    case role do
-      :miner -> Model.network_bucket(row, :active_miners)
-      :beneficiary -> Model.network_bucket(row, :active_beneficiaries)
-    end
-  end
-
-  defp active(state, role, first_bucket, interval, _rows) do
-    boundary =
-      {{role, first_bucket, <<>>}, {role, first_bucket + interval - 1, Util.max_256bit_bin()}}
-
-    state
-    |> Collection.stream(Model.BucketMiner, :forward, boundary, nil)
-    |> Enum.uniq_by(fn {_role, _bucket, pk} -> pk end)
-    |> length()
-  end
-
-  defp start_time(state, first_bucket, interval) do
-    with {:ok, bucket} <- State.next(state, Model.NetworkBucket, first_bucket - 1),
-         true <- bucket < first_bucket + interval do
-      Model.network_bucket(start_time: time) = State.fetch!(state, Model.NetworkBucket, bucket)
-      time
-    else
-      _no_bucket -> nil
-    end
-  end
-
-  defp end_time(state, first_bucket, interval) do
-    with {:ok, bucket} <- State.prev(state, Model.NetworkBucket, first_bucket + interval),
-         true <- bucket >= first_bucket do
-      Model.network_bucket(end_time: time) = State.fetch!(state, Model.NetworkBucket, bucket)
-      time
-    else
-      _no_bucket -> nil
-    end
-  end
-
-  defp sum(rows, fun), do: rows |> Enum.map(fun) |> Enum.sum()
 
   defp encode(pk), do: Enc.encode(:account_pubkey, pk)
 
@@ -569,9 +495,13 @@ defmodule AeMdw.MinerStats do
     end
   end
 
-  defp interval_param(interval)
-       when is_integer(interval) and interval > 0 and interval <= @max_interval,
-       do: {:ok, interval}
+  defp interval_param(interval) when is_integer(interval) do
+    if interval in Fold.intervals() do
+      {:ok, interval}
+    else
+      {:error, ErrInput.Query.exception(value: "interval=#{interval}")}
+    end
+  end
 
   defp interval_param(interval) when is_binary(interval) do
     case Integer.parse(interval) do
@@ -630,6 +560,9 @@ defmodule AeMdw.MinerStats do
       {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
+
+  # The group is the last element of the key of the series rows.
+  defp serialize_group_cursor(key), do: key |> elem(tuple_size(key) - 1) |> Integer.to_string()
 
   defp deserialize_group_cursor(nil), do: {:ok, nil}
 

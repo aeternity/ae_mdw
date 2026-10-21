@@ -1323,9 +1323,14 @@ defmodule AeMdw.Db.Model do
 
   # Mining stats, a miner is identified by its key (role :miner) or by the
   # beneficiary that gets its rewards (role :beneficiary). A bucket is a number
-  # of consecutive generations (see AeMdw.MinerStats).
+  # of consecutive generations, and the series are kept for several intervals (a
+  # number of consecutive buckets) so none has to be merged when read. The group
+  # of an interval is the first bucket of it divided by the interval
+  # (see AeMdw.MinerStats.Fold).
   @type miner_role() :: :miner | :beneficiary
   @type bucket() :: non_neg_integer()
+  @type interval() :: pos_integer()
+  @type group() :: non_neg_integer()
 
   # miner entity:
   #     index = {role, pubkey}
@@ -1350,10 +1355,10 @@ defmodule AeMdw.Db.Model do
   @type miner_entity_index() :: {miner_role(), pubkey()}
   @type miner_entity() :: record(:miner_entity, index: miner_entity_index())
 
-  # miner bucket:
-  #     index = {role, pubkey, bucket}
-  #     blocks, txs, rewards and fees = in the bucket
-  #     *_total = totals of the miner up to the end of the bucket
+  # miner bucket (or group of buckets):
+  #     index = {role, pubkey, interval, group}
+  #     blocks, txs, rewards and fees = in the group
+  #     *_total = totals of the miner up to the end of the group
   @miner_bucket_defaults [
     index: nil,
     blocks: 0,
@@ -1367,14 +1372,14 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :miner_bucket, @miner_bucket_defaults
 
-  @type miner_bucket_index() :: {miner_role(), pubkey(), bucket()}
+  @type miner_bucket_index() :: {miner_role(), pubkey(), interval(), group()}
   @type miner_bucket() :: record(:miner_bucket, index: miner_bucket_index())
 
-  # miners of a bucket: index = {role, bucket, pubkey}
+  # miners that mined in a group of buckets: index = {role, interval, group, pubkey}
   @bucket_miner_defaults [:index]
   defrecord :bucket_miner, @bucket_miner_defaults
 
-  @type bucket_miner_index() :: {miner_role(), bucket(), pubkey()}
+  @type bucket_miner_index() :: {miner_role(), interval(), group(), pubkey()}
   @type bucket_miner() :: record(:bucket_miner, index: bucket_miner_index())
 
   # miner key to beneficiary link: index = {miner_pk, beneficiary_pk}
@@ -1391,14 +1396,14 @@ defmodule AeMdw.Db.Model do
   @type beneficiary_link_index() :: {pubkey(), pubkey()}
   @type beneficiary_link() :: record(:beneficiary_link, index: beneficiary_link_index())
 
-  # network bucket:
-  #     index = bucket
-  #     start/end_* = first and last generation (and its time) folded into the bucket
-  #     blocks, micro_blocks, txs, rewards and fees = in the bucket
-  #     difficulty_sum = sum of the difficulty of the key blocks of the bucket
-  #     active_* = miners or beneficiaries that mined in the bucket, new_* = the first time they did
-  #     top_*_blocks = most blocks mined by a single miner or beneficiary in the bucket
-  #     *_total = totals up to the end of the bucket
+  # network bucket (or group of buckets):
+  #     index = {interval, group}
+  #     start/end_* = first and last generation (and its time) folded into the group
+  #     blocks, micro_blocks, txs, rewards and fees = in the group
+  #     difficulty_sum = sum of the difficulty of the key blocks of the group
+  #     active_* = miners or beneficiaries that mined in the group, new_* = the first time they did
+  #     top_*_blocks = most blocks mined by a single miner or beneficiary in the group
+  #     *_total = totals up to the end of the group
   @network_bucket_defaults [
     index: nil,
     start_height: nil,
@@ -1426,7 +1431,7 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :network_bucket, @network_bucket_defaults
 
-  @type network_bucket_index() :: bucket()
+  @type network_bucket_index() :: {interval(), group()}
   @type network_bucket() :: record(:network_bucket, index: network_bucket_index())
 
   ### Node tables

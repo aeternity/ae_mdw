@@ -4,6 +4,7 @@ defmodule AeMdw.MinerStats.FoldTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.MinerStats.Fold
+  alias AeMdw.MinerStatsFixtures
 
   import AeMdw.TestUtil, only: [empty_state: 0]
 
@@ -90,14 +91,14 @@ defmodule AeMdw.MinerStats.FoldTest do
                 txs_total: 4,
                 rewards_total: 55,
                 fees_total: 40
-              )} = State.get(state, Model.MinerBucket, {:beneficiary, @b1, 1})
+              )} = State.get(state, Model.MinerBucket, {:beneficiary, @b1, 1, 1})
 
       assert {:ok, Model.miner_bucket(blocks: 2, rewards: 0, blocks_total: 2)} =
-               State.get(state, Model.MinerBucket, {:miner, @m1, 1})
+               State.get(state, Model.MinerBucket, {:miner, @m1, 1, 1})
 
-      assert State.exists?(state, Model.BucketMiner, {:miner, 1, @m1})
-      assert State.exists?(state, Model.BucketMiner, {:miner, 1, @m2})
-      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 1, @b2})
+      assert State.exists?(state, Model.BucketMiner, {:miner, 1, 1, @m1})
+      assert State.exists?(state, Model.BucketMiner, {:miner, 1, 1, @m2})
+      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 1, 1, @b2})
     end
 
     test "it links the miners with their beneficiaries", %{state: state} do
@@ -138,7 +139,7 @@ defmodule AeMdw.MinerStats.FoldTest do
                 fees_total: 40,
                 miners_total: 2,
                 beneficiaries_total: 2
-              )} = State.get(state, Model.NetworkBucket, 1)
+              )} = State.get(state, Model.NetworkBucket, {1, 1})
     end
 
     test "it carries the totals to the next bucket and only counts what's new", %{state: state} do
@@ -165,10 +166,10 @@ defmodule AeMdw.MinerStats.FoldTest do
                 fees_total: 45,
                 miners_total: 3,
                 beneficiaries_total: 3
-              )} = State.get(state, Model.NetworkBucket, 2)
+              )} = State.get(state, Model.NetworkBucket, {1, 2})
 
       assert {:ok, Model.miner_bucket(blocks: 1, txs: 2, blocks_total: 3, txs_total: 5)} =
-               State.get(state, Model.MinerBucket, {:miner, @m1, 2})
+               State.get(state, Model.MinerBucket, {:miner, @m1, 1, 2})
     end
 
     test "it adds the rewards of a beneficiary that didn't mine in the bucket", %{state: state} do
@@ -180,16 +181,84 @@ defmodule AeMdw.MinerStats.FoldTest do
                 rewards: 9,
                 blocks_total: 1,
                 rewards_total: 79
-              )} = State.get(state, Model.MinerBucket, {:beneficiary, @b2, 2})
+              )} = State.get(state, Model.MinerBucket, {:beneficiary, @b2, 1, 2})
 
       assert {:ok, Model.miner_entity(last_height: 22, rewards: 79)} =
                State.get(state, Model.MinerEntity, {:beneficiary, @b2})
 
       assert {:ok, Model.network_bucket(active_beneficiaries: 1)} =
-               State.get(state, Model.NetworkBucket, 2)
+               State.get(state, Model.NetworkBucket, {1, 2})
 
-      refute State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b2})
-      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b3})
+      refute State.exists?(state, Model.BucketMiner, {:beneficiary, 1, 2, @b2})
+      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 1, 2, @b3})
+    end
+  end
+
+  describe "fold/2 intervals" do
+    setup do
+      {:ok, state: MinerStatsFixtures.fold_history(empty_state())}
+    end
+
+    test "it keeps the same stats for every interval, counting the miners once", %{state: state} do
+      for interval <- Fold.intervals(), interval >= 24 do
+        assert {:ok,
+                Model.network_bucket(
+                  start_height: 20,
+                  end_height: 60,
+                  start_time: 1_000,
+                  end_time: 6_000,
+                  blocks: 6,
+                  micro_blocks: 3,
+                  txs: 6,
+                  rewards: 134,
+                  fees: 45,
+                  active_miners: 3,
+                  active_beneficiaries: 3,
+                  new_miners: 3,
+                  new_beneficiaries: 3,
+                  top_miner_blocks: 4,
+                  top_beneficiary_blocks: 4,
+                  blocks_total: 6,
+                  rewards_total: 134,
+                  miners_total: 3
+                )} = State.get(state, Model.NetworkBucket, {interval, 0})
+
+        assert {:ok, Model.miner_bucket(blocks: 4, txs: 5, fees: 35, blocks_total: 4)} =
+                 State.get(state, Model.MinerBucket, {:miner, @m1, interval, 0})
+
+        assert {:ok, Model.miner_bucket(blocks: 1, rewards: 79, rewards_total: 79)} =
+                 State.get(state, Model.MinerBucket, {:beneficiary, @b2, interval, 0})
+
+        assert State.exists?(state, Model.BucketMiner, {:miner, interval, 0, @m3})
+        refute State.exists?(state, Model.BucketMiner, {:beneficiary, interval, 0, <<99::256>>})
+      end
+    end
+
+    test "it starts a new group of an interval from the totals of the previous one" do
+      state =
+        Enum.reduce([{479, 1_000}, {480, 2_000}], empty_state(), fn {height, time}, state ->
+          Fold.fold(state, %{
+            height: height,
+            time: time,
+            miner: @m1,
+            beneficiary: @b1,
+            info: nil,
+            difficulty: 100,
+            micro_blocks: 0,
+            txs: 1,
+            fees: 2,
+            rewards: %{}
+          })
+        end)
+
+      assert {:ok, Model.network_bucket(index: {24, 0}, blocks: 1, blocks_total: 1)} =
+               State.get(state, Model.NetworkBucket, {24, 0})
+
+      assert {:ok, Model.network_bucket(index: {24, 1}, blocks: 1, blocks_total: 2, txs_total: 2)} =
+               State.get(state, Model.NetworkBucket, {24, 1})
+
+      assert {:ok, Model.network_bucket(index: {168, 0}, blocks: 2, blocks_total: 2)} =
+               State.get(state, Model.NetworkBucket, {168, 0})
     end
   end
 
