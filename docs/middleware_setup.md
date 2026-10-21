@@ -96,13 +96,14 @@ The mining stats (`/v3/stats/mining`, `/v3/miners`) are built by a background pr
 starts with the middleware (it is not started on hyperchain nodes). The first time it runs,
 after an upgrade or on a new database, it goes through the whole chain from the genesis,
 which takes a while and adds some disk usage (a few hundred MB on mainnet, an estimate).
-There is nothing to configure and nothing blocks while it runs.
+There is nothing to configure and nothing blocks while it runs. It only folds complete buckets
+(20 generations) and sleeps until the next one can be complete, so it is idle most of the time.
 
 Check its progress with `GET /v3/stats/mining`: `synced_height` is the last generation folded
-and it should reach the `mdw_height` of `GET /v3/status` minus the generations kept in
+and it trails the `mdw_height` of `GET /v3/status` by up to a bucket plus the generations kept in
 memory. The series only include the generations up to `synced_height`.
 When a chunk fails (for example the node database isn't ready) it logs
-`[miner_stats] fold failed: ...` and retries after 30 seconds.
+`[miner_stats] fold failed: ...` and retries after a minute.
 
 ## Quick Start with Docker Compose
 

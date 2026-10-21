@@ -23,7 +23,7 @@ defmodule AeMdw.MinerStats.FolderTest do
   ]
 
   setup do
-    Enum.each(1..3, &Database.dirty_write(Model.DeltaStat, Model.delta_stat(index: &1)))
+    Enum.each(1..45, &Database.dirty_write(Model.DeltaStat, Model.delta_stat(index: &1)))
 
     on_exit(fn ->
       Enum.each(@tables, fn table ->
@@ -33,26 +33,38 @@ defmodule AeMdw.MinerStats.FolderTest do
   end
 
   describe "fold_chunk/2" do
-    test "it folds each finalized generation only once, in chunks" do
+    test "it folds each complete bucket only once, in chunks" do
       with_mock Facts, fetch: fn _state, height -> {:ok, facts(height)} end do
         assert 0 == Folder.folded_height(State.new())
 
-        assert :more = Folder.fold_chunk(State.new(), 2)
-        assert 2 == Folder.folded_height(State.new())
-        assert_called_exactly(Facts.fetch(:_, :_), 2)
+        assert :more = Folder.fold_chunk(State.new(), 25)
+        assert 25 == Folder.folded_height(State.new())
+        assert_called_exactly(Facts.fetch(:_, :_), 25)
 
-        assert :caught_up = Folder.fold_chunk(State.new(), 2)
-        assert 3 == Folder.folded_height(State.new())
+        assert {:caught_up, 14} = Folder.fold_chunk(State.new(), 25)
+        assert 39 == Folder.folded_height(State.new())
 
-        assert :caught_up = Folder.fold_chunk(State.new(), 2)
-        assert_called_exactly(Facts.fetch(:_, :_), 3)
+        assert {:caught_up, 14} = Folder.fold_chunk(State.new(), 25)
+        assert_called_exactly(Facts.fetch(:_, :_), 39)
       end
 
-      assert {:ok, Model.miner_entity(blocks: 3, first_height: 1, last_height: 3)} =
+      assert {:ok, Model.miner_entity(blocks: 39, first_height: 1, last_height: 39)} =
                State.get(State.new(), Model.MinerEntity, {:miner, <<1::256>>})
 
-      assert {:ok, Model.network_bucket(blocks: 3, blocks_total: 3)} =
-               State.get(State.new(), Model.NetworkBucket, {1, 0})
+      assert {:ok, Model.network_bucket(blocks: 20, blocks_total: 39)} =
+               State.get(State.new(), Model.NetworkBucket, {1, 1})
+    end
+
+    test "it waits for the first bucket to complete" do
+      Enum.each(11..45, &Database.dirty_delete(Model.DeltaStat, &1))
+
+      with_mock Facts, fetch: fn _state, height -> {:ok, facts(height)} end do
+        assert {:caught_up, 9} = Folder.fold_chunk(State.new(), 25)
+
+        assert_not_called(Facts.fetch(:_, :_))
+      end
+
+      assert 0 == Folder.folded_height(State.new())
     end
 
     test "it doesn't move on when a generation can't be read" do
