@@ -6,7 +6,7 @@ defmodule AeMdw.MinerStats.FoldTest do
   alias AeMdw.MinerStats.Fold
   alias AeMdw.MinerStatsFixtures
 
-  import AeMdw.TestUtil, only: [empty_state: 0]
+  import AeMdw.TestUtil, only: [empty_state: 0, all_keys: 2]
 
   require Model
 
@@ -72,6 +72,28 @@ defmodule AeMdw.MinerStats.FoldTest do
 
       assert {:ok, Model.miner_entity(first_height: 22, blocks: 1, rewards: 70)} =
                State.get(state, Model.MinerEntity, {:beneficiary, @b2})
+    end
+
+    test "it sorts the miners by each of their totals and activity", %{state: state} do
+      assert [{1, @m2}, {2, @m1}] = sorted(state, :miner, :blocks)
+      assert [{1, @m2}, {3, @m1}] = sorted(state, :miner, :txs)
+      assert [{10, @m2}, {30, @m1}] = sorted(state, :miner, :fees)
+      assert [{20, @m1}, {21, @m2}] = sorted(state, :miner, :first_active)
+      assert [{21, @m2}, {22, @m1}] = sorted(state, :miner, :last_active)
+      assert [] = sorted(state, :miner, :rewards)
+
+      assert [{1, @b2}, {2, @b1}] = sorted(state, :beneficiary, :blocks)
+      assert [{55, @b1}, {70, @b2}] = sorted(state, :beneficiary, :rewards)
+    end
+
+    test "it sorts a beneficiary that was only paid as never active", %{state: state} do
+      b4 = <<14::256>>
+      state = Fold.fold(state, facts(41, @m3, @b3, rewards: %{b4 => 9}))
+
+      assert [{-1, ^b4} | _rest] = sorted(state, :beneficiary, :first_active)
+      assert [{-1, ^b4} | _rest] = sorted(state, :beneficiary, :last_active)
+      assert [{0, ^b4} | _rest] = sorted(state, :beneficiary, :blocks)
+      assert {9, b4} in sorted(state, :beneficiary, :rewards)
     end
 
     test "it adds a row to the bucket of each miner with their totals up to there", %{
@@ -260,6 +282,10 @@ defmodule AeMdw.MinerStats.FoldTest do
       assert 1 == Fold.bucket(size)
       assert 1 == Fold.bucket(2 * size - 1)
     end
+  end
+
+  defp sorted(state, role, order_by) do
+    for {^role, ^order_by, value, pk} <- all_keys(state, Model.MinerOrder), do: {value, pk}
   end
 
   defp facts(height, miner, beneficiary, opts) do

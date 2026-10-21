@@ -17,6 +17,10 @@ defmodule AeMdw.MinerStats.Fold do
   @bucket_size 20
   # of buckets, which is about an hour, a day, a week, a month and a year
   @intervals [1, 24, 168, 720, 8760]
+  @orders_by %{
+    miner: [:blocks, :txs, :fees, :first_active, :last_active],
+    beneficiary: [:blocks, :txs, :rewards, :fees, :first_active, :last_active]
+  }
 
   @spec bucket_size() :: pos_integer()
   def bucket_size, do: @bucket_size
@@ -26,6 +30,12 @@ defmodule AeMdw.MinerStats.Fold do
 
   @spec bucket(Blocks.height()) :: Model.bucket()
   def bucket(height), do: div(height, @bucket_size)
+
+  @doc """
+  What the miners of a role are sorted by, only beneficiaries get rewards.
+  """
+  @spec orders_by(Model.miner_role()) :: [Model.miner_order_by()]
+  def orders_by(role), do: Map.fetch!(@orders_by, role)
 
   @spec fold(State.t(), Facts.t()) :: State.t()
   def fold(state, %{height: height} = facts) do
@@ -47,13 +57,13 @@ defmodule AeMdw.MinerStats.Fold do
   defp mine(state, role, pk, facts) do
     entity_key = {role, pk}
 
-    {new?, entity} =
+    {old_entity, entity} =
       case State.get(state, Model.MinerEntity, entity_key) do
         {:ok, entity} ->
-          {false, entity}
+          {entity, entity}
 
         :not_found ->
-          {true,
+          {nil,
            Model.miner_entity(
              index: entity_key,
              first_height: facts.height,
@@ -72,7 +82,7 @@ defmodule AeMdw.MinerStats.Fold do
         fees: fees + facts.fees
       )
 
-    {State.put(state, Model.MinerEntity, entity), new?}
+    {put_entity(state, old_entity, entity), is_nil(old_entity)}
   end
 
   defp link(state, miner_pk, beneficiary_pk, height) do
@@ -101,17 +111,48 @@ defmodule AeMdw.MinerStats.Fold do
     Enum.reduce(rewards, state, fn {beneficiary_pk, amount}, state ->
       entity_key = {:beneficiary, beneficiary_pk}
 
-      entity =
+      {old_entity, entity} =
         case State.get(state, Model.MinerEntity, entity_key) do
-          {:ok, entity} -> entity
-          :not_found -> Model.miner_entity(index: entity_key)
+          {:ok, entity} -> {entity, entity}
+          :not_found -> {nil, Model.miner_entity(index: entity_key)}
         end
 
       entity = Model.miner_entity(entity, rewards: Model.miner_entity(entity, :rewards) + amount)
 
-      State.put(state, Model.MinerEntity, entity)
+      put_entity(state, old_entity, entity)
     end)
   end
+
+  # Moves the entity in the orders where its value changed.
+  defp put_entity(state, old_entity, entity) do
+    {role, pk} = Model.miner_entity(entity, :index)
+
+    role
+    |> orders_by()
+    |> Enum.reduce(State.put(state, Model.MinerEntity, entity), fn order_by, state ->
+      value = order_value(entity, order_by)
+
+      case old_entity && order_value(old_entity, order_by) do
+        ^value ->
+          state
+
+        old_value ->
+          state
+          |> delete_order(old_value && {role, order_by, old_value, pk})
+          |> State.put(Model.MinerOrder, Model.miner_order(index: {role, order_by, value, pk}))
+      end
+    end)
+  end
+
+  defp delete_order(state, nil), do: state
+  defp delete_order(state, key), do: State.delete(state, Model.MinerOrder, key)
+
+  defp order_value(entity, :blocks), do: Model.miner_entity(entity, :blocks)
+  defp order_value(entity, :txs), do: Model.miner_entity(entity, :txs)
+  defp order_value(entity, :rewards), do: Model.miner_entity(entity, :rewards)
+  defp order_value(entity, :fees), do: Model.miner_entity(entity, :fees)
+  defp order_value(entity, :first_active), do: Model.miner_entity(entity, :first_height) || -1
+  defp order_value(entity, :last_active), do: Model.miner_entity(entity, :last_height) || -1
 
   defp entity!(state, role, pk), do: State.fetch!(state, Model.MinerEntity, {role, pk})
 

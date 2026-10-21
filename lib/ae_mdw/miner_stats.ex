@@ -10,7 +10,6 @@ defmodule AeMdw.MinerStats do
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.EtsCache
   alias AeMdw.MinerStats.Fold
   alias AeMdw.MinerStats.Folder
   alias AeMdw.Miners
@@ -26,15 +25,9 @@ defmodule AeMdw.MinerStats do
   @type query() :: %{binary() => binary() | integer()}
   @typep state() :: State.t()
   @typep pagination() :: Collection.direction_limit()
-  @typep order_by() :: :blocks | :txs | :rewards | :fees | :first_active | :last_active
+  @typep order_by() :: Model.miner_order_by()
 
   @roles %{"miner" => :miner, "beneficiary" => :beneficiary}
-
-  @cache_table :miner_stats_sorted
-  @cache_expiration_minutes 10
-
-  @spec init_cache() :: :ok
-  def init_cache, do: EtsCache.new(@cache_table, @cache_expiration_minutes)
 
   @doc """
   Totals of the whole chain and how far the stats have been folded, since they're built
@@ -91,22 +84,33 @@ defmodule AeMdw.MinerStats do
   @spec fetch_miners(state(), pagination(), query(), order_by() | nil, cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_miners(state, pagination, query, order_by, cursor) do
+    order_by = order_by || :blocks
+
     with {:ok, role, rest} <- split_role(query, :miner),
          :ok <- check_params(rest, []),
          :ok <- check_order(role, order_by),
          {:ok, cursor} <- Miners.deserialize_cursor(cursor) do
-      sorted = sorted_miners(state, role, order_by || :blocks)
+      boundary =
+        {{role, order_by, Util.min_int(), <<>>}, {role, order_by, Util.max_int(), <<>>}}
 
-      stream_fn = fn
-        :forward -> drop_before(sorted, cursor)
-        :backward -> sorted |> Enum.reverse() |> drop_after(cursor)
+      # the cursor is the first miner of the page, so it's kept even if it moved since then
+      cursor_key =
+        case cursor do
+          {value, pk} -> {role, order_by, value, pk}
+          nil -> nil
+        end
+
+      stream_fn = fn direction ->
+        Collection.stream(state, Model.MinerOrder, direction, boundary, cursor_key)
       end
 
       stream_fn
       |> Collection.paginate(
         pagination,
-        fn {_value, pk} -> render_miner(State.fetch!(state, Model.MinerEntity, {role, pk})) end,
-        &Miners.serialize_cursor/1
+        fn {^role, ^order_by, _value, pk} ->
+          render_miner(State.fetch!(state, Model.MinerEntity, {role, pk}))
+        end,
+        fn {_role, _order_by, value, pk} -> Miners.serialize_cursor({value, pk}) end
       )
       |> then(&{:ok, &1})
     end
@@ -386,47 +390,6 @@ defmodule AeMdw.MinerStats do
   defp found({:ok, entity}, _id), do: {:ok, entity}
   defp found(:not_found, id), do: {:error, ErrInput.NotFound.exception(value: id)}
 
-  # Ascending [{value, pubkey}] of the role, cached while there's nothing new folded.
-  defp sorted_miners(state, role, order_by) do
-    cache_key = {role, order_by, Folder.folded_height(state)}
-
-    case EtsCache.get(@cache_table, cache_key) do
-      {sorted, _inserted_at} ->
-        sorted
-
-      nil ->
-        sorted =
-          state
-          |> Collection.stream(
-            Model.MinerEntity,
-            :forward,
-            {{role, <<>>}, {role, Util.max_256bit_bin()}},
-            nil
-          )
-          |> Enum.map(fn {^role, pk} = key ->
-            {order_value(State.fetch!(state, Model.MinerEntity, key), order_by), pk}
-          end)
-          |> Enum.sort()
-
-        EtsCache.put(@cache_table, cache_key, sorted)
-        sorted
-    end
-  end
-
-  defp order_value(entity, :blocks), do: Model.miner_entity(entity, :blocks)
-  defp order_value(entity, :txs), do: Model.miner_entity(entity, :txs)
-  defp order_value(entity, :rewards), do: Model.miner_entity(entity, :rewards)
-  defp order_value(entity, :fees), do: Model.miner_entity(entity, :fees)
-  defp order_value(entity, :first_active), do: Model.miner_entity(entity, :first_height) || -1
-  defp order_value(entity, :last_active), do: Model.miner_entity(entity, :last_height) || -1
-
-  # The cursor is the first miner of the page, so it's kept (even if it moved since then).
-  defp drop_before(sorted, nil), do: sorted
-  defp drop_before(sorted, cursor), do: Enum.drop_while(sorted, &(&1 < cursor))
-
-  defp drop_after(sorted, nil), do: sorted
-  defp drop_after(sorted, cursor), do: Enum.drop_while(sorted, &(&1 > cursor))
-
   defp split_role(query, default \\ nil) do
     case Map.pop(query, "role") do
       {nil, rest} ->
@@ -452,9 +415,11 @@ defmodule AeMdw.MinerStats do
     end
   end
 
-  # Only beneficiaries get rewards.
-  defp check_order(:miner, :rewards), do: {:error, ErrInput.Query.exception(value: "by=rewards")}
-  defp check_order(_role, _order_by), do: :ok
+  defp check_order(role, order_by) do
+    if order_by in Fold.orders_by(role),
+      do: :ok,
+      else: {:error, ErrInput.Query.exception(value: "by=#{order_by}")}
+  end
 
   defp check_params(query, allowed_keys) do
     case Enum.find(query, fn {key, _val} -> key not in allowed_keys end) do

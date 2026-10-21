@@ -13,6 +13,7 @@ defmodule AeMdw.MinerStats.FolderTest do
 
   @tables [
     Model.MinerEntity,
+    Model.MinerOrder,
     Model.MinerBucket,
     Model.BucketMiner,
     Model.BeneficiaryLink,

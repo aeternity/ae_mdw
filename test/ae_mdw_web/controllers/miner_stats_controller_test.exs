@@ -16,8 +16,6 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
   setup %{conn: conn, store: store} do
     MinerStatsFixtures.fold_history(State.new(store))
 
-    :ets.delete_all_objects(:miner_stats_sorted)
-
     {:ok, conn: with_store(conn, store)}
   end
 

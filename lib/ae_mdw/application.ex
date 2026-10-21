@@ -14,7 +14,6 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
-  alias AeMdw.MinerStats
   alias AeMdw.Miners
   alias AeMdw.Sync.Hyperchain
   alias AeMdw.Sync.Watcher
@@ -92,7 +91,6 @@ defmodule AeMdw.Application do
     BroadcasterCache.init()
     MutationsCache.init()
     Miners.init_cache()
-    MinerStats.init_cache()
 
     _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
 

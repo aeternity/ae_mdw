@@ -1352,6 +1352,15 @@ defmodule AeMdw.Db.Model do
   @type miner_entity_index() :: {miner_role(), pubkey()}
   @type miner_entity() :: record(:miner_entity, index: miner_entity_index())
 
+  # miners sorted by one of their totals or activity:
+  #     index = {role, order_by, value, pubkey}, the value of a missing height is -1
+  @miner_order_defaults [:index]
+  defrecord :miner_order, @miner_order_defaults
+
+  @type miner_order_by() :: :blocks | :txs | :rewards | :fees | :first_active | :last_active
+  @type miner_order_index() :: {miner_role(), miner_order_by(), integer(), pubkey()}
+  @type miner_order() :: record(:miner_order, index: miner_order_index())
+
   # miner bucket (or group of buckets):
   #     index = {role, pubkey, interval, group}
   #     blocks, txs, rewards and fees = in the group
@@ -1553,6 +1562,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Miner,
       AeMdw.Db.Model.RewardMiner,
       AeMdw.Db.Model.MinerEntity,
+      AeMdw.Db.Model.MinerOrder,
       AeMdw.Db.Model.MinerBucket,
       AeMdw.Db.Model.BucketMiner,
       AeMdw.Db.Model.BeneficiaryLink,
@@ -1798,6 +1808,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Miner), do: :miner
   def record(AeMdw.Db.Model.RewardMiner), do: :reward_miner
   def record(AeMdw.Db.Model.MinerEntity), do: :miner_entity
+  def record(AeMdw.Db.Model.MinerOrder), do: :miner_order
   def record(AeMdw.Db.Model.MinerBucket), do: :miner_bucket
   def record(AeMdw.Db.Model.BucketMiner), do: :bucket_miner
   def record(AeMdw.Db.Model.BeneficiaryLink), do: :beneficiary_link

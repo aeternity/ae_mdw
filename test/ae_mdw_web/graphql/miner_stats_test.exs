@@ -9,8 +9,6 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
   setup %{store: store} do
     state = MinerStatsFixtures.fold_history(State.new(store))
 
-    :ets.delete_all_objects(:miner_stats_sorted)
-
     {:ok, state: state, ids: ids()}
   end
 
