@@ -45,7 +45,8 @@ defmodule AeMdw.MinerStats do
   def fetch_summary(state) do
     summary = %{
       bucket_size: Fold.bucket_size(),
-      synced_height: Folder.folded_height(state),
+      mdw_height: max(State.height(state), 0),
+      stats_height: Folder.folded_height(state),
       last_bucket: nil,
       blocks: 0,
       txs: 0,

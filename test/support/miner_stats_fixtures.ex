@@ -49,6 +49,7 @@ defmodule AeMdw.MinerStatsFixtures do
     ]
     |> Enum.reduce(state, &Fold.fold(&2, &1))
     |> State.put(Model.Stat, Model.stat(index: :miner_stats_height, payload: 60))
+    |> State.put(Model.DeltaStat, Model.delta_stat(index: 75))
   end
 
   defp facts(height, miner, beneficiary, opts) do

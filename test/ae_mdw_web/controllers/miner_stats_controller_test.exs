@@ -25,7 +25,8 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
     test "it returns the totals and how far the stats are folded", %{conn: conn} do
       assert %{
                "bucket_size" => 20,
-               "synced_height" => 60,
+               "mdw_height" => 75,
+               "stats_height" => 60,
                "last_bucket" => 3,
                "blocks" => 6,
                "txs" => 6,
@@ -39,7 +40,13 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
     test "it returns zeros when nothing was folded yet", %{conn: conn} do
       store = AeMdw.Sync.MemStoreCreator.create(AeMdw.Db.NullStore.new())
 
-      assert %{"synced_height" => 0, "last_bucket" => nil, "blocks" => 0, "miners" => 0} =
+      assert %{
+               "mdw_height" => 0,
+               "stats_height" => 0,
+               "last_bucket" => nil,
+               "blocks" => 0,
+               "miners" => 0
+             } =
                conn |> with_store(store) |> get("/v3/stats/mining") |> json_response(200)
     end
   end

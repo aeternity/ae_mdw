@@ -99,9 +99,10 @@ which takes a while and adds some disk usage (a few hundred MB on mainnet, an es
 There is nothing to configure and nothing blocks while it runs. It only folds complete buckets
 (20 generations) and sleeps until the next one can be complete, so it is idle most of the time.
 
-Check its progress with `GET /v3/stats/mining`: `synced_height` is the last generation folded
-and it trails the `mdw_height` of `GET /v3/status` by up to a bucket plus the generations kept in
-memory. The series only include the generations up to `synced_height`.
+Check its progress with `GET /v3/stats/mining`: `stats_height` is the last generation folded
+and `mdw_height` is the one synced by the middleware (the `mdw_height` of `GET /v3/status`).
+The stats trail it by up to a bucket plus the generations kept in memory, and the series only
+include the generations up to `stats_height`.
 When a chunk fails (for example the node database isn't ready) it logs
 `[miner_stats] fold failed: ...` and retries after a minute.
 

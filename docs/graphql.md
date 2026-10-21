@@ -610,7 +610,7 @@ query {
     nextCursor
     data { bucket startTime blocks rewards rewardsTotal }
   }
-  miningSummary { syncedHeight lastBucket blocks miners beneficiaries }
+  miningSummary { mdwHeight statsHeight lastBucket blocks miners beneficiaries }
 }
 ```
 

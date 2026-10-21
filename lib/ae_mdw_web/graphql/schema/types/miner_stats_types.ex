@@ -23,7 +23,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.MinerStatsTypes do
 
   object :mining_summary do
     field(:bucket_size, :integer)
-    field(:synced_height, :integer)
+    field(:mdw_height, :integer)
+    field(:stats_height, :integer)
     field(:last_bucket, :integer)
     field(:blocks, :integer)
     field(:txs, :integer)

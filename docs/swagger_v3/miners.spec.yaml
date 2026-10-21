@@ -6,7 +6,8 @@ schemas:
     type: object
     example:
       bucket_size: 20
-      synced_height: 1100000
+      mdw_height: 1100030
+      stats_height: 1100000
       last_bucket: 55000
       blocks: 1100000
       txs: 52000000
@@ -16,7 +17,8 @@ schemas:
       beneficiaries: 290
     required:
       - bucket_size
-      - synced_height
+      - mdw_height
+      - stats_height
       - last_bucket
       - blocks
       - txs
@@ -29,8 +31,13 @@ schemas:
         description: The number of generations of a bucket
         type: integer
         example: 20
-      synced_height:
-        description: The last generation folded into the stats
+      mdw_height:
+        description: The last generation synced by the middleware
+        type: integer
+      stats_height:
+        description: >-
+          The last generation folded into the stats. The difference with `mdw_height`
+          tells how fresh the stats are.
         type: integer
       last_bucket:
         description: The last bucket with stats

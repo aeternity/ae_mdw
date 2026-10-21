@@ -19,12 +19,18 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       assert {:ok, %{data: %{"miningSummary" => summary}} = res} =
                run(
                  state,
-                 "{ miningSummary { bucketSize syncedHeight lastBucket blocks rewards miners } }"
+                 "{ miningSummary { bucketSize mdwHeight statsHeight lastBucket blocks rewards miners } }"
                )
 
       refute res[:errors]
 
-      assert %{"bucketSize" => 20, "syncedHeight" => 60, "lastBucket" => 3, "blocks" => 6} =
+      assert %{
+               "bucketSize" => 20,
+               "mdwHeight" => 75,
+               "statsHeight" => 60,
+               "lastBucket" => 3,
+               "blocks" => 6
+             } =
                summary
 
       assert %{"rewards" => "134", "miners" => 3} = summary

@@ -3388,7 +3388,7 @@ Series and totals of the mining, for each miner and for the whole network. They 
 built in the background from the finalized generations, starting at the genesis the first
 time the middleware runs, so they trail the tip of the chain by the finalization depth and
 the history is available once the first run catches up. `GET /v3/stats/mining` tells how
-far they are with `synced_height`.
+far they are with `stats_height`, compared to the `mdw_height` of the middleware.
 
 The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
 Each row of a series has what happened in the bucket, and the totals up to its end.
@@ -3437,7 +3437,8 @@ Example responses (with illustrative values):
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
 {
   "bucket_size": 20,
-  "synced_height": 1100000,
+  "mdw_height": 1100030,
+  "stats_height": 1100000,
   "last_bucket": 55000,
   "blocks": 1100000,
   "txs": 52000000,
@@ -3530,7 +3531,7 @@ Notes:
 * The series are not available on hyperchain nodes, which have no mining.
 * The `limit` is up to 1000 and the miners are listed with `limit` and `direction` like the other stats.
 * The `info` of a miner is the info field of the key blocks it mined, which usually identifies the software or the pool. The IP of a miner is not on chain, so it can't be known.
-* After upgrading, the background run builds the whole history, which takes a while on mainnet. The rest of the API works meanwhile and the series only have the generations up to `synced_height`.
+* After upgrading, the background run builds the whole history, which takes a while on mainnet. The rest of the API works meanwhile and the series only have the generations up to `stats_height`.
 
 The same data is available in GraphQL with the `miningSummary`, `miningSeries`, `miningBucket`,
 `miningBucketMiners`, `miners`, `miner`, `minerLinks` and `minerSeries` queries.
