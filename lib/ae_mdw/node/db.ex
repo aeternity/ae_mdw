@@ -140,6 +140,14 @@ defmodule AeMdw.Node.Db do
     |> Stream.unfold(&micro_block_walker/1)
   end
 
+  @spec get_reverse_micro_headers(Blocks.block_hash()) :: Enumerable.t()
+  def get_reverse_micro_headers(next_block_hash) do
+    next_block_hash
+    |> :aec_db.get_header()
+    |> :aec_headers.prev_hash()
+    |> Stream.unfold(&micro_header_walker/1)
+  end
+
   @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash() | nil
   def get_key_block_hash(height) do
     with {:ok, next_kb_header} <- :aec_chain.get_key_header_by_height(height),
@@ -349,6 +357,15 @@ defmodule AeMdw.Node.Db do
     with block <- :aec_db.get_block(hash),
          :micro <- :aec_blocks.type(block) do
       {block, :aec_blocks.prev_hash(block)}
+    else
+      :key -> nil
+    end
+  end
+
+  defp micro_header_walker(hash) do
+    with header <- :aec_db.get_header(hash),
+         :micro <- :aec_headers.type(header) do
+      {header, :aec_headers.prev_hash(header)}
     else
       :key -> nil
     end
