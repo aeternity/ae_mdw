@@ -119,7 +119,7 @@ defmodule AeMdw.Collection do
       end
     end)
     |> merge_streams_by(direction)
-    |> remove_dups()
+    |> Stream.uniq()
   end
 
   @spec generate_key_boundary(tuple()) :: key_boundary()
@@ -171,17 +171,6 @@ defmodule AeMdw.Collection do
   end
 
   defp get_max_key(x), do: x
-
-  defp remove_dups(stream) do
-    Stream.transform(stream, [], fn
-      item, visited_keys ->
-        if item in visited_keys do
-          {[], [item | visited_keys]}
-        else
-          {[item], [item | visited_keys]}
-        end
-    end)
-  end
 
   defp unfold_stream(state, tab, direction, first_key, last_key) do
     stream =
