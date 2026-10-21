@@ -143,8 +143,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       conn: conn,
       store: store
     } do
-      State.new(store)
-      |> Fold.fold(%{
+      Fold.fold(State.new(store), %{
         height: 61,
         time: 7_000,
         miner: @b1,
