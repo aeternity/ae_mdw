@@ -316,11 +316,10 @@ defmodule AeMdw.Db.RocksDbCF do
     do_all_keys([key | keys], it, do_iterator_move(it, :next))
   end
 
-  defp do_count(counter, _it, :not_found), do: counter
+  defp do_count(counter, it, {:ok, _key, _value}),
+    do: do_count(counter + 1, it, :rocksdb.iterator_move(it, :next))
 
-  defp do_count(counter, it, _key_res) do
-    do_count(counter + 1, it, do_iterator_move(it, :next))
-  end
+  defp do_count(counter, _it, {:error, :invalid_iterator}), do: counter
 
   defp encode_record_index(record), do: record |> elem(1) |> :sext.encode()
 
@@ -352,9 +351,7 @@ defmodule AeMdw.Db.RocksDbCF do
   end
 
   defp iterator_count(it) do
-    key_res = do_iterator_move(it, :first)
-
-    count = do_count(0, it, key_res)
+    count = do_count(0, it, :rocksdb.iterator_move(it, :first))
 
     RocksDb.iterator_close(it)
 
