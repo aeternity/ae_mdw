@@ -20,7 +20,6 @@ defmodule AeMdw.MinerStats.Facts do
           time: Blocks.time(),
           miner: Db.pubkey(),
           beneficiary: Db.pubkey(),
-          info: non_neg_integer() | nil,
           difficulty: non_neg_integer(),
           micro_blocks: non_neg_integer(),
           txs: non_neg_integer(),
@@ -43,20 +42,12 @@ defmodule AeMdw.MinerStats.Facts do
          time: :aec_headers.time_in_msecs(header),
          miner: :aec_headers.miner(header),
          beneficiary: :aec_headers.beneficiary(header),
-         info: info(header),
          difficulty: :aec_headers.difficulty(header),
          micro_blocks: micro_blocks_count(state, height),
          txs: next_txi - first_txi,
          fees: fees(state, first_txi, next_txi),
          rewards: IntTransfer.sum_block_rewards_by_target(state, height, height)
        }}
-    end
-  end
-
-  defp info(header) do
-    case :aec_headers.info(header) do
-      info when is_integer(info) -> info
-      _default -> nil
     end
   end
 

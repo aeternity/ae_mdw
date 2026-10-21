@@ -75,8 +75,6 @@ schemas:
       txs: 650000
       rewards: null
       fees: 20000000000000000000
-      last_info: 0
-      info_changes: 2
     required:
       - id
       - role
@@ -88,8 +86,6 @@ schemas:
       - txs
       - rewards
       - fees
-      - last_info
-      - info_changes
     properties:
       id:
         $ref: '#/components/schemas/AccountAddress'
@@ -124,13 +120,6 @@ schemas:
       fees:
         description: The fees of the transactions processed in the generations it mined
         type: integer
-      last_info:
-        description: The info of the last key block it mined
-        type: integer
-        nullable: true
-      info_changes:
-        description: How many times the info of its key blocks changed
-        type: integer
   MinerRole:
     description: >-
       The miner key that mined a key block or the beneficiary that gets its rewards, which
@@ -140,19 +129,16 @@ schemas:
       - miner
       - beneficiary
   MinerLink:
-    description: A beneficiary a miner key mined for, or a miner key that mined for a beneficiary
+    description: A miner key that mined for a beneficiary
     type: object
     required:
       - id
-      - role
       - blocks
       - first_height
       - last_height
     properties:
       id:
         $ref: '#/components/schemas/AccountAddress'
-      role:
-        $ref: '#/components/schemas/MinerRole'
       blocks:
         description: The number of key blocks mined together
         type: integer
@@ -271,8 +257,6 @@ schemas:
       active_beneficiaries: 22
       new_miners: 1
       new_beneficiaries: 0
-      top_miner_blocks: 90
-      top_beneficiary_blocks: 95
       blocks_total: 1100160
       txs_total: 51990000
       rewards_total: 1499000000000000000000000
@@ -298,8 +282,6 @@ schemas:
       - active_beneficiaries
       - new_miners
       - new_beneficiaries
-      - top_miner_blocks
-      - top_beneficiary_blocks
       - blocks_total
       - txs_total
       - rewards_total
@@ -364,12 +346,6 @@ schemas:
       new_beneficiaries:
         description: The beneficiaries that mined for the first time
         type: integer
-      top_miner_blocks:
-        description: The most blocks mined by a single miner key in a bucket
-        type: integer
-      top_beneficiary_blocks:
-        description: The most blocks mined by a single beneficiary in a bucket
-        type: integer
       blocks_total:
         description: The key blocks up to the end of the interval
         type: integer
@@ -408,14 +384,14 @@ paths:
       deprecated: false
       description: >-
         Get the mining series of the whole network, a row per bucket of 20 generations (about
-        an hour), or per interval of buckets (day, week, month or year), all of them indexed.
+        an hour), or per interval of buckets (about a day, week, month or year), all of them
+        indexed.
       operationId: GetMiningSeries
       parameters:
         - $ref: '#/components/parameters/StatsLimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
         - $ref: '#/components/parameters/MiningIntervalParam'
-        - $ref: '#/components/parameters/MiningIntervalByParam'
       responses:
         '200':
           description: Returns the paginated mining series
@@ -501,7 +477,9 @@ paths:
       deprecated: false
       description: >-
         Get the miners, by their key or by their beneficiary, sorted by one of their totals or
-        by when they first or last mined.
+        by when they first or last mined. Like all the mining stats, they trail the chain (see
+        `stats_height` of `/stats/mining`), the total rewards up to the synced generation are the
+        ones of `/stats/miners`.
       operationId: GetMiners
       parameters:
         - $ref: '#/components/parameters/MinerRoleParam'
@@ -573,13 +551,10 @@ paths:
   /miners/{minerId}/links:
     get:
       deprecated: false
-      description: >-
-        Get the beneficiaries a miner key mined for, or the miner keys that mined for a
-        beneficiary.
+      description: Get the miner keys that mined for a beneficiary.
       operationId: GetMinerLinks
       parameters:
         - $ref: '#/components/parameters/MinerIdParam'
-        - $ref: '#/components/parameters/MinerRoleParam'
         - $ref: '#/components/parameters/StatsLimitParam'
         - $ref: '#/components/parameters/DirectionParam'
       responses:
@@ -618,7 +593,6 @@ paths:
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
         - $ref: '#/components/parameters/MiningIntervalParam'
-        - $ref: '#/components/parameters/MiningIntervalByParam'
       responses:
         '200':
           description: Returns the paginated series of the miner

@@ -231,13 +231,13 @@ All time-series stats queries accept `intervalBy` (`day`, `week`, `month`),
 | `deltaStats` | pagination | Aggregated delta stats from chain tip |
 | `minersStats` | `period`, pagination | Total rewards per miner, optionally only those paid in the last `day`, `week` or `month` |
 | `miningSummary` | — | Mining totals and how far the mining stats are built |
-| `miningSeries` | `interval`, `intervalBy`, scope, pagination | Mining series of the network per bucket of 20 generations |
+| `miningSeries` | `interval`, scope, pagination | Mining series of the network per bucket of 20 generations |
 | `miningBucket` | `bucket` | A bucket of the mining series |
 | `miningBucketMiners` | `bucket`, `role`, pagination | Miners that mined in a bucket |
 | `miners` | `role`, `orderBy`, pagination | Miners (by key or beneficiary) sorted by their totals or activity |
 | `miner` | `id`, `role` | A miner with when it first and last mined |
-| `minerLinks` | `id`, `role`, pagination | Beneficiaries of a miner key or miner keys of a beneficiary |
-| `minerSeries` | `id`, `role`, `interval`, `intervalBy`, scope, pagination | Series of a miner |
+| `minerLinks` | `id`, pagination | Miner keys that mined for a beneficiary |
+| `minerSeries` | `id`, `role`, `interval`, scope, pagination | Series of a miner |
 | `topMinersStats` | pagination | Top miners by reward |
 | `topMiners24hStats` | pagination | Top miners in the last 24 hours |
 
@@ -586,8 +586,8 @@ query {
 
 ### Mining stats
 
-The mining stats of the whole network per day (the intervals are `1`, `24`, `168`, `720` and
-`8760` buckets of 20 generations, `intervalBy` only has `day`, `week` and `month`):
+The mining stats of the whole network per day. They don't take `intervalBy`, the `interval` is
+`1`, `24`, `168`, `720` or `8760` buckets of 20 generations, aligned to the genesis:
 
 ```graphql
 query {
@@ -605,8 +605,8 @@ query {
   miners(role: BENEFICIARY, orderBy: REWARDS, limit: 5) {
     data { id blocks txs rewards firstHeight lastHeight }
   }
-  miner(id: "ak_...", role: BENEFICIARY) { id blocks rewards lastInfo }
-  minerSeries(id: "ak_...", role: BENEFICIARY, intervalBy: WEEK, limit: 4) {
+  miner(id: "ak_...", role: BENEFICIARY) { id blocks rewards lastHeight }
+  minerSeries(id: "ak_...", role: BENEFICIARY, interval: 168, limit: 4) {
     nextCursor
     data { bucket startTime blocks rewards rewardsTotal }
   }

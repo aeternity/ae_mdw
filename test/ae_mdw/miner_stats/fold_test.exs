@@ -21,12 +21,11 @@ defmodule AeMdw.MinerStats.FoldTest do
     setup do
       state =
         empty_state()
-        |> Fold.fold(facts(20, @m1, @b1, txs: 3, fees: 30, info: 1, micro_blocks: 2, time: 1_000))
+        |> Fold.fold(facts(20, @m1, @b1, txs: 3, fees: 30, micro_blocks: 2, time: 1_000))
         |> Fold.fold(
           facts(21, @m2, @b1,
             txs: 1,
             fees: 10,
-            info: 1,
             micro_blocks: 1,
             time: 2_000,
             rewards: %{@b1 => 50}
@@ -35,7 +34,6 @@ defmodule AeMdw.MinerStats.FoldTest do
         |> Fold.fold(
           facts(22, @m1, @b2,
             difficulty: 200,
-            info: 2,
             time: 3_000,
             rewards: %{@b2 => 70, @b1 => 5}
           )
@@ -54,12 +52,10 @@ defmodule AeMdw.MinerStats.FoldTest do
                 blocks: 2,
                 txs: 3,
                 rewards: 0,
-                fees: 30,
-                last_info: 2,
-                info_changes: 1
+                fees: 30
               )} = State.get(state, Model.MinerEntity, {:miner, @m1})
 
-      assert {:ok, Model.miner_entity(blocks: 1, txs: 1, fees: 10, last_info: 1, info_changes: 0)} =
+      assert {:ok, Model.miner_entity(blocks: 1, txs: 1, fees: 10)} =
                State.get(state, Model.MinerEntity, {:miner, @m2})
     end
 
@@ -101,16 +97,16 @@ defmodule AeMdw.MinerStats.FoldTest do
       assert State.exists?(state, Model.BucketMiner, {:beneficiary, 1, 1, @b2})
     end
 
-    test "it links the miners with their beneficiaries", %{state: state} do
-      assert {:ok, Model.miner_link(blocks: 1, first_height: 20, last_height: 20)} =
-               State.get(state, Model.MinerLink, {@m1, @b1})
+    test "it links the beneficiaries with the miner keys that mined for them", %{state: state} do
+      assert {:ok, Model.beneficiary_link(blocks: 1, first_height: 20, last_height: 20)} =
+               State.get(state, Model.BeneficiaryLink, {@b1, @m1})
 
-      assert {:ok, Model.miner_link(blocks: 1, first_height: 22, last_height: 22)} =
-               State.get(state, Model.MinerLink, {@m1, @b2})
+      assert {:ok, Model.beneficiary_link(blocks: 1, first_height: 21, last_height: 21)} =
+               State.get(state, Model.BeneficiaryLink, {@b1, @m2})
 
-      assert State.exists?(state, Model.BeneficiaryLink, {@b1, @m1})
-      assert State.exists?(state, Model.BeneficiaryLink, {@b1, @m2})
-      assert State.exists?(state, Model.BeneficiaryLink, {@b2, @m1})
+      assert {:ok, Model.beneficiary_link(blocks: 1, first_height: 22, last_height: 22)} =
+               State.get(state, Model.BeneficiaryLink, {@b2, @m1})
+
       refute State.exists?(state, Model.BeneficiaryLink, {@b2, @m2})
     end
 
@@ -131,8 +127,6 @@ defmodule AeMdw.MinerStats.FoldTest do
                 active_beneficiaries: 2,
                 new_miners: 2,
                 new_beneficiaries: 2,
-                top_miner_blocks: 2,
-                top_beneficiary_blocks: 2,
                 blocks_total: 3,
                 txs_total: 4,
                 rewards_total: 125,
@@ -159,7 +153,6 @@ defmodule AeMdw.MinerStats.FoldTest do
                 active_beneficiaries: 2,
                 new_miners: 1,
                 new_beneficiaries: 1,
-                top_miner_blocks: 1,
                 blocks_total: 5,
                 txs_total: 6,
                 rewards_total: 134,
@@ -216,8 +209,6 @@ defmodule AeMdw.MinerStats.FoldTest do
                   active_beneficiaries: 3,
                   new_miners: 3,
                   new_beneficiaries: 3,
-                  top_miner_blocks: 4,
-                  top_beneficiary_blocks: 4,
                   blocks_total: 6,
                   rewards_total: 134,
                   miners_total: 3
@@ -242,7 +233,6 @@ defmodule AeMdw.MinerStats.FoldTest do
             time: time,
             miner: @m1,
             beneficiary: @b1,
-            info: nil,
             difficulty: 100,
             micro_blocks: 0,
             txs: 1,
@@ -278,7 +268,6 @@ defmodule AeMdw.MinerStats.FoldTest do
       time: Keyword.get(opts, :time, height * 1_000),
       miner: miner,
       beneficiary: beneficiary,
-      info: Keyword.get(opts, :info),
       difficulty: Keyword.get(opts, :difficulty, 100),
       micro_blocks: Keyword.get(opts, :micro_blocks, 0),
       txs: Keyword.get(opts, :txs, 0),

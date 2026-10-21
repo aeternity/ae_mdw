@@ -70,9 +70,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                "blocks" => 4,
                "txs" => 5,
                "rewards" => nil,
-               "fees" => 35,
-               "last_info" => 2,
-               "info_changes" => 1
+               "fees" => 35
              } = first
     end
 
@@ -155,7 +153,6 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
         time: 7_000,
         miner: @b1,
         beneficiary: @b1,
-        info: nil,
         difficulty: 100,
         micro_blocks: 0,
         txs: 0,
@@ -183,34 +180,34 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
   end
 
   describe "GET /v3/miners/:id/links" do
-    test "it returns the beneficiaries of a miner", %{conn: conn} do
-      [b1, b2] = Enum.map([@b1, @b2], &id/1)
+    test "it returns the miner keys of a beneficiary", %{conn: conn} do
+      [m1, m2] = Enum.map([@m1, @m2], &id/1)
 
       assert %{
                "data" => [
-                 %{"id" => ^b2, "role" => "beneficiary", "blocks" => 1, "first_height" => 22},
-                 %{"id" => ^b1, "blocks" => 3, "first_height" => 20, "last_height" => 60}
+                 %{"id" => ^m2, "blocks" => 1, "first_height" => 21, "last_height" => 21},
+                 %{"id" => ^m1, "blocks" => 3, "first_height" => 20, "last_height" => 60}
                ]
-             } = conn |> get("/v3/miners/#{id(@m1)}/links") |> json_response(200)
+             } = conn |> get("/v3/miners/#{id(@b1)}/links") |> json_response(200)
+
+      assert %{"data" => []} = conn |> get("/v3/miners/#{id(@m1)}/links") |> json_response(200)
     end
 
-    test "it finds the role of the account when it's not given", %{conn: conn} do
+    test "it paginates", %{conn: conn} do
       [m1, m2] = Enum.map([@m1, @m2], &id/1)
 
-      assert %{"data" => [%{"id" => ^m2, "role" => "miner"}, %{"id" => ^m1}]} =
-               conn |> get("/v3/miners/#{id(@b1)}/links") |> json_response(200)
-    end
-
-    test "it returns the miners of a beneficiary and paginates", %{conn: conn} do
-      [m1, m2] = Enum.map([@m1, @m2], &id/1)
-
-      assert %{"data" => [%{"id" => ^m2, "role" => "miner", "blocks" => 1}], "next" => next} =
-               conn
-               |> get("/v3/miners/#{id(@b1)}/links", role: "beneficiary", limit: 1)
-               |> json_response(200)
+      assert %{"data" => [%{"id" => ^m2, "blocks" => 1}], "next" => next} =
+               conn |> get("/v3/miners/#{id(@b1)}/links", limit: 1) |> json_response(200)
 
       assert %{"data" => [%{"id" => ^m1, "blocks" => 3}], "next" => nil} =
                conn |> get(next) |> json_response(200)
+    end
+
+    test "it doesn't take a role", %{conn: conn} do
+      assert %{"error" => "invalid query: role=beneficiary"} =
+               conn
+               |> get("/v3/miners/#{id(@b1)}/links", role: "beneficiary")
+               |> json_response(400)
     end
   end
 
@@ -285,7 +282,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
 
       assert %{"data" => [%{"interval" => 8760, "end_height" => 175_199, "blocks" => 4}]} =
                conn
-               |> get("/v3/miners/#{id(@m1)}/series", interval_by: "year")
+               |> get("/v3/miners/#{id(@m1)}/series", interval: 8760)
                |> json_response(200)
     end
 
@@ -322,11 +319,8 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"error" => "invalid query: interval=2"} =
                conn |> get(path, interval: 2) |> json_response(400)
 
-      assert %{"error" => "invalid query: interval_by=decade"} =
-               conn |> get(path, interval_by: "decade") |> json_response(400)
-
       assert %{"error" => "invalid query: interval_by=day"} =
-               conn |> get(path, interval: 2, interval_by: "day") |> json_response(400)
+               conn |> get(path, interval_by: "day") |> json_response(400)
 
       assert %{"error" => "invalid query: foo=bar"} =
                conn |> get(path, foo: "bar") |> json_response(400)
@@ -363,8 +357,6 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                "active_beneficiaries" => 2,
                "new_miners" => 2,
                "new_beneficiaries" => 2,
-               "top_miner_blocks" => 2,
-               "top_beneficiary_blocks" => 2,
                "blocks_total" => 3,
                "txs_total" => 4,
                "rewards_total" => 125,
@@ -378,7 +370,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
 
     test "it returns the indexed rows of an interval counting the miners once", %{conn: conn} do
       assert %{"prev" => nil, "data" => [day], "next" => nil} =
-               conn |> get("/v3/stats/mining/series", interval_by: "day") |> json_response(200)
+               conn |> get("/v3/stats/mining/series", interval: 24) |> json_response(200)
 
       assert %{
                "bucket" => 0,
@@ -393,15 +385,14 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                "active_miners" => 3,
                "active_beneficiaries" => 3,
                "new_miners" => 3,
-               "top_miner_blocks" => 4,
                "blocks_total" => 6,
                "miners_total" => 3
              } = day
 
-      for interval_by <- ["week", "month", "year"] do
+      for interval <- [168, 720, 8760] do
         assert %{"data" => [%{"blocks" => 6, "active_miners" => 3}]} =
                  conn
-                 |> get("/v3/stats/mining/series", interval_by: interval_by)
+                 |> get("/v3/stats/mining/series", interval: interval)
                  |> json_response(200)
       end
     end

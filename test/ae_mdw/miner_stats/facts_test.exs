@@ -36,8 +36,7 @@ defmodule AeMdw.MinerStats.FactsTest do
 
       with_mocks [
         {Db, [], [get_key_header: fn ^height -> {:ok, header(height)} end]},
-        {:aec_headers, [:passthrough],
-         [difficulty: fn _header -> 123 end, info: fn _header -> 42 end]}
+        {:aec_headers, [:passthrough], [difficulty: fn _header -> 123 end]}
       ] do
         assert {:ok,
                 %{
@@ -45,7 +44,6 @@ defmodule AeMdw.MinerStats.FactsTest do
                   time: 5_000,
                   miner: @miner,
                   beneficiary: @beneficiary,
-                  info: 42,
                   difficulty: 123,
                   micro_blocks: 2,
                   txs: 3,
@@ -55,12 +53,12 @@ defmodule AeMdw.MinerStats.FactsTest do
       end
     end
 
-    test "it has no info when the header has the default one" do
+    test "it returns zeros for a generation without micro blocks" do
       with_mocks [
         {Db, [], [get_key_header: fn _height -> {:ok, header(100)} end]},
         {:aec_headers, [:passthrough], [difficulty: fn _header -> 123 end]}
       ] do
-        assert {:ok, %{info: nil, micro_blocks: 0, txs: 0, fees: 0, rewards: rewards}} =
+        assert {:ok, %{micro_blocks: 0, txs: 0, fees: 0, rewards: rewards}} =
                  Facts.fetch(State.new(empty_store()), 100)
 
         assert rewards == %{}

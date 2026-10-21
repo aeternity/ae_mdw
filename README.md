@@ -3394,20 +3394,22 @@ far they are with `stats_height`, compared to the `mdw_height` of the middleware
 The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
 Each row of a series has what happened in the bucket, and the totals up to its end.
 The series are also kept (indexed, so reading them costs the same) for longer intervals of
-buckets, selected with `interval` (1, 24, 168, 720 or 8760 buckets) or `interval_by` (`day`,
-`week`, `month` or `year`, which are 24, 168, 720 and 8760 buckets). The groups of an interval
-are aligned to the genesis and not to calendar dates, a day is 24 buckets of 20 generations.
+buckets, selected with `interval` (1, 24, 168, 720 or 8760 buckets, about an hour, a day, a week,
+a month and a year). The groups of an interval are aligned to the genesis and not to calendar
+dates like the `interval_by` of the other stats.
 The `scope=gen:<from>-<to>` parameter selects the rows of the generations, which are whole
 rows, and it is paginated with the usual `limit`, `direction` and cursors. The `start_time`
 and `end_time` are the time of the first and last key block of the row.
 
 A key block has the miner key that mined it and the beneficiary that gets its reward, which
 are different accounts when a pool mines for its members, both are plain accounts (`ak_`).
-Every endpoint of the miners takes `role=miner` or `role=beneficiary`. The lists use the miner
+The endpoints of the miners take `role=miner` or `role=beneficiary`. The lists use the miner
 keys when it isn't given and a single miner (`/v3/miners/:id...`) finds it from the account:
 the miner key, unless the account only has stats as a beneficiary. Only beneficiaries get rewards, so the
 `rewards` of the miner keys are `null` (and `by=rewards` is only for beneficiaries). The rewards are counted when they are paid, which is
 some generations after the block was mined, like the totals of `/v3/stats/miners`.
+`/v3/stats/miners` remains the reference for the total rewards, it is current up to the synced
+generation, while `/v3/miners?role=beneficiary&by=rewards` trails it like all the mining stats.
 
 ```
 GET /v3/stats/mining                           - totals of the chain and how far the stats are built
@@ -3416,20 +3418,19 @@ GET /v3/stats/mining/buckets/:bucket           - a bucket of the network series
 GET /v3/stats/mining/buckets/:bucket/miners    - the miners that mined in a bucket
 GET /v3/miners                                 - miners sorted by `by=blocks|txs|rewards|fees|first_active|last_active`
 GET /v3/miners/:id                             - a miner, with when it first and last mined
-GET /v3/miners/:id/links                       - the beneficiaries of a miner key or the miner keys of a beneficiary
+GET /v3/miners/:id/links                       - the miner keys that mined for a beneficiary
 GET /v3/miners/:id/series                      - series of a miner
 ```
 
 The network series rows have the key and micro blocks, transactions, rewards and fees of
 the bucket, the average block time, difficulty and hashrate, how many miners and beneficiaries
-were active or new, the most blocks mined by a single miner
-or beneficiary, and the totals up to the end of the row. The fees are the ones of the
+were active or new, and the totals up to the end of the row. The fees are the ones of the
 transactions processed in the generations that the miner mined.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval_by=day" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval=24" | jq '.'
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners?role=beneficiary&by=rewards&limit=3" | jq '.'
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?scope=gen:1000000-1100000&interval_by=week" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?scope=gen:1000000-1100000&interval=168" | jq '.'
 ```
 
 Example responses (with illustrative values):
@@ -3449,7 +3450,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
   "beneficiaries": 290
 }
 
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=day&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval=24&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3471,8 +3472,6 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=d
       "active_beneficiaries": 22,
       "new_miners": 1,
       "new_beneficiaries": 0,
-      "top_miner_blocks": 90,
-      "top_beneficiary_blocks": 95,
       "blocks_total": 1099680,
       "txs_total": 51990000,
       "rewards_total": 1499000000000000000000000,
@@ -3481,7 +3480,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=d
       "beneficiaries_total": 290
     }
   ],
-  "next": "/v3/stats/mining/series?cursor=2290&interval_by=day&limit=1",
+  "next": "/v3/stats/mining/series?cursor=2290&interval=24&limit=1",
   "prev": null
 }
 
@@ -3520,9 +3519,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_..." | jq '.'
   "blocks": 12000,
   "txs": 650000,
   "rewards": null,
-  "fees": 20000000000000000000,
-  "last_info": 0,
-  "info_changes": 2
+  "fees": 20000000000000000000
 }
 ```
 
@@ -3531,7 +3528,6 @@ Notes:
 * A bucket without rows (the miner neither mined nor got paid in it) isn't returned, the `*_total` fields of a row carry what happened before.
 * The series are not available on hyperchain nodes, which have no mining.
 * The `limit` is up to 1000 and the miners are listed with `limit` and `direction` like the other stats.
-* The `info` of a miner is the info field of the key blocks it mined, which usually identifies the software or the pool. The IP of a miner is not on chain, so it can't be known.
 * After upgrading, the background run builds the whole history, which takes a while on mainnet. The rest of the API works meanwhile and the series only have the generations up to `stats_height`.
 
 The same data is available in GraphQL with the `miningSummary`, `miningSeries`, `miningBucket`,

@@ -29,9 +29,8 @@ defmodule AeMdwWeb.GraphQL.Resolvers.MinerStatsResolver do
   @spec links(any(), map(), Absinthe.Resolution.t()) :: {:ok, term()} | {:error, String.t()}
   def links(_parent, %{id: id} = args, %{context: %{state: state}}) do
     %{pagination: pagination, cursor: cursor} = Helpers.pagination_args(args)
-    query = Helpers.build_query(args, [:role])
 
-    Helpers.make_page(MinerStats.fetch_links(state, pagination, query, id, cursor))
+    Helpers.make_page(MinerStats.fetch_links(state, pagination, %{}, id, cursor))
   end
 
   @spec miner_series(any(), map(), Absinthe.Resolution.t()) ::
@@ -40,7 +39,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.MinerStatsResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = Helpers.build_query(args, [:role, :interval, :interval_by])
+    query = Helpers.build_query(args, [:role, :interval])
 
     Helpers.make_page(MinerStats.fetch_miner_series(state, pagination, id, scope, query, cursor))
   end
@@ -51,7 +50,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.MinerStatsResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = Helpers.build_query(args, [:interval, :interval_by])
+    query = Helpers.build_query(args, [:interval])
 
     Helpers.make_page(MinerStats.fetch_network_series(state, pagination, scope, query, cursor))
   end

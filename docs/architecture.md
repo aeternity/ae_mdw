@@ -597,7 +597,7 @@ Folding from the database, and not from the mutations, keeps the stats consisten
 
 The stats only include the generations of the database, so they trail the top of the chain by
 the number of generations kept in memory. `AeMdw.Db.Model.NetworkBucket`, `MinerBucket`,
-`BucketMiner`, `MinerEntity`, `MinerLink` and `BeneficiaryLink` hold the data.
+`BucketMiner`, `MinerEntity` and `BeneficiaryLink` hold the data.
 
 ## Database searching
 

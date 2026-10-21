@@ -47,15 +47,12 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.MinerStatsTypes do
     field(:txs, :integer)
     field(:rewards, :big_int)
     field(:fees, :big_int)
-    field(:last_info, :integer)
-    field(:info_changes, :integer)
   end
 
   Macros.page(:miner_link)
 
   object :miner_link do
     field(:id, :string)
-    field(:role, :string)
     field(:blocks, :integer)
     field(:first_height, :integer)
     field(:last_height, :integer)
@@ -102,8 +99,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.MinerStatsTypes do
     field(:active_beneficiaries, :integer)
     field(:new_miners, :integer)
     field(:new_beneficiaries, :integer)
-    field(:top_miner_blocks, :integer)
-    field(:top_beneficiary_blocks, :integer)
     field(:blocks_total, :integer)
     field(:txs_total, :integer)
     field(:rewards_total, :big_int)

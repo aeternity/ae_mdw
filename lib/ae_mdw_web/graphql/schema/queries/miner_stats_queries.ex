@@ -32,10 +32,9 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.MinerStatsQueries do
       resolve(&MinerStatsResolver.miner/3)
     end
 
-    @desc "The beneficiaries of a miner key or the miner keys of a beneficiary"
+    @desc "The miner keys that mined for a beneficiary"
     field :miner_links, :miner_link_page do
       arg(:id, non_null(:string))
-      arg(:role, :miner_role)
 
       Macros.pagination_args()
 
@@ -47,7 +46,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.MinerStatsQueries do
       arg(:id, non_null(:string))
       arg(:role, :miner_role)
       arg(:interval, :integer)
-      arg(:interval_by, :stats_interval)
 
       Macros.pagination_args_with_scope()
 
@@ -57,7 +55,6 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.MinerStatsQueries do
     @desc "Series of the mining of the whole network"
     field :mining_series, :mining_series_row_page do
       arg(:interval, :integer)
-      arg(:interval_by, :stats_interval)
 
       Macros.pagination_args_with_scope()
 

@@ -42,7 +42,7 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       assert {:ok, %{data: %{"miners" => %{"data" => [first, second, third]}}} = res} =
                run(
                  state,
-                 "{ miners { data { id role blocks txs rewards firstHeight lastInfo } } }"
+                 "{ miners { data { id role blocks txs rewards firstHeight } } }"
                )
 
       refute res[:errors]
@@ -55,7 +55,7 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       assert id3 == ids.m3
       assert %{"id" => id2} = third
       assert id2 == ids.m2
-      assert %{"firstHeight" => 20, "lastInfo" => 2} = first
+      assert %{"firstHeight" => 20} = first
     end
 
     test "it lists the beneficiaries by rewards and paginates", %{state: state, ids: ids} do
@@ -99,17 +99,14 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       assert message == "not found: #{unknown}"
     end
 
-    test "it returns the beneficiaries of a miner", %{state: state, ids: ids} do
+    test "it returns the miner keys of a beneficiary", %{state: state, ids: ids} do
       assert {:ok, %{data: %{"minerLinks" => %{"data" => [first, second]}}}} =
-               run(
-                 state,
-                 ~s|{ minerLinks(id: "#{ids.m1}") { data { id role blocks lastHeight } } }|
-               )
+               run(state, ~s|{ minerLinks(id: "#{ids.b1}") { data { id blocks lastHeight } } }|)
 
-      assert %{"id" => id2, "role" => "beneficiary", "blocks" => 1, "lastHeight" => 22} = first
-      assert id2 == ids.b2
+      assert %{"id" => id2, "blocks" => 1, "lastHeight" => 21} = first
+      assert id2 == ids.m2
       assert %{"id" => id1, "blocks" => 3, "lastHeight" => 60} = second
-      assert id1 == ids.b1
+      assert id1 == ids.m1
     end
   end
 
@@ -134,7 +131,7 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
 
     test "it returns the series of a miner for a scope and an interval", %{state: state, ids: ids} do
       query = """
-      { minerSeries(id: "#{ids.m1}", fromHeight: 0, toHeight: 39, intervalBy: DAY) {
+      { minerSeries(id: "#{ids.m1}", fromHeight: 0, toHeight: 39, interval: 24) {
           data { bucket interval blocks }
       } }
       """

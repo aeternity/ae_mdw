@@ -61,13 +61,7 @@ defmodule AeMdw.MinerStats.Fold do
            )}
       end
 
-    Model.miner_entity(
-      blocks: blocks,
-      txs: txs,
-      fees: fees,
-      last_info: last_info,
-      info_changes: info_changes
-    ) = entity
+    Model.miner_entity(blocks: blocks, txs: txs, fees: fees) = entity
 
     entity =
       Model.miner_entity(entity,
@@ -75,33 +69,30 @@ defmodule AeMdw.MinerStats.Fold do
         last_time: facts.time,
         blocks: blocks + 1,
         txs: txs + facts.txs,
-        fees: fees + facts.fees,
-        last_info: facts.info,
-        info_changes: info_changes + info_change(new?, last_info, facts.info)
+        fees: fees + facts.fees
       )
 
     {State.put(state, Model.MinerEntity, entity), new?}
   end
 
-  defp info_change(true, _last_info, _info), do: 0
-  defp info_change(false, info, info), do: 0
-  defp info_change(false, _last_info, _info), do: 1
-
   defp link(state, miner_pk, beneficiary_pk, height) do
-    link_key = {miner_pk, beneficiary_pk}
+    link_key = {beneficiary_pk, miner_pk}
 
     link =
-      case State.get(state, Model.MinerLink, link_key) do
-        {:ok, Model.miner_link(blocks: blocks) = link} ->
-          Model.miner_link(link, blocks: blocks + 1, last_height: height)
+      case State.get(state, Model.BeneficiaryLink, link_key) do
+        {:ok, Model.beneficiary_link(blocks: blocks) = link} ->
+          Model.beneficiary_link(link, blocks: blocks + 1, last_height: height)
 
         :not_found ->
-          Model.miner_link(index: link_key, blocks: 1, first_height: height, last_height: height)
+          Model.beneficiary_link(
+            index: link_key,
+            blocks: 1,
+            first_height: height,
+            last_height: height
+          )
       end
 
-    state
-    |> State.put(Model.MinerLink, link)
-    |> State.put(Model.BeneficiaryLink, Model.beneficiary_link(index: {beneficiary_pk, miner_pk}))
+    State.put(state, Model.BeneficiaryLink, link)
   end
 
   # Rewards are only received by beneficiaries, for blocks mined some generations ago
@@ -129,16 +120,16 @@ defmodule AeMdw.MinerStats.Fold do
     {miner_entity, miner_new?} = ctx.miner
     {beneficiary_entity, beneficiary_new?} = ctx.beneficiary
 
-    {state, miner_tick} = mine_row(state, miner_entity, interval, group, facts)
-    {state, beneficiary_tick} = mine_row(state, beneficiary_entity, interval, group, facts)
+    {state, miner_first?} = mine_row(state, miner_entity, interval, group, facts)
+    {state, beneficiary_first?} = mine_row(state, beneficiary_entity, interval, group, facts)
 
     state
     |> credit_rows(ctx.paid, interval, group)
     |> update_network(
       facts,
       {interval, group},
-      Map.put(miner_tick, :new?, miner_new?),
-      Map.put(beneficiary_tick, :new?, beneficiary_new?)
+      {miner_first?, miner_new?},
+      {beneficiary_first?, beneficiary_new?}
     )
   end
 
@@ -156,7 +147,7 @@ defmodule AeMdw.MinerStats.Fold do
         fees: fees + facts.fees
       )
 
-    {put_row(state, row, entity), %{first_in_group?: first_in_group?, blocks: blocks + 1}}
+    {put_row(state, row, entity), first_in_group?}
   end
 
   defp credit_rows(state, paid, interval, group) do
@@ -203,11 +194,17 @@ defmodule AeMdw.MinerStats.Fold do
     end
   end
 
-  defp update_network(state, facts, row_key, miner_tick, beneficiary_tick) do
+  defp update_network(
+         state,
+         facts,
+         row_key,
+         {miner_first?, miner_new?},
+         {beneficiary_first?, beneficiary_new?}
+       ) do
     row = get_network_row(state, row_key, facts)
     reward = facts.rewards |> Map.values() |> Enum.sum()
-    new_miners = tick(miner_tick.new?)
-    new_beneficiaries = tick(beneficiary_tick.new?)
+    new_miners = tick(miner_new?)
+    new_beneficiaries = tick(beneficiary_new?)
 
     row =
       Model.network_bucket(row,
@@ -219,16 +216,11 @@ defmodule AeMdw.MinerStats.Fold do
         rewards: Model.network_bucket(row, :rewards) + reward,
         fees: Model.network_bucket(row, :fees) + facts.fees,
         difficulty_sum: Model.network_bucket(row, :difficulty_sum) + facts.difficulty,
-        active_miners:
-          Model.network_bucket(row, :active_miners) + tick(miner_tick.first_in_group?),
+        active_miners: Model.network_bucket(row, :active_miners) + tick(miner_first?),
         active_beneficiaries:
-          Model.network_bucket(row, :active_beneficiaries) +
-            tick(beneficiary_tick.first_in_group?),
+          Model.network_bucket(row, :active_beneficiaries) + tick(beneficiary_first?),
         new_miners: Model.network_bucket(row, :new_miners) + new_miners,
         new_beneficiaries: Model.network_bucket(row, :new_beneficiaries) + new_beneficiaries,
-        top_miner_blocks: max(Model.network_bucket(row, :top_miner_blocks), miner_tick.blocks),
-        top_beneficiary_blocks:
-          max(Model.network_bucket(row, :top_beneficiary_blocks), beneficiary_tick.blocks),
         blocks_total: Model.network_bucket(row, :blocks_total) + 1,
         txs_total: Model.network_bucket(row, :txs_total) + facts.txs,
         rewards_total: Model.network_bucket(row, :rewards_total) + reward,

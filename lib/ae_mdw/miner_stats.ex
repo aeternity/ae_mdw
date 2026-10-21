@@ -29,7 +29,6 @@ defmodule AeMdw.MinerStats do
   @typep order_by() :: :blocks | :txs | :rewards | :fees | :first_active | :last_active
 
   @roles %{"miner" => :miner, "beneficiary" => :beneficiary}
-  @intervals_by %{"day" => 24, "week" => 24 * 7, "month" => 24 * 30, "year" => 24 * 365}
 
   @cache_table :miner_stats_sorted
   @cache_expiration_minutes 10
@@ -125,30 +124,26 @@ defmodule AeMdw.MinerStats do
   end
 
   @doc """
-  The beneficiaries that a miner key mined for or the miner keys that mined for a
-  beneficiary.
+  The miner keys that mined for a beneficiary.
   """
   @spec fetch_links(state(), pagination(), query(), binary(), cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_links(state, pagination, query, id, cursor) do
-    with {:ok, role, rest} <- split_role(query),
-         :ok <- check_params(rest, []),
-         {:ok, pk} <- Validate.id(id, [:account_pubkey]),
-         role = detect_role(state, role, pk),
+    with :ok <- check_params(query, []),
+         {:ok, beneficiary_pk} <- Validate.id(id, [:account_pubkey]),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
-      table = if role == :miner, do: Model.MinerLink, else: Model.BeneficiaryLink
-      boundary = {{pk, <<>>}, {pk, Util.max_256bit_bin()}}
-      cursor_key = cursor_pk && {pk, cursor_pk}
+      boundary = {{beneficiary_pk, <<>>}, {beneficiary_pk, Util.max_256bit_bin()}}
+      cursor_key = cursor_pk && {beneficiary_pk, cursor_pk}
 
       stream_fn = fn direction ->
-        Collection.stream(state, table, direction, boundary, cursor_key)
+        Collection.stream(state, Model.BeneficiaryLink, direction, boundary, cursor_key)
       end
 
       stream_fn
       |> Collection.paginate(
         pagination,
-        &render_link(state, role, &1),
-        fn {_pk, other_pk} -> encode(other_pk) end
+        &render_link(State.fetch!(state, Model.BeneficiaryLink, &1)),
+        fn {_beneficiary_pk, miner_pk} -> encode(miner_pk) end
       )
       |> then(&{:ok, &1})
     end
@@ -265,9 +260,7 @@ defmodule AeMdw.MinerStats do
            blocks: blocks,
            txs: txs,
            rewards: rewards,
-           fees: fees,
-           last_info: last_info,
-           info_changes: info_changes
+           fees: fees
          )
        ) do
     %{
@@ -280,9 +273,7 @@ defmodule AeMdw.MinerStats do
       blocks: blocks,
       txs: txs,
       rewards: rewards_for(role, rewards),
-      fees: fees,
-      last_info: last_info,
-      info_changes: info_changes
+      fees: fees
     }
   end
 
@@ -290,30 +281,15 @@ defmodule AeMdw.MinerStats do
   defp rewards_for(:miner, _rewards), do: nil
   defp rewards_for(:beneficiary, rewards), do: rewards
 
-  defp render_link(state, :miner, {miner_pk, beneficiary_pk}) do
-    Model.miner_link(blocks: blocks, first_height: first_height, last_height: last_height) =
-      State.fetch!(state, Model.MinerLink, {miner_pk, beneficiary_pk})
-
-    %{
-      id: encode(beneficiary_pk),
-      role: "beneficiary",
-      blocks: blocks,
-      first_height: first_height,
-      last_height: last_height
-    }
-  end
-
-  defp render_link(state, :beneficiary, {beneficiary_pk, miner_pk}) do
-    Model.miner_link(blocks: blocks, first_height: first_height, last_height: last_height) =
-      State.fetch!(state, Model.MinerLink, {miner_pk, beneficiary_pk})
-
-    %{
-      id: encode(miner_pk),
-      role: "miner",
-      blocks: blocks,
-      first_height: first_height,
-      last_height: last_height
-    }
+  defp render_link(
+         Model.beneficiary_link(
+           index: {_beneficiary_pk, miner_pk},
+           blocks: blocks,
+           first_height: first_height,
+           last_height: last_height
+         )
+       ) do
+    %{id: encode(miner_pk), blocks: blocks, first_height: first_height, last_height: last_height}
   end
 
   defp render_miner_row(state, role, {_role, _pk, interval, group} = key) do
@@ -364,8 +340,6 @@ defmodule AeMdw.MinerStats do
       active_beneficiaries: active_beneficiaries,
       new_miners: new_miners,
       new_beneficiaries: new_beneficiaries,
-      top_miner_blocks: top_miner_blocks,
-      top_beneficiary_blocks: top_beneficiary_blocks,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_total,
@@ -393,8 +367,6 @@ defmodule AeMdw.MinerStats do
       active_beneficiaries: active_beneficiaries,
       new_miners: new_miners,
       new_beneficiaries: new_beneficiaries,
-      top_miner_blocks: top_miner_blocks,
-      top_beneficiary_blocks: top_beneficiary_blocks,
       blocks_total: blocks_total,
       txs_total: txs_total,
       rewards_total: rewards_total,
@@ -492,19 +464,10 @@ defmodule AeMdw.MinerStats do
   end
 
   defp convert_interval(query) do
-    with :ok <- check_params(query, ["interval", "interval_by"]) do
-      case {Map.get(query, "interval"), Map.get(query, "interval_by")} do
-        {nil, nil} ->
-          {:ok, 1}
-
-        {interval, nil} ->
-          interval_param(interval)
-
-        {nil, interval_by} ->
-          interval_by_param(interval_by)
-
-        {_interval, interval_by} ->
-          {:error, ErrInput.Query.exception(value: "interval_by=#{interval_by}")}
+    with :ok <- check_params(query, ["interval"]) do
+      case Map.fetch(query, "interval") do
+        {:ok, interval} -> interval_param(interval)
+        :error -> {:ok, 1}
       end
     end
   end
@@ -526,13 +489,6 @@ defmodule AeMdw.MinerStats do
 
   defp interval_param(interval),
     do: {:error, ErrInput.Query.exception(value: "interval=#{interval}")}
-
-  defp interval_by_param(interval_by) do
-    case Map.fetch(@intervals_by, interval_by) do
-      {:ok, interval} -> {:ok, interval}
-      :error -> {:error, ErrInput.Query.exception(value: "interval_by=#{interval_by}")}
-    end
-  end
 
   @spec parse_bucket(binary() | integer()) :: {:ok, Model.bucket()} | {:error, Error.t()}
   def parse_bucket(bucket) when is_integer(bucket) and bucket >= 0, do: {:ok, bucket}

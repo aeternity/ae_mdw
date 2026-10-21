@@ -1336,7 +1336,6 @@ defmodule AeMdw.Db.Model do
   #     index = {role, pubkey}
   #     first_height/time = first generation mined, last_height/time = latest one mined
   #     blocks, txs, rewards and fees = totals (rewards are only received by beneficiaries)
-  #     last_info = latest key block info and info_changes = how many times it changed
   @miner_entity_defaults [
     index: nil,
     first_height: nil,
@@ -1346,9 +1345,7 @@ defmodule AeMdw.Db.Model do
     blocks: 0,
     txs: 0,
     rewards: 0,
-    fees: 0,
-    last_info: nil,
-    info_changes: 0
+    fees: 0
   ]
   defrecord :miner_entity, @miner_entity_defaults
 
@@ -1382,15 +1379,8 @@ defmodule AeMdw.Db.Model do
   @type bucket_miner_index() :: {miner_role(), interval(), group(), pubkey()}
   @type bucket_miner() :: record(:bucket_miner, index: bucket_miner_index())
 
-  # miner key to beneficiary link: index = {miner_pk, beneficiary_pk}
-  @miner_link_defaults [index: nil, blocks: 0, first_height: nil, last_height: nil]
-  defrecord :miner_link, @miner_link_defaults
-
-  @type miner_link_index() :: {pubkey(), pubkey()}
-  @type miner_link() :: record(:miner_link, index: miner_link_index())
-
-  # beneficiary to miner key link: index = {beneficiary_pk, miner_pk}
-  @beneficiary_link_defaults [:index]
+  # miner key that mined for a beneficiary: index = {beneficiary_pk, miner_pk}
+  @beneficiary_link_defaults [index: nil, blocks: 0, first_height: nil, last_height: nil]
   defrecord :beneficiary_link, @beneficiary_link_defaults
 
   @type beneficiary_link_index() :: {pubkey(), pubkey()}
@@ -1402,7 +1392,6 @@ defmodule AeMdw.Db.Model do
   #     blocks, micro_blocks, txs, rewards and fees = in the group
   #     difficulty_sum = sum of the difficulty of the key blocks of the group
   #     active_* = miners or beneficiaries that mined in the group, new_* = the first time they did
-  #     top_*_blocks = most blocks mined by a single miner or beneficiary in the group
   #     *_total = totals up to the end of the group
   @network_bucket_defaults [
     index: nil,
@@ -1420,8 +1409,6 @@ defmodule AeMdw.Db.Model do
     active_beneficiaries: 0,
     new_miners: 0,
     new_beneficiaries: 0,
-    top_miner_blocks: 0,
-    top_beneficiary_blocks: 0,
     blocks_total: 0,
     txs_total: 0,
     rewards_total: 0,
@@ -1568,7 +1555,6 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.MinerEntity,
       AeMdw.Db.Model.MinerBucket,
       AeMdw.Db.Model.BucketMiner,
-      AeMdw.Db.Model.MinerLink,
       AeMdw.Db.Model.BeneficiaryLink,
       AeMdw.Db.Model.NetworkBucket
     ]
@@ -1814,7 +1800,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.MinerEntity), do: :miner_entity
   def record(AeMdw.Db.Model.MinerBucket), do: :miner_bucket
   def record(AeMdw.Db.Model.BucketMiner), do: :bucket_miner
-  def record(AeMdw.Db.Model.MinerLink), do: :miner_link
   def record(AeMdw.Db.Model.BeneficiaryLink), do: :beneficiary_link
   def record(AeMdw.Db.Model.NetworkBucket), do: :network_bucket
   def record(AeMdw.Db.Model.AccountNamesCount), do: :account_names_count
