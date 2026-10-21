@@ -93,9 +93,10 @@ The ETS subscription row count is the key early-warning metric for subscriber-cl
 ### Mining stats backfill
 
 The mining stats (`/v3/stats/mining`, `/v3/miners`) are built by a background process that
-starts with the sync, after the database migrations (it is not started on hyperchain nodes). The first time it runs,
-after an upgrade or on a new database, it goes through the whole chain from the genesis,
-which takes a while and adds some disk usage (a few hundred MB on mainnet, an estimate).
+starts with the sync, after the database migrations (it is not started on hyperchain nodes).
+The first time it runs, after an upgrade or on a new database, it goes through the whole chain
+from generation 1 (the genesis has no miner), which takes a while and adds some disk usage (a
+few hundred MB on mainnet, an estimate).
 There is nothing to configure and nothing blocks while it runs. It only folds complete buckets
 (20 generations) and sleeps until the next one can be complete, so it is idle most of the time.
 

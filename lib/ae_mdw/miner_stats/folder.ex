@@ -1,7 +1,8 @@
 defmodule AeMdw.MinerStats.Folder do
   @moduledoc """
   Folds the finalized generations into the mining stats in the background, so the first
-  run is also the backfill of the whole chain and it never blocks the sync.
+  run is also the backfill of the whole chain and it never blocks the sync. It starts at
+  generation 1, the genesis has no miner.
 
   Only complete buckets are folded, so once caught up it sleeps until the next bucket
   can be complete instead of polling.

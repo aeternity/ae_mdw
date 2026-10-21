@@ -590,7 +590,8 @@ Folding from the database, and not from the mutations, keeps the stats consisten
 * The key block mutations of the open generation are built again every time the in-memory
   sync resumes on it, so counters written by them wouldn't be exact.
 * A single writer in order is the same code for the history and for the new generations: the
-  first run is the backfill from the genesis, without blocking the sync nor the startup.
+  first run is the backfill from generation 1 (the genesis has no miner), without blocking the
+  sync nor the startup.
 * Each chunk of generations is written in a single transaction together with the height it
   reaches (`Stat` `:miner_stats_height`), so a generation is folded exactly once, also across
   crashes and restarts.

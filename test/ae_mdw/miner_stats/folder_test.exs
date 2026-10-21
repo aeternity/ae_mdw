@@ -46,6 +46,7 @@ defmodule AeMdw.MinerStats.FolderTest do
 
         assert {:caught_up, 14} = Folder.fold_chunk(State.new(), 25)
         assert_called_exactly(Facts.fetch(:_, :_), 39)
+        assert_not_called(Facts.fetch(:_, 0))
       end
 
       assert {:ok, Model.miner_entity(blocks: 39, first_height: 1, last_height: 39)} =

@@ -3386,8 +3386,8 @@ Unknown query parameters and cursors of the earlier versions (only the `ak_` acc
 ### Mining stats
 
 Series and totals of the mining, for each miner and for the whole network. They are
-built in the background from the finalized generations, starting at the genesis the first
-time the middleware runs, so they trail the tip of the chain by the finalization depth and
+built in the background from the finalized generations, starting at generation 1 (the
+genesis has no miner) the first time the middleware runs, so they trail the tip of the chain by the finalization depth and
 the history is available once the first run catches up. `GET /v3/stats/mining` tells how
 far they are with `stats_height`, compared to the `mdw_height` of the middleware.
 
