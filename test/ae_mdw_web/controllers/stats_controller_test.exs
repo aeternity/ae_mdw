@@ -1797,10 +1797,7 @@ defmodule AeMdwWeb.StatsControllerTest do
       miner3_pk = pks[<<3::256>>]
 
       # miner1 had 9 when the previous page was served, it has 10 now
-      cursor =
-        {9, <<1::256>>}
-        |> :erlang.term_to_binary()
-        |> Base.hex_encode32(padding: false)
+      cursor = "9:#{pks[<<1::256>>]}"
 
       assert %{"data" => [%{"miner" => ^miner3_pk, "total_reward" => 8}]} =
                conn

@@ -167,9 +167,9 @@ defmodule AeMdwWeb.CursorInjectionTest do
     end
   end
 
-  describe "miners — hex32 ETF cursor" do
-    test "random non-hex32 string returns 400", %{conn: conn} do
-      cursor = "!!!not-hex32!!!"
+  describe "miners — reward:account cursor" do
+    test "a cursor without the reward returns 400", %{conn: conn} do
+      cursor = :aeapi.format_account_pubkey(@zeroed_pk)
 
       assert %{"error" => "invalid cursor: " <> _} =
                conn
@@ -177,13 +177,15 @@ defmodule AeMdwWeb.CursorInjectionTest do
                |> json_response(400)
     end
 
-    test "hex32 of random bytes returns 400", %{conn: conn} do
-      cursor = Base.hex_encode32("not_etf_data", padding: false)
+    test "a cursor with an invalid reward or account returns 400", %{conn: conn} do
+      account = :aeapi.format_account_pubkey(@zeroed_pk)
 
-      assert %{"error" => "invalid cursor: " <> _} =
-               conn
-               |> get("/v3/stats/miners", cursor: cursor)
-               |> json_response(400)
+      for cursor <- ["x:#{account}", "1.5:#{account}", "10:ak_nope", "10:#{account}:10", "10:"] do
+        assert %{"error" => "invalid cursor: " <> _} =
+                 conn
+                 |> get("/v3/stats/miners", cursor: cursor)
+                 |> json_response(400)
+      end
     end
 
     test "ETF with novel atom is rejected and does not grow the atom table", %{conn: conn} do

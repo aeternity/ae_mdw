@@ -132,28 +132,21 @@ defmodule AeMdw.Miners do
 
   defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
 
-  @spec serialize_cursor({non_neg_integer(), pubkey()}) :: binary()
-  def serialize_cursor({total_reward, miner_pk}) do
-    {total_reward, miner_pk}
-    |> :erlang.term_to_binary()
-    |> Base.hex_encode32(padding: false)
-  end
+  @spec serialize_cursor({integer(), pubkey()}) :: binary()
+  def serialize_cursor({total_reward, miner_pk}),
+    do: "#{total_reward}:#{Enc.encode(:account_pubkey, miner_pk)}"
 
   @spec deserialize_cursor(binary() | nil) ::
-          {:ok, {non_neg_integer(), pubkey()} | nil} | {:error, Error.t()}
+          {:ok, {integer(), pubkey()} | nil} | {:error, Error.t()}
   def deserialize_cursor(nil), do: {:ok, nil}
 
-  def deserialize_cursor(cursor_hex) do
-    with {:ok, cursor_bin} <- Base.hex_decode32(cursor_hex, padding: false),
-         {total_reward, <<miner_pk::256>>}
-         when is_integer(total_reward) <-
-           :erlang.binary_to_term(cursor_bin, [:safe]) do
-      {:ok, {total_reward, <<miner_pk::256>>}}
+  def deserialize_cursor(cursor) do
+    with [total_reward, miner_id] <- String.split(cursor, ":", parts: 2),
+         {total_reward, ""} <- Integer.parse(total_reward),
+         {:ok, miner_pk} <- Enc.safe_decode(:account_pubkey, miner_id) do
+      {:ok, {total_reward, miner_pk}}
     else
-      _invalid_cursor ->
-        {:error, ErrInput.Cursor.exception(value: cursor_hex)}
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor)}
     end
-  rescue
-    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_hex)}
   end
 end

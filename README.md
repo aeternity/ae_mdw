@@ -3375,12 +3375,13 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
       "total_reward": 76626041292504000000
     }
   ],
-  "next": "/v3/stats/miners?cursor=GDK04RG900001C5HAKURC7G4DK000010HC9JKE38J4ONDDGJEE41C93QFT6JAV5EALCPCKCSUMQK7QDJAL5G",
+  "next": "/v3/stats/miners?cursor=70360315826232000000:ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a&limit=1",
   "prev": null
 }
 ```
 
-The pagination cursors are opaque, use the `next` and `prev` links as they are.
+The cursor is the total reward and the miner of the first entry of the page, use the `next` and `prev` links as they are.
+Unknown query parameters and cursors of the earlier versions (only the `ak_` account) return a 400 error, also on `/v2/minerstats`.
 
 ### Mining stats
 
