@@ -152,13 +152,12 @@ schemas:
         type: integer
   MinerSeriesRow:
     description: >-
-      The activity of a miner in an interval of buckets, with its totals up to the end of it.
-      Intervals where it neither mined nor got paid are not returned. The id is only there
-      when listing the miners of a bucket.
+      The activity of a miner in a bucket of 20 generations, or in a day, week or month (UTC)
+      with `interval_by`, with its totals up to the end of it. Rows where it neither mined nor
+      got paid are not returned. The id is only there when listing the miners of a bucket.
     type: object
     example:
       bucket: 54999
-      interval: 1
       start_height: 1099980
       end_height: 1099999
       start_time: 1741996231653
@@ -172,8 +171,6 @@ schemas:
       rewards_total: null
       fees_total: 20000000000000000000
     required:
-      - bucket
-      - interval
       - start_height
       - end_height
       - start_time
@@ -190,16 +187,21 @@ schemas:
       id:
         $ref: '#/components/schemas/AccountAddress'
       bucket:
-        description: The first bucket of the interval
+        description: The bucket, only when the rows aren't grouped with `interval_by`
         type: integer
-      interval:
-        description: The number of buckets of the interval
-        type: integer
+      start_date:
+        description: The first date of the interval, only with `interval_by`
+        type: string
+        example: '2025-03-14'
+      end_date:
+        description: The date after the end of the interval, only with `interval_by`
+        type: string
+        example: '2025-03-15'
       start_height:
-        description: The first generation of the interval
+        description: The first generation of the row folded
         type: integer
       end_height:
-        description: The last generation of the interval
+        description: The last generation of the row folded
         type: integer
       start_time:
         description: The time of the first key block folded in the interval
@@ -237,12 +239,12 @@ schemas:
         type: integer
   MiningSeriesRow:
     description: >-
-      The mining of the whole network in an interval of buckets, with its totals up to the end
-      of it.
+      The mining of the whole network in a bucket of 20 generations, or in a day, week or month
+      (UTC) with `interval_by`, with its totals up to the end of it.
     type: object
     example:
-      bucket: 54984
-      interval: 24
+      start_date: '2025-03-14'
+      end_date: '2025-03-15'
       start_height: 1099680
       end_height: 1099999
       start_time: 1741942231653
@@ -266,8 +268,6 @@ schemas:
       miners_total: 310
       beneficiaries_total: 290
     required:
-      - bucket
-      - interval
       - start_height
       - end_height
       - start_time
@@ -292,16 +292,21 @@ schemas:
       - beneficiaries_total
     properties:
       bucket:
-        description: The first bucket of the interval
+        description: The bucket, only when the rows aren't grouped with `interval_by`
         type: integer
-      interval:
-        description: The number of buckets of the interval
-        type: integer
+      start_date:
+        description: The first date of the interval, only with `interval_by`
+        type: string
+        example: '2025-03-14'
+      end_date:
+        description: The date after the end of the interval, only with `interval_by`
+        type: string
+        example: '2025-03-15'
       start_height:
-        description: The first generation folded in the interval
+        description: The first generation folded in the row
         type: integer
       end_height:
-        description: The last generation folded in the interval
+        description: The last generation folded in the row
         type: integer
       start_time:
         description: The time of the first key block of the interval
@@ -386,14 +391,17 @@ paths:
       deprecated: false
       description: >-
         Get the mining series of the whole network, a row per bucket of 20 generations (about
-        an hour), or per interval of buckets (about a day, week, month or year), all of them
-        indexed.
+        an hour), or per day, week or month (UTC) with `interval_by`. The buckets are selected
+        with `scope=gen:` and the days, weeks and months with `min_start_date` and
+        `max_start_date`. All of them are indexed.
       operationId: GetMiningSeries
       parameters:
         - $ref: '#/components/parameters/StatsLimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
-        - $ref: '#/components/parameters/MiningIntervalParam'
+        - $ref: '#/components/parameters/MiningIntervalByParam'
+        - $ref: '#/components/parameters/MiningMinStartDateParam'
+        - $ref: '#/components/parameters/MiningMaxStartDateParam'
       responses:
         '200':
           description: Returns the paginated mining series
@@ -586,7 +594,9 @@ paths:
       deprecated: false
       description: >-
         Get the series of a miner, a row per bucket of 20 generations (about an hour), or per
-        interval of buckets, where it mined or got paid.
+        day, week or month (UTC) with `interval_by`, where it mined or got paid. The buckets are
+        selected with `scope=gen:` and the days, weeks and months with `min_start_date` and
+        `max_start_date`.
       operationId: GetMinerSeries
       parameters:
         - $ref: '#/components/parameters/MinerIdParam'
@@ -594,7 +604,9 @@ paths:
         - $ref: '#/components/parameters/StatsLimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
-        - $ref: '#/components/parameters/MiningIntervalParam'
+        - $ref: '#/components/parameters/MiningIntervalByParam'
+        - $ref: '#/components/parameters/MiningMinStartDateParam'
+        - $ref: '#/components/parameters/MiningMaxStartDateParam'
       responses:
         '200':
           description: Returns the paginated series of the miner

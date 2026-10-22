@@ -79,19 +79,30 @@ components:
       schema:
         type: integer
         minimum: 0
-    MiningIntervalParam:
+    MiningIntervalByParam:
       in: query
-      name: interval
-      description: 'The number of consecutive buckets of each row, which is about an hour, a day, a week, a month or a year'
+      name: interval_by
+      description: 'The calendar interval (UTC) of each row. Each row is a bucket of 20 generations (about an hour) when it is not given'
       schema:
-        type: integer
+        type: string
         enum:
-          - 1
-          - 24
-          - 168
-          - 720
-          - 8760
-        default: 1
+          - day
+          - week
+          - month
+    MiningMinStartDateParam:
+      in: query
+      name: min_start_date
+      description: 'The minimum start date in YYYY-MM-DD format, only with `interval_by`'
+      schema:
+        type: string
+        example: '2024-01-01'
+    MiningMaxStartDateParam:
+      in: query
+      name: max_start_date
+      description: 'The maximum start date in YYYY-MM-DD format, only with `interval_by`'
+      schema:
+        type: string
+        example: '2025-01-01'
   schemas:
     KeyBlockHash:
       description: Key block hash

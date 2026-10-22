@@ -3393,13 +3393,13 @@ far they are with `stats_height`, compared to the `mdw_height` of the middleware
 
 The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
 Each row of a series has what happened in the bucket, and the totals up to its end.
-The series are also kept (indexed, so reading them costs the same) for longer intervals of
-buckets, selected with `interval` (1, 24, 168, 720 or 8760 buckets, about an hour, a day, a week,
-a month and a year). The groups of an interval are aligned to the genesis and not to calendar
-dates like the `interval_by` of the other stats.
-The `scope=gen:<from>-<to>` parameter selects the rows of the generations, which are whole
-rows, and it is paginated with the usual `limit`, `direction` and cursors. The `start_time`
-and `end_time` are the time of the first and last key block of the row.
+The series are also kept (indexed, so reading them costs the same) per `interval_by=day`,
+`week` or `month`, like the other stats: UTC calendar intervals by the time of the key blocks,
+with their `start_date` and `end_date`, selected with `min_start_date` and `max_start_date`.
+The buckets are selected with `scope=gen:<from>-<to>` instead, which picks whole rows, and
+all of them are paginated with the usual `limit`, `direction` and cursors. The `start_time`
+and `end_time` are the time of the first and last key block of the row, and a row with a
+block time earlier than the one before it is counted in the later interval.
 
 A key block has the miner key that mined it and the beneficiary that gets its reward, which
 are different accounts when a pool mines for its members, both are plain accounts (`ak_`).
@@ -3429,9 +3429,9 @@ transactions processed in the generations that the miner mined, the outer one of
 paying-for transactions, without their inner fees nor the gas.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval=24" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval_by=day" | jq '.'
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners?role=beneficiary&by=rewards&limit=3" | jq '.'
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?scope=gen:1000000-1100000&interval=168" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?min_start_date=2025-01-01&interval_by=week" | jq '.'
 ```
 
 Example responses (with illustrative values):
@@ -3451,12 +3451,12 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
   "beneficiaries": 290
 }
 
-$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval=24&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=day&limit=1" | jq '.'
 {
   "data": [
     {
-      "bucket": 54984,
-      "interval": 24,
+      "start_date": "2025-03-14",
+      "end_date": "2025-03-15",
       "start_height": 1099680,
       "end_height": 1099999,
       "start_time": 1741942231653,
@@ -3481,7 +3481,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval=24&l
       "beneficiaries_total": 290
     }
   ],
-  "next": "/v3/stats/mining/series?cursor=2290&interval=24&limit=1",
+  "next": "/v3/stats/mining/series?cursor=20161&interval_by=day&limit=1",
   "prev": null
 }
 
@@ -3490,7 +3490,6 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?limit=1" | j
   "data": [
     {
       "bucket": 54999,
-      "interval": 1,
       "start_height": 1099980,
       "end_height": 1099999,
       "start_time": 1741996231653,

@@ -2,13 +2,13 @@ defmodule AeMdw.MinerStatsFixtures do
   @moduledoc """
   A small mining history shared by the mining stats tests:
 
-      height  bucket  miner  beneficiary  rewards paid
-      20      1       m1     b1
-      21      1       m2     b1           b1: 50
-      22      1       m1     b2           b2: 70, b1: 5
-      40      2       m1     b1
-      41      2       m3     b3           b2: 9
-      60      3       m1     b1
+      height  bucket  day  miner  beneficiary  rewards paid
+      20      1       0    m1     b1
+      21      1       0    m2     b1           b1: 50
+      22      1       0    m1     b2           b2: 70, b1: 5
+      40      2       1    m1     b1
+      41      2       1    m3     b3           b2: 9
+      60      3       1    m1     b1
   """
 
   alias AeMdw.Db.Model
@@ -23,6 +23,7 @@ defmodule AeMdw.MinerStatsFixtures do
   @b1 <<11::256>>
   @b2 <<12::256>>
   @b3 <<13::256>>
+  @day :timer.hours(24)
 
   @spec miners() :: [binary()]
   def miners, do: [@m1, @m2, @m3]
@@ -42,9 +43,9 @@ defmodule AeMdw.MinerStatsFixtures do
         rewards: %{@b1 => 50}
       ),
       facts(22, @m1, @b2, difficulty: 200, time: 3_000, rewards: %{@b2 => 70, @b1 => 5}),
-      facts(40, @m1, @b1, txs: 2, fees: 5, time: 4_000),
-      facts(41, @m3, @b3, time: 5_000, rewards: %{@b2 => 9}),
-      facts(60, @m1, @b1, time: 6_000)
+      facts(40, @m1, @b1, txs: 2, fees: 5, time: @day + 4_000),
+      facts(41, @m3, @b3, time: @day + 5_000, rewards: %{@b2 => 9}),
+      facts(60, @m1, @b1, time: @day + 6_000)
     ]
     |> Enum.reduce(state, &Fold.fold(&2, &1))
     |> State.put(Model.Stat, Model.stat(index: :miner_stats_height, payload: 60))

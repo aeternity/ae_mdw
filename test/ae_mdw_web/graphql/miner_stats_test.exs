@@ -161,7 +161,7 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
       query = """
       { minerSeries(id: "#{ids.m1}", limit: 2) {
           nextCursor
-          data { bucket interval startHeight endHeight blocks txs rewards blocksTotal }
+          data { bucket startHeight endHeight blocks txs rewards blocksTotal }
       } }
       """
 
@@ -169,16 +169,16 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
               %{data: %{"minerSeries" => %{"data" => [bucket3, bucket2], "nextCursor" => next}}}} =
                run(state, query)
 
-      assert %{"bucket" => 3, "interval" => 1, "startHeight" => 60, "endHeight" => 79} = bucket3
+      assert %{"bucket" => 3, "startHeight" => 60, "endHeight" => 60} = bucket3
       assert %{"blocks" => 1, "rewards" => nil, "blocksTotal" => 4} = bucket3
       assert %{"bucket" => 2, "txs" => 2, "blocksTotal" => 3} = bucket2
       assert is_binary(next)
     end
 
-    test "it returns the series of a miner for a scope and an interval", %{state: state, ids: ids} do
+    test "it returns the series of a miner by day for the dates", %{state: state, ids: ids} do
       query = """
-      { minerSeries(id: "#{ids.m1}", fromHeight: 0, toHeight: 39, interval: 24) {
-          data { bucket interval blocks }
+      { minerSeries(id: "#{ids.m1}", intervalBy: DAY, minStartDate: "1970-01-02") {
+          data { bucket startDate endDate blocks }
       } }
       """
 
@@ -186,33 +186,42 @@ defmodule AeMdwWeb.GraphQL.MinerStatsTest do
               %{
                 data: %{
                   "minerSeries" => %{
-                    "data" => [%{"bucket" => 0, "interval" => 24, "blocks" => 4}]
+                    "data" => [
+                      %{
+                        "bucket" => nil,
+                        "startDate" => "1970-01-02",
+                        "endDate" => "1970-01-03",
+                        "blocks" => 2
+                      }
+                    ]
                   }
                 }
-              }} =
-               run(state, query)
+              }} = run(state, query)
     end
 
     test "it returns the network series", %{state: state} do
       query = """
-      { miningSeries(interval: 24) {
-          data { bucket interval blocks activeMiners newMiners hashrate minersTotal }
+      { miningSeries(intervalBy: WEEK) {
+          data { startDate blocks activeMiners newMiners hashrate minersTotal }
       } }
       """
 
-      assert {:ok, %{data: %{"miningSeries" => %{"data" => [day]}}} = res} = run(state, query)
+      assert {:ok, %{data: %{"miningSeries" => %{"data" => [week]}}} = res} = run(state, query)
 
       refute res[:errors]
-      assert %{"bucket" => 0, "interval" => 24, "blocks" => 6, "activeMiners" => 3} = day
-      assert %{"newMiners" => 3, "minersTotal" => 3} = day
+      assert %{"startDate" => "1970-01-01", "blocks" => 6, "activeMiners" => 3} = week
+      assert %{"newMiners" => 3, "minersTotal" => 3} = week
     end
 
-    test "it returns the error of an invalid interval", %{state: state} do
-      assert {:ok, %{errors: [%{message: "invalid query: interval=0"}]}} =
-               run(state, "{ miningSeries(interval: 0) { data { bucket } } }")
+    test "it returns the error of an invalid date", %{state: state} do
+      assert {:ok, %{errors: [%{message: "invalid query: min_start_date=x"}]}} =
+               run(
+                 state,
+                 ~s|{ miningSeries(intervalBy: DAY, minStartDate: "x") { data { blocks } } }|
+               )
 
-      assert {:ok, %{errors: [%{message: "invalid query: interval=2"}]}} =
-               run(state, "{ miningSeries(interval: 2) { data { bucket } } }")
+      assert {:ok, %{errors: [%{message: "invalid query: min_start_date=1970-01-01"}]}} =
+               run(state, ~s|{ miningSeries(minStartDate: "1970-01-01") { data { blocks } } }|)
     end
   end
 

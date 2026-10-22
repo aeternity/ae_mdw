@@ -63,7 +63,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.MinerStatsTypes do
   object :miner_series_row do
     field(:id, :string)
     field(:bucket, :integer)
-    field(:interval, :integer)
+    field(:start_date, :string)
+    field(:end_date, :string)
     field(:start_height, :integer)
     field(:end_height, :integer)
     field(:start_time, :integer)
@@ -82,7 +83,8 @@ defmodule AeMdwWeb.GraphQL.Schema.Types.MinerStatsTypes do
 
   object :mining_series_row do
     field(:bucket, :integer)
-    field(:interval, :integer)
+    field(:start_date, :string)
+    field(:end_date, :string)
     field(:start_height, :integer)
     field(:end_height, :integer)
     field(:start_time, :integer)

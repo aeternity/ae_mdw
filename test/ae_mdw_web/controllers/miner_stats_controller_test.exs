@@ -66,7 +66,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
                "first_height" => 20,
                "first_time" => 1_000,
                "last_height" => 60,
-               "last_time" => 6_000,
+               "last_time" => 86_406_000,
                "blocks" => 4,
                "txs" => 5,
                "rewards" => nil,
@@ -134,8 +134,8 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"error" => ~s(invalid query: role=["x"])} =
                conn |> get("#{path}?role[]=x") |> json_response(400)
 
-      assert %{"error" => ~s(invalid query: interval=%{"x" => "1"})} =
-               conn |> get("#{path}/series?interval[x]=1") |> json_response(400)
+      assert %{"error" => ~s(invalid query: interval_by=%{"x" => "1"})} =
+               conn |> get("#{path}/series?interval_by[x]=1") |> json_response(400)
 
       assert %{"error" => ~s(invalid cursor: %{"x" => "1"})} =
                conn |> get("#{path}/series?cursor[x]=1") |> json_response(400)
@@ -306,10 +306,9 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
 
       assert %{
                "bucket" => 3,
-               "interval" => 1,
                "start_height" => 60,
-               "end_height" => 79,
-               "start_time" => 6_000,
+               "end_height" => 60,
+               "start_time" => 86_406_000,
                "blocks" => 1,
                "blocks_total" => 4,
                "rewards" => nil
@@ -320,7 +319,7 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{
                "bucket" => 1,
                "start_height" => 20,
-               "end_height" => 39,
+               "end_height" => 22,
                "start_time" => 1_000,
                "end_time" => 3_000,
                "blocks" => 2,
@@ -347,28 +346,53 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"bucket" => 1, "blocks" => 1, "rewards" => 70, "rewards_total" => 70} = bucket1
     end
 
-    test "it returns the indexed rows of an interval", %{conn: conn} do
-      assert %{"prev" => nil, "data" => [day], "next" => nil} =
+    test "it returns the rows of the days with their dates", %{conn: conn} do
+      assert %{"prev" => nil, "data" => [day1, day0], "next" => nil} =
                conn
-               |> get("/v3/miners/#{id(@m1)}/series", interval: 24)
+               |> get("/v3/miners/#{id(@m1)}/series", interval_by: "day")
                |> json_response(200)
 
       assert %{
-               "bucket" => 0,
-               "interval" => 24,
-               "start_height" => 0,
-               "end_height" => 479,
-               "start_time" => 1_000,
-               "end_time" => 6_000,
-               "blocks" => 4,
-               "txs" => 5,
-               "fees" => 35,
+               "start_date" => "1970-01-02",
+               "end_date" => "1970-01-03",
+               "start_height" => 40,
+               "end_height" => 60,
+               "start_time" => 86_404_000,
+               "end_time" => 86_406_000,
+               "blocks" => 2,
+               "txs" => 2,
+               "fees" => 5,
                "blocks_total" => 4
-             } = day
+             } = day1
 
-      assert %{"data" => [%{"interval" => 8760, "end_height" => 175_199, "blocks" => 4}]} =
+      refute Map.has_key?(day1, "bucket")
+
+      assert %{"start_date" => "1970-01-01", "end_date" => "1970-01-02", "blocks" => 2} = day0
+
+      for interval_by <- ["week", "month"] do
+        assert %{"data" => [%{"blocks" => 4, "blocks_total" => 4}]} =
+                 conn
+                 |> get("/v3/miners/#{id(@m1)}/series", interval_by: interval_by)
+                 |> json_response(200)
+      end
+    end
+
+    test "it only returns the days of the dates", %{conn: conn} do
+      path = "/v3/miners/#{id(@m1)}/series"
+
+      assert %{"data" => [%{"start_date" => "1970-01-02"}]} =
                conn
-               |> get("/v3/miners/#{id(@m1)}/series", interval: 8760)
+               |> get(path, interval_by: "day", min_start_date: "1970-01-02")
+               |> json_response(200)
+
+      assert %{"data" => [%{"start_date" => "1970-01-01"}]} =
+               conn
+               |> get(path, interval_by: "day", max_start_date: "1970-01-01")
+               |> json_response(200)
+
+      assert %{"data" => []} =
+               conn
+               |> get(path, interval_by: "day", min_start_date: "1970-02-01")
                |> json_response(200)
     end
 
@@ -396,17 +420,20 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
     test "it returns an error for invalid params", %{conn: conn} do
       path = "/v3/miners/#{id(@m1)}/series"
 
-      assert %{"error" => "invalid query: interval=0"} =
-               conn |> get(path, interval: 0) |> json_response(400)
+      assert %{"error" => "invalid query: interval_by=year"} =
+               conn |> get(path, interval_by: "year") |> json_response(400)
 
-      assert %{"error" => "invalid query: interval=x"} =
-               conn |> get(path, interval: "x") |> json_response(400)
+      assert %{"error" => "invalid query: interval=24"} =
+               conn |> get(path, interval: 24) |> json_response(400)
 
-      assert %{"error" => "invalid query: interval=2"} =
-               conn |> get(path, interval: 2) |> json_response(400)
+      assert %{"error" => "invalid query: min_start_date=1970-01-01"} =
+               conn |> get(path, min_start_date: "1970-01-01") |> json_response(400)
 
-      assert %{"error" => "invalid query: interval_by=day"} =
-               conn |> get(path, interval_by: "day") |> json_response(400)
+      assert %{"error" => "invalid query: max_start_date=x"} =
+               conn |> get(path, interval_by: "week", max_start_date: "x") |> json_response(400)
+
+      assert %{"error" => "invalid scope: gen:20-39"} =
+               conn |> get(path, interval_by: "day", scope: "gen:20-39") |> json_response(400)
 
       assert %{"error" => "invalid query: foo=bar"} =
                conn |> get(path, foo: "bar") |> json_response(400)
@@ -426,7 +453,6 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       hashrate = Node.difficulty_to_hashrate(133)
 
       assert %{
-               "interval" => 1,
                "start_height" => 20,
                "end_height" => 22,
                "start_time" => 1_000,
@@ -454,33 +480,43 @@ defmodule AeMdwWeb.MinerStatsControllerTest do
       assert %{"blocks" => 1, "avg_block_time" => nil, "miners_total" => 3} = bucket3
     end
 
-    test "it returns the indexed rows of an interval counting the miners once", %{conn: conn} do
-      assert %{"prev" => nil, "data" => [day], "next" => nil} =
-               conn |> get("/v3/stats/mining/series", interval: 24) |> json_response(200)
+    test "it returns the rows of the days, weeks and months counting the miners once", %{
+      conn: conn
+    } do
+      assert %{"prev" => nil, "data" => [day1, day0], "next" => nil} =
+               conn |> get("/v3/stats/mining/series", interval_by: "day") |> json_response(200)
 
       assert %{
-               "bucket" => 0,
-               "interval" => 24,
-               "start_height" => 20,
+               "start_date" => "1970-01-02",
+               "end_date" => "1970-01-03",
+               "start_height" => 40,
                "end_height" => 60,
-               "start_time" => 1_000,
-               "end_time" => 6_000,
-               "blocks" => 6,
-               "txs" => 6,
-               "rewards" => 134,
-               "active_miners" => 3,
-               "active_beneficiaries" => 3,
-               "new_miners" => 3,
+               "blocks" => 3,
+               "rewards" => 9,
+               "active_miners" => 2,
+               "new_miners" => 1,
                "blocks_total" => 6,
                "miners_total" => 3
-             } = day
+             } = day1
 
-      for interval <- [168, 720, 8760] do
-        assert %{"data" => [%{"blocks" => 6, "active_miners" => 3}]} =
+      assert %{"start_date" => "1970-01-01", "blocks" => 3, "blocks_total" => 3} = day0
+
+      for interval_by <- ["week", "month"] do
+        assert %{"data" => [%{"blocks" => 6, "active_miners" => 3, "rewards" => 134}]} =
                  conn
-                 |> get("/v3/stats/mining/series", interval: interval)
+                 |> get("/v3/stats/mining/series", interval_by: interval_by)
                  |> json_response(200)
       end
+    end
+
+    test "it paginates the days", %{conn: conn} do
+      path = "/v3/stats/mining/series"
+
+      assert %{"data" => [%{"start_date" => "1970-01-02"}], "next" => next} =
+               conn |> get(path, interval_by: "day", limit: 1) |> json_response(200)
+
+      assert %{"data" => [%{"start_date" => "1970-01-01"}], "next" => nil} =
+               conn |> get(next) |> json_response(200)
     end
 
     test "it only returns the buckets of the scope in the scope order", %{conn: conn} do

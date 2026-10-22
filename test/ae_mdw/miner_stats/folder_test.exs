@@ -63,7 +63,7 @@ defmodule AeMdw.MinerStats.FolderTest do
                State.get(State.new(), Model.MinerEntity, {:miner, <<1::256>>})
 
       assert {:ok, Model.network_bucket(blocks: 20, blocks_total: 39)} =
-               State.get(State.new(), Model.NetworkBucket, {1, 1})
+               State.get(State.new(), Model.NetworkBucket, {:bucket, 1})
     end
 
     test "it waits for the first bucket to complete" do

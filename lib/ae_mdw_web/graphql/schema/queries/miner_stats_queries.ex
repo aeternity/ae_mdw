@@ -45,7 +45,9 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.MinerStatsQueries do
     field :miner_series, :miner_series_row_page do
       arg(:id, non_null(:string))
       arg(:role, :miner_role)
-      arg(:interval, :integer)
+      arg(:interval_by, :stats_interval)
+      arg(:min_start_date, :string)
+      arg(:max_start_date, :string)
 
       Macros.pagination_args_with_scope()
 
@@ -54,7 +56,9 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.MinerStatsQueries do
 
     @desc "Series of the mining of the whole network"
     field :mining_series, :mining_series_row_page do
-      arg(:interval, :integer)
+      arg(:interval_by, :stats_interval)
+      arg(:min_start_date, :string)
+      arg(:max_start_date, :string)
 
       Macros.pagination_args_with_scope()
 

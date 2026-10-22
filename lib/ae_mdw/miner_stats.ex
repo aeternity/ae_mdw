@@ -14,6 +14,7 @@ defmodule AeMdw.MinerStats do
   alias AeMdw.MinerStats.Folder
   alias AeMdw.Miners
   alias AeMdw.Node
+  alias AeMdw.Stats
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -28,6 +29,7 @@ defmodule AeMdw.MinerStats do
   @typep order_by() :: Model.miner_order_by()
 
   @roles %{"miner" => :miner, "beneficiary" => :beneficiary}
+  @intervals_by %{"day" => :day, "week" => :week, "month" => :month}
 
   @doc """
   Totals of the whole chain and how far the stats have been folded, since they're built
@@ -48,9 +50,9 @@ defmodule AeMdw.MinerStats do
       beneficiaries: 0
     }
 
-    # the keys are sorted by interval, so the one before any other is the last bucket
-    case State.prev(state, Model.NetworkBucket, {2, 0}) do
-      {:ok, {1, bucket} = key} ->
+    # the keys are sorted by interval, so the one before the days is the last bucket
+    case State.prev(state, Model.NetworkBucket, {:day, 0}) do
+      {:ok, {:bucket, bucket} = key} ->
         Model.network_bucket(
           blocks_total: blocks,
           txs_total: txs,
@@ -154,7 +156,7 @@ defmodule AeMdw.MinerStats do
   end
 
   @doc """
-  Series of a miner, one row per interval of buckets where it mined or got paid.
+  Series of a miner, one row per bucket (or day, week or month) where it mined or got paid.
   """
   @spec fetch_miner_series(state(), pagination(), binary(), scope(), query(), cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
@@ -162,12 +164,11 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query),
          {:ok, pk} <- Validate.id(id, [:account_pubkey]),
          role = detect_role(state, role, pk),
-         {:ok, interval} <- convert_interval(rest) do
+         {:ok, interval, groups} <- series_params(rest, scope) do
       series(
         state,
         pagination,
-        scope,
-        interval,
+        groups,
         cursor,
         Model.MinerBucket,
         &{role, pk, interval, &1},
@@ -179,12 +180,11 @@ defmodule AeMdw.MinerStats do
   @spec fetch_network_series(state(), pagination(), scope(), query(), cursor()) ::
           {:ok, {cursor(), [map()], cursor()}} | {:error, Error.t()}
   def fetch_network_series(state, pagination, scope, query, cursor) do
-    with {:ok, interval} <- convert_interval(query) do
+    with {:ok, interval, groups} <- series_params(query, scope) do
       series(
         state,
         pagination,
-        scope,
-        interval,
+        groups,
         cursor,
         Model.NetworkBucket,
         &{interval, &1},
@@ -195,8 +195,9 @@ defmodule AeMdw.MinerStats do
 
   @spec fetch_bucket(state(), Model.bucket()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_bucket(state, bucket) do
-    with {:ok, _row} <- found(State.get(state, Model.NetworkBucket, {1, bucket}), "#{bucket}") do
-      {:ok, render_network_row(state, {1, bucket})}
+    with {:ok, _row} <-
+           found(State.get(state, Model.NetworkBucket, {:bucket, bucket}), "#{bucket}") do
+      {:ok, render_network_row(state, {:bucket, bucket})}
     end
   end
 
@@ -209,8 +210,8 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query, :miner),
          :ok <- check_params(rest, []),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
-      boundary = {{role, 1, bucket, <<>>}, {role, 1, bucket, Util.max_256bit_bin()}}
-      cursor_key = cursor_pk && {role, 1, bucket, cursor_pk}
+      boundary = {{role, :bucket, bucket, <<>>}, {role, :bucket, bucket, Util.max_256bit_bin()}}
+      cursor_key = cursor_pk && {role, :bucket, bucket, cursor_pk}
 
       stream_fn = fn direction ->
         Collection.stream(state, Model.BucketMiner, direction, boundary, cursor_key)
@@ -219,12 +220,12 @@ defmodule AeMdw.MinerStats do
       stream_fn
       |> Collection.paginate(
         pagination,
-        fn {^role, 1, ^bucket, pk} ->
+        fn {^role, :bucket, ^bucket, pk} ->
           state
-          |> render_miner_row(role, {role, pk, 1, bucket})
+          |> render_miner_row(role, {role, pk, :bucket, bucket})
           |> Map.put(:id, encode(pk))
         end,
-        fn {_role, 1, _bucket, pk} -> encode(pk) end
+        fn {_role, :bucket, _bucket, pk} -> encode(pk) end
       )
       |> then(&{:ok, &1})
     end
@@ -232,9 +233,8 @@ defmodule AeMdw.MinerStats do
 
   # Every interval is indexed, with the group in the last place of the key, which is also
   # what the cursor is.
-  defp series(state, pagination, scope, interval, cursor, table, key_fun, render_fun) do
+  defp series(state, pagination, {first_group, last_group}, cursor, table, key_fun, render_fun) do
     with {:ok, cursor_group} <- deserialize_group_cursor(cursor) do
-      {first_group, last_group} = group_range(scope, interval)
       boundary = {key_fun.(first_group), key_fun.(last_group)}
 
       stream_fn = fn direction ->
@@ -248,11 +248,6 @@ defmodule AeMdw.MinerStats do
       |> then(&{:ok, &1})
     end
   end
-
-  defp group_range(nil, _interval), do: {0, Util.max_int()}
-
-  defp group_range({:gen, first_gen..last_gen//_step}, interval),
-    do: {div(Fold.bucket(first_gen), interval), div(Fold.bucket(last_gen), interval)}
 
   defp render_miner(
          Model.miner_entity(
@@ -308,15 +303,20 @@ defmodule AeMdw.MinerStats do
       fees_total: fees_total
     ) = State.fetch!(state, Model.MinerBucket, key)
 
-    network_row = State.fetch!(state, Model.NetworkBucket, {interval, group})
+    Model.network_bucket(
+      start_height: start_height,
+      end_height: end_height,
+      start_time: start_time,
+      end_time: end_time
+    ) = State.fetch!(state, Model.NetworkBucket, {interval, group})
 
-    %{
-      bucket: group * interval,
-      interval: interval,
-      start_height: group * interval * Fold.bucket_size(),
-      end_height: (group + 1) * interval * Fold.bucket_size() - 1,
-      start_time: Model.network_bucket(network_row, :start_time),
-      end_time: Model.network_bucket(network_row, :end_time),
+    interval
+    |> period(group)
+    |> Map.merge(%{
+      start_height: start_height,
+      end_height: end_height,
+      start_time: start_time,
+      end_time: end_time,
       blocks: blocks,
       txs: txs,
       rewards: rewards_for(role, rewards),
@@ -325,7 +325,15 @@ defmodule AeMdw.MinerStats do
       txs_total: txs_total,
       rewards_total: rewards_for(role, rewards_total),
       fees_total: fees_total
-    }
+    })
+  end
+
+  defp period(:bucket, group), do: %{bucket: group}
+
+  defp period(interval_by, group) do
+    {start_date, end_date} = Stats.interval_dates(interval_by, group)
+
+    %{start_date: start_date, end_date: end_date}
   end
 
   defp render_network_row(state, {interval, group} = key) do
@@ -352,9 +360,9 @@ defmodule AeMdw.MinerStats do
       beneficiaries_total: beneficiaries_total
     ) = State.fetch!(state, Model.NetworkBucket, key)
 
-    %{
-      bucket: group * interval,
-      interval: interval,
+    interval
+    |> period(group)
+    |> Map.merge(%{
       start_height: start_height,
       end_height: end_height,
       start_time: start_time,
@@ -377,7 +385,7 @@ defmodule AeMdw.MinerStats do
       fees_total: fees_total,
       miners_total: miners_total,
       beneficiaries_total: beneficiaries_total
-    }
+    })
   end
 
   defp avg_block_time(start_time, end_time, blocks) when blocks > 1,
@@ -428,29 +436,59 @@ defmodule AeMdw.MinerStats do
     end
   end
 
-  defp convert_interval(query) do
-    with :ok <- check_params(query, ["interval"]) do
-      case Map.fetch(query, "interval") do
-        {:ok, interval} -> interval_param(interval)
-        :error -> {:ok, 1}
+  defp series_params(query, scope) do
+    {interval_by, rest} = Map.pop(query, "interval_by")
+
+    with {:ok, interval} <- convert_interval(interval_by),
+         {:ok, groups} <- group_range(interval, scope, rest) do
+      {:ok, interval, groups}
+    end
+  end
+
+  defp convert_interval(nil), do: {:ok, :bucket}
+
+  defp convert_interval(interval_by) when is_binary(interval_by) do
+    case Map.fetch(@intervals_by, interval_by) do
+      {:ok, interval} -> {:ok, interval}
+      :error -> invalid_query("interval_by", interval_by)
+    end
+  end
+
+  defp convert_interval(interval_by), do: invalid_query("interval_by", interval_by)
+
+  # The buckets are selected by generations and the days, weeks and months by dates.
+  defp group_range(:bucket, scope, query) do
+    with :ok <- check_params(query, []) do
+      case scope do
+        nil ->
+          {:ok, {0, Util.max_int()}}
+
+        {:gen, first_gen..last_gen//_step} ->
+          {:ok, {Fold.bucket(first_gen), Fold.bucket(last_gen)}}
       end
     end
   end
 
-  defp interval_param(interval) when is_integer(interval) do
-    if interval in Fold.intervals(),
-      do: {:ok, interval},
-      else: invalid_query("interval", interval)
-  end
+  defp group_range(_interval_by, {:gen, first_gen..last_gen//_step}, _query),
+    do: {:error, ErrInput.Scope.exception(value: "gen:#{first_gen}-#{last_gen}")}
 
-  defp interval_param(interval) when is_binary(interval) do
-    case Integer.parse(interval) do
-      {interval, ""} -> interval_param(interval)
-      _invalid -> invalid_query("interval", interval)
+  defp group_range(interval_by, nil, query) do
+    with :ok <- check_params(query, ["min_start_date", "max_start_date"]),
+         {:ok, first_group} <- date_group(query, "min_start_date", interval_by, 0),
+         {:ok, last_group} <- date_group(query, "max_start_date", interval_by, Util.max_int()) do
+      {:ok, {first_group, last_group}}
     end
   end
 
-  defp interval_param(interval), do: invalid_query("interval", interval)
+  defp date_group(query, key, interval_by, default) do
+    with {:ok, date} when is_binary(date) <- Map.fetch(query, key),
+         {:ok, date} <- Date.from_iso8601(date) do
+      {:ok, Stats.to_interval(date, interval_by)}
+    else
+      :error -> {:ok, default}
+      _invalid -> invalid_query(key, Map.fetch!(query, key))
+    end
+  end
 
   @spec parse_bucket(binary() | integer()) :: {:ok, Model.bucket()} | {:error, Error.t()}
   def parse_bucket(bucket) when is_integer(bucket) and bucket >= 0, do: {:ok, bucket}

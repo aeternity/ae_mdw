@@ -840,7 +840,23 @@ defmodule AeMdw.Stats do
     |> DateTime.to_date()
   end
 
-  defp to_interval(date, interval_by) do
+  @doc """
+  The first date of an interval and the one after its end.
+  """
+  @spec interval_dates(interval_by(), interval_start()) :: {binary(), binary()}
+  def interval_dates(:month, interval_start),
+    do: {months_to_iso(interval_start), months_to_iso(interval_start + 1)}
+
+  def interval_dates(:week, interval_start) do
+    {days_to_iso(interval_start * @days_per_week),
+     days_to_iso((interval_start + 1) * @days_per_week)}
+  end
+
+  def interval_dates(:day, interval_start),
+    do: {days_to_iso(interval_start), days_to_iso(interval_start + 1)}
+
+  @spec to_interval(Date.t(), interval_by()) :: interval_start()
+  def to_interval(date, interval_by) do
     seconds = date |> DateTime.new!(Time.new!(0, 0, 0)) |> DateTime.to_unix()
     day_start = div(seconds, @seconds_per_day)
 

@@ -582,8 +582,9 @@ Visualization of the different `Server` states:
 The mining stats (`AeMdw.MinerStats`) are not produced by the sync mutations. A background
 process (`AeMdw.MinerStats.Folder`) folds the generations already stored in RocksDb, in
 order, into their own tables: per miner key and per beneficiary (entity, links, and series
-rows per bucket of 20 generations) and for the whole network. The series are indexed for
-each interval (hour, day, week, month and year), so reading any of them is a range read.
+rows per bucket of 20 generations) and for the whole network. The series are indexed per
+bucket and per UTC day, week and month (by the time of the key blocks, like the other
+stats), so reading any of them is a range read.
 
 Folding from the database, and not from the mutations, keeps the stats consistent:
 

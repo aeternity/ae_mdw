@@ -39,7 +39,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.MinerStatsResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = Helpers.build_query(args, [:role, :interval])
+    query = Helpers.build_query(args, [:role, :interval_by, :min_start_date, :max_start_date])
 
     Helpers.make_page(MinerStats.fetch_miner_series(state, pagination, id, scope, query, cursor))
   end
@@ -50,7 +50,7 @@ defmodule AeMdwWeb.GraphQL.Resolvers.MinerStatsResolver do
     %{pagination: pagination, cursor: cursor, scope: scope} =
       Helpers.pagination_args_with_scope(args)
 
-    query = Helpers.build_query(args, [:interval])
+    query = Helpers.build_query(args, [:interval_by, :min_start_date, :max_start_date])
 
     Helpers.make_page(MinerStats.fetch_network_series(state, pagination, scope, query, cursor))
   end

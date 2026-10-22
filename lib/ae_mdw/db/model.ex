@@ -1323,13 +1323,13 @@ defmodule AeMdw.Db.Model do
 
   # Mining stats, a miner is identified by its key (role :miner) or by the
   # beneficiary that gets its rewards (role :beneficiary). A bucket is a number
-  # of consecutive generations, and the series are kept for several intervals (a
-  # number of consecutive buckets) so none has to be merged when read. The group
-  # of an interval is the first bucket of it divided by the interval
-  # (see AeMdw.MinerStats.Fold).
+  # of consecutive generations, and the series are also kept per calendar day, week
+  # and month (UTC, by the time of the key block) so none has to be merged when read.
+  # The group of the :bucket interval is the bucket, and the one of the others is the
+  # same as in the statistics (see AeMdw.MinerStats.Fold).
   @type miner_role() :: :miner | :beneficiary
   @type bucket() :: non_neg_integer()
-  @type interval() :: pos_integer()
+  @type interval() :: :bucket | :day | :week | :month
   @type group() :: non_neg_integer()
 
   # miner entity:

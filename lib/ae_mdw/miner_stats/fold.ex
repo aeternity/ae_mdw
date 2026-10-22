@@ -3,20 +3,21 @@ defmodule AeMdw.MinerStats.Fold do
   Folds generations, in order and only once each, into the mining stats tables.
 
   Generations are grouped in buckets and the series are kept for each of the intervals
-  (a number of consecutive buckets), updating all of them when folding, so any of them can
-  be read without merging rows.
+  (the buckets, and the days, weeks and months of the time of the key blocks), updating all
+  of them when folding, so any of them can be read without merging rows.
   """
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Stats
   alias AeMdw.MinerStats.Facts
+  alias AeMdw.Util
 
   require Model
 
   @bucket_size 20
-  # of buckets, which is about an hour, a day, a week, a month and a year
-  @intervals [1, 24, 168, 720, 8760]
+  @intervals [:bucket, :day, :week, :month]
   @orders_by %{
     miner: [:blocks, :txs, :fees, :first_active, :last_active],
     beneficiary: [:blocks, :txs, :rewards, :fees, :first_active, :last_active]
@@ -24,9 +25,6 @@ defmodule AeMdw.MinerStats.Fold do
 
   @spec bucket_size() :: pos_integer()
   def bucket_size, do: @bucket_size
-
-  @spec intervals() :: [Model.interval()]
-  def intervals, do: @intervals
 
   @spec bucket(Blocks.height()) :: Model.bucket()
   def bucket(height), do: div(height, @bucket_size)
@@ -157,7 +155,7 @@ defmodule AeMdw.MinerStats.Fold do
   defp entity!(state, role, pk), do: State.fetch!(state, Model.MinerEntity, {role, pk})
 
   defp fold_interval(state, %{facts: facts} = ctx, interval) do
-    group = div(bucket(facts.height), interval)
+    {group, last_key} = current_group(state, interval, facts)
     {miner_entity, miner_new?} = ctx.miner
     {beneficiary_entity, beneficiary_new?} = ctx.beneficiary
 
@@ -168,11 +166,27 @@ defmodule AeMdw.MinerStats.Fold do
     |> credit_rows(ctx.paid, interval, group)
     |> update_network(
       facts,
-      {interval, group},
+      {{interval, group}, last_key},
       {miner_first?, miner_new?},
       {beneficiary_first?, beneficiary_new?}
     )
   end
+
+  # The block times aren't strictly increasing, so a generation never goes back to the
+  # group of an earlier one, which would break the totals up to the end of the groups.
+  defp current_group(state, interval, facts) do
+    group = group(interval, facts)
+
+    case State.prev(state, Model.NetworkBucket, {interval, Util.max_int()}) do
+      {:ok, {^interval, last_group} = last_key} -> {max(group, last_group), last_key}
+      _other_interval_or_none -> {group, nil}
+    end
+  end
+
+  defp group(:bucket, facts), do: bucket(facts.height)
+
+  defp group(interval_by, facts),
+    do: facts.time |> Stats.time_intervals() |> Keyword.fetch!(interval_by)
 
   defp mine_row(state, entity, interval, group, facts) do
     {role, pk} = Model.miner_entity(entity, :index)
@@ -238,11 +252,11 @@ defmodule AeMdw.MinerStats.Fold do
   defp update_network(
          state,
          facts,
-         row_key,
+         {row_key, last_key},
          {miner_first?, miner_new?},
          {beneficiary_first?, beneficiary_new?}
        ) do
-    row = get_network_row(state, row_key, facts)
+    row = get_network_row(state, row_key, last_key, facts)
     reward = facts.rewards |> Map.values() |> Enum.sum()
     new_miners = tick(miner_new?)
     new_beneficiaries = tick(beneficiary_new?)
@@ -277,17 +291,16 @@ defmodule AeMdw.MinerStats.Fold do
   defp tick(false), do: 0
 
   # A new group starts from the totals at the end of the previous one.
-  defp get_network_row(state, {interval, group} = row_key, facts) do
+  defp get_network_row(state, row_key, last_key, facts) do
     case State.get(state, Model.NetworkBucket, row_key) do
       {:ok, row} ->
         row
 
       :not_found ->
         base =
-          case State.get(state, Model.NetworkBucket, {interval, group - 1}) do
-            {:ok, previous} -> previous
-            :not_found -> Model.network_bucket()
-          end
+          if last_key,
+            do: State.fetch!(state, Model.NetworkBucket, last_key),
+            else: Model.network_bucket()
 
         Model.network_bucket(
           index: row_key,
