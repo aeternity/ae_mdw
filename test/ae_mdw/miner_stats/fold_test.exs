@@ -115,9 +115,9 @@ defmodule AeMdw.MinerStats.FoldTest do
       assert {:ok, Model.miner_bucket(blocks: 2, rewards: 0, blocks_total: 2)} =
                State.get(state, Model.MinerBucket, {:miner, @m1, :bucket, 1})
 
-      assert State.exists?(state, Model.BucketMiner, {:miner, :bucket, 1, @m1})
-      assert State.exists?(state, Model.BucketMiner, {:miner, :bucket, 1, @m2})
-      assert State.exists?(state, Model.BucketMiner, {:beneficiary, :bucket, 1, @b2})
+      assert State.exists?(state, Model.BucketMiner, {:miner, 1, @m1})
+      assert State.exists?(state, Model.BucketMiner, {:miner, 1, @m2})
+      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 1, @b2})
     end
 
     test "it links the beneficiaries with the miner keys that mined for them", %{state: state} do
@@ -205,8 +205,8 @@ defmodule AeMdw.MinerStats.FoldTest do
       assert {:ok, Model.network_bucket(active_beneficiaries: 1)} =
                State.get(state, Model.NetworkBucket, {:bucket, 2})
 
-      refute State.exists?(state, Model.BucketMiner, {:beneficiary, :bucket, 2, @b2})
-      assert State.exists?(state, Model.BucketMiner, {:beneficiary, :bucket, 2, @b3})
+      refute State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b2})
+      assert State.exists?(state, Model.BucketMiner, {:beneficiary, 2, @b3})
     end
   end
 
@@ -248,8 +248,12 @@ defmodule AeMdw.MinerStats.FoldTest do
       assert {:ok, Model.miner_bucket(blocks: 2, txs: 2, blocks_total: 4)} =
                State.get(state, Model.MinerBucket, {:miner, @m1, :day, 1})
 
-      assert State.exists?(state, Model.BucketMiner, {:miner, :day, 0, @m2})
-      refute State.exists?(state, Model.BucketMiner, {:miner, :day, 1, @m2})
+      # only the buckets have the miners that mined in them
+      keys = all_keys(state, Model.BucketMiner)
+
+      assert {:miner, 1, @m2} in keys
+      assert Enum.all?(keys, fn {_role, bucket, _pk} -> bucket in [1, 2, 3] end)
+      assert 10 == length(keys)
     end
 
     test "it keeps the same stats for the weeks and months, counting the miners once", %{
@@ -282,8 +286,8 @@ defmodule AeMdw.MinerStats.FoldTest do
         assert {:ok, Model.miner_bucket(blocks: 1, rewards: 79, rewards_total: 79)} =
                  State.get(state, Model.MinerBucket, {:beneficiary, @b2, interval, 0})
 
-        assert State.exists?(state, Model.BucketMiner, {:miner, interval, 0, @m3})
-        refute State.exists?(state, Model.BucketMiner, {:miner, interval, 0, @b1})
+        assert {:ok, Model.miner_bucket(blocks: 1)} =
+                 State.get(state, Model.MinerBucket, {:miner, @m3, interval, 0})
       end
     end
 
@@ -319,6 +323,26 @@ defmodule AeMdw.MinerStats.FoldTest do
                State.get(state, Model.NetworkBucket, {:day, 1})
 
       assert :not_found = State.get(state, Model.NetworkBucket, {:day, 0})
+    end
+  end
+
+  describe "fold/2 of a beneficiary paid before it mined" do
+    test "it counts it as new and sets its first activity when it first mines" do
+      state =
+        empty_state()
+        |> Fold.fold(facts(1, @m1, @b1, rewards: %{@b2 => 5}))
+        |> Fold.fold(facts(2, @m2, @b2, []))
+
+      assert {:ok, Model.miner_entity(first_height: 2, last_height: 2, blocks: 1, rewards: 5)} =
+               State.get(state, Model.MinerEntity, {:beneficiary, @b2})
+
+      assert {:ok, Model.network_bucket(new_beneficiaries: 2, beneficiaries_total: 2)} =
+               State.get(state, Model.NetworkBucket, {:bucket, 0})
+
+      assert {2, @b2} in sorted(state, :beneficiary, :first_active)
+      refute {-1, @b2} in sorted(state, :beneficiary, :first_active)
+      assert {1, @b2} in sorted(state, :beneficiary, :blocks)
+      refute {0, @b2} in sorted(state, :beneficiary, :blocks)
     end
   end
 

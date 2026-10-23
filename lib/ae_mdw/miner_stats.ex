@@ -210,8 +210,8 @@ defmodule AeMdw.MinerStats do
     with {:ok, role, rest} <- split_role(query, :miner),
          :ok <- check_params(rest, []),
          {:ok, cursor_pk} <- deserialize_pubkey_cursor(cursor) do
-      boundary = {{role, :bucket, bucket, <<>>}, {role, :bucket, bucket, Util.max_256bit_bin()}}
-      cursor_key = cursor_pk && {role, :bucket, bucket, cursor_pk}
+      boundary = {{role, bucket, <<>>}, {role, bucket, Util.max_256bit_bin()}}
+      cursor_key = cursor_pk && {role, bucket, cursor_pk}
 
       stream_fn = fn direction ->
         Collection.stream(state, Model.BucketMiner, direction, boundary, cursor_key)
@@ -220,12 +220,12 @@ defmodule AeMdw.MinerStats do
       stream_fn
       |> Collection.paginate(
         pagination,
-        fn {^role, :bucket, ^bucket, pk} ->
+        fn {^role, ^bucket, pk} ->
           state
           |> render_miner_row(role, {role, pk, :bucket, bucket})
           |> Map.put(:id, encode(pk))
         end,
-        fn {_role, :bucket, _bucket, pk} -> encode(pk) end
+        fn {_role, _bucket, pk} -> encode(pk) end
       )
       |> then(&{:ok, &1})
     end

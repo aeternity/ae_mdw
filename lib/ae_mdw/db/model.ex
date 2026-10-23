@@ -1381,11 +1381,11 @@ defmodule AeMdw.Db.Model do
   @type miner_bucket_index() :: {miner_role(), pubkey(), interval(), group()}
   @type miner_bucket() :: record(:miner_bucket, index: miner_bucket_index())
 
-  # miners that mined in a group of buckets: index = {role, interval, group, pubkey}
+  # miners that mined in a bucket: index = {role, bucket, pubkey}
   @bucket_miner_defaults [:index]
   defrecord :bucket_miner, @bucket_miner_defaults
 
-  @type bucket_miner_index() :: {miner_role(), interval(), group(), pubkey()}
+  @type bucket_miner_index() :: {miner_role(), bucket(), pubkey()}
   @type bucket_miner() :: record(:bucket_miner, index: bucket_miner_index())
 
   # miner key that mined for a beneficiary: index = {beneficiary_pk, miner_pk}

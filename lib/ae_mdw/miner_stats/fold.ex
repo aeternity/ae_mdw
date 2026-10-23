@@ -57,22 +57,18 @@ defmodule AeMdw.MinerStats.Fold do
 
     {old_entity, entity} =
       case State.get(state, Model.MinerEntity, entity_key) do
-        {:ok, entity} ->
-          {entity, entity}
-
-        :not_found ->
-          {nil,
-           Model.miner_entity(
-             index: entity_key,
-             first_height: facts.height,
-             first_time: facts.time
-           )}
+        {:ok, entity} -> {entity, entity}
+        :not_found -> {nil, Model.miner_entity(index: entity_key)}
       end
 
+    # a beneficiary that was paid before it mined has an entity but never mined
+    new? = is_nil(Model.miner_entity(entity, :first_height))
     Model.miner_entity(blocks: blocks, txs: txs, fees: fees) = entity
 
     entity =
       Model.miner_entity(entity,
+        first_height: Model.miner_entity(entity, :first_height) || facts.height,
+        first_time: Model.miner_entity(entity, :first_time) || facts.time,
         last_height: facts.height,
         last_time: facts.time,
         blocks: blocks + 1,
@@ -80,7 +76,7 @@ defmodule AeMdw.MinerStats.Fold do
         fees: fees + facts.fees
       )
 
-    {put_entity(state, old_entity, entity), is_nil(old_entity)}
+    {put_entity(state, old_entity, entity), new?}
   end
 
   defp link(state, miner_pk, beneficiary_pk, height) do
@@ -237,13 +233,9 @@ defmodule AeMdw.MinerStats.Fold do
 
     state = State.put(state, Model.MinerBucket, row)
 
-    # only the ones that mined in the group, not the ones that were just paid
-    if Model.miner_bucket(row, :blocks) > 0 do
-      State.put(
-        state,
-        Model.BucketMiner,
-        Model.bucket_miner(index: {role, interval, group, pk})
-      )
+    # only the ones that mined in the bucket, not the ones that were just paid
+    if interval == :bucket and Model.miner_bucket(row, :blocks) > 0 do
+      State.put(state, Model.BucketMiner, Model.bucket_miner(index: {role, group, pk}))
     else
       state
     end
