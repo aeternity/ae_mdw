@@ -597,7 +597,7 @@ defmodule AeMdw.Stats do
   defp convert_blocks_param({"type", "micro"}), do: {:ok, {:block_type, :micro}}
   defp convert_blocks_param(param), do: convert_param(param)
 
-  defp convert_transactions_param({"tx_type", val}) do
+  defp convert_transactions_param({"tx_type", val}) when is_binary(val) do
     case Validate.tx_type(val) do
       {:ok, tx_type} -> {:ok, {:tx_type, tx_type}}
       {:error, reason} -> {:error, reason}
@@ -613,11 +613,17 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp convert_param({"min_start_date", val}), do: convert_date(:min_start_date, val)
+  defp convert_param({"min_start_date", val}) when is_binary(val),
+    do: convert_date(:min_start_date, val)
 
-  defp convert_param({"max_start_date", val}), do: convert_date(:max_start_date, val)
+  defp convert_param({"max_start_date", val}) when is_binary(val),
+    do: convert_date(:max_start_date, val)
 
-  defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+  defp convert_param({key, val}) when is_binary(val),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp convert_param({key, val}),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{inspect(val)}")}
 
   defp convert_date(key, val) do
     case Date.from_iso8601(val) do
@@ -834,7 +840,23 @@ defmodule AeMdw.Stats do
     |> DateTime.to_date()
   end
 
-  defp to_interval(date, interval_by) do
+  @doc """
+  The first date of an interval and the one after its end.
+  """
+  @spec interval_dates(interval_by(), interval_start()) :: {binary(), binary()}
+  def interval_dates(:month, interval_start),
+    do: {months_to_iso(interval_start), months_to_iso(interval_start + 1)}
+
+  def interval_dates(:week, interval_start) do
+    {days_to_iso(interval_start * @days_per_week),
+     days_to_iso((interval_start + 1) * @days_per_week)}
+  end
+
+  def interval_dates(:day, interval_start),
+    do: {days_to_iso(interval_start), days_to_iso(interval_start + 1)}
+
+  @spec to_interval(Date.t(), interval_by()) :: interval_start()
+  def to_interval(date, interval_by) do
     seconds = date |> DateTime.new!(Time.new!(0, 0, 0)) |> DateTime.to_unix()
     day_start = div(seconds, @seconds_per_day)
 

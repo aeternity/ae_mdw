@@ -14,6 +14,8 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
+  alias AeMdw.MinerStats.Folder, as: MinerStatsFolder
+  alias AeMdw.Miners
   alias AeMdw.Sync.Hyperchain
   alias AeMdw.Sync.Watcher
   alias AeMdwWeb.Websocket.BroadcasterCache
@@ -89,6 +91,7 @@ defmodule AeMdw.Application do
   defp init(:tables) do
     BroadcasterCache.init()
     MutationsCache.init()
+    Miners.init_cache()
 
     _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
 
@@ -143,6 +146,11 @@ defmodule AeMdw.Application do
         SyncServer.start_sync()
         Watcher.start_sync()
       end)
+
+      if not Hyperchain.hyperchain?() do
+        {:ok, _pid} = Supervisor.start_child(AeMdw.Sync.Supervisor, MinerStatsFolder)
+        :ok
+      end
     end
 
     :ok

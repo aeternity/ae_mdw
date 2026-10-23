@@ -229,7 +229,15 @@ All time-series stats queries accept `intervalBy` (`day`, `week`, `month`),
 | `aex9TransfersStats` | — | AEX-9 transfer count over time |
 | `totalStats` | pagination | Per-generation stats from chain tip |
 | `deltaStats` | pagination | Aggregated delta stats from chain tip |
-| `minersStats` | pagination | Total rewards per miner |
+| `minersStats` | `period`, pagination | Total rewards per miner, optionally only those paid in the last `day`, `week` or `month` |
+| `miningSummary` | — | Mining totals and how far the mining stats are built |
+| `miningSeries` | `intervalBy`, `minStartDate`, `maxStartDate`, scope, pagination | Mining series of the network per bucket of 20 generations |
+| `miningBucket` | `bucket` | A bucket of the mining series |
+| `miningBucketMiners` | `bucket`, `role`, pagination | Miners that mined in a bucket |
+| `miners` | `role`, `orderBy`, pagination | Miners (by key or beneficiary) sorted by their totals or activity |
+| `miner` | `id`, `role` | A miner with when it first and last mined |
+| `minerLinks` | `id`, pagination | Miner keys that mined for a beneficiary |
+| `minerSeries` | `id`, `role`, `intervalBy`, `minStartDate`, `maxStartDate`, scope, pagination | Series of a miner |
 | `topMinersStats` | pagination | Top miners by reward |
 | `topMiners24hStats` | pagination | Top miners in the last 24 hours |
 
@@ -573,6 +581,36 @@ Global counters:
 ```graphql
 query {
   stats { height txsCount contractsCount namesCount }
+}
+```
+
+### Mining stats
+
+The mining stats of the whole network per day (`intervalBy` is `DAY`, `WEEK` or `MONTH`, or
+omitted for the buckets of 20 generations, which use `fromHeight` and `toHeight`):
+
+```graphql
+query {
+  miningSeries(intervalBy: DAY, limit: 7) {
+    data { startDate endDate startTime blocks txs rewards activeMiners newMiners hashrate minersTotal }
+  }
+}
+```
+
+Miners by their rewards (`role: BENEFICIARY`, the default is the miner key), a miner and its
+series. The amounts are `BigInt`, and the `rewards` of the miner keys are `null`:
+
+```graphql
+query {
+  miners(role: BENEFICIARY, orderBy: REWARDS, limit: 5) {
+    data { id blocks txs rewards firstHeight lastHeight }
+  }
+  miner(id: "ak_...", role: BENEFICIARY) { id blocks rewards lastHeight }
+  minerSeries(id: "ak_...", role: BENEFICIARY, intervalBy: WEEK, limit: 4) {
+    nextCursor
+    data { startDate startTime blocks rewards rewardsTotal }
+  }
+  miningSummary { mdwHeight statsHeight lastBucket blocks miners beneficiaries }
 }
 ```
 

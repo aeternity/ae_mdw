@@ -51,6 +51,58 @@ components:
         enum:
           - forward
           - backward
+    MinerIdParam:
+      in: path
+      name: minerId
+      description: 'The account of the miner key or of the beneficiary'
+      required: true
+      schema:
+        $ref: '#/components/schemas/AccountAddress'
+    MinerRoleParam:
+      in: query
+      name: role
+      description: >-
+        If the miners are identified by the miner key or by the beneficiary that gets the
+        rewards, both are accounts. When listing miners it is the miner key by default, and
+        for a single miner it is found from the account: the miner key unless it only has
+        stats as a beneficiary.
+      schema:
+        type: string
+        enum:
+          - miner
+          - beneficiary
+    MiningBucketParam:
+      in: path
+      name: bucket
+      description: 'The bucket number, which is the generation divided by the bucket size (20)'
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    MiningIntervalByParam:
+      in: query
+      name: interval_by
+      description: 'The calendar interval (UTC) of each row. Each row is a bucket of 20 generations (about an hour) when it is not given'
+      schema:
+        type: string
+        enum:
+          - day
+          - week
+          - month
+    MiningMinStartDateParam:
+      in: query
+      name: min_start_date
+      description: 'The minimum start date in YYYY-MM-DD format, only with `interval_by`'
+      schema:
+        type: string
+        example: '2024-01-01'
+    MiningMaxStartDateParam:
+      in: query
+      name: max_start_date
+      description: 'The maximum start date in YYYY-MM-DD format, only with `interval_by`'
+      schema:
+        type: string
+        example: '2025-01-01'
   schemas:
     KeyBlockHash:
       description: Key block hash
