@@ -140,6 +140,14 @@ defmodule AeMdw.Node.Db do
     |> Stream.unfold(&micro_block_walker/1)
   end
 
+  @spec get_reverse_micro_hashes(Blocks.block_hash()) :: Enumerable.t()
+  def get_reverse_micro_hashes(next_block_hash) do
+    next_block_hash
+    |> :aec_db.get_header()
+    |> :aec_headers.prev_hash()
+    |> Stream.unfold(&micro_hash_walker/1)
+  end
+
   @spec get_key_header(Blocks.height()) :: {:ok, term()} | {:error, atom()}
   def get_key_header(height), do: :aec_chain.get_key_header_by_height(height)
 
@@ -156,9 +164,7 @@ defmodule AeMdw.Node.Db do
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
   def get_next_hash(next_kb_hash, mbi) do
     next_kb_hash
-    |> :aec_db.get_header()
-    |> :aec_headers.prev_hash()
-    |> Stream.unfold(&micro_hash_walker/1)
+    |> get_reverse_micro_hashes()
     |> Enum.reverse()
     |> Enum.at(mbi + 1, next_kb_hash)
   end

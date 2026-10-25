@@ -2118,7 +2118,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, height} end
          ]}
       ] do
@@ -2159,7 +2159,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, height} end
          ]}
       ] do
@@ -2187,7 +2187,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> 1 end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, 999_999} end
          ]}
       ] do
@@ -2268,7 +2268,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, height} end
          ]},
         {Format, [],
@@ -2313,7 +2313,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, height} end
          ]},
         {Format, [],
@@ -2355,7 +2355,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, height} end
          ]},
         {Format, [],
@@ -2411,7 +2411,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {:aec_headers, [], height: fn :header -> 1 end},
         {Db, [],
          [
-           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           get_reverse_micro_hashes: fn ^mb_hash -> [] end,
            find_block_height: fn ^mb_hash -> {:ok, 999_999} end
          ]}
       ] do
