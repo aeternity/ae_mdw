@@ -10,7 +10,7 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Stats
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
-  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
+  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5, reverted_call_rec: 0]
   import AeMdw.TestUtil, only: [empty_state: 0]
   import Mock
 
@@ -1165,6 +1165,61 @@ defmodule AeMdw.Db.ContractTest do
 
         assert 2 = Stats.fetch_aex9_logs_count(state, contract_pk)
       end)
+    end
+
+    test "keeps indexing aex9 events when the balances dry-run reverts" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      block_index = {height, mbi} = {Enum.random(100_000..999_999), 0}
+      txi = Enum.random(100_000_000..999_999_999)
+      next_height = height + 1
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_hash = :crypto.strong_rand_bytes(32)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<10::256>>], ""}
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: txi + 1, block_index: block_index, time: 1_704_100_546_000)
+        )
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^next_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
+         ]},
+        {:aec_dry_run, [:passthrough],
+         [
+           dry_run: fn ^next_hash, _accounts, [{:tx, _aetx}], _opts ->
+             {:ok, {[contract_call_tx: {:ok, reverted_call_rec()}], []}}
+           end
+         ]}
+      ] do
+        state = Contract.logs_write(state, txi, txi + 1, call_rec, false)
+
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk1, txi + 1, 0, account_pk2, 10}
+               )
+
+        refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+      end
     end
   end
 

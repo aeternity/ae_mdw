@@ -17,7 +17,7 @@ defmodule AeMdw.DryRun.Runner do
   @type node_event :: tuple()
   @type node_run_result :: {[run_tx_res()], [node_event()]}
   @type call_return :: any()
-  @type call_error :: binary() | :contract_does_not_exist | :dry_run_error
+  @type call_error :: binary() | :contract_does_not_exist | :dry_run_error | :revert
 
   # arbitrary new pk to run the calls
   @runner_pk <<13, 24, 60, 171, 170, 28, 99, 114, 174, 14, 112, 19, 49, 53, 233, 194, 46, 149,
@@ -32,12 +32,12 @@ defmodule AeMdw.DryRun.Runner do
   @introspection_gas 6_000_000
 
   @spec call_contract(DBN.pubkey(), method_name(), method_args()) ::
-          {:ok, call_return()} | {:error, call_error()} | :revert
+          {:ok, call_return()} | {:error, call_error()}
   def call_contract(contract_pk, function_name, args),
     do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
 
   @spec call_contract(DBN.pubkey(), DBN.height_hash(), method_name(), method_args()) ::
-          {:ok, call_return()} | {:error, call_error()} | :revert
+          {:ok, call_return()} | {:error, call_error()}
   def call_contract(contract_pk, {_type, _height, block_hash}, function_name, args) do
     contract_pk
     |> new_contract_call_tx(function_name, args)
@@ -53,7 +53,7 @@ defmodule AeMdw.DryRun.Runner do
             {:error, :aect_call.return_value(call_res)}
 
           :revert ->
-            :revert
+            {:error, :revert}
         end
 
       {:ok, {[contract_call_tx: {:error, :contract_does_not_exist}], []}} ->
