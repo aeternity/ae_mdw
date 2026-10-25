@@ -167,6 +167,42 @@ defmodule AeMdwWeb.CursorInjectionTest do
     end
   end
 
+  describe "miners — reward:account cursor" do
+    test "a cursor without the reward returns 400", %{conn: conn} do
+      cursor = :aeapi.format_account_pubkey(@zeroed_pk)
+
+      assert %{"error" => "invalid cursor: " <> _} =
+               conn
+               |> get("/v3/stats/miners", cursor: cursor)
+               |> json_response(400)
+    end
+
+    test "a cursor with an invalid reward or account returns 400", %{conn: conn} do
+      account = :aeapi.format_account_pubkey(@zeroed_pk)
+
+      for cursor <- ["x:#{account}", "1.5:#{account}", "10:ak_nope", "10:#{account}:10", "10:"] do
+        assert %{"error" => "invalid cursor: " <> _} =
+                 conn
+                 |> get("/v3/stats/miners", cursor: cursor)
+                 |> json_response(400)
+      end
+    end
+
+    test "ETF with novel atom is rejected and does not grow the atom table", %{conn: conn} do
+      unique = "ae_mdw_miners_inject_#{System.unique_integer([:positive])}"
+      refute atom_exists?(unique)
+
+      cursor = unique |> novel_atom_etf() |> Base.hex_encode32(padding: false)
+
+      assert %{"error" => "invalid cursor: " <> _} =
+               conn
+               |> get("/v3/stats/miners", cursor: cursor)
+               |> json_response(400)
+
+      refute atom_exists?(unique)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Tests: endpoints where an invalid cursor is silently ignored (no 400),
   # but the atom table must still not grow.
