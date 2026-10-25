@@ -141,6 +141,29 @@ defmodule AeMdw.Db.IntTransfer do
     sum_reward_amount(state, height, @reward_dev_kind)
   end
 
+  @doc """
+  Sums the block rewards paid to each miner between the given heights (inclusive).
+  """
+  @spec sum_block_rewards_by_target(State.t(), Blocks.height(), Blocks.height()) :: %{
+          target() => non_neg_integer()
+        }
+  def sum_block_rewards_by_target(state, min_height, max_height) do
+    kind = @reward_block_kind
+
+    state
+    |> Collection.stream(Model.KindIntTransferTx, {kind, {min_height, -1}, <<>>, -1})
+    |> Stream.take_while(fn
+      {^kind, {height, _opt_txi_idx}, _target, _ref_txi_idx} -> height <= max_height
+      _other_kind -> false
+    end)
+    |> Enum.reduce(%{}, fn {^kind, height_pos, target_pk, ref_txi_idx}, acc ->
+      Model.int_transfer_tx(amount: amount) =
+        State.fetch!(state, Model.IntTransferTx, {height_pos, kind, target_pk, ref_txi_idx})
+
+      Map.update(acc, target_pk, amount, &(&1 + amount))
+    end)
+  end
+
   defp sum_reward_amount(state, height, kind) do
     height_pos = {height, -1}
 

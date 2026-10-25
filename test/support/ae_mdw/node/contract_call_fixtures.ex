@@ -335,6 +335,20 @@ defmodule AeMdw.Node.ContractCallFixtures do
     )
   end
 
+  @spec reverted_call_rec() :: call_record()
+  def reverted_call_rec do
+    call =
+      :aect_call.new(
+        :aeser_id.create(:account, <<1::256>>),
+        1,
+        :aeser_id.create(:contract, <<2::256>>),
+        1,
+        1_000_000_000
+      )
+
+    :aect_call.set_return_type(:revert, call)
+  end
+
   @spec call_rec(fname(), pubkey()) :: call_record()
   def call_rec("attach", account_pk) do
     contract_pk = <<2::256>>

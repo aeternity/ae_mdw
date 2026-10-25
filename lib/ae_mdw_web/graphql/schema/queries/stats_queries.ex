@@ -134,8 +134,10 @@ defmodule AeMdwWeb.GraphQL.Schema.Queries.StatsQueries do
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.stats/3)
     end
 
-    @desc "Total rewards for each miner"
+    @desc "Total rewards for each miner, optionally only the rewards paid in the last period"
     field :miners_stats, :miners_stats_page do
+      arg(:period, :stats_interval)
+
       Macros.pagination_args()
       resolve(&AeMdwWeb.GraphQL.Resolvers.StatsResolver.miners/3)
     end

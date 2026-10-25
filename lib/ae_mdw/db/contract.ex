@@ -296,22 +296,36 @@ defmodule AeMdw.Db.Contract do
         event_type == :swap_tokens ->
           write_swap_tokens(state, create_txi, txi, log_idx, args, data)
 
-        aex9_contract_pk != nil ->
-          # the balance is always re-derived from a dry-run of the real chain
-          # state, rather than accumulated from event arguments, so it can't
-          # drift from reality regardless of how/where the token was created
-          # or how many events log the same underlying balance change
-          state2
-          |> SyncStats.increment_aex9_logs(aex9_contract_pk)
-          |> write_aex9_records(event_type, addr, txi, log_idx, args)
-
-        event_type != nil and State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state2, event_type, addr, txi, log_idx, args)
-
         true ->
-          state2
+          write_aexn_records(state2, aex9_contract_pk, event_type, addr, txi, log_idx, args)
       end
     end)
+  end
+
+  # dex logs are not counted as aex9 logs, even when an aex9 pair emits them
+  defp write_aexn_records(state, aex9_contract_pk, event_type, addr, txi, log_idx, args) do
+    state =
+      if aex9_contract_pk,
+        do: SyncStats.increment_aex9_logs(state, aex9_contract_pk),
+        else: state
+
+    cond do
+      event_type == nil ->
+        state
+
+      aex9_emitter?(aex9_contract_pk, addr) ->
+        # the balance is always re-derived from a dry-run of the real chain
+        # state, rather than accumulated from event arguments, so it can't
+        # drift from reality regardless of how/where the token was created
+        # or how many events log the same underlying balance change
+        write_aex9_records(state, event_type, addr, txi, log_idx, args)
+
+      State.exists?(state, Model.AexnContract, {:aex141, addr}) ->
+        write_aex141_records(state, event_type, addr, txi, log_idx, args)
+
+      true ->
+        state
+    end
   end
 
   defp which_aex9_contract_pubkey(true, contract_pk, _addr), do: contract_pk
@@ -320,6 +334,12 @@ defmodule AeMdw.Db.Contract do
   defp which_aex9_contract_pubkey(false, contract_pk, addr) do
     if addr != contract_pk and AexnContracts.aex9?(addr), do: addr
   end
+
+  # in a call to an aex9 contract, logs of other contracts are aex9 events only
+  # if those contracts are aex9 too
+  defp aex9_emitter?(nil, _addr), do: false
+  defp aex9_emitter?(addr, addr), do: true
+  defp aex9_emitter?(_aex9_contract_pk, addr), do: AexnContracts.aex9?(addr)
 
   @spec call_fun_arg_res(State.t(), pubkey(), txi()) :: Contract.fun_arg_res()
   def call_fun_arg_res(state, contract_pk, call_txi) do
@@ -696,8 +716,9 @@ defmodule AeMdw.Db.Contract do
 
   defp refresh_aex9_balances(state, contract_pk, txi, log_idx, affected_pubkeys) do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+    {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
-    case Aex9Balances.get_balances(contract_pk, block_index) do
+    case Aex9Balances.get_balances(contract_pk, block_index, type_height_hash) do
       {:ok, balances, _purged_balances} ->
         Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
           Model.aex9_event_balance(amount: old_amount) =
@@ -738,6 +759,21 @@ defmodule AeMdw.Db.Contract do
         )
 
         state
+    end
+  end
+
+  # resolving it reads the generation's micro blocks from the node, so it's
+  # done once per block instead of once per event
+  defp aex9_type_height_hash(state, block_index) do
+    case State.cache_get(state, :aex9_type_height_hash, block_index) do
+      {:ok, type_height_hash} ->
+        {state, type_height_hash}
+
+      :not_found ->
+        type_height_hash = Aex9Balances.type_height_hash(block_index)
+
+        {State.cache_put(state, :aex9_type_height_hash, block_index, type_height_hash),
+         type_height_hash}
     end
   end
 
@@ -905,7 +941,7 @@ defmodule AeMdw.Db.Contract do
            <<_pk1::256>> = from_pk,
            <<_pk2::256>> = to_pk,
            <<value::256>>
-         ] = transfer
+         ]
        ) do
     m_transfer =
       Model.aexn_transfer(
@@ -924,26 +960,28 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
-    |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
+    |> index_contract_transfer(contract_pk, txi, log_idx, from_pk, to_pk, value)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
 
-  defp index_contract_transfer(state, contract_pk, txi, i, [
-         from_pk,
-         to_pk,
-         <<value::256>>
-       ]) do
+  # burns have no recipient, so they are only indexed by sender
+  defp index_contract_transfer(state, contract_pk, txi, i, from_pk, to_pk, value) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
       Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
 
-    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
+    state = State.put(state, Model.AexnContractFromTransfer, m_ct_from)
 
-    state
-    |> State.put(Model.AexnContractFromTransfer, m_ct_from)
-    |> State.put(Model.AexnContractToTransfer, m_ct_to)
+    if to_pk do
+      m_ct_to =
+        Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
+
+      State.put(state, Model.AexnContractToTransfer, m_ct_to)
+    else
+      state
+    end
   end
 
   defp burn_aex9_balance(state, contract_pk, txi, log_idx, [from_pk, <<burn_value::256>>]) do
@@ -956,6 +994,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> index_contract_transfer(contract_pk, txi, log_idx, from_pk, nil, burn_value)
   end
 
   defp burn_aex9_balance(state, _pk, _txi, _idx, _args), do: state
@@ -974,6 +1013,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> index_contract_transfer(contract_pk, txi, log_idx, contract_pk, to_pk, mint_value)
   end
 
   defp mint_aex9_balance(state, _pk, _txi, _idx, _args), do: state

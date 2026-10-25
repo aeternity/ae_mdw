@@ -351,7 +351,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :key end,
-           get_reverse_micro_headers: fn ^decoded_hash -> [] end,
+           get_reverse_micro_hashes: fn ^decoded_hash -> [] end,
            find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
          ]}
       ] do
@@ -406,7 +406,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :key end,
-           get_reverse_micro_headers: fn ^decoded_hash -> [] end,
+           get_reverse_micro_hashes: fn ^decoded_hash -> [] end,
            find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
          ]}
       ] do

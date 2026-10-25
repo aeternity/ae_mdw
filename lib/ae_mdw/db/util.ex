@@ -218,7 +218,7 @@ defmodule AeMdw.Db.Util do
     with {:ok, height, decoded_hash} <- extract_block_height(state, mb_hash, :micro_block_hash) do
       mbi =
         decoded_hash
-        |> Db.get_reverse_micro_headers()
+        |> Db.get_reverse_micro_hashes()
         |> Enum.count()
 
       {:ok, height, mbi}

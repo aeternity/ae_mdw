@@ -336,11 +336,27 @@ paths:
   /stats/miners:
     get:
       deprecated: false
-      description: Get miners list with total rewards obtained through mining.
+      description: >-
+        Get miners list sorted by the total rewards obtained through mining. With the
+        `period` parameter only the rewards paid in the last day (24 hours), week (7 days)
+        or month (30 days) are counted, up to the latest synced block.
       operationId: GetMinerStats
       parameters:
         - $ref: '#/components/parameters/StatsLimitParam'
         - $ref: '#/components/parameters/DirectionParam'
+        - name: period
+          description: >-
+            Only count the rewards paid in the last period. All the rewards
+            (since genesis) are counted if not given.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
       responses:
         '200':
           description: Returns paginated total stats per generation

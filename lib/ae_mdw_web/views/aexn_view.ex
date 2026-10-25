@@ -140,7 +140,7 @@ defmodule AeMdwWeb.AexnView do
         {_create_txi, sender_pk, call_txi, log_idx, recipient_pk, token_id},
         v3?
       )
-      when is_binary(sender_pk) and is_binary(recipient_pk) do
+      when is_binary(sender_pk) and (is_binary(recipient_pk) or is_nil(recipient_pk)) do
     do_transfer_to_map(
       state,
       {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},
@@ -170,7 +170,7 @@ defmodule AeMdwWeb.AexnView do
         {_create_txi, call_txi, log_idx, sender_pk, recipient_pk, token_id},
         v3?
       )
-      when is_binary(sender_pk) and is_binary(recipient_pk) do
+      when is_binary(sender_pk) and (is_binary(recipient_pk) or is_nil(recipient_pk)) do
     do_transfer_to_map(
       state,
       {aexn_type, sender_pk, call_txi, log_idx, recipient_pk, token_id},

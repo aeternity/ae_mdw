@@ -21,33 +21,36 @@ defmodule AeMdw.Db.TotalStatisticsMutation do
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{statistics: statistics}, state) do
-    Enum.reduce(statistics, state, fn {{tag, interval_by, _interval_start} = statistic_index,
-                                       statistic_increment},
-                                      state ->
-      prev_stat_count =
-        state
-        |> State.prev(Model.Statistic, statistic_index)
-        |> case do
-          {:ok, {^tag, ^interval_by, _prev_interval_start} = index} ->
-            Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
-            count
+    Enum.reduce(statistics, state, fn {statistic_index, statistic_increment}, state ->
+      Model.statistic(count: count) =
+        statistic =
+        case State.get(state, Model.Statistic, statistic_index) do
+          {:ok, statistic} ->
+            statistic
 
-          {:ok, _other_statistic} ->
-            0
-
-          :none ->
-            0
+          :not_found ->
+            Model.statistic(index: statistic_index, count: prev_count(state, statistic_index))
         end
 
-      State.update(
+      State.put(
         state,
         Model.Statistic,
-        statistic_index,
-        fn Model.statistic(count: count) = statistic ->
-          Model.statistic(statistic, count: count + statistic_increment)
-        end,
-        Model.statistic(index: statistic_index, count: prev_stat_count)
+        Model.statistic(statistic, count: count + statistic_increment)
       )
     end)
+  end
+
+  defp prev_count(state, {tag, interval_by, _interval_start} = statistic_index) do
+    case State.prev(state, Model.Statistic, statistic_index) do
+      {:ok, {^tag, ^interval_by, _prev_interval_start} = index} ->
+        Model.statistic(count: count) = State.fetch!(state, Model.Statistic, index)
+        count
+
+      {:ok, _other_statistic} ->
+        0
+
+      :none ->
+        0
+    end
   end
 end

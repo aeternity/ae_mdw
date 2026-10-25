@@ -117,7 +117,7 @@ defmodule AeMdw.Activities do
 
           gens_stream =
             %{
-              :int_transfers =>
+              :int_transfers => fn ->
                 build_gens_int_transfers_stream(
                   state,
                   direction,
@@ -126,15 +126,16 @@ defmodule AeMdw.Activities do
                   gen_cursor,
                   ownership_only?
                 )
+              end
             }
-            |> filter_by_stream_types(stream_types)
+            |> build_streams(stream_types)
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {gen, _data} -> gen end)
             |> build_gens_stream(state)
 
           txi_stream =
             %{
-              :transactions =>
+              :transactions => fn ->
                 build_txs_stream(
                   state,
                   direction,
@@ -142,16 +143,18 @@ defmodule AeMdw.Activities do
                   txi_scope,
                   txi_cursor,
                   ownership_only?
-                ),
-              :int_calls =>
+                )
+              end,
+              :int_calls => fn ->
                 build_int_contract_calls_stream(
                   state,
                   direction,
                   account_pk,
                   txi_scope,
                   txi_idx_cursor
-                ),
-              :ext_calls =>
+                )
+              end,
+              :ext_calls => fn ->
                 build_ext_contract_calls_stream(
                   state,
                   direction,
@@ -159,8 +162,9 @@ defmodule AeMdw.Activities do
                   txi_scope,
                   txi_idx_cursor,
                   ownership_only?
-                ),
-              :aex9 =>
+                )
+              end,
+              :aex9 => fn ->
                 build_aexn_transfers_stream(
                   state,
                   direction,
@@ -169,8 +173,9 @@ defmodule AeMdw.Activities do
                   txi_scope,
                   txi_cursor,
                   ownership_only?
-                ),
-              :aex141 =>
+                )
+              end,
+              :aex141 => fn ->
                 build_aexn_transfers_stream(
                   state,
                   direction,
@@ -179,8 +184,9 @@ defmodule AeMdw.Activities do
                   txi_scope,
                   txi_cursor,
                   ownership_only?
-                ),
-              :int_transfers =>
+                )
+              end,
+              :int_transfers => fn ->
                 build_txs_int_transfers_stream(
                   state,
                   direction,
@@ -188,12 +194,16 @@ defmodule AeMdw.Activities do
                   gen_scope,
                   gen_cursor,
                   ownership_only?
-                ),
-              :claims =>
-                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor),
-              :swaps => build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor)
+                )
+              end,
+              :claims => fn ->
+                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
+              end,
+              :swaps => fn ->
+                build_swaps_stream(state, direction, account_pk, txi_scope, txi_cursor)
+              end
             }
-            |> filter_by_stream_types(stream_types)
+            |> build_streams(stream_types)
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {txi, _data} -> txi end)
             |> build_txi_stream(state)
@@ -228,12 +238,11 @@ defmodule AeMdw.Activities do
     end
   end
 
-  defp filter_by_stream_types(streams_map, nil), do: Map.values(streams_map)
+  defp build_streams(stream_builders, nil),
+    do: Enum.map(stream_builders, fn {_stream_type, build_fn} -> build_fn.() end)
 
-  defp filter_by_stream_types(streams_map, stream_types) do
-    streams_map
-    |> Enum.filter(fn {stream_type, _stream} -> stream_type in stream_types end)
-    |> Enum.map(fn {_stream_type, stream} -> stream end)
+  defp build_streams(stream_builders, stream_types) do
+    for {stream_type, build_fn} <- stream_builders, stream_type in stream_types, do: build_fn.()
   end
 
   defp render_activities(state, account_pk, activities_locators_data) do

@@ -203,7 +203,9 @@ GET /v3/aex141/transfers                               - nft transfers that can 
 
 GET /v3/stats/delta                       - statistics for generations from tip of the chain
 GET /v3/stats/total                       - aggregated statistics for generations from tip of the chain
-GET /v3/stats/miners                       - total rewards for each miner
+GET /v3/stats/miners                       - total rewards for each miner (optionally for the last day, week or month)
+GET /v3/stats/mining/series               - mining series of the network (see mining stats)
+GET /v3/miners                            - miners with their totals and series (see mining stats)
 
 GET /v3/stats/transactions                - statistics over time of transactions count
 GET /v3/stats/blocks                      - statistics over time of blocks count
@@ -2997,8 +2999,23 @@ $ curl https://mainnet.aeternity.io/mdw/v3/aex9/ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGP
 
 ### `/v3/aex9/:contract_id/transfers`
 
+Returns the transfers, mints and burns of a token involving an account, filtered by one of `account` (sent or received), `sender` or `recipient`. A mint is sent by the contract itself and a burn has no recipient.
+
 ```
-$ TODO
+$ curl -s 'https://mainnet.aeternity.io/mdw/v3/aex9/ct_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM/transfers?account=ak_rRVV9aDnmmLriPePDSvfTUvepZtR2rbYk2Mx4GCqGLcc1DMAq&direction=forward&limit=1' | jq '.data'
+[
+  {
+    "amount": 31622776601683792319,
+    "block_height": 636510,
+    "contract_id": "ct_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM",
+    "log_idx": 7,
+    "micro_index": 17,
+    "micro_time": 1659515279144,
+    "recipient": "ak_rRVV9aDnmmLriPePDSvfTUvepZtR2rbYk2Mx4GCqGLcc1DMAq",
+    "sender": "ak_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM",
+    "tx_hash": "th_2YiLo4ut9fYajfsmxun7fhLRGUk3QHjTRopcyMzm75iqNGxcLm"
+  }
+]
 ```
 
 ---
@@ -3360,7 +3377,9 @@ These endpoints allow pagination, with typical `forward/backward` direction or s
 
 ### `/v3/stats/miners`
 
-Total reward given to each chain miner.
+Total reward given to each chain miner, sorted by the reward (highest first by default, use `direction=forward` for the lowest first).
+
+The optional `period` query parameter (`day`, `week` or `month`) only counts the rewards paid during the last 24 hours, 7 days or 30 days up to the latest synced block, instead of all of them since genesis.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
@@ -3371,10 +3390,163 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/miners?limit=1" | jq '.'
       "total_reward": 76626041292504000000
     }
   ],
-  "next": "/v3/stats/miners?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
+  "next": "/v3/stats/miners?cursor=70360315826232000000:ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a&limit=1",
   "prev": null
 }
 ```
+
+The cursor is the total reward and the miner of the first entry of the page, use the `next` and `prev` links as they are.
+Unknown query parameters and cursors of the earlier versions (only the `ak_` account) return a 400 error, also on `/v2/minerstats`.
+
+### Mining stats
+
+Series and totals of the mining, for each miner and for the whole network. They are
+built in the background from the finalized generations, starting at generation 1 (the
+genesis has no miner) the first time the middleware runs, so they trail the tip of the chain by the finalization depth and
+the history is available once the first run catches up. `GET /v3/stats/mining` tells how
+far they are with `stats_height`, compared to the `mdw_height` of the middleware.
+
+The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
+Each row of a series has what happened in the bucket, and the totals up to its end.
+The series are also kept (indexed, so reading them costs the same) per `interval_by=day`,
+`week` or `month`, like the other stats: UTC calendar intervals by the time of the key blocks,
+with their `start_date` and `end_date`, selected with `min_start_date` and `max_start_date`.
+The buckets are selected with `scope=gen:<from>-<to>` instead, which picks whole rows, and
+all of them are paginated with the usual `limit`, `direction` and cursors. The `start_time`
+and `end_time` are the time of the first and last key block of the row, and a row with a
+block time earlier than the one before it is counted in the later interval.
+
+A key block has the miner key that mined it and the beneficiary that gets its reward, which
+are different accounts when a pool mines for its members, both are plain accounts (`ak_`).
+The endpoints of the miners take `role=miner` or `role=beneficiary`. The lists use the miner
+keys when it isn't given and a single miner (`/v3/miners/:id...`) finds it from the account:
+the miner key, unless the account only has stats as a beneficiary. Only beneficiaries get rewards, so the
+`rewards` of the miner keys are `null` (and `by=rewards` is only for beneficiaries). The rewards are counted when they are paid, which is
+some generations after the block was mined, like the totals of `/v3/stats/miners`.
+`/v3/stats/miners` remains the reference for the total rewards, it is current up to the synced
+generation, while `/v3/miners?role=beneficiary&by=rewards` trails it like all the mining stats.
+
+```
+GET /v3/stats/mining                           - totals of the chain and how far the stats are built
+GET /v3/stats/mining/series                    - series of the whole network
+GET /v3/stats/mining/buckets/:bucket           - a bucket of the network series
+GET /v3/stats/mining/buckets/:bucket/miners    - the miners that mined in a bucket
+GET /v3/miners                                 - miners sorted by `by=blocks|txs|rewards|fees|first_active|last_active`
+GET /v3/miners/:id                             - a miner, with when it first and last mined
+GET /v3/miners/:id/links                       - the miner keys that mined for a beneficiary
+GET /v3/miners/:id/series                      - series of a miner
+```
+
+The network series rows have the key and micro blocks, transactions, rewards and fees of
+the bucket, the average block time, difficulty and hashrate, how many miners and beneficiaries
+were active or new, and the totals up to the end of the row. The fees are the `fee` of the
+transactions processed in the generations that the miner mined, the outer one of meta and
+paying-for transactions, without their inner fees nor the gas.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?limit=1&interval_by=day" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners?role=beneficiary&by=rewards&limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?min_start_date=2025-01-01&interval_by=week" | jq '.'
+```
+
+Example responses (with illustrative values):
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining" | jq '.'
+{
+  "bucket_size": 20,
+  "mdw_height": 1100030,
+  "stats_height": 1099999,
+  "last_bucket": 54999,
+  "blocks": 1099999,
+  "txs": 52000000,
+  "rewards": 1500000000000000000000000,
+  "fees": 900000000000000000000,
+  "miners": 310,
+  "beneficiaries": 290
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/stats/mining/series?interval_by=day&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "start_date": "2025-03-14",
+      "end_date": "2025-03-15",
+      "start_height": 1099680,
+      "end_height": 1099999,
+      "start_time": 1741942231653,
+      "end_time": 1741999651653,
+      "blocks": 320,
+      "micro_blocks": 6000,
+      "txs": 8000,
+      "rewards": 730000000000000000000,
+      "fees": 1300000000000000000,
+      "avg_block_time": 180000,
+      "avg_difficulty": 4400000000000,
+      "hashrate": 10000000000000,
+      "active_miners": 25,
+      "active_beneficiaries": 22,
+      "new_miners": 1,
+      "new_beneficiaries": 0,
+      "blocks_total": 1099999,
+      "txs_total": 52000000,
+      "rewards_total": 1500000000000000000000000,
+      "fees_total": 900000000000000000000,
+      "miners_total": 310,
+      "beneficiaries_total": 290
+    }
+  ],
+  "next": "/v3/stats/mining/series?cursor=20161&interval_by=day&limit=1",
+  "prev": null
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_.../series?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "bucket": 54999,
+      "start_height": 1099980,
+      "end_height": 1099999,
+      "start_time": 1741996231653,
+      "end_time": 1741999651653,
+      "blocks": 3,
+      "txs": 40,
+      "rewards": null,
+      "fees": 7000000000000000,
+      "blocks_total": 12000,
+      "txs_total": 650000,
+      "rewards_total": null,
+      "fees_total": 20000000000000000000
+    }
+  ],
+  "next": "/v3/miners/ak_.../series?cursor=54998&limit=1",
+  "prev": null
+}
+
+$ curl -s "https://mainnet.aeternity.io/mdw/v3/miners/ak_..." | jq '.'
+{
+  "id": "ak_...",
+  "role": "miner",
+  "first_height": 190000,
+  "first_time": 1600000000000,
+  "last_height": 1099990,
+  "last_time": 1741998031653,
+  "blocks": 12000,
+  "txs": 650000,
+  "rewards": null,
+  "fees": 20000000000000000000
+}
+```
+
+Notes:
+
+* A bucket without rows (the miner neither mined nor got paid in it) isn't returned, the `*_total` fields of a row carry what happened before.
+* The series are not available on hyperchain nodes, which have no mining.
+* The `limit` is up to 1000 and the miners are listed with `limit` and `direction` like the other stats.
+* After upgrading, the background run builds the whole history, which takes a while on mainnet. The rest of the API works meanwhile and the series only have the generations up to `stats_height`.
+
+The same data is available in GraphQL with the `miningSummary`, `miningSeries`, `miningBucket`,
+`miningBucketMiners`, `miners`, `miner`, `minerLinks` and `minerSeries` queries.
 
 ### `/v3/stats/blocks`
 

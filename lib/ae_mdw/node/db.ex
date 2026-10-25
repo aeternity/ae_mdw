@@ -140,13 +140,16 @@ defmodule AeMdw.Node.Db do
     |> Stream.unfold(&micro_block_walker/1)
   end
 
-  @spec get_reverse_micro_headers(Blocks.block_hash()) :: Enumerable.t()
-  def get_reverse_micro_headers(next_block_hash) do
+  @spec get_reverse_micro_hashes(Blocks.block_hash()) :: Enumerable.t()
+  def get_reverse_micro_hashes(next_block_hash) do
     next_block_hash
     |> :aec_db.get_header()
     |> :aec_headers.prev_hash()
-    |> Stream.unfold(&micro_header_walker/1)
+    |> Stream.unfold(&micro_hash_walker/1)
   end
+
+  @spec get_key_header(Blocks.height()) :: {:ok, term()} | {:error, atom()}
+  def get_key_header(height), do: :aec_chain.get_key_header_by_height(height)
 
   @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash() | nil
   def get_key_block_hash(height) do
@@ -161,23 +164,9 @@ defmodule AeMdw.Node.Db do
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
   def get_next_hash(next_kb_hash, mbi) do
     next_kb_hash
-    |> get_micro_blocks()
-    |> Enum.reduce_while(0, fn mblock, index ->
-      if index == mbi + 1 do
-        ok_mb_hash =
-          mblock
-          |> :aec_blocks.to_micro_header()
-          |> :aec_headers.hash_header()
-
-        {:halt, ok_mb_hash}
-      else
-        {:cont, index + 1}
-      end
-    end)
-    |> case do
-      {:ok, mb_hash} -> mb_hash
-      _mb_count -> next_kb_hash
-    end
+    |> get_reverse_micro_hashes()
+    |> Enum.reverse()
+    |> Enum.at(mbi + 1, next_kb_hash)
   end
 
   @spec get_tx_data(binary()) ::
@@ -362,11 +351,12 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  defp micro_header_walker(hash) do
-    with header <- :aec_db.get_header(hash),
-         :micro <- :aec_headers.type(header) do
-      {header, :aec_headers.prev_hash(header)}
-    else
+  # walks headers only, unlike micro_block_walker/1 that also reads every tx
+  defp micro_hash_walker(hash) do
+    header = :aec_db.get_header(hash)
+
+    case :aec_headers.type(header) do
+      :micro -> {hash, :aec_headers.prev_hash(header)}
       :key -> nil
     end
   end
