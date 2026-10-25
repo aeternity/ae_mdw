@@ -75,6 +75,21 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
+  describe "dirty_count/2" do
+    setup :setup_transaction
+
+    test "counts records written in the transaction", %{txn: txn} do
+      count_before = RocksDbCF.dirty_count(txn, Model.Tx)
+
+      Enum.each(1..10, fn _i ->
+        m_tx = Model.tx(index: System.unique_integer() |> abs())
+        assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      end)
+
+      assert RocksDbCF.dirty_count(txn, Model.Tx) == count_before + 10
+    end
+  end
+
   describe "exists?/2" do
     setup :setup_transaction
 
