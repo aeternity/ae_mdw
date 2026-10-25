@@ -69,33 +69,38 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  # Reads time from MDW index tables first (Model.Time, Model.KeyBlockTime) to
-  # avoid a node DB call via block_time/1. Falls back to approximation when the
-  # state is sparse (test fixtures) and none of the time tables are populated.
+  # Reads time from MDW index tables (Model.Time, then Model.KeyBlockTime, then
+  # the last Model.Tx) to avoid a node DB call via block_time/1, stopping at the
+  # first one that has it. Falls back to approximation when the state is sparse
+  # (test fixtures) and none of the time tables are populated.
   @spec last_gen_and_time(state()) :: {:ok, {Blocks.height(), Blocks.time()}} | :no_blocks
   def last_gen_and_time(state) do
-    case {State.prev(state, Model.Block, nil), State.prev(state, Model.Time, nil),
-          State.prev(state, Model.KeyBlockTime, nil), State.prev(state, Model.Tx, nil)} do
-      {{:ok, {height, _mbi}}, {:ok, {time, _txi}}, _key_block_time, _last_tx} ->
-        {:ok, {height, time}}
+    case State.prev(state, Model.Block, nil) do
+      {:ok, {height, _mbi}} -> {:ok, {height, last_time(state, height)}}
+      :none -> :no_blocks
+    end
+  end
 
-      {{:ok, {height, _mbi}}, :none, {:ok, time}, _last_tx} ->
-        {:ok, {height, time}}
+  defp last_time(state, height) do
+    case State.prev(state, Model.Time, nil) do
+      {:ok, {time, _txi}} -> time
+      :none -> last_key_block_time(state, height)
+    end
+  end
 
-      {{:ok, {height, _mbi}}, :none, :none, {:ok, txi}} ->
-        case State.get(state, Model.Tx, txi) do
-          {:ok, Model.tx(time: time)} when is_integer(time) ->
-            {:ok, {height, time}}
+  defp last_key_block_time(state, height) do
+    case State.prev(state, Model.KeyBlockTime, nil) do
+      {:ok, time} -> time
+      :none -> last_tx_time(state, height)
+    end
+  end
 
-          _missing_time ->
-            {:ok, {height, last_block_time_or_approx(state, height)}}
-        end
-
-      {{:ok, {height, _mbi}}, :none, :none, :none} ->
-        {:ok, {height, last_block_time_or_approx(state, height)}}
-
-      {:none, _no_time, _no_key_block_time, _no_tx} ->
-        :no_blocks
+  defp last_tx_time(state, height) do
+    with {:ok, txi} <- State.prev(state, Model.Tx, nil),
+         {:ok, Model.tx(time: time)} when is_integer(time) <- State.get(state, Model.Tx, txi) do
+      time
+    else
+      _missing_time -> last_block_time_or_approx(state, height)
     end
   end
 
