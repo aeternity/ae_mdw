@@ -140,6 +140,9 @@ defmodule AeMdw.Node.Db do
     |> Stream.unfold(&micro_block_walker/1)
   end
 
+  @spec get_key_header(Blocks.height()) :: {:ok, term()} | {:error, atom()}
+  def get_key_header(height), do: :aec_chain.get_key_header_by_height(height)
+
   @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash() | nil
   def get_key_block_hash(height) do
     with {:ok, next_kb_header} <- :aec_chain.get_key_header_by_height(height),

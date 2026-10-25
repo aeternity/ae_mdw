@@ -320,6 +320,15 @@ defmodule AeMdw.Db.ContractTest do
       call_txi = call_txi + 1
       log_idx = 0
 
+      # dex pairs are aex9 (LP) tokens
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, dex_pair_pk, {type_info, nil, nil})
+      on_exit(fn -> AeMdw.EtsCache.del(AeMdw.Contract, dex_pair_pk) end)
+
       state = Contract.logs_write(state, create_token_txi, call_txi, call_rec2, false)
 
       assert {:ok, Model.dex_account_swap_tokens(amounts: [123, 456], to: ^account2_pk)} =
@@ -334,6 +343,8 @@ defmodule AeMdw.Db.ContractTest do
                Model.DexContractSwapTokens,
                {create_token_txi, account1_pk, call_txi, log_idx}
              )
+
+      assert 0 = Stats.fetch_aex9_logs_count(state, dex_pair_pk)
     end
 
     test "always refreshes aex9 event balance from a dry-run, even on contract creation" do
@@ -1034,6 +1045,126 @@ defmodule AeMdw.Db.ContractTest do
         assert State.exists?(state, Model.ContractLog, {txi, txi, 0})
         assert State.exists?(state, Model.NftTemplate, {contract_pk, template_id})
       end
+    end
+
+    test "indexes aex141 logs of a contract called by an aex9 contract as aex141" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      nft_pk = :crypto.strong_rand_bytes(32)
+      owner_pk = :crypto.strong_rand_bytes(32)
+      buyer_pk = :crypto.strong_rand_bytes(32)
+      token_id = Enum.random(1..999)
+      height = Enum.random(100_000..999_999)
+      create_txi = Enum.random(100_000_000..999_999_999)
+      txi = create_txi + 2
+
+      for {pk, signatures} <- [
+            {contract_pk, AeMdw.Node.aex9_signatures()},
+            {nft_pk, AeMdw.Node.aex141_signatures()}
+          ] do
+        functions = Map.new(signatures, fn {hash, type} -> {hash, {nil, type, nil}} end)
+        AeMdw.EtsCache.put(AeMdw.Contract, pk, {{:fcode, functions, nil, nil}, nil, nil})
+      end
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {nft_pk, [aexn_event_hash(:mint), owner_pk, <<token_id::256>>], ""},
+          {nft_pk, [aexn_event_hash(:transfer), owner_pk, buyer_pk, <<token_id::256>>], ""}
+        ])
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.cache_put(:ct_create_sync_cache, nft_pk, create_txi + 1)
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, nft_pk}))
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: txi, block_index: {height, 0}, time: 1_704_100_546_000)
+        )
+        |> Contract.logs_write(create_txi, txi, call_rec, false)
+
+      assert {:ok, Model.nft_token_owner(owner: ^buyer_pk)} =
+               State.get(state, Model.NftTokenOwner, {nft_pk, token_id})
+
+      assert State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex141, owner_pk, txi, 1, buyer_pk, token_id}
+             )
+
+      refute State.exists?(state, Model.AexnTransfer, {:aex9, nft_pk, txi, 0, owner_pk, token_id})
+
+      refute State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex9, owner_pk, txi, 1, buyer_pk, token_id}
+             )
+
+      assert 2 = Stats.fetch_aex9_logs_count(state, contract_pk)
+    end
+
+    test "indexes logs of other contracts in a call to an aex9 contract as aex9 only if they are aex9" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      token_pk = :crypto.strong_rand_bytes(32)
+      other_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      block_index = {height, _mbi} = {Enum.random(100_000..999_999), 0}
+      create_txi = Enum.random(100_000_000..999_999_999)
+      txi = create_txi + 3
+
+      aex9_functions =
+        Map.new(AeMdw.Node.aex9_signatures(), fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      for {pk, functions} <- [
+            {contract_pk, aex9_functions},
+            {token_pk, aex9_functions},
+            {other_pk, %{}}
+          ] do
+        AeMdw.EtsCache.put(AeMdw.Contract, pk, {{:fcode, functions, nil, nil}, nil, nil})
+      end
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {token_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<10::256>>], ""},
+          {other_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<20::256>>], ""}
+        ])
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.cache_put(:ct_create_sync_cache, token_pk, create_txi + 1)
+        |> State.cache_put(:ct_create_sync_cache, other_pk, create_txi + 2)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, token_pk}, txi_idx: {create_txi + 1, -1})
+        )
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: txi, block_index: block_index, time: 1_704_100_546_000)
+        )
+
+      with_aex9_balances(block_index, %{account_pk2 => 10}, fn ->
+        state = Contract.logs_write(state, create_txi, txi, call_rec, false)
+
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk1, txi, 0, account_pk2, 10}
+               )
+
+        refute State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk1, txi, 1, account_pk2, 20}
+               )
+
+        assert {:ok, Model.aex9_event_balance(amount: 10)} =
+                 State.get(state, Model.Aex9EventBalance, {token_pk, account_pk2})
+
+        refute State.exists?(state, Model.Aex9EventBalance, {other_pk, account_pk2})
+
+        assert 2 = Stats.fetch_aex9_logs_count(state, contract_pk)
+      end)
     end
 
     test "keeps indexing aex9 events when the balances dry-run reverts" do

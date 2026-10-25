@@ -296,22 +296,36 @@ defmodule AeMdw.Db.Contract do
         event_type == :swap_tokens ->
           write_swap_tokens(state, create_txi, txi, log_idx, args, data)
 
-        aex9_contract_pk != nil ->
-          # the balance is always re-derived from a dry-run of the real chain
-          # state, rather than accumulated from event arguments, so it can't
-          # drift from reality regardless of how/where the token was created
-          # or how many events log the same underlying balance change
-          state2
-          |> SyncStats.increment_aex9_logs(aex9_contract_pk)
-          |> write_aex9_records(event_type, addr, txi, log_idx, args)
-
-        event_type != nil and State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state2, event_type, addr, txi, log_idx, args)
-
         true ->
-          state2
+          write_aexn_records(state2, aex9_contract_pk, event_type, addr, txi, log_idx, args)
       end
     end)
+  end
+
+  # dex logs are not counted as aex9 logs, even when an aex9 pair emits them
+  defp write_aexn_records(state, aex9_contract_pk, event_type, addr, txi, log_idx, args) do
+    state =
+      if aex9_contract_pk,
+        do: SyncStats.increment_aex9_logs(state, aex9_contract_pk),
+        else: state
+
+    cond do
+      event_type == nil ->
+        state
+
+      aex9_emitter?(aex9_contract_pk, addr) ->
+        # the balance is always re-derived from a dry-run of the real chain
+        # state, rather than accumulated from event arguments, so it can't
+        # drift from reality regardless of how/where the token was created
+        # or how many events log the same underlying balance change
+        write_aex9_records(state, event_type, addr, txi, log_idx, args)
+
+      State.exists?(state, Model.AexnContract, {:aex141, addr}) ->
+        write_aex141_records(state, event_type, addr, txi, log_idx, args)
+
+      true ->
+        state
+    end
   end
 
   defp which_aex9_contract_pubkey(true, contract_pk, _addr), do: contract_pk
@@ -320,6 +334,12 @@ defmodule AeMdw.Db.Contract do
   defp which_aex9_contract_pubkey(false, contract_pk, addr) do
     if addr != contract_pk and AexnContracts.aex9?(addr), do: addr
   end
+
+  # in a call to an aex9 contract, logs of other contracts are aex9 events only
+  # if those contracts are aex9 too
+  defp aex9_emitter?(nil, _addr), do: false
+  defp aex9_emitter?(addr, addr), do: true
+  defp aex9_emitter?(_aex9_contract_pk, addr), do: AexnContracts.aex9?(addr)
 
   @spec call_fun_arg_res(State.t(), pubkey(), txi()) :: Contract.fun_arg_res()
   def call_fun_arg_res(state, contract_pk, call_txi) do

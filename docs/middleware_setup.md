@@ -90,6 +90,23 @@ With `ENABLE_TELEMETRY=true` and a StatsD → Grafana pipeline, alert on:
 
 The ETS subscription row count is the key early-warning metric for subscriber-cleanup regressions: rows should drop to zero promptly after a client disconnects.
 
+### Mining stats backfill
+
+The mining stats (`/v3/stats/mining`, `/v3/miners`) are built by a background process that
+starts with the sync, after the database migrations (it is not started on hyperchain nodes).
+The first time it runs, after an upgrade or on a new database, it goes through the whole chain
+from generation 1 (the genesis has no miner), which takes a while and adds some disk usage (a
+few hundred MB on mainnet, an estimate).
+There is nothing to configure and nothing blocks while it runs. It only folds complete buckets
+(20 generations) and sleeps until the next one can be complete, so it is idle most of the time.
+
+Check its progress with `GET /v3/stats/mining`: `stats_height` is the last generation folded
+and `mdw_height` is the one synced by the middleware (the `mdw_height` of `GET /v3/status`).
+The stats trail it by up to a bucket plus the generations kept in memory, and the series only
+include the generations up to `stats_height`.
+When a chunk fails (for example the node database isn't ready) it logs
+`[miner_stats] fold failed: ...` and retries after a minute.
+
 ## Quick Start with Docker Compose
 
 ### Step 1: Clone the Repository
