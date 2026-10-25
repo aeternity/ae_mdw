@@ -923,6 +923,50 @@ defmodule AeMdw.Db.ContractTest do
       end)
     end
 
+    test "resolves the dry-run block once per micro block" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      block_index = {height, _mbi} = {Enum.random(100_000..999_999), 0}
+      txi1 = Enum.random(100_000_000..999_999_999)
+      txi2 = txi1 + 1
+      create_txi = txi1 - 1
+
+      transfer_log =
+        {contract_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<1::256>>], ""}
+
+      call_rec = call_rec("logs", contract_pk, height, nil, [transfer_log, transfer_log])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.put(Model.Tx, Model.tx(index: txi1, block_index: block_index, time: 1))
+        |> State.put(Model.Tx, Model.tx(index: txi2, block_index: block_index, time: 1))
+
+      with_aex9_balances(block_index, %{account_pk1 => 6, account_pk2 => 4}, fn ->
+        state =
+          state
+          |> Contract.logs_write(create_txi, txi1, call_rec, false)
+          |> Contract.logs_write(create_txi, txi2, call_rec, false)
+
+        assert_called_exactly(AeMdw.Node.Db.get_next_hash(:_, :_), 1)
+
+        assert {:ok, Model.aex9_event_balance(txi: ^txi2, amount: 4)} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+      end)
+    end
+
     test "ignores aex9 events without matching args" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)

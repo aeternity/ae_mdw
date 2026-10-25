@@ -156,23 +156,11 @@ defmodule AeMdw.Node.Db do
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
   def get_next_hash(next_kb_hash, mbi) do
     next_kb_hash
-    |> get_micro_blocks()
-    |> Enum.reduce_while(0, fn mblock, index ->
-      if index == mbi + 1 do
-        ok_mb_hash =
-          mblock
-          |> :aec_blocks.to_micro_header()
-          |> :aec_headers.hash_header()
-
-        {:halt, ok_mb_hash}
-      else
-        {:cont, index + 1}
-      end
-    end)
-    |> case do
-      {:ok, mb_hash} -> mb_hash
-      _mb_count -> next_kb_hash
-    end
+    |> :aec_db.get_header()
+    |> :aec_headers.prev_hash()
+    |> Stream.unfold(&micro_hash_walker/1)
+    |> Enum.reverse()
+    |> Enum.at(mbi + 1, next_kb_hash)
   end
 
   @spec get_tx_data(binary()) ::
@@ -353,6 +341,16 @@ defmodule AeMdw.Node.Db do
          :micro <- :aec_blocks.type(block) do
       {block, :aec_blocks.prev_hash(block)}
     else
+      :key -> nil
+    end
+  end
+
+  # walks headers only, unlike micro_block_walker/1 that also reads every tx
+  defp micro_hash_walker(hash) do
+    header = :aec_db.get_header(hash)
+
+    case :aec_headers.type(header) do
+      :micro -> {hash, :aec_headers.prev_hash(header)}
       :key -> nil
     end
   end
