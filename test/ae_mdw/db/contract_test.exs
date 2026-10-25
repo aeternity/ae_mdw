@@ -671,6 +671,79 @@ defmodule AeMdw.Db.ContractTest do
 
         assert {:ok, Model.aex9_event_balance(amount: ^transfer_amount)} =
                  State.get(state, Model.Aex9EventBalance, {remote_pk2, account_pk2})
+
+        assert State.exists?(
+                 state,
+                 Model.AexnContractToTransfer,
+                 {txi - 1, account_pk1, txi, 2, remote_pk1, mint_amount}
+               )
+      end)
+    end
+
+    test "indexes aex9 mints and burns by contract" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      block_index = {height, _mbi} = {Enum.random(100_000..999_999), 0}
+      create_txi = Enum.random(100_000_000..999_999_999)
+      txi = create_txi + 1
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [aexn_event_hash(:mint), account_pk, <<1_000::256>>], ""},
+          {contract_pk, [aexn_event_hash(:burn), account_pk, <<100::256>>], ""},
+          {contract_pk, [aexn_event_hash(:swap), account_pk, <<200::256>>], ""}
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, functions, nil, nil}, nil, nil})
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: txi, block_index: block_index, time: 1_704_100_546_000)
+        )
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
+
+      with_aex9_balances(block_index, %{account_pk => 700}, fn ->
+        state = Contract.logs_write(state, create_txi, txi, call_rec, false)
+
+        assert State.exists?(
+                 state,
+                 Model.AexnContractFromTransfer,
+                 {create_txi, contract_pk, txi, 0, account_pk, 1_000}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.AexnContractToTransfer,
+                 {create_txi, account_pk, txi, 0, contract_pk, 1_000}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.AexnContractFromTransfer,
+                 {create_txi, account_pk, txi, 1, nil, 100}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.AexnContractFromTransfer,
+                 {create_txi, account_pk, txi, 2, nil, 200}
+               )
+
+        refute State.exists?(
+                 state,
+                 Model.AexnContractToTransfer,
+                 {create_txi, nil, txi, 1, account_pk, 100}
+               )
       end)
     end
 

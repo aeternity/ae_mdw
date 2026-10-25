@@ -32,7 +32,7 @@ defmodule AeMdw.AexnTransfers do
   @type pair_transfer_key ::
           {:aex9 | :aex141, pubkey(), pubkey(), txi(), log_idx(), pos_integer()}
   @type contract_transfer_key ::
-          {txi(), txi(), log_idx(), pubkey(), pubkey(), pos_integer()}
+          {txi(), txi(), log_idx(), pubkey(), pubkey() | nil, pos_integer()}
 
   @type cursor :: binary()
   @typep page_cursor :: Collection.pagination_cursor()
@@ -260,7 +260,8 @@ defmodule AeMdw.AexnTransfers do
          true <-
            (elem(cursor_term, 0) in [:aex9, :aex141] or is_integer(elem(cursor_term, 0))) and
              (match?(
-                {_type_or_pk, <<_pk1::256>>, _txi, _idx, <<_pk2::256>>, _amount},
+                {_type_or_pk, <<_pk1::256>>, _txi, _idx, pk2, _amount}
+                when is_nil(pk2) or bit_size(pk2) == 256,
                 cursor_term
               ) or
                 match?(
@@ -268,7 +269,8 @@ defmodule AeMdw.AexnTransfers do
                   cursor_term
                 ) or
                 match?(
-                  {_type_or_pk, _txi, _idx, <<_pk1::256>>, <<_pk2::256>>, _amount},
+                  {_type_or_pk, _txi, _idx, <<_pk1::256>>, pk2, _amount}
+                  when is_nil(pk2) or bit_size(pk2) == 256,
                   cursor_term
                 )) do
       {:ok, cursor_term}

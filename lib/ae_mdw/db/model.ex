@@ -1014,8 +1014,8 @@ defmodule AeMdw.Db.Model do
           {aexn_type(), pubkey(), pubkey(), txi(), log_idx(), amount()}
   @type aexn_pair_transfer() :: record(:aexn_pair_transfer, index: aexn_pair_transfer_index())
 
-  # aexn contract from transfer:
-  #    index: {create_txi, from_pk, call_txi, log_idx, to_pki, amount | token_id}
+  # aexn contract from transfer (aex9 mints are sent by the contract, burns have no to_pk):
+  #    index: {create_txi, from_pk, call_txi, log_idx, to_pk | nil, amount | token_id}
   @aexn_contract_from_transfer_defaults [
     index: {-1, <<>>, -1, -1, <<>>, -1},
     unused: nil
@@ -1023,7 +1023,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_contract_from_transfer, @aexn_contract_from_transfer_defaults
 
   @type aexn_contract_from_transfer_index() ::
-          {txi(), pubkey(), txi(), log_idx(), pubkey(), amount()}
+          {txi(), pubkey(), txi(), log_idx(), pubkey() | nil, amount()}
   @type aexn_contract_from_transfer() ::
           record(:aexn_contract_from_transfer, index: aexn_contract_from_transfer_index())
 

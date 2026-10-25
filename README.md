@@ -2999,8 +2999,23 @@ $ curl https://mainnet.aeternity.io/mdw/v3/aex9/ct_TEt8raHSNKZWHNN8TaCvV2VKDuSGP
 
 ### `/v3/aex9/:contract_id/transfers`
 
+Returns the transfers, mints and burns of a token involving an account, filtered by one of `account` (sent or received), `sender` or `recipient`. A mint is sent by the contract itself and a burn has no recipient.
+
 ```
-$ TODO
+$ curl -s 'https://mainnet.aeternity.io/mdw/v3/aex9/ct_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM/transfers?account=ak_rRVV9aDnmmLriPePDSvfTUvepZtR2rbYk2Mx4GCqGLcc1DMAq&direction=forward&limit=1' | jq '.data'
+[
+  {
+    "amount": 31622776601683792319,
+    "block_height": 636510,
+    "contract_id": "ct_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM",
+    "log_idx": 7,
+    "micro_index": 17,
+    "micro_time": 1659515279144,
+    "recipient": "ak_rRVV9aDnmmLriPePDSvfTUvepZtR2rbYk2Mx4GCqGLcc1DMAq",
+    "sender": "ak_e4p55rpMZFtTTv8e99GgTkF4LAEo8hhJZp71nRkCJoeZMMxaM",
+    "tx_hash": "th_2YiLo4ut9fYajfsmxun7fhLRGUk3QHjTRopcyMzm75iqNGxcLm"
+  }
+]
 ```
 
 ---

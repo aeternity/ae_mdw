@@ -925,7 +925,7 @@ defmodule AeMdw.Db.Contract do
            <<_pk1::256>> = from_pk,
            <<_pk2::256>> = to_pk,
            <<value::256>>
-         ] = transfer
+         ]
        ) do
     m_transfer =
       Model.aexn_transfer(
@@ -944,26 +944,28 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
-    |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
+    |> index_contract_transfer(contract_pk, txi, log_idx, from_pk, to_pk, value)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
 
-  defp index_contract_transfer(state, contract_pk, txi, i, [
-         from_pk,
-         to_pk,
-         <<value::256>>
-       ]) do
+  # burns have no recipient, so they are only indexed by sender
+  defp index_contract_transfer(state, contract_pk, txi, i, from_pk, to_pk, value) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
       Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
 
-    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
+    state = State.put(state, Model.AexnContractFromTransfer, m_ct_from)
 
-    state
-    |> State.put(Model.AexnContractFromTransfer, m_ct_from)
-    |> State.put(Model.AexnContractToTransfer, m_ct_to)
+    if to_pk do
+      m_ct_to =
+        Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, i, from_pk, value})
+
+      State.put(state, Model.AexnContractToTransfer, m_ct_to)
+    else
+      state
+    end
   end
 
   defp burn_aex9_balance(state, contract_pk, txi, log_idx, [from_pk, <<burn_value::256>>]) do
@@ -976,6 +978,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.AexnTransfer, m_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> index_contract_transfer(contract_pk, txi, log_idx, from_pk, nil, burn_value)
   end
 
   defp burn_aex9_balance(state, _pk, _txi, _idx, _args), do: state
@@ -994,6 +997,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> SyncStats.increment_statistics(:aex9_transfers, Util.txi_to_time(state, txi), 1)
+    |> index_contract_transfer(contract_pk, txi, log_idx, contract_pk, to_pk, mint_value)
   end
 
   defp mint_aex9_balance(state, _pk, _txi, _idx, _args), do: state
