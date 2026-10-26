@@ -1,5 +1,49 @@
 # Changelog
 
+## [1.109.0](https://github.com/aeternity/ae_mdw/compare/v1.108.3...v1.109.0) (2026-10-26)
+
+
+### Features
+
+* add mining stats per miner and for the network with time series ([#2145](https://github.com/aeternity/ae_mdw/issues/2145)) ([5416cae](https://github.com/aeternity/ae_mdw/commit/5416cae87ff91d99a841724a831645d2c3843dfb))
+* sort the miners stats by reward and filter them by day, week or month ([#2145](https://github.com/aeternity/ae_mdw/issues/2145)) ([5416cae](https://github.com/aeternity/ae_mdw/commit/5416cae87ff91d99a841724a831645d2c3843dfb))
+
+
+### Bug Fixes
+
+* broadcast blocks when mem-sync resumes on top of the synced overlay ([e7baa13](https://github.com/aeternity/ae_mdw/commit/e7baa13f608b70f825e0e6775b5fd18777701021))
+* index remote logs in aex9 calls by their emitting contract ([#2221](https://github.com/aeternity/ae_mdw/issues/2221)) ([95e271d](https://github.com/aeternity/ae_mdw/commit/95e271d1398f0779ca1e9071c1fa241b14885285))
+* list aex9 mints and burns in contract transfers by account ([#2219](https://github.com/aeternity/ae_mdw/issues/2219)) ([dda49bb](https://github.com/aeternity/ae_mdw/commit/dda49bb9c57697130cbb2b8e3eb149b9186ff148))
+* list GaMetaTx and PayingForTx activities for inner tx accounts ([#2212](https://github.com/aeternity/ae_mdw/issues/2212)) ([e51cf1a](https://github.com/aeternity/ae_mdw/commit/e51cf1a5e3683a2f8a6d31606c91e6a32c2b50db)), closes [#2154](https://github.com/aeternity/ae_mdw/issues/2154)
+* treat reverted dry-run calls as errors ([#2222](https://github.com/aeternity/ae_mdw/issues/2222)) ([43b9b9b](https://github.com/aeternity/ae_mdw/commit/43b9b9b5c57503f44552d836100f84228f160355))
+
+
+### Performance Improvements
+
+* broadcast synced blocks without rebuilding their mutations ([8cf7999](https://github.com/aeternity/ae_mdw/commit/8cf799954052d0f18e5141528277a9da6bc6912e))
+* build only the activity streams selected by type ([#2227](https://github.com/aeternity/ae_mdw/issues/2227)) ([6bcfa08](https://github.com/aeternity/ae_mdw/commit/6bcfa08edb426f3eae64733be7fb273305e00b06))
+* commit a generation's account mutations together ([#2224](https://github.com/aeternity/ae_mdw/issues/2224)) ([471d3bb](https://github.com/aeternity/ae_mdw/commit/471d3bb730ba1ea782e1b05d5cf67d9755aac8e0))
+* compute micro block index from headers ([#2228](https://github.com/aeternity/ae_mdw/issues/2228)) ([51d82b2](https://github.com/aeternity/ae_mdw/commit/51d82b2ce0ccf78991a1979264f92e68b615e4f5))
+* compute total statistic default only when missing ([#2226](https://github.com/aeternity/ae_mdw/issues/2226)) ([de4076e](https://github.com/aeternity/ae_mdw/commit/de4076ed97769ff40d92fc363f96305f9bbc1bf0))
+* count rocksdb keys without decoding them ([#2225](https://github.com/aeternity/ae_mdw/issues/2225)) ([710a52b](https://github.com/aeternity/ae_mdw/commit/710a52bdb6658089fc790dcf94999fd4ffad8a6f))
+* drop dups from merged streams with Stream.uniq ([#2230](https://github.com/aeternity/ae_mdw/issues/2230)) ([0e69e20](https://github.com/aeternity/ae_mdw/commit/0e69e208056438e626a8812f5cfa1462a0559359))
+* read time tables lazily in last_gen_and_time ([#2229](https://github.com/aeternity/ae_mdw/issues/2229)) ([fa37d57](https://github.com/aeternity/ae_mdw/commit/fa37d5798bd463b38620c15075913053c9f31b2d))
+* read tx fee from the signed tx during sync ([#2215](https://github.com/aeternity/ae_mdw/issues/2215)) ([7993be4](https://github.com/aeternity/ae_mdw/commit/7993be48de7d4c137dbfffb93fca3d237050d547))
+* resolve the aex9 dry-run block once per micro block ([#2223](https://github.com/aeternity/ae_mdw/issues/2223)) ([0867f7a](https://github.com/aeternity/ae_mdw/commit/0867f7ad0a005155d5ab52869cfc7e1e652af585))
+* skip repeated per-log lookups in logs_write ([#2217](https://github.com/aeternity/ae_mdw/issues/2217)) ([2e27aaa](https://github.com/aeternity/ae_mdw/commit/2e27aaa8c9a30556f1e11c2cdab9305d7dc7ea82))
+* stop memoizing per-generation node lookups ([#2216](https://github.com/aeternity/ae_mdw/issues/2216)) ([ff5460d](https://github.com/aeternity/ae_mdw/commit/ff5460df1e0087269cefc91c43f7fe19ddd7ce91))
+
+
+### CI / CD
+
+* list the perf commits in the changelog ([#2231](https://github.com/aeternity/ae_mdw/issues/2231)) ([36c7cfc](https://github.com/aeternity/ae_mdw/commit/36c7cfcbd5356df9bff89e0b45573a6746c05313))
+
+
+### Testing
+
+* cover building and broadcasting synced generations ([0eae250](https://github.com/aeternity/ae_mdw/commit/0eae250060078175a9b9172fa4d7709d75e4b45c))
+* drop mock of removed Node.Db.get_tx_fee/1 ([#2220](https://github.com/aeternity/ae_mdw/issues/2220)) ([4788df4](https://github.com/aeternity/ae_mdw/commit/4788df41f6dd9f835efd44bf287b78db99a95b7d))
+
 ## [1.108.3](https://github.com/aeternity/ae_mdw/compare/v1.108.2...v1.108.3) (2026-10-13)
 
 
