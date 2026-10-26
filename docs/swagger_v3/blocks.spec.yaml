@@ -222,6 +222,7 @@ paths:
       description: Get a micro block transactions
       operationId: GetMicroBlockTransactions
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - name: hash
           in: path
           description: The micro block encoded hash
