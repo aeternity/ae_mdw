@@ -212,8 +212,7 @@ height-scoped pagination (transactions, transfers, block-level queries).
 ### Stats
 
 All time-series stats queries accept `intervalBy` (`day`, `week`, `month`),
-`minStartDate`, and `maxStartDate` (ISO-8601 date strings) unless noted. The intervals are UTC
-calendar ones and the weeks start on Thursday (they are aligned to the Unix epoch).
+`minStartDate`, and `maxStartDate` (ISO-8601 date strings) unless noted.
 
 | Query | Extra args | Description |
 |-------|------------|-------------|

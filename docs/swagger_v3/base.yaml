@@ -82,7 +82,7 @@ components:
     MiningIntervalByParam:
       in: query
       name: interval_by
-      description: 'The calendar interval (UTC) of each row, the weeks start on Thursday. Each row is a bucket of 20 generations (about an hour) when it is not given'
+      description: 'The calendar interval (UTC) of each row. Each row is a bucket of 20 generations (about an hour) when it is not given'
       schema:
         type: string
         enum:

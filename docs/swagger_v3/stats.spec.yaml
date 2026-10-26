@@ -386,7 +386,7 @@ paths:
       operationId: GetTopMinerStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -451,7 +451,7 @@ paths:
       operationId: GetBlocksStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -516,7 +516,7 @@ paths:
       operationId: GetDifficultyStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -571,7 +571,7 @@ paths:
       operationId: GetHashrateStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -627,7 +627,7 @@ paths:
       operationId: GetContractsStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -682,7 +682,7 @@ paths:
       operationId: GetTransactionsStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -785,7 +785,7 @@ paths:
       operationId: GetTotalAccountsStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -826,7 +826,7 @@ paths:
       operationId: GetActiveAccountsStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -867,7 +867,7 @@ paths:
       operationId: GetNamesStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
@@ -940,7 +940,7 @@ paths:
       operationId: GetAex9TransfersStats
       parameters:
         - name: interval_by
-          description: The interval in which to return the stats. The weeks start on Thursday.
+          description: The interval in which to return the stats.
           in: query
           required: false
           schema:
