@@ -3409,8 +3409,8 @@ far they are with `stats_height`, compared to the `mdw_height` of the middleware
 The generations are grouped in buckets of 20 (`bucket = generation / 20`), about an hour.
 Each row of a series has what happened in the bucket, and the totals up to its end.
 The series are also kept (indexed, so reading them costs the same) per `interval_by=day`,
-`week` or `month`, like the other stats: UTC calendar intervals by the time of the key blocks,
-with their `start_date` and `end_date`, selected with `min_start_date` and `max_start_date`.
+`week` or `month`, like the other stats: UTC calendar intervals by the time of the key blocks
+(the weeks start on Thursday, as in the other stats), with their `start_date` and `end_date`, selected with `min_start_date` and `max_start_date`.
 The buckets are selected with `scope=gen:<from>-<to>` instead, which picks whole rows, and
 all of them are paginated with the usual `limit`, `direction` and cursors. The `start_time`
 and `end_time` are the time of the first and last key block of the row, and a row with a
@@ -3552,7 +3552,7 @@ The same data is available in GraphQL with the `miningSummary`, `miningSeries`, 
 
 Retrieve the total count of blocks over time, with an optional filter by block type (`key` or `micro`). By default, this will count all blocks.
 
-You can adjust the time granularity of the results using the `interval_by` query parameter, which supports `day` (default), `week`, or `month`.
+You can adjust the time granularity of the results using the `interval_by` query parameter, which supports `day` (default), `week`, or `month`. The intervals are UTC calendar ones, and the weeks are aligned to the Unix epoch, so they start on Thursday.
 
 Additionally, filter results by specifying a date range with the `min_start_date` and/or `max_start_date` parameters. Dates should be provided in ISO 8601 format.
 
