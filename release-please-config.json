@@ -14,6 +14,11 @@
       "hidden": false
     },
     {
+      "type": "perf",
+      "section": "Performance Improvements",
+      "hidden": false
+    },
+    {
       "type": "ci",
       "section": "CI / CD",
       "hidden": false
