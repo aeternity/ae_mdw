@@ -91,6 +91,7 @@ paths:
       description: Get DEX swap tokens
       operationId: GetDexSwaps
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
@@ -120,6 +121,7 @@ paths:
       description: Get DEX swap tokens
       operationId: GetDexSwapsByContractId
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
         - in: path
           name: contract_id
@@ -155,6 +157,7 @@ paths:
       description: Get DEX swap tokens
       operationId: GetAccountDexSwaps
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
         - in: path
           name: accountId

@@ -431,6 +431,7 @@ paths:
       description: Get an oracle's queries.
       operationId: GetOracleQueries
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - name: id
           in: path
           description: The oracle
@@ -476,6 +477,7 @@ paths:
       description: Get an oracle's responses.
       operationId: GetOracleResponses
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - name: id
           in: path
           description: The oracle
@@ -523,6 +525,7 @@ paths:
       description: Get an oracle's extensions.
       operationId: GetOracleExtends
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - name: id
           in: path
           description: The oracle
