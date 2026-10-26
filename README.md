@@ -3554,6 +3554,8 @@ Retrieve the total count of blocks over time, with an optional filter by block t
 
 You can adjust the time granularity of the results using the `interval_by` query parameter, which supports `day` (default), `week`, or `month`.
 
+_Note: the weeks are aligned to the Unix epoch, so they start on Thursday. This applies to every `interval_by` of the stats, including the mining stats._
+
 Additionally, filter results by specifying a date range with the `min_start_date` and/or `max_start_date` parameters. Dates should be provided in ISO 8601 format.
 
 ```
