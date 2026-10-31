@@ -606,6 +606,7 @@ paths:
       description: Get account pointees
       operationId: GetAccountPointees
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - name: accountId
           in: path
           description: The account that names point to

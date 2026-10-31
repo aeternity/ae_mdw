@@ -1013,6 +1013,7 @@ paths:
       description: Get all AEX9 balances for an account on the last block.
       operationId: GetAex9AccountBalances
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
         - description: Account id
           in: path
           name: accountId

@@ -32,6 +32,14 @@ schemas:
         enum:
           - reward_dev
           - reward_block
+          - reward_oracle
+          - fee_lock_name
+          - fee_refund_name
+          - fee_spend_name
+          - accounts_roma
+          - accounts_minerva
+          - accounts_fortuna
+          - accounts_lima
       ref_block_hash:
         nullable: true
         $ref: '#/components/schemas/MicroBlockHash'

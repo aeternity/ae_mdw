@@ -330,6 +330,7 @@ of transactions in the reply than `10` (max `100`).
 The `scope` parameter specifies the time period to look for results matching the criteria:
 
 - `gen:A-B`   - from generation A to B (forward if A < B, backward otherwise)
+- `transaction:HASH` or `transaction:HASH-HASH` - from the given transaction (or from the first to the second one), e.g. the activities of a single transaction
 
 Not all paginated endpoints support all scopes.
 
