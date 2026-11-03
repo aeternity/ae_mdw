@@ -89,9 +89,14 @@ defmodule AeMdw.Collection do
         {{last, first}, :backward} -> {first, last}
       end
 
-    case fetch_first_key(state, tab, direction, first, cursor) do
-      {:ok, first_key} -> unfold_stream(state, tab, direction, first_key, last)
-      :none -> []
+    stream = State.stream(state, tab, direction, start_key(direction, first, cursor))
+
+    if last do
+      Stream.take_while(stream, fn key ->
+        if direction == :forward, do: key <= last, else: key >= last
+      end)
+    else
+      stream
     end
   end
 
@@ -99,26 +104,18 @@ defmodule AeMdw.Collection do
   Same as stream/3 but using the State instead.
   """
   @spec stream(State.t(), table(), key()) :: Enumerable.t()
-  def stream(state, table, boundary_start_key) do
-    case fetch_first_key(state, table, :forward, boundary_start_key, nil) do
-      {:ok, first_key} -> unfold_stream(state, table, :forward, first_key, nil)
-      :none -> []
-    end
-  end
+  def stream(state, table, boundary_start_key),
+    do: State.stream(state, table, :forward, boundary_start_key)
 
   @doc """
   Merges any given stream of keys into a single stream, in sorted order and without dups.
+
+  The streams that aren't read to the end are halted when the merged stream stops.
   """
   @spec merge([Enumerable.t()], direction()) :: Enumerable.t()
   def merge(streams, direction) do
     streams
-    |> Enum.reduce(:gb_sets.new(), fn stream, acc ->
-      case StreamSplit.take_and_drop(stream, 1) do
-        {[first_key], rest} -> :gb_sets.add_element({first_key, rest}, acc)
-        {[], []} -> acc
-      end
-    end)
-    |> merge_streams_by(direction)
+    |> merge_sorted(direction)
     |> Stream.uniq()
   end
 
@@ -172,71 +169,46 @@ defmodule AeMdw.Collection do
 
   defp get_max_key(x), do: x
 
-  defp unfold_stream(state, tab, direction, first_key, last_key) do
-    stream =
-      Stream.unfold(first_key, fn
-        :end_keys ->
-          nil
+  defp start_key(_direction, first, nil), do: first
+  defp start_key(_direction, nil, cursor), do: cursor
+  defp start_key(:forward, first, cursor), do: max(first, cursor)
+  defp start_key(:backward, first, cursor), do: min(first, cursor)
 
-        key ->
-          case State.next(state, tab, direction, key) do
-            {:ok, next_key} -> {key, next_key}
-            :none -> {key, :end_keys}
-          end
-      end)
+  defp merge_sorted(streams, direction) do
+    Stream.resource(
+      fn -> Enum.reduce(streams, :gb_sets.new(), &add_next_key/2) end,
+      &take_next_key(&1, direction),
+      &halt_rest_streams/1
+    )
+  end
 
-    if last_key do
-      Stream.take_while(stream, fn key ->
-        if direction == :forward, do: key <= last_key, else: key >= last_key
-      end)
-    else
-      stream
+  defp add_next_key(stream, gb_set) do
+    case StreamSplit.take_and_drop(stream, 1) do
+      {[key], rest_stream} -> :gb_sets.add_element({key, rest_stream}, gb_set)
+      {[], []} -> gb_set
     end
   end
 
-  defp fetch_first_key(state, tab, direction, nil, nil),
-    do: State.next(state, tab, direction, nil)
-
-  defp fetch_first_key(state, tab, direction, first, nil),
-    do: fetch_first_key(state, tab, direction, first)
-
-  defp fetch_first_key(state, tab, direction, nil, cursor),
-    do: fetch_first_key(state, tab, direction, cursor)
-
-  defp fetch_first_key(state, tab, :forward, first, cursor),
-    do: fetch_first_key(state, tab, :forward, max(first, cursor))
-
-  defp fetch_first_key(state, tab, :backward, first, cursor),
-    do: fetch_first_key(state, tab, :backward, min(first, cursor))
-
-  defp fetch_first_key(state, tab, direction, candidate_cursor) do
-    if State.exists?(state, tab, candidate_cursor) do
-      {:ok, candidate_cursor}
+  defp take_next_key(gb_set, direction) do
+    if :gb_sets.is_empty(gb_set) do
+      {:halt, gb_set}
     else
-      State.next(state, tab, direction, candidate_cursor)
-    end
-  end
-
-  defp merge_streams_by(gb_set, direction) do
-    Stream.unfold(gb_set, fn gb_set ->
-      if :gb_sets.is_empty(gb_set) do
-        nil
-      else
-        {{key, rest_stream}, rest_set} =
-          if direction == :forward do
-            :gb_sets.take_smallest(gb_set)
-          else
-            :gb_sets.take_largest(gb_set)
-          end
-
-        case StreamSplit.take_and_drop(rest_stream, 1) do
-          {[next_key], next_stream} ->
-            {key, :gb_sets.add_element({next_key, next_stream}, rest_set)}
-
-          {[], []} ->
-            {key, rest_set}
+      {{key, rest_stream}, rest_set} =
+        if direction == :forward do
+          :gb_sets.take_smallest(gb_set)
+        else
+          :gb_sets.take_largest(gb_set)
         end
-      end
+
+      {[key], add_next_key(rest_stream, rest_set)}
+    end
+  end
+
+  defp halt_rest_streams(gb_set) do
+    gb_set
+    |> :gb_sets.to_list()
+    |> Enum.each(fn {_key, rest_stream} ->
+      Enumerable.reduce(rest_stream, {:halt, nil}, fn _key, nil -> {:cont, nil} end)
     end)
   end
 

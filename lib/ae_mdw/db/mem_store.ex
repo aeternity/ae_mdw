@@ -21,6 +21,7 @@ defmodule AeMdw.Db.MemStore do
   @typep key() :: Database.key()
   @typep record() :: Database.record()
   @typep table() :: Database.table()
+  @typep direction() :: Database.direction()
   @opaque t() :: %__MODULE__{
             fallback_store: Store.t(),
             tables: %{table() => SortedTable.t()}
@@ -124,6 +125,89 @@ defmodule AeMdw.Db.MemStore do
       {{:ok, key1}, {:ok, key2, {:added, _record}}} -> {:ok, max(key1, key2)}
     end
   end
+
+  @doc """
+  Merges the fallback store's keys with the in-memory ones. The in-memory table is read
+  again for every key since the stream's consumer may change it meanwhile.
+  """
+  @spec stream(t(), table(), direction(), key() | nil) :: Enumerable.t()
+  def stream(
+        %__MODULE__{fallback_store: fallback_store, tables: tables},
+        table_name,
+        direction,
+        start_key
+      ) do
+    table = get_table(tables, table_name)
+    fallback_keys = Store.stream(fallback_store, table_name, direction, start_key)
+
+    Stream.resource(
+      fn ->
+        fallback =
+          pull_key(fn acc -> Enumerable.reduce(fallback_keys, acc, &suspend_key/2) end)
+
+        {{:from, start_key}, fallback}
+      end,
+      &merge_next(table, direction, &1),
+      fn {_mem_from, fallback} -> halt_keys(fallback) end
+    )
+  end
+
+  defp merge_next(table, direction, {mem_from, {:pull, cont}}),
+    do: merge_next(table, direction, {mem_from, pull_key(cont)})
+
+  defp merge_next(table, direction, {mem_from, fallback} = acc) do
+    case {fallback, mem_entry(table, direction, mem_from)} do
+      {:none, :none} ->
+        {:halt, acc}
+
+      {{:ok, fallback_key, cont}, :none} ->
+        {[fallback_key], {{:after, fallback_key}, {:pull, cont}}}
+
+      {:none, {:ok, key, value}} ->
+        {live_keys(key, value), {{:after, key}, :none}}
+
+      {{:ok, fallback_key, cont}, {:ok, key, value}} ->
+        cond do
+          before?(fallback_key, key, direction) ->
+            {[fallback_key], {{:after, fallback_key}, {:pull, cont}}}
+
+          before?(key, fallback_key, direction) ->
+            {live_keys(key, value), {{:after, key}, fallback}}
+
+          true ->
+            {live_keys(key, value), {{:after, key}, {:pull, cont}}}
+        end
+    end
+  end
+
+  defp mem_entry(table, direction, {:from, key}) do
+    case SortedTable.lookup(table, key) do
+      {:ok, value} -> {:ok, key, value}
+      :not_found -> mem_entry(table, direction, {:after, key})
+    end
+  end
+
+  defp mem_entry(table, :forward, {:after, key}), do: SortedTable.next(table, key)
+  defp mem_entry(table, :backward, {:after, key}), do: SortedTable.prev(table, key)
+
+  defp live_keys(_key, :deleted), do: []
+  defp live_keys(key, {:added, _record}), do: [key]
+
+  defp before?(key1, key2, :forward), do: key1 < key2
+  defp before?(key1, key2, :backward), do: key1 > key2
+
+  defp pull_key(cont) do
+    case cont.({:cont, nil}) do
+      {:suspended, key, cont} -> {:ok, key, cont}
+      {_done_or_halted, nil} -> :none
+    end
+  end
+
+  defp suspend_key(key, nil), do: {:suspend, key}
+
+  defp halt_keys({:ok, _key, cont}), do: cont.({:halt, nil})
+  defp halt_keys({:pull, cont}), do: cont.({:halt, nil})
+  defp halt_keys(:none), do: :ok
 
   defp get_table(tables, table_name), do: Map.fetch!(tables, table_name)
 

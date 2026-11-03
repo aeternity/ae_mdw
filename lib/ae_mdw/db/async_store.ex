@@ -8,6 +8,7 @@ defmodule AeMdw.Db.AsyncStore do
 
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.StepwiseStream
   alias AeMdw.EtsCache
 
   @derive AeMdw.Db.Store
@@ -78,6 +79,10 @@ defmodule AeMdw.Db.AsyncStore do
       _not_found_or_mismatch -> :none
     end
   end
+
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(store, table, direction, start_key),
+    do: StepwiseStream.stream(store, table, direction, start_key)
 
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(%__MODULE__{tid: tid}, table) do
