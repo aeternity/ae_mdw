@@ -39,7 +39,7 @@ defmodule AeMdw.Db.IntCallsMutation do
         %__MODULE__{contract_pk: contract_pk, call_txi: call_txi, int_calls: int_calls},
         state
       ) do
-    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    {state, create_txi} = Origin.sync_tx_index!(state, {:contract, contract_pk})
 
     int_calls
     |> Enum.reduce(state, fn {local_idx, fname, tx_type, aetx, tx}, state ->

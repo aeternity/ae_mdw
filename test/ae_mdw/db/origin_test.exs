@@ -50,4 +50,38 @@ defmodule AeMdw.Db.OriginTest do
       end
     end
   end
+
+  describe "sync_tx_index!/2" do
+    test "caches the creation txi of a contract" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      create_txi = 123
+      field_key = {:contract_call_tx, nil, contract_pk, create_txi}
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.Field, Model.field(index: field_key))
+
+      assert {state2, ^create_txi} = Origin.sync_tx_index!(state, {:contract, contract_pk})
+      assert {:ok, ^create_txi} = State.cache_get(state2, :ct_create_sync_cache, contract_pk)
+
+      state3 = State.delete(state2, Model.Field, field_key)
+
+      assert {^state3, ^create_txi} = Origin.sync_tx_index!(state3, {:contract, contract_pk})
+    end
+
+    test "raises when the contract isn't found" do
+      :persistent_term.put({Origin, :hardforks_contracts}, [])
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+
+      assert_raise RuntimeError, fn ->
+        Origin.sync_tx_index!(state, {:contract, :crypto.strong_rand_bytes(32)})
+      end
+    end
+  end
 end

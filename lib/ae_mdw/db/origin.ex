@@ -54,14 +54,22 @@ defmodule AeMdw.Db.Origin do
   @spec tx_index!(State.t(), creation_txi_locator()) :: integer()
   def tx_index!(state, {:contract, pk} = creation_txi_locator) do
     case State.cache_get(state, :ct_create_sync_cache, pk) do
+      {:ok, txi} -> txi
+      :not_found -> fetch_tx_index!(state, creation_txi_locator)
+    end
+  end
+
+  # mutations use it so that a contract is looked up once per generation
+  @spec sync_tx_index!(State.t(), creation_txi_locator()) :: {State.t(), integer()}
+  def sync_tx_index!(state, {:contract, pk} = creation_txi_locator) do
+    case State.cache_get(state, :ct_create_sync_cache, pk) do
       {:ok, txi} ->
-        txi
+        {state, txi}
 
       :not_found ->
-        case tx_index(state, creation_txi_locator) do
-          {:ok, txi} -> txi
-          :not_found -> raise "Origin #{inspect(creation_txi_locator)} not found"
-        end
+        txi = fetch_tx_index!(state, creation_txi_locator)
+
+        {State.cache_put(state, :ct_create_sync_cache, pk, txi), txi}
     end
   end
 
@@ -116,6 +124,13 @@ defmodule AeMdw.Db.Origin do
   #
   # Private functions
   #
+  defp fetch_tx_index!(state, creation_txi_locator) do
+    case tx_index(state, creation_txi_locator) do
+      {:ok, txi} -> txi
+      :not_found -> raise "Origin #{inspect(creation_txi_locator)} not found"
+    end
+  end
+
   defp field_txi(state, tx_type, pos, pk) do
     case State.next(state, Model.Field, {tx_type, pos, pk, -1}) do
       {:ok, {^tx_type, ^pos, ^pk, txi}} -> {:ok, txi}

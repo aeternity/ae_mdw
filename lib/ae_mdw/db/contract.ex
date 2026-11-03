@@ -909,7 +909,7 @@ defmodule AeMdw.Db.Contract do
          txi,
          {{log_pk, [evt_hash | args], data}, idx}
        ) do
-    remote_contract_txi = Origin.tx_index!(state, {:contract, log_pk})
+    {state, remote_contract_txi} = Origin.sync_tx_index!(state, {:contract, log_pk})
 
     # on caller log: ext_contract = called contract_pk
     # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
@@ -967,7 +967,7 @@ defmodule AeMdw.Db.Contract do
 
   # burns have no recipient, so they are only indexed by sender
   defp index_contract_transfer(state, contract_pk, txi, i, from_pk, to_pk, value) do
-    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    {state, create_txi} = Origin.sync_tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
       Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
