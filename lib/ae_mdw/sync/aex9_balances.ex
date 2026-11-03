@@ -20,21 +20,28 @@ defmodule AeMdw.Sync.Aex9Balances do
   @spec get_balances(pubkey(), block_index(), NodeDb.height_hash()) ::
           {:ok, balances(), balances()}
           | {:error, AeMdw.DryRun.Runner.call_error()}
-  def get_balances(contract_pk, block_index, {type, height, next_hash}) do
+  def get_balances(contract_pk, block_index, height_hash) do
+    with {:ok, balances_map, purged_map} <-
+           get_balances_map(contract_pk, block_index, height_hash) do
+      {:ok, decode_balances(balances_map), decode_balances(purged_map)}
+    end
+  end
+
+  @spec get_balances_map(pubkey(), block_index(), NodeDb.height_hash()) ::
+          {:ok, NodeDb.balances_map(), NodeDb.balances_map()}
+          | {:error, AeMdw.DryRun.Runner.call_error()}
+  def get_balances_map(contract_pk, block_index, {type, height, next_hash}) do
     case Aex9BalancesCache.get(contract_pk, block_index, next_hash) do
-      {:ok, dry_run_balances} ->
-        {:ok, decode_balances(dry_run_balances), []}
+      {:ok, balances_map} ->
+        {:ok, balances_map, %{}}
 
       :not_found ->
-        purged_balances =
-          contract_pk
-          |> Aex9BalancesCache.purge(block_index)
-          |> Enum.map(fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
+        purged_map = Aex9BalancesCache.purge(contract_pk, block_index)
 
-        with {:ok, balances} <- NodeDb.aex9_balances(contract_pk, {type, height, next_hash}) do
-          Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
+        with {:ok, balances_map} <- NodeDb.aex9_balances(contract_pk, {type, height, next_hash}) do
+          Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances_map)
 
-          {:ok, decode_balances(balances), purged_balances}
+          {:ok, balances_map, purged_map}
         end
     end
   end

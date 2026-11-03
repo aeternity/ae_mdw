@@ -1275,6 +1275,9 @@ defmodule AeMdw.Db.ContractTest do
                  {:aex9, account_pk1, txi, 1, account_pk2, 20}
                )
 
+        assert {:ok, Model.aex9_event_balance(amount: 0)} =
+                 State.get(state, Model.Aex9EventBalance, {token_pk, account_pk1})
+
         assert {:ok, Model.aex9_event_balance(amount: 10)} =
                  State.get(state, Model.Aex9EventBalance, {token_pk, account_pk2})
 

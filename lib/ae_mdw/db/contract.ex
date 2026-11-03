@@ -718,17 +718,13 @@ defmodule AeMdw.Db.Contract do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
     {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
-    case Aex9Balances.get_balances(contract_pk, block_index, type_height_hash) do
-      {:ok, balances, _purged_balances} ->
+    case Aex9Balances.get_balances_map(contract_pk, block_index, type_height_hash) do
+      {:ok, balances_map, _purged_map} ->
         Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
           Model.aex9_event_balance(amount: old_amount) =
             get_aex9_event_balance(state, contract_pk, account_pk)
 
-          new_amount =
-            case List.keyfind(balances, account_pk, 0) do
-              {_account_pk, amount} -> amount
-              nil -> 0
-            end
+          new_amount = Map.get(balances_map, {:address, account_pk}, 0)
 
           m_balance =
             Model.aex9_event_balance(
