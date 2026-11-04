@@ -125,6 +125,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           Model.Stat,
           Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)
         )
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(<<i::256>>), payload: i)
+        )
       end)
 
     store =
@@ -713,6 +717,41 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                conn
                |> get("/v3/aex9/#{@aex9_token_id}")
                |> json_response(200)
+    end
+
+    test "returns the holders from the counter, never below zero", %{conn: conn} do
+      for {counter, holders} <- [{3, 3}, {-1, 0}] do
+        contract_pk = :crypto.strong_rand_bytes(32)
+
+        # the one positive balance would make a scan count 1 holder
+        %{store: store} =
+          empty_store()
+          |> State.new()
+          |> Contract.aexn_creation_write(
+            :aex9,
+            {"holders-AEX9", "HOLD", 18},
+            contract_pk,
+            {12_345_678, -1},
+            []
+          )
+          |> State.put(Model.Tx, Model.tx(index: 12_345_678, id: <<12_345_678::256>>))
+          |> State.put(
+            Model.Aex9EventBalance,
+            Model.aex9_event_balance(index: {contract_pk, <<1::256>>}, amount: 100)
+          )
+          |> State.put(
+            Model.Stat,
+            Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: counter)
+          )
+
+        contract_id = encode_contract(contract_pk)
+
+        assert %{"contract_id" => ^contract_id, "holders" => ^holders} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/aex9/#{contract_id}")
+                 |> json_response(200)
+      end
     end
 
     test "when not found, it returns 404", %{conn: conn} do

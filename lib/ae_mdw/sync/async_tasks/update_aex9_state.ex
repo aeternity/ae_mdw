@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   @behaviour AeMdw.Sync.AsyncTasks.Work
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.RecountAex9HoldersMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.UpdateAex9StateMutation
   alias AeMdw.Sync.Aex9Balances
@@ -28,9 +29,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
             write_mutation = mutation(contract_pk, call_txi, balances)
             delete_mutation = Aex9Balances.purge_mutation(contract_pk, purge_balances)
 
+            # the holders counted on the async store start from zero and would
+            # overwrite the ones events added to the database in the meantime
             AsyncStoreServer.write_mutations(
               [delete_mutation, write_mutation],
-              done_fn
+              done_fn,
+              [RecountAex9HoldersMutation.new(contract_pk)]
             )
 
           {:error, _reason} ->
