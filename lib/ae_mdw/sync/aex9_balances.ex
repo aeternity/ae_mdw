@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.Aex9Balances do
 
   alias AeMdw.Db.PurgeAex9StateMutation
   alias AeMdw.Node.Db, as: NodeDb
+  alias AeMdw.Sync.Aex9AccountBalancesCache
   alias AeMdw.Sync.Aex9BalancesCache
 
   @typep pubkey :: NodeDb.pubkey()
@@ -35,6 +36,30 @@ defmodule AeMdw.Sync.Aex9Balances do
           Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
 
           {:ok, decode_balances(balances), purged_balances}
+        end
+    end
+  end
+
+  @spec get_balance(pubkey(), pubkey(), block_index(), NodeDb.height_hash()) ::
+          {:ok, integer()} | {:error, AeMdw.DryRun.Runner.call_error()}
+  def get_balance(
+        contract_pk,
+        account_pk,
+        block_index,
+        {_type, _height, next_hash} = height_hash
+      ) do
+    case Aex9AccountBalancesCache.get(contract_pk, block_index, next_hash, account_pk) do
+      {:ok, amount} ->
+        {:ok, amount}
+
+      :not_found ->
+        with {:ok, {amount_or_nil, _height_hash}} <-
+               NodeDb.aex9_balance(contract_pk, account_pk, height_hash) do
+          # balance() returns None for an account the contract never credited
+          amount = amount_or_nil || 0
+          Aex9AccountBalancesCache.put(contract_pk, block_index, next_hash, account_pk, amount)
+
+          {:ok, amount}
         end
     end
   end

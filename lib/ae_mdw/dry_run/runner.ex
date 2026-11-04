@@ -76,7 +76,7 @@ defmodule AeMdw.DryRun.Runner do
   end
 
   defp new_contract_call_tx(contract_pk, function_name, args)
-       when function_name == "meta_info" or function_name in @extension_methods do
+       when function_name in ["meta_info", "balance"] or function_name in @extension_methods do
     Contract.new_call_tx(
       @runner_pk,
       contract_pk,

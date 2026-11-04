@@ -100,6 +100,7 @@ defmodule AeMdw.Application do
 
     AeMdw.Db.AsyncStore.init()
     AeMdw.Sync.Aex9BalancesCache.init()
+    AeMdw.Sync.Aex9AccountBalancesCache.init()
 
     AeMdwWeb.Cache.GraphQLDocumentCache.init()
     AeMdwWeb.Cache.GraphQLResponseCache.init()

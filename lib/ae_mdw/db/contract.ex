@@ -4,7 +4,7 @@ defmodule AeMdw.Db.Contract do
 
   AEX-9 balances are never accumulated from event arguments. Whenever a
   mint/burn/swap/transfer log is processed, the accounts it touches have
-  their balance re-derived from a dry-run of the contract's `balances()`
+  their balance re-derived from a dry-run of the contract's `balance(owner)`
   entrypoint (see `refresh_aex9_balances/5`), so the stored balance always
   matches real chain state regardless of how many redundant or nested events
   a given token template logs for the same underlying change (#2155).
@@ -35,6 +35,7 @@ defmodule AeMdw.Db.Contract do
   require Record
 
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
@@ -718,17 +719,11 @@ defmodule AeMdw.Db.Contract do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
     {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
-    case Aex9Balances.get_balances(contract_pk, block_index, type_height_hash) do
-      {:ok, balances, _purged_balances} ->
-        Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
+    case fetch_aex9_balances(contract_pk, affected_pubkeys, block_index, type_height_hash) do
+      {:ok, new_balances} ->
+        Enum.reduce(new_balances, state, fn {account_pk, new_amount}, state ->
           Model.aex9_event_balance(amount: old_amount) =
             get_aex9_event_balance(state, contract_pk, account_pk)
-
-          new_amount =
-            case List.keyfind(balances, account_pk, 0) do
-              {_account_pk, amount} -> amount
-              nil -> 0
-            end
 
           m_balance =
             Model.aex9_event_balance(
@@ -754,11 +749,25 @@ defmodule AeMdw.Db.Contract do
         end)
 
       {:error, reason} ->
-        Log.warn(
-          "[refresh_aex9_balances] dry-run failed for #{inspect(contract_pk)}: #{inspect(reason)}"
-        )
+        contract_id = encode_contract(contract_pk)
+        Log.warn("[refresh_aex9_balances] dry-run failed for #{contract_id}: #{inspect(reason)}")
 
         state
+    end
+  end
+
+  # all or nothing, so a failed dry-run leaves every account of the event untouched
+  defp fetch_aex9_balances(contract_pk, account_pks, block_index, type_height_hash) do
+    account_pks
+    |> Enum.reduce_while({:ok, []}, fn account_pk, {:ok, balances} ->
+      case Aex9Balances.get_balance(contract_pk, account_pk, block_index, type_height_hash) do
+        {:ok, amount} -> {:cont, {:ok, [{account_pk, amount} | balances]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, balances} -> {:ok, Enum.reverse(balances)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
