@@ -8,7 +8,8 @@ defmodule AeMdw.Sync.Aex9AccountBalancesCache do
   alias AeMdw.EtsCache
 
   @table :aex9_account_balances
-  @expire_minutes 24 * 60
+  # entries are only read again while the unfinalized generations are rebuilt, about 30 minutes
+  @expire_minutes 60
 
   @spec init() :: :ok
   def init do
