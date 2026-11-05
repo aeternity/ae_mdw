@@ -7,6 +7,7 @@ defmodule AeMdw.Migrations.RecountAex9HoldersTest do
   alias AeMdw.Db.State
   alias AeMdw.Migrations.RecountAex9Holders
   alias AeMdw.Stats
+  alias AeMdw.Sync.AsyncStoreServer
 
   require Model
 
@@ -63,6 +64,69 @@ defmodule AeMdw.Migrations.RecountAex9HoldersTest do
     assert 0 == Stats.fetch_aex9_holders_count(state, emptied_pk)
 
     assert {:ok, 0} = RecountAex9Holders.run(State.new(), false)
+  end
+
+  describe "when it starts with the node" do
+    setup do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pks = [:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)]
+      counter_key = Stats.aex9_holder_count_key(contract_pk)
+
+      Enum.each(account_pks, fn account_pk ->
+        Database.dirty_write(
+          Model.Aex9EventBalance,
+          Model.aex9_event_balance(index: {contract_pk, account_pk}, amount: 1)
+        )
+      end)
+
+      Database.dirty_write(Model.Stat, Model.stat(index: counter_key, payload: 7))
+
+      on_exit(fn ->
+        Enum.each(account_pks, &Database.dirty_delete(Model.Aex9EventBalance, {contract_pk, &1}))
+        Database.dirty_delete(Model.Stat, counter_key)
+      end)
+
+      %{contract_pk: contract_pk}
+    end
+
+    test "recounts in the background through a commit while syncing", %{contract_pk: contract_pk} do
+      put_sync_env(true)
+
+      assert {:async, [recount_fn]} = RecountAex9Holders.run(State.new(), true)
+
+      task = Task.async(recount_fn)
+
+      assert nil == Task.yield(task, 200)
+      assert 7 == Stats.fetch_aex9_holders_count(State.new(), contract_pk)
+
+      assert :ok = commit_until_done(task)
+      assert 2 == Stats.fetch_aex9_holders_count(State.new(), contract_pk)
+    end
+
+    test "recounts right away when it doesn't sync", %{contract_pk: contract_pk} do
+      put_sync_env(false)
+
+      assert {:ok, updated_count} = RecountAex9Holders.run(State.new(), true)
+      assert updated_count >= 1
+      assert 2 == Stats.fetch_aex9_holders_count(State.new(), contract_pk)
+    end
+  end
+
+  defp put_sync_env(sync?) do
+    original = Application.fetch_env!(:ae_mdw, :sync)
+    Application.put_env(:ae_mdw, :sync, sync?)
+    on_exit(fn -> Application.put_env(:ae_mdw, :sync, original) end)
+  end
+
+  defp commit_until_done(task, attempts \\ 200) do
+    case Task.yield(task, 50) do
+      {:ok, _result} ->
+        :ok
+
+      nil when attempts > 0 ->
+        AsyncStoreServer.write_async_store(State.new())
+        commit_until_done(task, attempts - 1)
+    end
   end
 
   test "clears the invalid number of holders flags, keeping the other ones" do

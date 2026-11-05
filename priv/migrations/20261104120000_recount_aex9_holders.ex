@@ -9,25 +9,80 @@ defmodule AeMdw.Migrations.RecountAex9Holders do
   That drift is what flagged contracts with an invalid number of holders,
   which hides their balances, so those flags are cleared too.
 
-  Runs before syncing starts, so no block updates a counter while it's being
-  rewritten.
+  When started with the node it runs in the background while syncing. It only
+  reads the balances to find the counters that are off, and hands those
+  contracts to the sync commit, which recounts them serialized with the blocks
+  that update the same counters. The migration is recorded once they did. A
+  counter that already drifted can be missed if a block changed it by exactly
+  that drift while the balances were being read.
   """
 
   alias AeMdw.Aex9
   alias AeMdw.Collection
+  alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.RecountAex9HoldersMutation
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
-  alias AeMdw.Stats
+  alias AeMdw.Sync.AsyncStoreServer
 
   require Model
 
-  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
-  def run(state, _from_start?) do
-    {:ok, recount_holders(state) + clear_invalid_holders_flags(state)}
+  # the commit waits for the recounts of a chunk while holding the syncing, see AsyncStoreServer
+  @chunk_size 50
+
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()} | {:async, [fun()]}
+  def run(state, true = _from_start?) do
+    if Application.fetch_env!(:ae_mdw, :sync) do
+      {:async, [fn -> flush_recounts(contracts_to_recount()) end]}
+    else
+      {:ok, recount(state)}
+    end
   end
 
-  defp recount_holders(state) do
+  def run(state, false = _from_start?), do: {:ok, recount(state)}
+
+  defp recount(state) do
+    contracts = contracts_to_recount()
+
+    contracts
+    |> Enum.flat_map(&recount_mutations/1)
+    |> Enum.each(&Mutation.execute(&1, state))
+
+    length(contracts)
+  end
+
+  defp flush_recounts(contracts) do
+    contracts
+    |> Enum.chunk_every(@chunk_size)
+    |> Enum.each(fn chunk ->
+      chunk
+      |> Enum.flat_map(&recount_mutations/1)
+      |> AsyncStoreServer.flush_mutations()
+    end)
+  end
+
+  defp recount_mutations({contract_pk, invalid_holders?}) do
+    recount = RecountAex9HoldersMutation.new(contract_pk)
+
+    if invalid_holders? do
+      [recount, DeleteKeysMutation.new(%{Model.AexnInvalidContract => [{:aex9, contract_pk}]})]
+    else
+      [recount]
+    end
+  end
+
+  defp contracts_to_recount do
+    invalid_holders = invalid_holders_contracts()
+
+    drifted_contracts()
+    |> MapSet.new()
+    |> MapSet.union(invalid_holders)
+    |> Enum.map(&{&1, MapSet.member?(invalid_holders, &1)})
+  end
+
+  defp drifted_contracts do
     holders_counts =
       Model.Aex9EventBalance
       |> RocksDbCF.stream()
@@ -53,19 +108,10 @@ defmodule AeMdw.Migrations.RecountAex9Holders do
     |> Map.new(fn {contract_pk, _count} -> {contract_pk, 0} end)
     |> Map.merge(holders_counts)
     |> Enum.reject(fn {contract_pk, count} -> Map.get(stored_counts, contract_pk) == count end)
-    |> Enum.reduce(0, fn {contract_pk, count}, updated_count ->
-      _state =
-        State.put(
-          state,
-          Model.Stat,
-          Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: count)
-        )
-
-      updated_count + 1
-    end)
+    |> Enum.map(fn {contract_pk, _count} -> contract_pk end)
   end
 
-  defp clear_invalid_holders_flags(state) do
+  defp invalid_holders_contracts do
     invalid_reason = Aex9.invalid_number_of_holders_reason()
 
     Model.AexnInvalidContract
@@ -73,10 +119,6 @@ defmodule AeMdw.Migrations.RecountAex9Holders do
       key_boundary: Collection.generate_key_boundary({:aex9, Collection.binary()})
     )
     |> Enum.filter(&match?(Model.aexn_invalid_contract(reason: ^invalid_reason), &1))
-    |> Enum.reduce(0, fn Model.aexn_invalid_contract(index: index), cleared_count ->
-      _state = State.delete(state, Model.AexnInvalidContract, index)
-
-      cleared_count + 1
-    end)
+    |> MapSet.new(fn Model.aexn_invalid_contract(index: {:aex9, contract_pk}) -> contract_pk end)
   end
 end
