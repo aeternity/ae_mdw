@@ -96,6 +96,28 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert {:ok, Model.contract_call(index: {^create_txi, ^call_txi}, fun: "mint", args: ^args)} =
                Store.get(store, Model.ContractCall, {call_txi - 1, call_txi})
     end
+
+    test "caches the creation txi of the called contract" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      call_txi = Enum.random(100_000_000..999_999_999)
+      create_txi = call_txi - 1
+
+      fun_arg_res = %{arguments: [], function: "get", result: %{type: :unit, value: ""}}
+      mutation = ContractCallMutation.new(contract_pk, call_txi, fun_arg_res, nil)
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> State.commit_mem([mutation])
+
+      assert {:ok, ^create_txi} = State.cache_get(state, :ct_create_sync_cache, contract_pk)
+      assert State.exists?(state, Model.ContractCall, {create_txi, call_txi})
+    end
   end
 
   describe "aex9 presence" do

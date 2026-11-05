@@ -51,7 +51,7 @@ defmodule AeMdw.Db.ContractCallMutation do
         },
         state
       ) do
-    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    {state, create_txi} = Origin.sync_tx_index!(state, {:contract, contract_pk})
 
     state = DBContract.call_write(state, create_txi, txi, fun_arg_res)
 
