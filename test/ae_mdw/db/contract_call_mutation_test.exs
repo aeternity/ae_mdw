@@ -279,8 +279,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           txi: call_txi - 1
         )
 
-      assert :not_found = Store.get(store, Model.Stat, Stats.aex9_holder_count_key(remote_pk))
-
       block_index = {height, 0}
       new_amount = previous_balance + amount
 
@@ -288,6 +286,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk), payload: 1)
+        )
         |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> Store.put(
           Model.Field,
@@ -338,6 +340,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), remote_pk)
     end
   end
 
@@ -460,6 +463,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
 
     test "decrement aex9 holder count after a call with full burn log", %{store: store} do
@@ -547,6 +551,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert 0 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
   end
 
@@ -788,6 +793,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Aex9EventBalance,
           Model.aex9_event_balance(index: {remote_pk2, from_pk2}, amount: amount2)
         )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk1), payload: 1)
+        )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk2), payload: 1)
+        )
         |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
@@ -831,6 +844,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert 2 = Aex9.fetch_holders_count(state, remote_pk1)
       assert 1 = Aex9.fetch_holders_count(state, remote_pk2)
+      assert 2 = Stats.fetch_aex9_holders_count(state, remote_pk1)
+      assert 1 = Stats.fetch_aex9_holders_count(state, remote_pk2)
 
       assert State.exists?(
                state,
@@ -1768,6 +1783,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> change_store([mutation])
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert -1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
   end
 

@@ -1423,6 +1423,7 @@ defmodule AeMdw.Db.ContractTest do
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
 
       assert 1 == Aex9.fetch_holders_count(state, contract_pk)
+      assert 1 == Stats.fetch_aex9_holders_count(state, contract_pk)
 
       assert [
                {:aex9_transfers, :day, 19_723},
@@ -1437,6 +1438,40 @@ defmodule AeMdw.Db.ContractTest do
                  nil
                )
                |> Enum.to_list()
+    end
+  end
+
+  describe "aex9_update_holders_to_balance_change/5" do
+    test "counts the accounts with a positive balance, like Aex9.fetch_holders_count/2" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      # balances accumulated from events before #2192 could be negative, and so
+      # can the ones a non-compliant contract's dry-run returns
+      for {old_balance, new_balance, holders_count} <- [
+            {0, 5, 2},
+            {5, 7, 1},
+            {5, 0, 0},
+            {5, -5, 0},
+            {0, -5, 1},
+            {-5, 5, 2},
+            {-5, 0, 1}
+          ] do
+        state =
+          empty_state()
+          |> State.put(
+            Model.Stat,
+            Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
+          )
+          |> Contract.aex9_update_holders_to_balance_change(
+            contract_pk,
+            old_balance,
+            new_balance,
+            txi
+          )
+
+        assert holders_count == Stats.fetch_aex9_holders_count(state, contract_pk)
+      end
     end
   end
 
