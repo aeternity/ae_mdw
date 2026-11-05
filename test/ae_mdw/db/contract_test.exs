@@ -19,7 +19,8 @@ defmodule AeMdw.Db.ContractTest do
   @dex_factory_pk Application.compile_env(:ae_mdw, :dex_factories)["ae_mainnet"]
 
   # stubs the dry-run boundary (AeMdw.Node.Db) so refresh_aex9_balances/5 gets a
-  # canned balances map for the given block_index instead of hitting a real node
+  # canned balance per account for the given block_index instead of hitting a real
+  # node - accounts missing from balances_map get None, like the real balance()
   defp with_aex9_balances({kbi, mbi} = _block_index, balances_map, fun) do
     with_aex9_balances_by_contract({kbi, mbi}, fn _contract_pk -> balances_map end, fun)
   end
@@ -36,13 +37,8 @@ defmodule AeMdw.Db.ContractTest do
        [
          get_key_block_hash: fn ^next_height -> kb_hash end,
          get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
-         aex9_balances: fn contract_pk, {:micro, ^kbi, ^next_hash} ->
-           balances_map = balances_by_contract.(contract_pk)
-
-           node_balances =
-             Map.new(balances_map, fn {account_pk, amount} -> {{:address, account_pk}, amount} end)
-
-           {:ok, node_balances}
+         aex9_balance: fn contract_pk, account_pk, {:micro, ^kbi, ^next_hash} = height_hash ->
+           {:ok, {Map.get(balances_by_contract.(contract_pk), account_pk), height_hash}}
          end
        ]}
     ] do
@@ -923,7 +919,7 @@ defmodule AeMdw.Db.ContractTest do
       end)
     end
 
-    test "resolves the dry-run block once per micro block" do
+    test "resolves the dry-run block and each account's balance once per micro block" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       account_pk2 = :crypto.strong_rand_bytes(32)
@@ -961,8 +957,51 @@ defmodule AeMdw.Db.ContractTest do
           |> Contract.logs_write(create_txi, txi2, call_rec, false)
 
         assert_called_exactly(AeMdw.Node.Db.get_next_hash(:_, :_), 1)
+        assert_called_exactly(AeMdw.Node.Db.aex9_balance(contract_pk, account_pk1, :_), 1)
+        assert_called_exactly(AeMdw.Node.Db.aex9_balance(contract_pk, account_pk2, :_), 1)
+        assert_not_called(AeMdw.Node.Db.aex9_balances(:_, :_))
 
         assert {:ok, Model.aex9_event_balance(txi: ^txi2, amount: 4)} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+      end)
+    end
+
+    test "stores a zero balance for an account the contract has no balance for" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      block_index = {height, _mbi} = {Enum.random(100_000..999_999), 0}
+      txi = Enum.random(100_000_000..999_999_999)
+      create_txi = txi - 1
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<5::256>>], ""}
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.put(Model.Tx, Model.tx(index: txi, block_index: block_index, time: 1))
+
+      with_aex9_balances(block_index, %{account_pk2 => 5}, fn ->
+        state = Contract.logs_write(state, create_txi, txi, call_rec, false)
+
+        assert {:ok, Model.aex9_event_balance(amount: 0)} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
+
+        assert {:ok, Model.aex9_event_balance(amount: 5)} =
                  State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
       end)
     end
@@ -1284,7 +1323,7 @@ defmodule AeMdw.Db.ContractTest do
       end)
     end
 
-    test "keeps indexing aex9 events when the balances dry-run reverts" do
+    test "keeps indexing aex9 events when the balance dry-run reverts" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       account_pk2 = :crypto.strong_rand_bytes(32)
@@ -1335,6 +1374,60 @@ defmodule AeMdw.Db.ContractTest do
                  {:aex9, account_pk1, txi + 1, 0, account_pk2, 10}
                )
 
+        refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+      end
+    end
+
+    test "leaves every account of an event untouched when one balance dry-run fails" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      block_index = {height, mbi} = {Enum.random(100_000..999_999), 0}
+      txi = Enum.random(100_000_000..999_999_999)
+      next_height = height + 1
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_hash = :crypto.strong_rand_bytes(32)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [aexn_event_hash(:transfer), account_pk1, account_pk2, <<10::256>>], ""}
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(
+          Model.Tx,
+          Model.tx(index: txi + 1, block_index: block_index, time: 1_704_100_546_000)
+        )
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^next_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
+           aex9_balance: fn
+             ^contract_pk, ^account_pk1, height_hash -> {:ok, {90, height_hash}}
+             ^contract_pk, ^account_pk2, _height_hash -> {:error, :revert}
+           end
+         ]}
+      ] do
+        state = Contract.logs_write(state, txi, txi + 1, call_rec, false)
+
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk1, txi + 1, 0, account_pk2, 10}
+               )
+
+        refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
         refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
       end
     end
