@@ -60,6 +60,9 @@ defmodule AeMdw.Node.Db do
 
     {last_mb_hash, last_kb_hash}
     |> Stream.unfold(fn
+      :done ->
+        nil
+
       {_last_mb_hash, ^root_hash} ->
         nil
 
@@ -70,7 +73,10 @@ defmodule AeMdw.Node.Db do
         key_header = :aec_blocks.to_header(key_block)
         {:ok, key_hash} = :aec_headers.hash_header(key_header)
 
-        {{key_block, micro_blocks, last_kb_hash}, {prev_hash, key_hash}}
+        next_acc =
+          if :aec_blocks.height(key_block) > from_height, do: {prev_hash, key_hash}, else: :done
+
+        {{key_block, micro_blocks, last_kb_hash}, next_acc}
     end)
     |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
       :aec_blocks.height(key_block) >= from_height
@@ -93,6 +99,9 @@ defmodule AeMdw.Node.Db do
 
     last_kb_hash
     |> Stream.unfold(fn
+      :done ->
+        nil
+
       ^root_hash ->
         nil
 
@@ -105,7 +114,10 @@ defmodule AeMdw.Node.Db do
         {:ok, %{key_block: prev_key_block, micro_blocks: micro_blocks}} =
           :aec_chain.get_generation_by_hash(prev_key_hash, :backward)
 
-        {{prev_key_block, micro_blocks, last_kb_hash}, prev_key_hash}
+        next_acc =
+          if :aec_blocks.height(prev_key_block) > from_height, do: prev_key_hash, else: :done
+
+        {{prev_key_block, micro_blocks, last_kb_hash}, next_acc}
     end)
     |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
       :aec_blocks.height(key_block) >= from_height
