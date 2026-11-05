@@ -3,7 +3,9 @@ defmodule AeMdw.Db.NodeStore do
   Store implementation with operations reading from the node tables directly.
   """
 
+  alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.StepwiseStream
 
   require Model
 
@@ -75,6 +77,10 @@ defmodule AeMdw.Db.NodeStore do
       key -> {:ok, key}
     end
   end
+
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(store, table, direction, start_key),
+    do: StepwiseStream.stream(store, table, direction, start_key)
 
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(_store, table) do

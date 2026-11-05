@@ -34,4 +34,7 @@ defmodule AeMdw.Db.NullStore do
 
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
   def prev(_store, _table, _key), do: :none
+
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(_store, _table, _direction, _start_key), do: []
 end

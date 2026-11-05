@@ -16,6 +16,8 @@ defmodule AeMdw.Db.RocksDbCF do
   @type record :: tuple()
   @typep transaction :: RocksDb.transaction()
 
+  @keys_per_iterator 1_000
+
   @spec all_keys(table()) :: [key()]
   def all_keys(table) do
     {:ok, it} = RocksDb.iterator(table)
@@ -272,6 +274,40 @@ defmodule AeMdw.Db.RocksDbCF do
     )
   end
 
+  @doc """
+  Streams the keys of a table with a single iterator, starting at `start_key` (included
+  when present) or at the table's edge when it's `nil`.
+
+  The iterator is re-opened every #{@keys_per_iterator} keys so that long scans don't
+  keep old memtables and SST files alive.
+  """
+  @spec stream_keys(table(), :forward | :backward, key() | nil) :: Enumerable.t()
+  def stream_keys(table, direction, start_key) do
+    Stream.resource(
+      fn -> {open_iterator(table), :start, @keys_per_iterator} end,
+      fn
+        {it, :start, keys_left} ->
+          emit_key(it, do_iterator_move(it, seek_action(direction, start_key)), keys_left)
+
+        {it, {:last, last_key}, 0} ->
+          new_it = open_iterator(table)
+          close_iterator(it)
+
+          key_res =
+            case do_iterator_move(new_it, seek_action(direction, last_key)) do
+              {:ok, ^last_key} -> do_iterator_move(new_it, step_action(direction))
+              key_res -> key_res
+            end
+
+          emit_key(new_it, key_res, @keys_per_iterator)
+
+        {it, {:last, _last_key}, keys_left} ->
+          emit_key(it, do_iterator_move(it, step_action(direction)), keys_left)
+      end,
+      fn {it, _last, _keys_left} -> close_iterator(it) end
+    )
+  end
+
   #
   # Private functions
   #
@@ -349,6 +385,31 @@ defmodule AeMdw.Db.RocksDbCF do
         :not_found
     end
   end
+
+  defp open_iterator(table) do
+    {:ok, it} = RocksDb.iterator(table)
+
+    it
+  end
+
+  # Closing twice raises. It happens when an exception already closed the stream and
+  # a stale continuation of it gets halted afterwards.
+  defp close_iterator(it) do
+    RocksDb.iterator_close(it)
+  rescue
+    ArgumentError -> :ok
+  end
+
+  defp emit_key(it, {:ok, key}, keys_left), do: {[key], {it, {:last, key}, keys_left - 1}}
+  defp emit_key(it, :not_found, keys_left), do: {:halt, {it, :done, keys_left}}
+
+  defp seek_action(:forward, nil), do: :first
+  defp seek_action(:backward, nil), do: :last
+  defp seek_action(:forward, key), do: {:seek, :sext.encode(key)}
+  defp seek_action(:backward, key), do: {:seek_for_prev, :sext.encode(key)}
+
+  defp step_action(:forward), do: :next
+  defp step_action(:backward), do: :prev
 
   defp iterator_count(it) do
     count = do_count(0, it, :rocksdb.iterator_move(it, :first))

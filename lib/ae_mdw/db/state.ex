@@ -188,6 +188,10 @@ defmodule AeMdw.Db.State do
 
   def next(state, table, :forward, cursor), do: next(state, table, cursor)
 
+  @spec stream(t(), table(), direction(), key() | nil) :: Enumerable.t()
+  def stream(%__MODULE__{store: store}, table, direction, start_key),
+    do: Store.stream(store, table, direction, start_key)
+
   Enum.each(Model.tables(), fn table_name ->
     @spec update(
             t(),

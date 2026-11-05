@@ -6,6 +6,7 @@ defmodule AeMdw.Db.TxnDbStore do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.StepwiseStream
 
   require Model
 
@@ -52,6 +53,12 @@ defmodule AeMdw.Db.TxnDbStore do
 
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
   def prev(%__MODULE__{txn: txn}, table, key), do: Database.dirty_prev(txn, table, key)
+
+  # A transaction iterator must not outlive its transaction, and mutations write the
+  # keys they are streaming, so this one doesn't keep an iterator open.
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(store, table, direction, start_key),
+    do: StepwiseStream.stream(store, table, direction, start_key)
 
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(%__MODULE__{txn: txn}, table), do: Database.dirty_count(txn, table)
