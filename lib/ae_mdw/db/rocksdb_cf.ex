@@ -2,9 +2,10 @@ defmodule AeMdw.Db.RocksDbCF do
   @moduledoc """
   RocksDb column family operations using AeMdw.Db.Model records and indexes.
 
-  The key-value is saved encoded with :sext to acomplish the pre-requisite of saving strings (binary type) while
-  keeping the ordering of erlang terms (same as mnesia_rocksdb). This way the key-value works like a sorted set
-  and naturally the read operations decode both key and value to original erlang term.
+  The key is saved encoded with :sext to acomplish the pre-requisite of saving strings (binary type) while
+  keeping the ordering of erlang terms (same as mnesia_rocksdb). This way the key-value works like a sorted set.
+  The value only needs to be decoded, so it is saved with the faster and smaller :erlang.term_to_binary
+  (older rows may still hold :sext values).
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDb
@@ -175,8 +176,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          record_type
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -203,8 +204,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          record_type
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -256,8 +257,8 @@ defmodule AeMdw.Db.RocksDbCF do
         with {:ok, key, value} <- :rocksdb.iterator_move(it, action),
              true <- check_end.(key) do
           record =
-            record_type
-            |> decode_value(value)
+            value
+            |> decode_value()
             |> Tuple.insert_at(0, :sext.decode(key))
             |> Tuple.insert_at(0, record_type)
 
@@ -361,20 +362,17 @@ defmodule AeMdw.Db.RocksDbCF do
 
   defp encode_record_value({_record_name, _key, nil}), do: ""
 
-  defp encode_record_value({:contract_log, _key, ext_contract, args, data, hash}) do
-    :erlang.term_to_binary({ext_contract, args, data, hash})
-  end
-
   defp encode_record_value(record) do
     record
     |> Tuple.delete_at(0)
     |> Tuple.delete_at(0)
-    |> :sext.encode()
+    |> :erlang.term_to_binary()
   end
 
-  defp decode_value(_type, ""), do: {nil}
-  defp decode_value(:contract_log, value), do: :erlang.binary_to_term(value)
-  defp decode_value(_type, value), do: :sext.decode(value)
+  defp decode_value(""), do: {nil}
+  defp decode_value(<<131, _rest::binary>> = value), do: :erlang.binary_to_term(value)
+  # rows written before the switch to term_to_binary, sext tuples start with 16
+  defp decode_value(value), do: :sext.decode(value)
 
   defp do_iterator_move(it, action) do
     case :rocksdb.iterator_move(it, action) do
