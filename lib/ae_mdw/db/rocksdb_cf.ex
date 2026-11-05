@@ -2,9 +2,10 @@ defmodule AeMdw.Db.RocksDbCF do
   @moduledoc """
   RocksDb column family operations using AeMdw.Db.Model records and indexes.
 
-  The key-value is saved encoded with :sext to acomplish the pre-requisite of saving strings (binary type) while
-  keeping the ordering of erlang terms (same as mnesia_rocksdb). This way the key-value works like a sorted set
-  and naturally the read operations decode both key and value to original erlang term.
+  The key is saved encoded with :sext to acomplish the pre-requisite of saving strings (binary type) while
+  keeping the ordering of erlang terms (same as mnesia_rocksdb). This way the key-value works like a sorted set.
+  The value only needs to be decoded, so it is saved with the faster and smaller :erlang.term_to_binary
+  (older rows may still hold :sext values).
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDb
@@ -15,6 +16,8 @@ defmodule AeMdw.Db.RocksDbCF do
   @type table :: atom()
   @type record :: tuple()
   @typep transaction :: RocksDb.transaction()
+
+  @keys_per_iterator 1_000
 
   @spec all_keys(table()) :: [key()]
   def all_keys(table) do
@@ -173,8 +176,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          record_type
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -201,8 +204,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          record_type
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -254,8 +257,8 @@ defmodule AeMdw.Db.RocksDbCF do
         with {:ok, key, value} <- :rocksdb.iterator_move(it, action),
              true <- check_end.(key) do
           record =
-            record_type
-            |> decode_value(value)
+            value
+            |> decode_value()
             |> Tuple.insert_at(0, :sext.decode(key))
             |> Tuple.insert_at(0, record_type)
 
@@ -269,6 +272,40 @@ defmodule AeMdw.Db.RocksDbCF do
         end
       end,
       fn {it, _action} -> RocksDb.iterator_close(it) end
+    )
+  end
+
+  @doc """
+  Streams the keys of a table with a single iterator, starting at `start_key` (included
+  when present) or at the table's edge when it's `nil`.
+
+  The iterator is re-opened every #{@keys_per_iterator} keys so that long scans don't
+  keep old memtables and SST files alive.
+  """
+  @spec stream_keys(table(), :forward | :backward, key() | nil) :: Enumerable.t()
+  def stream_keys(table, direction, start_key) do
+    Stream.resource(
+      fn -> {open_iterator(table), :start, @keys_per_iterator} end,
+      fn
+        {it, :start, keys_left} ->
+          emit_key(it, do_iterator_move(it, seek_action(direction, start_key)), keys_left)
+
+        {it, {:last, last_key}, 0} ->
+          new_it = open_iterator(table)
+          close_iterator(it)
+
+          key_res =
+            case do_iterator_move(new_it, seek_action(direction, last_key)) do
+              {:ok, ^last_key} -> do_iterator_move(new_it, step_action(direction))
+              key_res -> key_res
+            end
+
+          emit_key(new_it, key_res, @keys_per_iterator)
+
+        {it, {:last, _last_key}, keys_left} ->
+          emit_key(it, do_iterator_move(it, step_action(direction)), keys_left)
+      end,
+      fn {it, _last, _keys_left} -> close_iterator(it) end
     )
   end
 
@@ -325,20 +362,17 @@ defmodule AeMdw.Db.RocksDbCF do
 
   defp encode_record_value({_record_name, _key, nil}), do: ""
 
-  defp encode_record_value({:contract_log, _key, ext_contract, args, data, hash}) do
-    :erlang.term_to_binary({ext_contract, args, data, hash})
-  end
-
   defp encode_record_value(record) do
     record
     |> Tuple.delete_at(0)
     |> Tuple.delete_at(0)
-    |> :sext.encode()
+    |> :erlang.term_to_binary()
   end
 
-  defp decode_value(_type, ""), do: {nil}
-  defp decode_value(:contract_log, value), do: :erlang.binary_to_term(value)
-  defp decode_value(_type, value), do: :sext.decode(value)
+  defp decode_value(""), do: {nil}
+  defp decode_value(<<131, _rest::binary>> = value), do: :erlang.binary_to_term(value)
+  # rows written before the switch to term_to_binary, sext tuples start with 16
+  defp decode_value(value), do: :sext.decode(value)
 
   defp do_iterator_move(it, action) do
     case :rocksdb.iterator_move(it, action) do
@@ -349,6 +383,31 @@ defmodule AeMdw.Db.RocksDbCF do
         :not_found
     end
   end
+
+  defp open_iterator(table) do
+    {:ok, it} = RocksDb.iterator(table)
+
+    it
+  end
+
+  # Closing twice raises. It happens when an exception already closed the stream and
+  # a stale continuation of it gets halted afterwards.
+  defp close_iterator(it) do
+    RocksDb.iterator_close(it)
+  rescue
+    ArgumentError -> :ok
+  end
+
+  defp emit_key(it, {:ok, key}, keys_left), do: {[key], {it, {:last, key}, keys_left - 1}}
+  defp emit_key(it, :not_found, keys_left), do: {:halt, {it, :done, keys_left}}
+
+  defp seek_action(:forward, nil), do: :first
+  defp seek_action(:backward, nil), do: :last
+  defp seek_action(:forward, key), do: {:seek, :sext.encode(key)}
+  defp seek_action(:backward, key), do: {:seek_for_prev, :sext.encode(key)}
+
+  defp step_action(:forward), do: :next
+  defp step_action(:backward), do: :prev
 
   defp iterator_count(it) do
     count = do_count(0, it, :rocksdb.iterator_move(it, :first))

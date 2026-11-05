@@ -23,7 +23,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
 
   # stubs the dry-run boundary (AeMdw.Node.Db) so refresh_aex9_balances/5 gets a
-  # canned balances map for the given block_index instead of hitting a real node
+  # canned balance per account for the given block_index instead of hitting a real
+  # node - accounts missing from balances_map get None, like the real balance()
   defp with_aex9_balances({kbi, mbi} = _block_index, balances_map, fun) do
     with_aex9_balances_by_contract({kbi, mbi}, fn _contract_pk -> balances_map end, fun)
   end
@@ -40,13 +41,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
        [
          get_key_block_hash: fn ^next_height -> kb_hash end,
          get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
-         aex9_balances: fn contract_pk, {:micro, ^kbi, ^next_hash} ->
-           balances_map = balances_by_contract.(contract_pk)
-
-           node_balances =
-             Map.new(balances_map, fn {account_pk, amount} -> {{:address, account_pk}, amount} end)
-
-           {:ok, node_balances}
+         aex9_balance: fn contract_pk, account_pk, {:micro, ^kbi, ^next_hash} = height_hash ->
+           {:ok, {Map.get(balances_by_contract.(contract_pk), account_pk), height_hash}}
          end
        ]}
     ] do
@@ -95,6 +91,28 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert {:ok, Model.contract_call(index: {^create_txi, ^call_txi}, fun: "mint", args: ^args)} =
                Store.get(store, Model.ContractCall, {call_txi - 1, call_txi})
+    end
+
+    test "caches the creation txi of the called contract" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      call_txi = Enum.random(100_000_000..999_999_999)
+      create_txi = call_txi - 1
+
+      fun_arg_res = %{arguments: [], function: "get", result: %{type: :unit, value: ""}}
+      mutation = ContractCallMutation.new(contract_pk, call_txi, fun_arg_res, nil)
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+        |> State.commit_mem([mutation])
+
+      assert {:ok, ^create_txi} = State.cache_get(state, :ct_create_sync_cache, contract_pk)
+      assert State.exists?(state, Model.ContractCall, {create_txi, call_txi})
     end
   end
 
@@ -257,8 +275,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           txi: call_txi - 1
         )
 
-      assert :not_found = Store.get(store, Model.Stat, Stats.aex9_holder_count_key(remote_pk))
-
       block_index = {height, 0}
       new_amount = previous_balance + amount
 
@@ -266,6 +282,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk), payload: 1)
+        )
         |> Store.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> Store.put(
           Model.Field,
@@ -316,6 +336,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), remote_pk)
     end
   end
 
@@ -438,6 +459,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
 
     test "decrement aex9 holder count after a call with full burn log", %{store: store} do
@@ -525,6 +547,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert 0 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
   end
 
@@ -766,6 +789,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.Aex9EventBalance,
           Model.aex9_event_balance(index: {remote_pk2, from_pk2}, amount: amount2)
         )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk1), payload: 1)
+        )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(remote_pk2), payload: 1)
+        )
         |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
@@ -809,6 +840,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert 2 = Aex9.fetch_holders_count(state, remote_pk1)
       assert 1 = Aex9.fetch_holders_count(state, remote_pk2)
+      assert 2 = Stats.fetch_aex9_holders_count(state, remote_pk1)
+      assert 1 = Stats.fetch_aex9_holders_count(state, remote_pk2)
 
       assert State.exists?(
                state,
@@ -1746,6 +1779,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> change_store([mutation])
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
+      assert -1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
   end
 

@@ -100,6 +100,11 @@ defmodule AeMdw.Database do
     end
   end
 
+  @spec stream_keys(table(), direction(), key() | nil) :: Enumerable.t()
+  def stream_keys(tab, direction, start_key) do
+    RocksDbCF.stream_keys(tab, direction, start_key)
+  end
+
   @spec dirty_next(transaction(), table(), key()) :: {:ok, key()} | :none
   def dirty_next(txn, tab, key) do
     case RocksDbCF.dirty_next(txn, tab, key) do

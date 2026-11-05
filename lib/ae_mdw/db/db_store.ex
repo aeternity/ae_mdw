@@ -47,6 +47,10 @@ defmodule AeMdw.Db.DbStore do
 
   def prev(_store, table, key_boundary), do: Database.prev_key(table, key_boundary)
 
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(_store, table, direction, start_key),
+    do: Database.stream_keys(table, direction, start_key)
+
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(_store, table), do: Database.count(table)
 end

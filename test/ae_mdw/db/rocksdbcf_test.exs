@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.RocksDbCFTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.DbStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.RocksDb
+  alias AeMdw.Db.StepwiseStream
 
   import AeMdw.Db.ModelFixtures
 
@@ -13,6 +15,11 @@ defmodule AeMdw.Db.RocksDbCFTest do
     {:ok, txn} = RocksDb.transaction_new()
 
     {:ok, txn: txn}
+  end
+
+  defp put_blocks(height, mbis) do
+    Enum.each(mbis, &RocksDbCF.dirty_put(Model.Block, Model.block(index: {height, &1})))
+    on_exit(fn -> Enum.each(mbis, &RocksDbCF.dirty_delete(Model.Block, {height, &1})) end)
   end
 
   describe "put/2" do
@@ -167,6 +174,48 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
+  describe "stream_keys/3" do
+    test "returns the keys that next_key/2 and prev_key/2 return, from any start" do
+      height = Enum.random(1_000_000_000..9_999_999_999)
+      put_blocks(height, 0..20//2)
+
+      for start_key <- [nil | Enum.map(-1..21, &{height, &1})],
+          direction <- [:forward, :backward] do
+        assert DbStore.new()
+               |> StepwiseStream.stream(Model.Block, direction, start_key)
+               |> Enum.take(5) ==
+                 Model.Block |> RocksDbCF.stream_keys(direction, start_key) |> Enum.take(5)
+      end
+    end
+
+    test "sees the keys deleted while streaming once it re-opens the iterator" do
+      height = Enum.random(1_000_000_000..9_999_999_999)
+      put_blocks(height, 0..2_499)
+
+      # the iterator is re-opened after every 1_000 keys
+      keys =
+        Model.Block
+        |> RocksDbCF.stream_keys(:forward, {height, 0})
+        |> Stream.take_while(&match?({^height, _mbi}, &1))
+        |> Stream.each(fn
+          {^height, 999} ->
+            Enum.each([999, 1_000, 1_500], &RocksDbCF.dirty_delete(Model.Block, {height, &1}))
+
+          _key ->
+            :ok
+        end)
+        |> Enum.to_list()
+
+      assert keys == for(mbi <- 0..2_499, mbi not in [1_000, 1_500], do: {height, mbi})
+
+      assert Enum.reverse(List.delete(keys, {height, 999})) ==
+               Model.Block
+               |> RocksDbCF.stream_keys(:backward, {height, 2_499})
+               |> Stream.take_while(&match?({^height, _mbi}, &1))
+               |> Enum.to_list()
+    end
+  end
+
   describe "dirty_fetch/2" do
     setup :setup_transaction
 
@@ -254,6 +303,59 @@ defmodule AeMdw.Db.RocksDbCFTest do
       assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
       assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_block} = RocksDbCF.fetch(Model.Block, key)
+    end
+  end
+
+  describe "value encoding" do
+    setup :setup_transaction
+
+    test "writes values with term_to_binary", %{txn: txn} do
+      txi = new_txi()
+      on_exit(fn -> RocksDbCF.dirty_delete(Model.Tx, txi) end)
+
+      id = :crypto.strong_rand_bytes(32)
+      m_tx = Model.tx(index: txi, id: id, block_index: {1, 0})
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert :ok = RocksDb.transaction_commit(txn)
+
+      assert {:ok, value} = RocksDb.get(Model.Tx, :sext.encode(txi))
+      assert {^id, {1, 0}, nil, nil} = :erlang.binary_to_term(value)
+      assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, txi)
+    end
+
+    test "reads values written with sext next to term_to_binary ones", %{txn: txn} do
+      old_txi = new_txi()
+      txi = new_txi()
+
+      on_exit(fn ->
+        RocksDbCF.dirty_delete(Model.Tx, old_txi)
+        RocksDbCF.dirty_delete(Model.Tx, txi)
+      end)
+
+      id = :crypto.strong_rand_bytes(32)
+      old_tx = Model.tx(index: old_txi, id: id, block_index: {1, 0})
+      sext_value = :sext.encode({id, {1, 0}, nil, nil})
+      assert :ok = RocksDb.dirty_put(Model.Tx, :sext.encode(old_txi), sext_value)
+
+      m_tx = Model.tx(index: txi, id: :crypto.strong_rand_bytes(32), block_index: {1, 1})
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, m_tx)
+
+      assert {:ok, ^old_tx} = RocksDbCF.fetch(Model.Tx, old_txi)
+      assert {:ok, ^old_tx} = RocksDbCF.dirty_fetch(txn, Model.Tx, old_txi)
+
+      assert [^old_tx, ^m_tx] =
+               Model.Tx |> RocksDbCF.stream(key_boundary: {old_txi, txi}) |> Enum.to_list()
+    end
+
+    test "writes a nil value as an empty binary" do
+      key = {new_txi(), -1}
+      on_exit(fn -> RocksDbCF.dirty_delete(Model.Time, key) end)
+
+      m_time = Model.time(index: key)
+      assert :ok = RocksDbCF.dirty_put(Model.Time, m_time)
+
+      assert {:ok, ""} = RocksDb.get(Model.Time, :sext.encode(key))
+      assert {:ok, ^m_time} = RocksDbCF.fetch(Model.Time, key)
     end
   end
 end

@@ -5,7 +5,6 @@ defmodule AeMdw.AexnTokens do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Aex141
-  alias AeMdw.Aex9
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -218,7 +217,8 @@ defmodule AeMdw.AexnTokens do
         :not_found -> 0
       end
 
-    num_holders = Aex9.fetch_holders_count(state, contract_pk)
+    # the counter only drops below zero when it drifted, which flags the contract invalid
+    num_holders = max(Stats.fetch_aex9_holders_count(state, contract_pk), 0)
 
     response =
       %{

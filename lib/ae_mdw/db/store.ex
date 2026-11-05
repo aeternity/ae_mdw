@@ -24,6 +24,13 @@ defprotocol AeMdw.Db.Store do
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
   def prev(store, table, key)
 
+  @doc """
+  Streams the keys of a table, starting at `start_key` (included when present) or at
+  the table's edge when it's `nil`.
+  """
+  @spec stream(t(), table(), Database.direction(), key() | nil) :: Enumerable.t()
+  def stream(store, table, direction, start_key)
+
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(store, table)
 end
@@ -34,5 +41,9 @@ defimpl AeMdw.Db.Store, for: Any do
   def delete(%mod{} = store, table, key), do: mod.delete(store, table, key)
   def next(%mod{} = store, table, key), do: mod.next(store, table, key)
   def prev(%mod{} = store, table, key), do: mod.prev(store, table, key)
+
+  def stream(%mod{} = store, table, direction, start_key),
+    do: mod.stream(store, table, direction, start_key)
+
   def count_keys(%mod{} = store, table), do: mod.count_keys(store, table)
 end

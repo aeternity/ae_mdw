@@ -10,7 +10,7 @@ defmodule AeMdw.DryRun.RunnerTest do
   @contract_pk <<1::256>>
   @block_hash <<2::256>>
   @height 500_000
-  @introspection_methods ["meta_info", "aex9_extensions", "aex141_extensions"]
+  @gas_capped_methods ["meta_info", "aex9_extensions", "aex141_extensions", "balance"]
 
   setup_all do
     # Maintenance-mode boot skips aec_db:put_backend_module/1, so any test
@@ -41,7 +41,7 @@ defmodule AeMdw.DryRun.RunnerTest do
       end
     end
 
-    test "gives the AEX-N introspection calls an execution budget, not the call tx base gas" do
+    test "gives the AEX-N introspection and balance calls the per-microblock gas limit" do
       test_pid = self()
 
       protocol = :aec_hard_forks.protocol_effective_at_height(@height)
@@ -53,7 +53,7 @@ defmodule AeMdw.DryRun.RunnerTest do
 
           {:error, "not executed"}
         end do
-        for function_name <- @introspection_methods do
+        for function_name <- @gas_capped_methods do
           assert {:error, :dry_run_error} =
                    Runner.call_contract(
                      @contract_pk,

@@ -4,7 +4,7 @@ defmodule AeMdw.Db.Contract do
 
   AEX-9 balances are never accumulated from event arguments. Whenever a
   mint/burn/swap/transfer log is processed, the accounts it touches have
-  their balance re-derived from a dry-run of the contract's `balances()`
+  their balance re-derived from a dry-run of the contract's `balance(owner)`
   entrypoint (see `refresh_aex9_balances/5`), so the stored balance always
   matches real chain state regardless of how many redundant or nested events
   a given token template logs for the same underlying change (#2155).
@@ -35,6 +35,7 @@ defmodule AeMdw.Db.Contract do
   require Record
 
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
@@ -128,21 +129,19 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
+  # an account holds the token while its balance is positive, the same rule
+  # Aex9.fetch_holders_count/2 counts by
   @spec aex9_update_holders_to_balance_change(state(), pubkey(), integer(), integer(), txi()) ::
           state()
-  def aex9_update_holders_to_balance_change(state, contract_pk, 0, new_balance, _txi)
-      when new_balance != 0 do
-    SyncStats.increment_aex9_holders(state, contract_pk)
+  def aex9_update_holders_to_balance_change(state, contract_pk, old_balance, new_balance, txi) do
+    case {aex9_holder?(old_balance), aex9_holder?(new_balance)} do
+      {false, true} -> SyncStats.increment_aex9_holders(state, contract_pk)
+      {true, false} -> SyncStats.decrement_aex9_holders(state, contract_pk, txi)
+      _unchanged -> state
+    end
   end
 
-  def aex9_update_holders_to_balance_change(state, contract_pk, old_balance, 0, txi)
-      when old_balance != 0 do
-    SyncStats.decrement_aex9_holders(state, contract_pk, txi)
-  end
-
-  def aex9_update_holders_to_balance_change(state, _contract_pk, _old_balance, _new_balance, _txi) do
-    state
-  end
+  defp aex9_holder?(balance), do: is_integer(balance) and balance > 0
 
   @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
   def aex9_delete_presence(state, account_pk, contract_pk) do
@@ -718,13 +717,11 @@ defmodule AeMdw.Db.Contract do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
     {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
-    case Aex9Balances.get_balances_map(contract_pk, block_index, type_height_hash) do
-      {:ok, balances_map, _purged_map} ->
-        Enum.reduce(affected_pubkeys, state, fn account_pk, state ->
+    case fetch_aex9_balances(contract_pk, affected_pubkeys, block_index, type_height_hash) do
+      {:ok, new_balances} ->
+        Enum.reduce(new_balances, state, fn {account_pk, new_amount}, state ->
           Model.aex9_event_balance(amount: old_amount) =
             get_aex9_event_balance(state, contract_pk, account_pk)
-
-          new_amount = Map.get(balances_map, {:address, account_pk}, 0)
 
           m_balance =
             Model.aex9_event_balance(
@@ -750,11 +747,25 @@ defmodule AeMdw.Db.Contract do
         end)
 
       {:error, reason} ->
-        Log.warn(
-          "[refresh_aex9_balances] dry-run failed for #{inspect(contract_pk)}: #{inspect(reason)}"
-        )
+        contract_id = encode_contract(contract_pk)
+        Log.warn("[refresh_aex9_balances] dry-run failed for #{contract_id}: #{inspect(reason)}")
 
         state
+    end
+  end
+
+  # all or nothing, so a failed dry-run leaves every account of the event untouched
+  defp fetch_aex9_balances(contract_pk, account_pks, block_index, type_height_hash) do
+    account_pks
+    |> Enum.reduce_while({:ok, []}, fn account_pk, {:ok, balances} ->
+      case Aex9Balances.get_balance(contract_pk, account_pk, block_index, type_height_hash) do
+        {:ok, amount} -> {:cont, {:ok, [{account_pk, amount} | balances]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, balances} -> {:ok, Enum.reverse(balances)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -905,7 +916,7 @@ defmodule AeMdw.Db.Contract do
          txi,
          {{log_pk, [evt_hash | args], data}, idx}
        ) do
-    remote_contract_txi = Origin.tx_index!(state, {:contract, log_pk})
+    {state, remote_contract_txi} = Origin.sync_tx_index!(state, {:contract, log_pk})
 
     # on caller log: ext_contract = called contract_pk
     # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
@@ -963,7 +974,7 @@ defmodule AeMdw.Db.Contract do
 
   # burns have no recipient, so they are only indexed by sender
   defp index_contract_transfer(state, contract_pk, txi, i, from_pk, to_pk, value) do
-    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    {state, create_txi} = Origin.sync_tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
       Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, i, to_pk, value})
