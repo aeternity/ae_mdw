@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.110.0](https://github.com/aeternity/ae_mdw/compare/v1.109.0...v1.110.0) (2026-11-05)
+
+
+### Performance Improvements
+
+* cache contract creation txis during sync ([#2236](https://github.com/aeternity/ae_mdw/issues/2236)) ([960397a](https://github.com/aeternity/ae_mdw/commit/960397ae51fb75734fa3241b016a4603f258a6bd))
+* dry-run aex9 balance(owner) per affected account ([#2239](https://github.com/aeternity/ae_mdw/issues/2239)) ([4197a53](https://github.com/aeternity/ae_mdw/commit/4197a532e76def797da1358256c6c4ba9fcecb93))
+* encode record values with term_to_binary ([#2238](https://github.com/aeternity/ae_mdw/issues/2238)) ([72bc4c0](https://github.com/aeternity/ae_mdw/commit/72bc4c0cc1e8d40c881c55e0146ef615c8446e72))
+* serve aex9 holders from the per-contract counter ([#2240](https://github.com/aeternity/ae_mdw/issues/2240)) ([8cbc558](https://github.com/aeternity/ae_mdw/commit/8cbc558629971704e8ea2bcb6112ddad50c46daa))
+* stop reading the generation below from_height ([#2234](https://github.com/aeternity/ae_mdw/issues/2234)) ([87bc167](https://github.com/aeternity/ae_mdw/commit/87bc1671be9999f6ddc9b50f8ded671946c24b76))
+* stream table keys with one RocksDB iterator ([#2237](https://github.com/aeternity/ae_mdw/issues/2237)) ([a975559](https://github.com/aeternity/ae_mdw/commit/a975559e979fed160aef02cf5bebf781dd5c08f2))
+
+
+### Testing
+
+* assert an account emptied by a transfer ends with a zero aex9 balance ([#2235](https://github.com/aeternity/ae_mdw/issues/2235)) ([a9a611c](https://github.com/aeternity/ae_mdw/commit/a9a611c44e9252f318edf183238c899a4ec27975))
+
+
+### Miscellaneous
+
+* set the next version to 1.110.0 ([#2243](https://github.com/aeternity/ae_mdw/issues/2243)) ([575e5f4](https://github.com/aeternity/ae_mdw/commit/575e5f4e64d73db8f4ec5c4c7b9d1cf75be28ed6))
+
 ## [1.109.0](https://github.com/aeternity/ae_mdw/compare/v1.108.3...v1.109.0) (2026-10-26)
 
 
