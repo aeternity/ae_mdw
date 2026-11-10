@@ -1,14 +1,17 @@
 defmodule AeMdw.Sync.ServerTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Database
   alias AeMdw.Db.AccountActivityMutation
   alias AeMdw.Db.AccountCreationMutation
+  alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.UpdateBalanceAccountMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
@@ -43,7 +46,20 @@ defmodule AeMdw.Sync.ServerTest do
       assert received(:broadcast) == expected_broadcasts(gens)
     end
 
-    test "commits the account mutations of a generation together" do
+    test "commits each generation in one transaction" do
+      gens = [generation(1_000, 2), generation(1_001, 1)]
+
+      with_mocks sync_mocks(gens) do
+        sync(db_sync_data())
+      end
+
+      assert received(:committed) == [
+               [{:mutation, {1_000, 0}}, {:mutation, {1_000, 1}}, {:mutation, {1_000, -1}}],
+               [{:mutation, {1_001, 0}}, {:mutation, {1_001, -1}}]
+             ]
+    end
+
+    test "commits the account mutations with the rest of the generation" do
       gens = [generation(1_000, 2)]
       pubkeys = [<<1::256>>, <<2::256>>]
       trees = state_trees_with_accounts(pubkeys)
@@ -59,14 +75,52 @@ defmodule AeMdw.Sync.ServerTest do
         sync(db_sync_data())
       end
 
-      # one commit per block and a single one for all the account mutations
-      assert [[], [], [], account_mutations] = received(:committed)
+      assert [
+               [
+                 {:mutation, {1_000, 0}},
+                 {:mutation, {1_000, 1}},
+                 {:mutation, {1_000, -1}}
+                 | account_mutations
+               ]
+             ] = received(:committed)
 
       assert %{
                UpdateBalanceAccountMutation => 2,
                AccountCreationMutation => 2,
                AccountActivityMutation => 2
              } == Enum.frequencies_by(account_mutations, & &1.__struct__)
+    end
+
+    @tag :capture_log
+    test "persists nothing of a generation whose commit fails" do
+      key = :sync_server_test_uncommitted
+      on_exit(fn -> Database.dirty_delete(Model.Stat, key) end)
+      {key_block, [micro_block]} = generation(1_000, 1)
+      write_mutation = WriteMutation.new(Model.Stat, Model.stat(index: key, payload: 0))
+      failing_mutation = DeleteKeysMutation.new(%{})
+
+      blocks_mutations = [
+        {{1_000, 0}, micro_block, [write_mutation]},
+        {{1_000, -1}, key_block, [failing_mutation]}
+      ]
+
+      with_mocks [
+        {Block, [:passthrough],
+         blocks_mutations: fn _from_height, _from_mbi, _from_txi, _to, _use_cache? ->
+           [{1_000, blocks_mutations}]
+         end},
+        {DeleteKeysMutation, [:passthrough],
+         execute: fn _mutation, _state -> raise "key block mutation failed" end}
+      ] do
+        {:next_state, {:syncing_db, ref}, _data} =
+          Server.handle_event(:internal, :check_sync, :idle, db_sync_data())
+
+        assert_receive {:DOWN, ^ref, :process, _pid,
+                        {%RuntimeError{message: "key block mutation failed"}, _stacktrace}},
+                       1_000
+      end
+
+      refute Database.exists?(Model.Stat, key)
     end
   end
 
@@ -255,9 +309,11 @@ defmodule AeMdw.Sync.ServerTest do
     mbs_mutations =
       micro_blocks
       |> Enum.with_index()
-      |> Enum.map(fn {micro_block, mbi} -> {{height, mbi}, micro_block, []} end)
+      |> Enum.map(fn {micro_block, mbi} ->
+        {{height, mbi}, micro_block, [{:mutation, {height, mbi}}]}
+      end)
 
-    {height, mbs_mutations ++ [{{height, -1}, key_block, []}]}
+    {height, mbs_mutations ++ [{{height, -1}, key_block, [{:mutation, {height, -1}}]}]}
   end
 
   defp expected_broadcasts(gens) do
