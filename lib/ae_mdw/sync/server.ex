@@ -383,10 +383,12 @@ defmodule AeMdw.Sync.Server do
     new_state
   end
 
+  # One transaction per generation, so the synced height (DeltaStat) is never
+  # committed without the generation's account mutations.
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
-    Enum.reduce(blocks_mutations, state, fn {_bi, _block, block_mutations}, state ->
-      State.commit_db(state, block_mutations, clear_mem?)
-    end)
+    mutations = Enum.flat_map(blocks_mutations, fn {_bi, _block, mutations} -> mutations end)
+
+    State.commit_db(state, mutations, clear_mem?)
   end
 
   defp maybe_add_accounts_balance_mutations(gen_mutations) do
@@ -419,7 +421,6 @@ defmodule AeMdw.Sync.Server do
           ]
         end)
 
-      # a single entry so that db sync commits them in one transaction
       gen_mutations ++
         [{block_index, mblock, account_balances_mutations ++ account_statistics_mutations}]
     else
