@@ -53,6 +53,7 @@ defmodule AeMdw.Stats do
           | :hashrate
           | :contracts
           | :total_accounts
+          | :active_accounts
   @type interval_by() :: :day | :week | :month
   @type interval_start() :: non_neg_integer()
 
