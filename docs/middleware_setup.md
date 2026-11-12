@@ -259,6 +259,11 @@ The following environment variables configure the middleware itself (not the und
 | `TELEMETRY_STATSD_HOST` | hostname | StatsD host (used when `ENABLE_TELEMETRY=true`) |
 | `TELEMETRY_STATSD_PORT` | `8125` | StatsD port |
 | `TELEMETRY_POLLER_PERIOD` | `10000` | VM metrics polling interval in milliseconds |
+| `MDW_DB_MAX_OPEN_FILES` | `500` | Maximum SST files the middleware database keeps open (`-1` for no limit). RocksDB reserves 10 of them for other files, so with more SST files (`ls data/mdw.db/*.sst \| wc -l`) than the rest, reads keep reopening files (about 2x slower lookups in a benchmark). Each open file holds its index (and bloom filter) in memory and uses a file descriptor |
+| `MDW_DB_BLOCK_CACHE_MB` | unset | Size of one block cache shared by all middleware tables. Unset, each table has its own 8 MB RocksDB cache. The shared cache fills up to its size, and blocks are cached uncompressed |
+| `MDW_DB_BLOOM_FILTER_TABLES` | empty | Comma-separated middleware tables (e.g. `IdCount,DupIdCount`) to give a bloom filter (10 bits per key). Faster point lookups, especially for missing keys, for about 1.25 bytes per key more disk and memory. Only SST files written afterwards get the filter, so the gain grows as compaction rewrites older files. Keep `MDW_DB_MAX_OPEN_FILES` above the number of SST files, otherwise every file reopen also reloads its filter and reads get slower |
+| `MDW_DB_MAX_BACKGROUND_JOBS` | `2` | Maximum number of concurrent RocksDB flush and compaction jobs of the middleware database |
+| `MDW_DB_MAX_TOTAL_WAL_SIZE_MB` | unset | Total size of the middleware write-ahead log files (`data/mdw.db/*.log`) above which RocksDB flushes the tables still holding the oldest of them. A table that is written rarely keeps every log file since its last flush, and all of them are replayed on startup. Unset, the limit is 4 times the memtable budget, about 61 GB with 122 tables. A lower limit means smaller flushes of rarely written tables, so a few more small SST files |
 
 ## Additional Resources
 
