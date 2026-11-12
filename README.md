@@ -4042,6 +4042,18 @@ All env vars are read once at node startup from `config/runtime.exs`. Changing a
 |----------|---------|-------------|
 | `WEALTH_RANK_SIZE` | `200` | Number of accounts tracked in the wealth-rank index. |
 
+### Database
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MDW_DB_MAX_OPEN_FILES` | `500` | Maximum SST files kept open (`-1` for no limit). Each open file costs memory for its index and filter, and a file descriptor. |
+| `MDW_DB_BLOCK_CACHE_MB` | unset | Size of one block cache shared by all tables. Unset, each table has its own 8 MB cache. |
+| `MDW_DB_BLOOM_FILTER_TABLES` | empty | Comma-separated tables (e.g. `IdCount,DupIdCount`) that get a bloom filter, about 1.25 bytes per key. Only new SST files get the filter. Needs `MDW_DB_MAX_OPEN_FILES` above the SST file count. |
+| `MDW_DB_MAX_BACKGROUND_JOBS` | `2` | Maximum number of concurrent RocksDB flush and compaction jobs. |
+| `MDW_DB_MAX_TOTAL_WAL_SIZE_MB` | unset | Total size of the write-ahead log files that triggers a flush of the tables still holding the oldest of them. Unset, RocksDB allows about 61 GB. |
+
+See [middleware setup](docs/middleware_setup.md#middleware-environment-variables) for the trade-offs.
+
 ## Tests
 
 ### Unit tests

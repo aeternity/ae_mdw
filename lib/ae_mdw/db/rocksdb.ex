@@ -23,17 +23,15 @@ defmodule AeMdw.Db.RocksDb do
   @opaque transaction :: reference() | binary()
   @typep table :: atom()
 
-  # arround 50 column families * 10
   @max_open_files 500
   # see https://github.com/facebook/rocksdb/wiki/Space-Tuning
   @block_size 4 * 1024
-  @block_cache_size 32 * 1024 * 1024
   @write_buffer_size 64 * 1024 * 1024
+  @bloom_filter_bits_per_key 10
 
   @db_options [
     create_if_missing: true,
     create_missing_column_families: true,
-    max_open_files: @max_open_files,
     merge_operator: :erlang_merge_operator
   ]
   @cf_options [
@@ -41,13 +39,13 @@ defmodule AeMdw.Db.RocksDb do
     compression: :lz4,
     bottommost_compression: :zstd,
     write_buffer_size: @write_buffer_size,
-    block_based_table_options: [
-      block_size: @block_size,
-      block_cache_size: @block_cache_size,
-      cache_index_and_filter_blocks: false,
-      format_version: 5
-    ],
     merge_operator: :erlang_merge_operator
+  ]
+  # without a block_cache option each column family gets its own 8 MB RocksDB cache
+  @table_options [
+    block_size: @block_size,
+    cache_index_and_filter_blocks: false,
+    format_version: 5
   ]
 
   @doc """
@@ -57,7 +55,7 @@ defmodule AeMdw.Db.RocksDb do
   @spec open(boolean()) :: :ok
   def open(delete_existing?) do
     with :ok <- create_dir_if_missing(delete_existing?),
-         {:ok, db_ref, cf_ref_list} <- open_db() do
+         {:ok, db_ref, cf_ref_list} <- open_db(open_options()) do
       :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
 
       # keep db handle
@@ -205,32 +203,88 @@ defmodule AeMdw.Db.RocksDb do
     end
   end
 
-  defp open_db() do
-    with {:error, {:db_open, _reason}} <- do_open_db(),
+  defp open_db(options) do
+    with {:error, {:db_open, _reason}} <- do_open_db(options, []),
          [_atom | _list] = drop_tables <-
            Application.fetch_env!(:ae_mdw, __MODULE__)[:drop_tables],
-         {:ok, db_ref, cf_list} <- do_open_db(drop_tables) do
+         {:ok, db_ref, cf_list} <- do_open_db(options, drop_tables) do
       cf_list
       |> Enum.drop(length(cf_list) - length(drop_tables))
       |> Enum.each(&:rocksdb.drop_column_family(db_ref, &1))
 
       :rocksdb.close(db_ref)
 
-      do_open_db()
+      do_open_db(options, [])
     end
   end
 
-  defp do_open_db(tables_drop \\ []) do
+  defp do_open_db({db_options, table_options, bloom_tables}, tables_drop) do
     cf_descriptors =
       tables_drop
       |> all_cf_names()
       |> Enum.map(fn cf_name ->
-        {Atom.to_charlist(cf_name), @cf_options}
+        table_options =
+          if cf_name in bloom_tables,
+            do: [{:bloom_filter_policy, @bloom_filter_bits_per_key} | table_options],
+            else: table_options
+
+        {Atom.to_charlist(cf_name), [{:block_based_table_options, table_options} | @cf_options]}
       end)
 
     data_dir()
     |> String.to_charlist()
-    |> :rocksdb.open_optimistic_transaction_db(@db_options, cf_descriptors)
+    |> :rocksdb.open_optimistic_transaction_db(db_options, cf_descriptors)
+  end
+
+  defp open_options() do
+    config = Application.fetch_env!(:ae_mdw, __MODULE__)
+
+    db_options =
+      [{:max_open_files, max_open_files(config[:max_open_files])} | @db_options] ++
+        background_jobs_option(config[:max_background_jobs]) ++
+        wal_size_option(config[:max_total_wal_size_mb])
+
+    table_options = @table_options ++ block_cache_option(config[:block_cache_mb])
+
+    {db_options, table_options, bloom_filter_tables(config[:bloom_filter_tables] || [])}
+  end
+
+  defp max_open_files(nil), do: @max_open_files
+  defp max_open_files(-1), do: -1
+  defp max_open_files(max_files) when is_integer(max_files) and max_files > 0, do: max_files
+
+  defp background_jobs_option(nil), do: []
+
+  defp background_jobs_option(jobs) when is_integer(jobs) and jobs > 0,
+    do: [max_background_jobs: jobs]
+
+  defp wal_size_option(nil), do: []
+
+  defp wal_size_option(size_mb) when is_integer(size_mb) and size_mb > 0,
+    do: [max_total_wal_size: size_mb * 1024 * 1024]
+
+  defp block_cache_option(nil), do: []
+
+  defp block_cache_option(size_mb) when is_integer(size_mb) and size_mb > 0 do
+    {:ok, cache} = :rocksdb.new_cache(:lru, size_mb * 1024 * 1024)
+
+    [block_cache: cache]
+  end
+
+  defp bloom_filter_tables(names) do
+    tables_by_name = Map.new(Model.tables(), &{&1 |> Module.split() |> List.last(), &1})
+
+    Enum.map(names, fn name ->
+      case Map.fetch(tables_by_name, name) do
+        {:ok, table} ->
+          table
+
+        :error ->
+          raise ArgumentError,
+                "unknown table in bloom_filter_tables: #{inspect(name)}, " <>
+                  "expected a table name of AeMdw.Db.Model like \"IdCount\""
+      end
+    end)
   end
 
   defp all_cf_names(tables_drop \\ []) do

@@ -24,6 +24,26 @@ config :ae_mdw,
 
 config :ae_mdw, :wealth_rank_size, String.to_integer(System.get_env("WEALTH_RANK_SIZE", "200"))
 
+# Middleware RocksDB tuning, unset keeps the defaults of AeMdw.Db.RocksDb
+optional_int_env = fn name ->
+  case System.get_env(name) do
+    nil -> nil
+    value -> String.to_integer(value)
+  end
+end
+
+config :ae_mdw, AeMdw.Db.RocksDb,
+  max_open_files: optional_int_env.("MDW_DB_MAX_OPEN_FILES"),
+  block_cache_mb: optional_int_env.("MDW_DB_BLOCK_CACHE_MB"),
+  max_background_jobs: optional_int_env.("MDW_DB_MAX_BACKGROUND_JOBS"),
+  max_total_wal_size_mb: optional_int_env.("MDW_DB_MAX_TOTAL_WAL_SIZE_MB"),
+  bloom_filter_tables:
+    "MDW_DB_BLOOM_FILTER_TABLES"
+    |> System.get_env("")
+    |> String.split(",")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+
 config :ae_mdw, AeMdwWeb.Websocket.Subscriptions,
   # 100k per connection lets a single service monitor 100k accounts without multiplexing
   max_subs_per_conn: String.to_integer(System.get_env("MAX_SUBS_PER_CONN", "100000")),
