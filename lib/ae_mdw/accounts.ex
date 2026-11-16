@@ -3,7 +3,6 @@ defmodule AeMdw.Accounts do
     Module for account related operations
   """
   alias AeMdw.Blocks
-  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Stats, as: SyncStats
@@ -34,31 +33,46 @@ defmodule AeMdw.Accounts do
   def account_activity(state, pubkey, time) do
     initial_intervals = SyncStats.time_intervals(time)
 
-    pubkey
-    |> SyncStats.key_boundaries_for_intervals(initial_intervals)
-    |> Enum.reduce(state, fn {interval_type, key_boundary}, state ->
-      state
-      |> Collection.stream(Model.AccountActivity, :forward, key_boundary, nil)
-      |> Enum.take(1)
-      |> case do
-        [] ->
-          index =
-            {:active_accounts, interval_type, Keyword.fetch!(initial_intervals, interval_type)}
+    [{:day, day_boundary} | week_and_month_boundaries] =
+      SyncStats.key_boundaries_for_intervals(pubkey, initial_intervals)
 
-          State.update(
-            state,
-            Model.Statistic,
-            index,
-            fn Model.statistic(count: count) = statistics ->
-              Model.statistic(statistics, count: count + 1)
-            end,
-            Model.statistic(index: index, count: 0)
-          )
-
-        _account_activity ->
-          state
+    # the day range lies within the week and month ranges
+    state =
+      if active_in?(state, day_boundary) do
+        state
+      else
+        week_and_month_boundaries
+        |> Enum.reject(fn {_interval_type, key_boundary} -> active_in?(state, key_boundary) end)
+        |> Enum.reduce(
+          increment_active_accounts(state, :day, initial_intervals),
+          fn {interval_type, _key_boundary}, state ->
+            increment_active_accounts(state, interval_type, initial_intervals)
+          end
+        )
       end
-    end)
-    |> State.put(Model.AccountActivity, Model.account_activity(index: {pubkey, time}))
+
+    State.put(state, Model.AccountActivity, Model.account_activity(index: {pubkey, time}))
+  end
+
+  # State.next/3 starts after the given key
+  defp active_in?(state, {{pubkey, first_time}, {pubkey, last_time}}) do
+    case State.next(state, Model.AccountActivity, {pubkey, first_time - 1}) do
+      {:ok, {^pubkey, time}} -> time <= last_time
+      _none_or_other_account -> false
+    end
+  end
+
+  defp increment_active_accounts(state, interval_type, intervals) do
+    index = {:active_accounts, interval_type, Keyword.fetch!(intervals, interval_type)}
+
+    State.update(
+      state,
+      Model.Statistic,
+      index,
+      fn Model.statistic(count: count) = statistics ->
+        Model.statistic(statistics, count: count + 1)
+      end,
+      Model.statistic(index: index, count: 0)
+    )
   end
 end
