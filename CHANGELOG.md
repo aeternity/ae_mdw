@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.111.0](https://github.com/aeternity/ae_mdw/compare/v1.110.0...v1.111.0) (2026-11-16)
+
+
+### Features
+
+* tune the middleware RocksDB with MDW_DB_* env vars ([#2245](https://github.com/aeternity/ae_mdw/issues/2245)) ([0238eb2](https://github.com/aeternity/ae_mdw/commit/0238eb2faaae11513c419820678649ecdbb82195))
+
+
+### Performance Improvements
+
+* commit db sync once per generation ([#2244](https://github.com/aeternity/ae_mdw/issues/2244)) ([6ab14f4](https://github.com/aeternity/ae_mdw/commit/6ab14f40b56df70d556aadbffe69219f6bc2b734))
+* skip the week and month activity checks when the account was active that day ([#2246](https://github.com/aeternity/ae_mdw/issues/2246)) ([d75ebfb](https://github.com/aeternity/ae_mdw/commit/d75ebfb2e22c6b36c4b4fe616c838dd1668ed538))
+
 ## [1.110.0](https://github.com/aeternity/ae_mdw/compare/v1.109.0...v1.110.0) (2026-11-05)
 
 
