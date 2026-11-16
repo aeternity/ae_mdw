@@ -37,6 +37,8 @@ VERSION
 data
 /data/
 /test_data.db/
+# ExUnit tmp_dir
+/tmp/
 
 # Dialyzer generated files
 /priv/plts/*.plt
