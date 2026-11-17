@@ -9,6 +9,7 @@ defmodule AeMdw.Db.MemStore do
   building this store.
   """
 
+  alias AeMdw.Db.DbStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Database
   alias AeMdw.Db.Model
@@ -33,6 +34,16 @@ defmodule AeMdw.Db.MemStore do
   @spec delete_store(t()) :: :ok
   def delete_store(%__MODULE__{tables: tables}),
     do: Enum.each(tables, fn {_name, t} -> SortedTable.delete(t) end)
+
+  @doc """
+  True when the store is empty and falls back to the database, so it reads the same
+  as a new one. A deleted table makes it false.
+  """
+  @spec pristine?(t()) :: boolean()
+  def pristine?(%__MODULE__{fallback_store: fallback_store, tables: tables}) do
+    is_struct(fallback_store, DbStore) and
+      Enum.all?(tables, fn {_name, t} -> SortedTable.empty?(t) end)
+  end
 
   @spec without_fallback(t()) :: t()
   def without_fallback(%{tables: tables}),

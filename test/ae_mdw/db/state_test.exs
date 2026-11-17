@@ -5,6 +5,7 @@ defmodule AeMdw.Db.StateTest do
   alias AeMdw.Database
   alias AeMdw.Sync.Aex9BalancesCache
   alias AeMdw.Db.AexnCreateContractMutation
+  alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
@@ -21,6 +22,40 @@ defmodule AeMdw.Db.StateTest do
   setup do
     global_state_ref = :persistent_term.get(:global_state, nil)
     on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
+  describe "commit/3 when clearing the mem state" do
+    test "keeps an untouched mem state" do
+      mem_state = State.new(MemStore.new(DbStore.new()))
+      :persistent_term.put(:global_state, mem_state)
+
+      State.commit(State.new(), [], true)
+
+      assert mem_state == :persistent_term.get(:global_state, :none)
+    end
+
+    test "erases a mem state with records, stats, deleted tables or no db fallback" do
+      written =
+        DbStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.Block, Model.block(index: {1, 0}))
+
+      with_stats = DbStore.new() |> MemStore.new() |> State.new() |> State.inc_stat(:accounts)
+
+      deleted_store = MemStore.new(DbStore.new())
+      MemStore.delete_store(deleted_store)
+
+      no_db_fallback = State.new(MemStore.new(NullStore.new()))
+
+      for mem_state <- [written, with_stats, State.new(deleted_store), no_db_fallback, nil] do
+        :persistent_term.put(:global_state, mem_state)
+
+        State.commit(State.new(), [], true)
+
+        assert :none == :persistent_term.get(:global_state, :none)
+      end
+    end
   end
 
   describe "commit_db" do

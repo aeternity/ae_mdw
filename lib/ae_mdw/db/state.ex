@@ -78,11 +78,25 @@ defmodule AeMdw.Db.State do
     enqueue_jobs(jobs, only_new: true)
 
     if clear_mem? do
-      :persistent_term.erase(@state_pm_key)
+      clear_mem_state()
     end
 
     %__MODULE__{new_state | store: prev_store, jobs: %{}}
   end
+
+  # An untouched mem state reads through to the database, so keeping it saves
+  # creating a new store on the next mem_state().
+  defp clear_mem_state do
+    if not pristine_mem_state?(:persistent_term.get(@state_pm_key, :none)) do
+      :persistent_term.erase(@state_pm_key)
+    end
+  end
+
+  defp pristine_mem_state?(%__MODULE__{store: store, stats: stats, cache: cache, jobs: jobs})
+       when map_size(stats) == 0 and map_size(cache) == 0 and map_size(jobs) == 0,
+       do: is_struct(store, MemStore) and MemStore.pristine?(store)
+
+  defp pristine_mem_state?(_other), do: false
 
   @spec commit_db(t(), [Mutation.t()], boolean()) :: t()
   def commit_db(state, mutations, clear_mem? \\ true) do
@@ -120,6 +134,14 @@ defmodule AeMdw.Db.State do
 
   @spec create_mem_state() :: t()
   def create_mem_state, do: new(MemStoreCreator.create())
+
+  @spec current_mem_store() :: Store.t() | nil
+  def current_mem_store do
+    case :persistent_term.get(@state_pm_key, :none) do
+      %__MODULE__{store: store} -> store
+      _none -> nil
+    end
+  end
 
   Enum.each(Model.tables(), fn table_name ->
     @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()

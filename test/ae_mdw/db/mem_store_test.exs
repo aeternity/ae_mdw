@@ -93,6 +93,21 @@ defmodule AeMdw.Db.MemStoreTest do
     end
   end
 
+  describe "pristine?/1" do
+    test "is true only for an empty store over the database" do
+      assert MemStore.pristine?(MemStore.new(DbStore.new()))
+      refute MemStore.pristine?(MemStore.new(NullStore.new()))
+
+      written = MemStore.new(DbStore.new())
+      Store.put(written, Model.Block, Model.block(index: {1, 0}))
+      refute MemStore.pristine?(written)
+
+      deleted = MemStore.new(DbStore.new())
+      MemStore.delete_store(deleted)
+      refute MemStore.pristine?(deleted)
+    end
+  end
+
   describe "stream/4 when the fallback is the database" do
     test "returns the keys that next/3 and prev/3 return, from any start" do
       height = Enum.random(1_000_000_000..9_999_999_999)

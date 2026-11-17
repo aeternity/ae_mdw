@@ -25,6 +25,10 @@ defmodule AeMdw.Util.SortedTable do
     :ok
   end
 
+  @doc "False for a deleted table."
+  @spec empty?(t()) :: boolean()
+  def empty?(t), do: :ets.info(t, :size) == 0
+
   @spec insert(t(), key(), value()) :: t()
   def insert(t, key, value) do
     :ets.insert(t, {key, value})
