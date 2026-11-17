@@ -5,6 +5,7 @@ defmodule AeMdw.Db.ContractCreateMutation do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
   alias AeMdw.Txs
 
@@ -26,6 +27,11 @@ defmodule AeMdw.Db.ContractCreateMutation do
       call_rec: call_rec
     }
   end
+
+  # nil for any other mutation
+  @spec call_rec(Mutation.t()) :: Contract.call() | nil
+  def call_rec(%__MODULE__{call_rec: call_rec}), do: call_rec
+  def call_rec(_mutation), do: nil
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(

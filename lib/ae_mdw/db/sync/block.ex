@@ -79,8 +79,11 @@ defmodule AeMdw.Db.Sync.Block do
         end
 
       {micro_blocks_gens, txi} =
-        Enum.map_reduce(pending_micro_blocks, txi, fn {micro_block, mbi}, txi ->
-          {mutations, txi} = micro_block_mutations(micro_block, mbi, txi, use_cache?)
+        pending_micro_blocks
+        |> with_events_or_cached(height, use_cache?)
+        |> Enum.map_reduce(txi, fn {micro_block, mbi, mb_hash, events_or_cached}, txi ->
+          {mutations, txi} =
+            micro_block_mutations(micro_block, mb_hash, mbi, txi, events_or_cached, use_cache?)
 
           {{{height, mbi}, micro_block, mutations}, txi}
         end)
@@ -160,28 +163,68 @@ defmodule AeMdw.Db.Sync.Block do
     end
   end
 
-  defp micro_block_mutations(mblock, mbi, first_txi, false = _use_cache?) do
-    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+  # Replaying a micro block's txs for its events only reads the node state, so
+  # the micro blocks of a generation are replayed at the same time.
+  defp with_events_or_cached(pending_micro_blocks, height, use_cache?) do
+    micro_blocks =
+      Enum.map(pending_micro_blocks, fn {micro_block, mbi} ->
+        {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(micro_block))
+        cached = if use_cache?, do: MutationsCache.get_mbs_mutations(mb_hash)
 
-    process_micro_block_mutations(mblock, mb_hash, mbi, first_txi)
+        {micro_block, mbi, mb_hash, cached}
+      end)
+
+    replayed = for {micro_block, _mbi, mb_hash, nil} <- micro_blocks, do: {mb_hash, micro_block}
+
+    {ts, events} =
+      :timer.tc(fn ->
+        replayed
+        |> map_concurrently(fn {mb_hash, micro_block} ->
+          {mb_hash, AeMdw.Contract.get_grouped_events(micro_block)}
+        end)
+        |> Map.new()
+      end)
+
+    _sum =
+      if replayed != [],
+        do: :ets.update_counter(:sync_profiling, {:dryrun, height}, ts, {{:dryrun, height}, 0})
+
+    Enum.map(micro_blocks, fn
+      {micro_block, mbi, mb_hash, nil} ->
+        {micro_block, mbi, mb_hash, {:events, Map.fetch!(events, mb_hash)}}
+
+      {micro_block, mbi, mb_hash, cached} ->
+        {micro_block, mbi, mb_hash, {:cached, cached}}
+    end)
   end
 
-  defp micro_block_mutations(mblock, mbi, first_txi, true = _use_cache?) do
-    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+  # timeout :infinity because a busy micro block can take longer than the 5 s default
+  defp map_concurrently(items, fun) do
+    case Application.get_env(:ae_mdw, :sync_concurrency, 1) do
+      1 ->
+        Enum.map(items, fun)
 
-    with nil <- MutationsCache.get_mbs_mutations(mb_hash) do
-      mutations_txi = process_micro_block_mutations(mblock, mb_hash, mbi, first_txi)
-      MutationsCache.put_mbs_mutations(mb_hash, mutations_txi)
-      mutations_txi
+      concurrency ->
+        items
+        |> Task.async_stream(fun, max_concurrency: concurrency, timeout: :infinity)
+        |> Enum.map(fn {:ok, result} -> result end)
     end
   end
 
-  defp process_micro_block_mutations(mblock, mb_hash, mbi, first_txi) do
+  defp micro_block_mutations(_mblock, _mb_hash, _mbi, _txi, {:cached, mutations_txi}, _cache?),
+    do: mutations_txi
+
+  defp micro_block_mutations(mblock, mb_hash, mbi, first_txi, {:events, events}, use_cache?) do
+    mutations_txi = process_micro_block_mutations(mblock, mb_hash, mbi, first_txi, events)
+    if use_cache?, do: MutationsCache.put_mbs_mutations(mb_hash, mutations_txi)
+
+    mutations_txi
+  end
+
+  defp process_micro_block_mutations(mblock, mb_hash, mbi, first_txi, events) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_txs = :aec_blocks.txs(mblock)
-    {ts, events} = :timer.tc(fn -> AeMdw.Contract.get_grouped_events(mblock) end)
-    _sum = :ets.update_counter(:sync_profiling, {:dryrun, height}, ts, {{:dryrun, height}, 0})
     mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
     block_stats_mutation = BlockStatisticsMutation.new(mb_time)

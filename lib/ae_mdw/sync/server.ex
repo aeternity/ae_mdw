@@ -38,10 +38,13 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.AccountActivityMutation
   alias AeMdw.Db.AccountCreationMutation
+  alias AeMdw.Db.ContractCallMutation
+  alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Db.RollbackMutation
   alias AeMdw.Log
   alias AeMdw.Node.Db
+  alias AeMdw.Sync.Aex9Balances
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdwWeb.Websocket.Broadcaster
@@ -366,14 +369,22 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
+    concurrency = Application.get_env(:ae_mdw, :sync_concurrency, 1)
+
     {new_state, gens_blocks} =
       gens_mutations
       |> Enum.reduce({initial_state, []}, fn {height, blocks_mutations}, {state, gens_blocks} ->
         gen_blocks = gen_blocks(height, blocks_mutations)
         blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
-        {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
-        :ok = profile_sync("sync_db", height, ts, blocks_mutations, 1)
+        {prefetch_ts, prefetched} =
+          :timer.tc(fn -> prefetch_aex9_balances(blocks_mutations, concurrency) end)
+
+        {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
+        # a generation synced into the db isn't synced again
+        :ok = Aex9Balances.delete_prefetched(prefetched)
+
+        :ok = profile_sync("sync_db", height, ts, blocks_mutations, 1, prefetch_ts)
 
         {add_tx_fees_job(new_state), [gen_blocks | gens_blocks]}
       end)
@@ -389,6 +400,31 @@ defmodule AeMdw.Sync.Server do
     mutations = Enum.flat_map(blocks_mutations, fn {_bi, _block, mutations} -> mutations end)
 
     State.commit_db(state, mutations, clear_mem?)
+  end
+
+  # The aex9 balance dry-runs of the generation, run concurrently before the
+  # commit instead of one by one inside it. With 1 they stay inside it.
+  defp prefetch_aex9_balances(_blocks_mutations, 1), do: []
+
+  defp prefetch_aex9_balances(blocks_mutations, concurrency) do
+    blocks_mutations
+    |> Enum.flat_map(fn
+      {{_height, -1}, _block, _mutations} ->
+        []
+
+      {block_index, _block, mutations} ->
+        call_recs =
+          mutations
+          |> List.flatten()
+          |> Enum.flat_map(fn mutation ->
+            List.wrap(
+              ContractCallMutation.call_rec(mutation) || ContractCreateMutation.call_rec(mutation)
+            )
+          end)
+
+        if call_recs == [], do: [], else: [{block_index, call_recs}]
+    end)
+    |> Aex9Balances.prefetch_balances(concurrency)
   end
 
   defp maybe_add_accounts_balance_mutations(gen_mutations) do
@@ -579,7 +615,14 @@ defmodule AeMdw.Sync.Server do
     end
   end
 
-  defp profile_sync(sync_type, height, exec_ts, blocks_mutations, gens_in_batch) do
+  defp profile_sync(
+         sync_type,
+         height,
+         exec_ts,
+         blocks_mutations,
+         gens_in_batch,
+         prefetch_ts \\ nil
+       ) do
     mutations = Enum.map(blocks_mutations, &elem(&1, 2))
 
     _lookup_return =
@@ -598,9 +641,11 @@ defmodule AeMdw.Sync.Server do
           end)
 
         mutations_count = length(mutations)
+        # last, so that parsers of the fields before it keep working
+        prefetch = if prefetch_ts, do: ", prefetch=#{div(prefetch_ts, 1_000)}ms", else: ""
 
         Log.info(
-          "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, gens_in_batch=#{gens_in_batch}, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
+          "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, gens_in_batch=#{gens_in_batch}, mutations={#{mutations_count}, #{inspect(mutations_map)}}#{prefetch}"
         )
       end
 

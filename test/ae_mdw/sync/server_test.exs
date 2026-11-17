@@ -4,6 +4,7 @@ defmodule AeMdw.Sync.ServerTest do
   alias AeMdw.Database
   alias AeMdw.Db.AccountActivityMutation
   alias AeMdw.Db.AccountCreationMutation
+  alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
@@ -12,7 +13,10 @@ defmodule AeMdw.Sync.ServerTest do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Db.WriteMutation
+  alias AeMdw.EtsCache
+  alias AeMdw.Node.ContractCallFixtures
   alias AeMdw.Node.Db
+  alias AeMdw.Sync.Aex9AccountBalancesCache
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
@@ -124,6 +128,67 @@ defmodule AeMdw.Sync.ServerTest do
     end
   end
 
+  describe "db sync of aex9 events" do
+    setup do
+      concurrency = Application.get_env(:ae_mdw, :sync_concurrency)
+      on_exit(fn -> Application.put_env(:ae_mdw, :sync_concurrency, concurrency) end)
+      Application.put_env(:ae_mdw, :sync_concurrency, 4)
+
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, functions, nil, nil}, nil, nil})
+
+      {:ok,
+       contract_pk: contract_pk,
+       from_pk: :crypto.strong_rand_bytes(32),
+       to_pk: :crypto.strong_rand_bytes(32),
+       next_hash: :crypto.strong_rand_bytes(32)}
+    end
+
+    test "runs the balance dry-runs before the commit and drops them after it", ctx do
+      %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hash: next_hash} = ctx
+
+      with_mocks aex9_sync_mocks(ctx, fn _account_pk -> :ok end) do
+        sync(db_sync_data())
+      end
+
+      assert [[{:ok, 10}, {:ok, 10}]] = received(:cached_at_commit)
+      assert Enum.sort([from_pk, to_pk]) == Enum.sort(received(:dry_run))
+
+      for account_pk <- [from_pk, to_pk] do
+        assert :not_found =
+                 Aex9AccountBalancesCache.get(contract_pk, {1_000, 0}, next_hash, account_pk)
+      end
+    end
+
+    @tag :capture_log
+    test "leaves a dry-run that fails to the commit", %{to_pk: to_pk} = ctx do
+      with_mocks aex9_sync_mocks(ctx, fn
+                   ^to_pk -> raise "dry-run crashed"
+                   _account_pk -> :ok
+                 end) do
+        sync(db_sync_data())
+      end
+
+      assert [[{:ok, 10}, :not_found]] = received(:cached_at_commit)
+    end
+
+    test "runs no dry-run before the commit with a concurrency of 1", ctx do
+      Application.put_env(:ae_mdw, :sync_concurrency, 1)
+
+      with_mocks aex9_sync_mocks(ctx, fn _account_pk -> :ok end) do
+        sync(db_sync_data())
+      end
+
+      assert [[:not_found, :not_found]] = received(:cached_at_commit)
+      assert [] == received(:dry_run)
+    end
+  end
+
   describe "mem sync rebuilding the overlay" do
     setup do
       :persistent_term.put(:global_state, state_at(1_005))
@@ -222,7 +287,47 @@ defmodule AeMdw.Sync.ServerTest do
     result
   end
 
-  defp sync_mocks(gens) do
+  # One generation with an aex9 transfer from from_pk to to_pk in its first
+  # micro block. The commit reports which balances are cached at that point.
+  defp aex9_sync_mocks(ctx, dry_run_result) do
+    %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hash: next_hash} = ctx
+    test_pid = self()
+    kb_hash = :crypto.strong_rand_bytes(32)
+    transfer_hash = :aec_hash.blake2b_256_hash("Transfer")
+    log = {contract_pk, [transfer_hash, from_pk, to_pk, <<5::256>>], ""}
+    call_rec = ContractCallFixtures.call_rec("logs", contract_pk, 1_000, nil, [log])
+    fun_arg_res = %{arguments: [], function: "transfer", result: %{type: :unit, value: ""}}
+    call_mutation = ContractCallMutation.new(contract_pk, 1, fun_arg_res, call_rec)
+
+    gen_mutations = fn gen ->
+      {height, [{block_index, micro_block, mutations} | blocks_mutations]} = gen_mutations(gen)
+
+      {height, [{block_index, micro_block, [call_mutation | mutations]} | blocks_mutations]}
+    end
+
+    on_commit = fn ->
+      cached =
+        Enum.map([from_pk, to_pk], fn account_pk ->
+          Aex9AccountBalancesCache.get(contract_pk, {1_000, 0}, next_hash, account_pk)
+        end)
+
+      send(test_pid, {:cached_at_commit, cached})
+    end
+
+    [
+      {Db, [:passthrough],
+       get_key_block_hash: fn 1_001 -> kb_hash end,
+       get_next_hash: fn ^kb_hash, 0 -> next_hash end,
+       aex9_balance: fn ^contract_pk, account_pk, height_hash ->
+         send(test_pid, {:dry_run, account_pk})
+         :ok = dry_run_result.(account_pk)
+         {:ok, {10, height_hash}}
+       end}
+      | sync_mocks([generation(1_000, 2)], gen_mutations, on_commit)
+    ]
+  end
+
+  defp sync_mocks(gens, gen_mutations \\ &gen_mutations/1, on_commit \\ fn -> :ok end) do
     test_pid = self()
 
     [
@@ -230,7 +335,7 @@ defmodule AeMdw.Sync.ServerTest do
        blocks_mutations: fn _from_height, _from_mbi, _from_txi, _to, _use_cache? ->
          # Like the real stream, builds the generation again on every traversal.
          gens
-         |> Enum.map(&gen_mutations/1)
+         |> Enum.map(gen_mutations)
          |> Stream.map(fn {height, _blocks_mutations} = gen ->
            send(test_pid, {:built, height})
            gen
@@ -239,6 +344,7 @@ defmodule AeMdw.Sync.ServerTest do
       {State, [:passthrough],
        create_mem_state: fn -> state_at(nil) end,
        commit_db: fn state, mutations, _clear_mem? ->
+         on_commit.()
          send(test_pid, {:committed, mutations})
          state
        end,
