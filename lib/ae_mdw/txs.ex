@@ -428,10 +428,7 @@ defmodule AeMdw.Txs do
       end
 
     Enum.flat_map(intersection_of_tx_types, fn tx_type ->
-      {min_account_id, min_fields} =
-        Enum.min_by(ids_fields, fn {id, fields} ->
-          count_txs_for_account(state, id, fields, tx_type)
-        end)
+      {min_account_id, min_fields} = min_txs_account(state, ids_fields, tx_type)
 
       rest_accounts = Enum.reject(ids_fields, &match?({^min_account_id, ^min_fields}, &1))
 
@@ -447,6 +444,14 @@ defmodule AeMdw.Txs do
         |> Stream.map(extract_txi)
         |> Stream.filter(&all_accounts_have_tx?(state, tx_type, &1, rest_accounts))
       end)
+    end)
+  end
+
+  defp min_txs_account(_state, [id_fields], _tx_type), do: id_fields
+
+  defp min_txs_account(state, ids_fields, tx_type) do
+    Enum.min_by(ids_fields, fn {id, fields} ->
+      count_txs_for_account(state, id, fields, tx_type)
     end)
   end
 
