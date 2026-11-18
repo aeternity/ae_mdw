@@ -1,147 +1,152 @@
 defmodule AeMdw.Db.Sync.ObjectKeys do
   @moduledoc """
-  Counts active and inactive names and oracles.
+  Counts active and inactive names and oracles, and contracts.
 
-  Persisted initial keys are loaded by staged parallel tasks for faster loading.
-
-  It deduplicates new on memory compared with persisted keys and the counting itself
-  is performed in constant time by table sizes.
+  Writes to the name and oracle tables go through put/3 and delete/3, which keep
+  each table's count in Model.Stat. The counts are recounted at startup when the
+  last synced generation didn't record them.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Sync.SyncingQueue
+  alias AeMdw.Txs
 
-  import AeMdw.Util, only: [max_name_bin: 0, max_256bit_bin: 0, max_int: 0]
+  import AeMdw.Util, only: [max_256bit_bin: 0, max_int: 0]
 
-  require Logger
   require Model
 
-  @typep pubkey :: Db.pubkey()
+  @type table() ::
+          Model.ActiveName | Model.InactiveName | Model.ActiveOracle | Model.InactiveOracle
 
-  # commited keys
-  @active_names_table :db_active_names
-  @active_oracles_table :db_active_oracles
-  @inactive_names_table :db_inactive_names
-  @inactive_oracles_table :db_inactive_oracles
-
-  @store_tables %{
-    @active_names_table => Model.ActiveName,
-    @inactive_names_table => Model.InactiveName,
-    @active_oracles_table => Model.ActiveOracle,
-    @inactive_oracles_table => Model.InactiveOracle
+  @count_keys %{
+    Model.ActiveName => :active_names_count,
+    Model.InactiveName => :inactive_names_count,
+    Model.ActiveOracle => :active_oracles_count,
+    Model.InactiveOracle => :inactive_oracles_count
   }
 
-  @name_halves [
-    {"", "g" <> max_name_bin()},
-    {"h", max_name_bin()}
-  ]
-
-  @oracle_halves [
-    {<<0::256>>, <<trunc(:math.pow(2, 128))::256>>},
-    {<<trunc(:math.pow(2, 128)) + 1::256>>, max_256bit_bin()}
-  ]
-
-  @opts [:named_table, :set, :public]
+  @counted_at_key :object_counts_at
 
   @spec load() :: :ok
   def load do
-    _tid1 = :ets.new(@active_names_table, @opts)
-    _tid2 = :ets.new(@inactive_names_table, @opts)
-    _tid3 = :ets.new(@active_oracles_table, @opts)
-    _tid4 = :ets.new(@inactive_oracles_table, @opts)
-
-    [
-      load_tables_fns(@oracle_halves, @active_oracles_table, @inactive_oracles_table),
-      load_tables_fns(@name_halves, @active_names_table, @inactive_names_table)
-    ]
-    |> List.flatten()
-    |> Enum.each(&SyncingQueue.push/1)
+    SyncingQueue.push(fn ->
+      _state = recount_if_stale(State.new())
+      :ok
+    end)
   end
 
-  @spec put_active_name(State.t(), String.t()) :: :ok
-  def put_active_name(state, name) do
-    if not State.has_memory_store?(state) do
-      put(@active_names_table, name)
-      del(@inactive_names_table, name)
+  @doc """
+  Recounts the tables unless the last synced generation recorded the counts.
+  Runs before syncing starts.
+  """
+  @spec recount_if_stale(State.t()) :: State.t()
+  def recount_if_stale(state) do
+    counted_at = synced_at(state)
+
+    case State.get(state, Model.Stat, @counted_at_key) do
+      {:ok, Model.stat(payload: ^counted_at)} ->
+        state
+
+      _stale_or_not_found ->
+        {time, state} =
+          :timer.tc(fn ->
+            Enum.reduce(@count_keys, state, fn {table, count_key}, state ->
+              State.put(
+                state,
+                Model.Stat,
+                Model.stat(index: count_key, payload: State.count_keys(state, table))
+              )
+            end)
+          end)
+
+        Log.info("[object_keys] recounted names and oracles in #{div(time, 1_000)}ms")
+
+        State.put(state, Model.Stat, Model.stat(index: @counted_at_key, payload: counted_at))
     end
-
-    :ok
   end
 
-  @spec put_inactive_name(State.t(), String.t()) :: :ok
-  def put_inactive_name(state, name) do
-    if not State.has_memory_store?(state) do
-      put(@inactive_names_table, name)
-      del(@active_names_table, name)
+  @doc """
+  Records that the counts are up to date at the end of this generation.
+  """
+  @spec put_counted_at(State.t(), Blocks.height(), Txs.txi()) :: State.t()
+  def put_counted_at(state, height, next_txi),
+    do:
+      State.put(
+        state,
+        Model.Stat,
+        Model.stat(index: @counted_at_key, payload: {height, next_txi})
+      )
+
+  @spec put(State.t(), table(), Model.name() | Model.oracle()) :: State.t()
+  def put(state, table, record) do
+    if State.exists?(state, table, elem(record, 1)) do
+      State.put(state, table, record)
+    else
+      state
+      |> update_count(table, 1)
+      |> State.put(table, record)
     end
-
-    :ok
   end
 
-  @spec put_active_oracle(State.t(), pubkey()) :: :ok
-  def put_active_oracle(state, oracle) do
-    if not State.has_memory_store?(state) do
-      put(@active_oracles_table, oracle)
-      del(@inactive_oracles_table, oracle)
+  @spec delete(State.t(), table(), Db.pubkey() | String.t()) :: State.t()
+  def delete(state, table, key) do
+    if State.exists?(state, table, key) do
+      state
+      |> update_count(table, -1)
+      |> State.delete(table, key)
+    else
+      State.delete(state, table, key)
     end
-
-    :ok
   end
 
-  @spec put_inactive_oracle(State.t(), pubkey()) :: :ok
-  def put_inactive_oracle(state, oracle) do
-    if not State.has_memory_store?(state) do
-      put(@inactive_oracles_table, oracle)
-      del(@active_oracles_table, oracle)
+  @spec count(State.t(), table()) :: non_neg_integer()
+  def count(state, table) do
+    case State.get(state, Model.Stat, Map.fetch!(@count_keys, table)) do
+      {:ok, Model.stat(payload: count)} -> count
+      :not_found -> 0
     end
-
-    :ok
   end
-
-  @spec count_active_names(State.t()) :: non_neg_integer()
-  def count_active_names(state), do: count(state, @active_names_table)
-
-  @spec count_inactive_names(State.t()) :: non_neg_integer()
-  def count_inactive_names(state), do: count(state, @inactive_names_table)
-
-  @spec count_active_oracles(State.t()) :: non_neg_integer()
-  def count_active_oracles(state), do: count(state, @active_oracles_table)
-
-  @spec count_inactive_oracles(State.t()) :: non_neg_integer()
-  def count_inactive_oracles(state), do: count(state, @inactive_oracles_table)
 
   @spec count_contracts(State.t()) :: non_neg_integer()
   def count_contracts(state) do
     memory_only_keys =
-      state
-      |> list_mem_keys(Model.Origin)
-      |> Enum.count()
+      if State.has_memory_store?(state) do
+        state
+        |> State.without_fallback()
+        |> stream_origin_pubkeys()
+        |> Enum.count()
+      else
+        0
+      end
 
     memory_only_keys + db_contracts_count()
   end
 
-  defp put(table, key) do
-    :ets.insert(table, {key})
+  defp update_count(state, table, delta) do
+    count_key = Map.fetch!(@count_keys, table)
+
+    State.update(
+      state,
+      Model.Stat,
+      count_key,
+      fn Model.stat(payload: count) = stat -> Model.stat(stat, payload: count + delta) end,
+      Model.stat(index: count_key, payload: 0)
+    )
   end
 
-  defp del(table, key) do
-    :ets.delete(table, key)
-  end
+  defp synced_at(state) do
+    next_txi =
+      case State.prev(state, Model.Tx, nil) do
+        {:ok, txi} -> txi + 1
+        :none -> 0
+      end
 
-  defp count(state, table) do
-    model_table = @store_tables[table]
-
-    memory_only_keys =
-      state
-      |> list_mem_keys(model_table)
-      |> Enum.count(&(not :ets.member(table, &1)))
-
-    commited_keys = :ets.info(table, :size)
-
-    memory_only_keys + commited_keys
+    {State.height(state), next_txi}
   end
 
   defp db_contracts_count() do
@@ -158,17 +163,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     end
   end
 
-  defp list_mem_keys(state, table) do
-    if State.has_memory_store?(state) do
-      state
-      |> State.without_fallback()
-      |> stream_all_keys(table)
-    else
-      []
-    end
-  end
-
-  defp stream_all_keys(state, Model.Origin) do
+  defp stream_origin_pubkeys(state) do
     [:contract_create_tx, :contract_call_tx, :ga_attach_tx]
     |> Enum.map(fn tx_type ->
       key_boundary = {{tx_type, <<>>, 0}, {tx_type, max_256bit_bin(), max_int()}}
@@ -176,27 +171,5 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     end)
     |> Collection.merge(:forward)
     |> Stream.map(fn {_type, pubkey, _txi} -> pubkey end)
-  end
-
-  defp stream_all_keys(state, table), do: Collection.stream(state, table, nil)
-
-  defp load_tables_fns(key_boundaries, active_table, inactive_table) do
-    state = State.new()
-
-    key_boundaries
-    |> Enum.flat_map(&[{active_table, &1}, {inactive_table, &1}])
-    |> Enum.map(fn {table, key_boundary} ->
-      fn -> load_records(state, table, key_boundary) end
-    end)
-  end
-
-  defp load_records(state, table, key_boundary) do
-    records =
-      state
-      |> Collection.stream(@store_tables[table], key_boundary)
-      |> Enum.map(&{&1})
-
-    :ets.insert(table, records)
-    :ok
   end
 end

@@ -39,7 +39,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
     state =
       store
-      |> Store.put(Model.InactiveName, inactive_name)
+      |> put_counted(Model.InactiveName, inactive_name)
       |> Store.put(Model.InactiveNameExpiration, Model.expiration(index: {199, plain_name}))
       |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
       |> Store.put(
@@ -78,6 +78,9 @@ defmodule AeMdw.Db.NameClaimMutationTest do
                Model.ActiveNameOwnerDeactivation,
                {new_owner_pk, expire, plain_name}
              )
+
+      assert 1 == Sync.ObjectKeys.count(state, Model.ActiveName)
+      assert 0 == Sync.ObjectKeys.count(state, Model.InactiveName)
     end
   end
 
