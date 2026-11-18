@@ -35,8 +35,6 @@ defmodule AeMdw.Db.NameRevokeMutation do
       ) do
     plain_name = Name.plain_name!(state, name_hash)
 
-    Sync.ObjectKeys.put_inactive_name(state, plain_name)
-
     Sync.Name.revoke(state, plain_name, txi_idx, block_index)
   end
 end

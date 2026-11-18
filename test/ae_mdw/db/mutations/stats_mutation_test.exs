@@ -272,6 +272,7 @@ defmodule AeMdw.Db.StatsMutationTest do
           Model.origin(index: {:contract_create_tx, :crypto.strong_rand_bytes(32), 1_003})
         )
         |> State.new()
+        |> ObjectKeys.recount_if_stale()
 
       expected_delta =
         Model.delta_stat(
@@ -289,10 +290,10 @@ defmodule AeMdw.Db.StatsMutationTest do
         Model.total_stat(
           index: height + 1,
           active_auctions: 2 + 1,
-          inactive_oracles: ObjectKeys.count_inactive_oracles(state),
-          active_oracles: ObjectKeys.count_active_oracles(state),
-          active_names: ObjectKeys.count_active_names(state),
-          inactive_names: ObjectKeys.count_inactive_names(state),
+          inactive_oracles: 7,
+          active_oracles: 6,
+          active_names: 5,
+          inactive_names: 4,
           contracts: 2
         )
 
@@ -379,6 +380,9 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:names_expired, 2)
         |> State.inc_stat(:names_revoked)
         |> State.inc_stat(:contracts_created)
+        |> ObjectKeys.put(Model.ActiveName, Model.name(index: "a1.chain"))
+        |> ObjectKeys.put(Model.ActiveName, Model.name(index: "a2.chain"))
+        |> ObjectKeys.put(Model.InactiveOracle, Model.oracle(index: <<1::256>>))
 
       mutation = StatsMutation.new(height, key_hash, 0, 0, 0, true, 123)
 
@@ -398,10 +402,10 @@ defmodule AeMdw.Db.StatsMutationTest do
         Model.total_stat(
           index: height + 1,
           contracts: 1,
-          inactive_oracles: ObjectKeys.count_inactive_oracles(state),
-          active_oracles: ObjectKeys.count_active_oracles(state),
-          active_names: ObjectKeys.count_active_names(state),
-          inactive_names: ObjectKeys.count_inactive_names(state)
+          inactive_oracles: 1,
+          active_oracles: 0,
+          active_names: 2,
+          inactive_names: 0
         )
 
       with_mocks [
@@ -427,6 +431,13 @@ defmodule AeMdw.Db.StatsMutationTest do
 
         assert expected_delta == State.fetch!(state, Model.DeltaStat, height)
         assert expected_total == State.fetch!(state, Model.TotalStat, height + 1)
+
+        # the generation is marked as counted, so no recount picks up this row
+        assert 2 ==
+                 state
+                 |> State.put(Model.ActiveName, Model.name(index: "uncounted.chain"))
+                 |> ObjectKeys.recount_if_stale()
+                 |> ObjectKeys.count(Model.ActiveName)
       end
     end
 

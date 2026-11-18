@@ -79,6 +79,7 @@ defmodule AeMdw.Db.StatsMutation do
     state
     |> State.put(Model.DeltaStat, m_delta_stat)
     |> State.put(Model.TotalStat, m_total_stat)
+    |> ObjectKeys.put_counted_at(height, next_txi)
     |> State.update(Model.Stat, Stats.max_tps_key(), fn
       Model.stat(payload: {max_tps, _tps_block_hash}) = stat ->
         if tps >= max_tps do
@@ -232,10 +233,10 @@ defmodule AeMdw.Db.StatsMutation do
       dev_reward: prev_dev_reward + inc_dev_reward,
       total_supply: prev_total_supply + token_supply_delta + inc_block_reward + inc_dev_reward,
       active_auctions: max(0, prev_active_auctions + auctions_started - auctions_expired),
-      active_names: ObjectKeys.count_active_names(state),
-      inactive_names: ObjectKeys.count_inactive_names(state),
-      active_oracles: ObjectKeys.count_active_oracles(state),
-      inactive_oracles: ObjectKeys.count_inactive_oracles(state),
+      active_names: ObjectKeys.count(state, Model.ActiveName),
+      inactive_names: ObjectKeys.count(state, Model.InactiveName),
+      active_oracles: ObjectKeys.count(state, Model.ActiveOracle),
+      inactive_oracles: ObjectKeys.count(state, Model.InactiveOracle),
       contracts: prev_contracts + contracts_created,
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,

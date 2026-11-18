@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.Store
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.TestSamples, as: TS
 
@@ -27,7 +28,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
 
       store =
         store
-        |> Store.put(Model.ActiveOracle, m_oracle)
+        |> put_counted(Model.ActiveOracle, m_oracle)
         |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: {sync_height, pubkey}))
 
       mutation = OraclesExpirationMutation.new(sync_height)
@@ -39,6 +40,28 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
 
       assert {:ok, Model.expiration(index: {^sync_height, ^pubkey})} =
                Store.get(store, Model.InactiveOracleExpiration, {sync_height, pubkey})
+
+      assert 0 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 1 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
+    end
+
+    test "ignores a stale expiration of an active oracle", %{store: store} do
+      pubkey = <<123_454::256>>
+      sync_height = 10_000
+      expire = sync_height + 10
+
+      m_oracle = Model.oracle(index: pubkey, expire: expire)
+
+      store =
+        store
+        |> put_counted(Model.ActiveOracle, m_oracle)
+        |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: {sync_height, pubkey}))
+        |> change_store([OraclesExpirationMutation.new(sync_height)])
+
+      assert {:ok, ^m_oracle} = Store.get(store, Model.ActiveOracle, pubkey)
+      assert :not_found = Store.get(store, Model.InactiveOracle, pubkey)
+      assert 1 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 0 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
     end
 
     test "does nothing when oracle has not expired yet",

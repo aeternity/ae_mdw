@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -38,7 +39,7 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
 
       store =
         store
-        |> Store.put(Model.ActiveOracle, m_previous)
+        |> put_counted(Model.ActiveOracle, m_previous)
         |> Store.put(
           Model.ActiveOracleExpiration,
           Model.expiration(index: {old_expire, pubkey})
@@ -58,6 +59,8 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
                Store.get(store, Model.ActiveOracleExpiration, {new_expire, pubkey})
 
       assert :not_found = Store.get(store, Model.ActiveOracleExpiration, {old_expire, pubkey})
+      assert 1 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 0 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
     end
 
     test "reactivates an inactive oracle", %{store: store} do
@@ -90,7 +93,7 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
 
       store =
         store
-        |> Store.put(Model.InactiveOracle, m_previous)
+        |> put_counted(Model.InactiveOracle, m_previous)
         |> Store.put(
           Model.InactiveOracleExpiration,
           Model.expiration(index: {old_expire, pubkey})
@@ -111,6 +114,9 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
 
       assert {:ok, Model.expiration(index: {^new_expire, ^pubkey})} =
                Store.get(store, Model.ActiveOracleExpiration, {new_expire, pubkey})
+
+      assert 1 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 0 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
     end
 
     test "registers a new oracle", %{store: store} do
@@ -146,6 +152,9 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
 
       assert {:ok, Model.expiration(index: {^new_expire, ^pubkey})} =
                Store.get(store, Model.ActiveOracleExpiration, {new_expire, pubkey})
+
+      assert 1 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 0 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
     end
   end
 end

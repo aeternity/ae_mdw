@@ -8,6 +8,7 @@ defmodule AeMdw.TestUtil do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Error.Input, as: ErrInput
   alias Plug.Conn
@@ -56,6 +57,18 @@ defmodule AeMdw.TestUtil do
       end)
 
     Enum.each(store2.tables, &Database.exists?(elem(&1, 0), nil))
+
+    store2
+  end
+
+  @spec put_counted(
+          MemStore.t(),
+          ObjectKeys.table(),
+          AeMdw.Db.Model.name() | AeMdw.Db.Model.oracle()
+        ) ::
+          MemStore.t()
+  def put_counted(store, table, record) do
+    %{store: store2} = store |> State.new() |> ObjectKeys.put(table, record)
 
     store2
   end

@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Sync.NameTest do
   alias AeMdw.Db.Store
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Name
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Node.Db
@@ -302,6 +303,9 @@ defmodule AeMdw.Db.Sync.NameTest do
                Model.ActiveNameOwnerDeactivation,
                {old_owner, expire, plain_name}
              )
+
+      assert 1 == ObjectKeys.count(state, Model.ActiveName)
+      assert 0 == ObjectKeys.count(state, Model.InactiveName)
     end
   end
 
@@ -322,7 +326,7 @@ defmodule AeMdw.Db.Sync.NameTest do
 
       state =
         empty_store()
-        |> Store.put(Model.ActiveName, name)
+        |> put_counted(Model.ActiveName, name)
         |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
         |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
         |> State.new()
@@ -340,6 +344,9 @@ defmodule AeMdw.Db.Sync.NameTest do
                Model.ActiveNameOwnerDeactivation,
                {owner, new_expire, plain_name}
              )
+
+      assert 1 == ObjectKeys.count(state, Model.ActiveName)
+      assert 0 == ObjectKeys.count(state, Model.InactiveName)
     end
   end
 
@@ -392,6 +399,9 @@ defmodule AeMdw.Db.Sync.NameTest do
                Model.InactiveNameOwnerDeactivation,
                {owner_pk, revoke_height, plain_name}
              )
+
+      assert 0 == ObjectKeys.count(state, Model.ActiveName)
+      assert 1 == ObjectKeys.count(state, Model.InactiveName)
     end
   end
 
@@ -449,6 +459,9 @@ defmodule AeMdw.Db.Sync.NameTest do
         refute State.exists?(state, Model.AuctionBidClaim, {plain_name, height, txi_idx1})
         assert State.exists?(state, Model.NameClaim, {plain_name, height, txi_idx2})
         refute State.exists?(state, Model.AuctionBidClaim, {plain_name, height, txi_idx2})
+
+        assert 1 == ObjectKeys.count(state, Model.ActiveName)
+        assert 0 == ObjectKeys.count(state, Model.InactiveName)
       end
     end
   end
@@ -480,6 +493,8 @@ defmodule AeMdw.Db.Sync.NameTest do
       state2 = Name.deactivate_name(state2, expire, expire, m_name, :names_expired)
 
       assert_same(state1, state2)
+      assert 0 == ObjectKeys.count(state1, Model.ActiveName)
+      assert 1 == ObjectKeys.count(state1, Model.InactiveName)
     end
   end
 

@@ -12,6 +12,7 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Node
   alias AeMdw.Txs
@@ -72,7 +73,7 @@ defmodule AeMdw.Db.Sync.Oracle do
   @spec delete_inactive(state(), Model.oracle()) :: state()
   def delete_inactive(state, Model.oracle(index: pubkey, expire: height)) do
     state
-    |> State.delete(Model.InactiveOracle, pubkey)
+    |> ObjectKeys.delete(Model.InactiveOracle, pubkey)
     |> State.delete(Model.InactiveOracleExpiration, {height, pubkey})
   end
 
@@ -81,9 +82,9 @@ defmodule AeMdw.Db.Sync.Oracle do
     m_exp = Model.expiration(index: {height, pubkey})
 
     state
-    |> State.put(Model.InactiveOracle, m_oracle)
+    |> ObjectKeys.put(Model.InactiveOracle, m_oracle)
     |> State.put(Model.InactiveOracleExpiration, m_exp)
-    |> State.delete(Model.ActiveOracle, pubkey)
+    |> ObjectKeys.delete(Model.ActiveOracle, pubkey)
     |> State.delete(Model.ActiveOracleExpiration, {height, pubkey})
     |> State.inc_stat(:oracles_expired)
   end
@@ -93,7 +94,7 @@ defmodule AeMdw.Db.Sync.Oracle do
     m_exp = Model.expiration(index: {height, pubkey})
 
     state
-    |> State.put(Model.ActiveOracle, m_oracle)
+    |> ObjectKeys.put(Model.ActiveOracle, m_oracle)
     |> State.put(Model.ActiveOracleExpiration, m_exp)
     |> State.inc_stat(:oracles_registered)
   end
