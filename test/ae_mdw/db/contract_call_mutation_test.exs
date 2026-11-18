@@ -2,11 +2,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.Aex9
+  alias AeMdw.Collection
   alias AeMdw.Contract
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.EtsCache
@@ -1891,6 +1894,266 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
+  describe "execute/2 with the last refresh blocks of the generation" do
+    test "skips the dry-run of an account that a later block refreshes" do
+      [ct_pk, other_pk] = put_contracts([:aex9, :aex9])
+      [from_pk, to_pk] = Enum.map(1..2, fn _i -> :crypto.strong_rand_bytes(32) end)
+
+      call_rec =
+        call_rec("logs", ct_pk, 1, nil, [
+          {ct_pk, [aexn_event_hash(:transfer), from_pk, to_pk, <<1_000::256>>], ""}
+        ])
+
+      both = Enum.sort([{ct_pk, from_pk}, {ct_pk, to_pk}])
+
+      scenarios = [
+        {fn {kbi, mbi} -> %{{ct_pk, from_pk} => {kbi, mbi + 1}, {ct_pk, to_pk} => {kbi, mbi}} end,
+         [{ct_pk, to_pk}]},
+        {fn {kbi, mbi} -> %{{ct_pk, from_pk} => {kbi, mbi + 1}, {ct_pk, to_pk} => {kbi, 2}} end,
+         []},
+        {fn {kbi, mbi} -> %{{ct_pk, from_pk} => {kbi, mbi}, {ct_pk, to_pk} => {kbi - 1, 9}} end,
+         both},
+        {fn {kbi, mbi} -> %{{other_pk, from_pk} => {kbi, mbi + 1}} end, both},
+        {fn _block_index -> %{} end, both}
+      ]
+
+      for {last_refresh_blocks, expected} <- scenarios do
+        assert expected ==
+                 dry_run_accounts(ct_pk, call_rec, [ct_pk],
+                   last_refresh_blocks: last_refresh_blocks
+                 )
+      end
+    end
+
+    test "stores the same aex9 state as refreshing the accounts in every block" do
+      [old_pk, new_pk] = put_contracts([:aex9, :aex9])
+      [a_pk, b_pk, c_pk, d_pk, e_pk] = Enum.map(1..5, fn _i -> :crypto.strong_rand_bytes(32) end)
+      kbi = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      [old_create_txi, new_create_txi, txi0, new_txi0, txi1, txi2, old_txi2] =
+        Enum.map(0..6, &(txi + &1))
+
+      transfer = aexn_event_hash(:transfer)
+
+      # new_pk is created in the first micro block, old_pk holds 100 for a_pk before
+      calls = [
+        {0, txi0, old_pk, [{old_pk, [transfer, a_pk, b_pk, <<40::256>>], ""}]},
+        {0, new_txi0, new_pk,
+         [
+           {new_pk, [transfer, a_pk, b_pk, <<5::256>>], ""},
+           {new_pk, [aexn_event_hash(:mint), c_pk, <<10::256>>], ""}
+         ]},
+        {1, txi1, new_pk,
+         [
+           {new_pk, [transfer, b_pk, a_pk, <<3::256>>], ""},
+           {new_pk, [transfer, c_pk, c_pk, <<1::256>>], ""}
+         ]},
+        {2, txi2, new_pk,
+         [
+           {new_pk, [aexn_event_hash(:burn), a_pk, <<50::256>>], ""},
+           {new_pk, [transfer, b_pk, d_pk, <<2::256>>], ""}
+         ]},
+        {2, old_txi2, old_pk, [{old_pk, [transfer, b_pk, a_pk, <<40::256>>], ""}]}
+      ]
+
+      # the balances at the end of each micro block
+      balances = %{
+        old_pk => %{0 => %{a_pk => 60, b_pk => 40}, 2 => %{a_pk => 100, b_pk => 0}},
+        new_pk => %{
+          0 => %{a_pk => 95, b_pk => 5, c_pk => 10, e_pk => 7},
+          1 => %{a_pk => 98, b_pk => 2, c_pk => 10, e_pk => 7},
+          2 => %{a_pk => 48, b_pk => 0, c_pk => 10, d_pk => 2, e_pk => 7}
+        }
+      }
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, old_pk, old_create_txi)
+        |> State.cache_put(:ct_create_sync_cache, new_pk, new_create_txi)
+        |> DbContract.aex9_init_event_balances(old_pk, [{a_pk, 100}], old_create_txi)
+
+      state =
+        Enum.reduce(calls, state, fn {mbi, call_txi, _ct_pk, _logs}, state ->
+          State.put(state, Model.Tx, Model.tx(index: call_txi, block_index: {kbi, mbi}, time: 1))
+        end)
+
+      blocks_mutations =
+        calls
+        |> Enum.group_by(&elem(&1, 0), fn {_mbi, call_txi, ct_pk, logs} ->
+          fun_arg_res = %{arguments: [], function: "any", result: %{type: :unit, value: ""}}
+          call_rec = call_rec("logs", ct_pk, kbi, nil, logs)
+
+          ContractCallMutation.new(ct_pk, call_txi, fun_arg_res, call_rec)
+        end)
+        |> Enum.sort()
+        |> Enum.map(fn
+          {0, mutations} ->
+            create_mutation =
+              AexnCreateContractMutation.new(
+                :aex9,
+                new_pk,
+                {"Token", "TKN", 18},
+                {kbi, 0},
+                {new_create_txi, -1},
+                []
+              )
+
+            {{kbi, 0}, [create_mutation | mutations]}
+
+          {mbi, mutations} ->
+            {{kbi, mbi}, mutations}
+        end)
+
+      {every_block_state, every_block_dry_runs} =
+        execute_generation(state, kbi, blocks_mutations, balances, false)
+
+      {last_block_state, last_block_dry_runs} =
+        execute_generation(state, kbi, blocks_mutations, balances, true)
+
+      assert length(every_block_dry_runs) == 13
+
+      assert Enum.sort(last_block_dry_runs) ==
+               Enum.sort([
+                 {old_pk, a_pk, 2},
+                 {old_pk, b_pk, 2},
+                 {new_pk, a_pk, 2},
+                 {new_pk, b_pk, 2},
+                 {new_pk, c_pk, 1},
+                 {new_pk, d_pk, 2}
+               ])
+
+      for table <- Model.tables() do
+        assert all_records(last_block_state, table) == all_records(every_block_state, table),
+               inspect(table)
+      end
+
+      assert {:ok, Model.aex9_event_balance(txi: ^txi2, amount: 48)} =
+               State.get(last_block_state, Model.Aex9EventBalance, {new_pk, a_pk})
+
+      assert {:ok, Model.aex9_event_balance(txi: ^txi1, amount: 10)} =
+               State.get(last_block_state, Model.Aex9EventBalance, {new_pk, c_pk})
+
+      assert {:ok, Model.aex9_event_balance(amount: 7)} =
+               State.get(last_block_state, Model.Aex9EventBalance, {new_pk, e_pk})
+
+      assert 4 = Stats.fetch_aex9_holders_count(last_block_state, new_pk)
+      assert 1 = Stats.fetch_aex9_holders_count(last_block_state, old_pk)
+    end
+
+    @tag :capture_log
+    test "when the last dry-run fails, keeps the balance from before the generation or the block before" do
+      [ct_pk] = put_contracts([:aex9])
+      account_pk = :crypto.strong_rand_bytes(32)
+      kbi = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+      [create_txi, txi0, txi1] = Enum.map(0..2, &(txi + &1))
+      fun_arg_res = %{arguments: [], function: "burn", result: %{type: :unit, value: ""}}
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, ct_pk, create_txi)
+        |> DbContract.aex9_init_event_balances(ct_pk, [{account_pk, 100}], create_txi)
+
+      burns = [{0, txi0, 40}, {1, txi1, 10}]
+
+      {blocks_mutations, state} =
+        Enum.map_reduce(burns, state, fn {mbi, call_txi, amount}, state ->
+          log = {ct_pk, [aexn_event_hash(:burn), account_pk, <<amount::256>>], ""}
+          call_rec = call_rec("logs", ct_pk, kbi, nil, [log])
+          mutation = ContractCallMutation.new(ct_pk, call_txi, fun_arg_res, call_rec)
+          tx = Model.tx(index: call_txi, block_index: {kbi, mbi}, time: 1)
+
+          {{{kbi, mbi}, [mutation]}, State.put(state, Model.Tx, tx)}
+        end)
+
+      balances = %{ct_pk => %{0 => %{account_pk => 60}, 1 => %{account_pk => :error}}}
+
+      {planned_state, planned_dry_runs} =
+        execute_generation(state, kbi, blocks_mutations, balances, true)
+
+      assert [{ct_pk, account_pk, 1}] == planned_dry_runs
+
+      assert {:ok, Model.aex9_event_balance(txi: ^create_txi, amount: 100)} =
+               State.get(planned_state, Model.Aex9EventBalance, {ct_pk, account_pk})
+
+      # db sync drops the entry when the dry-run fails before the commit
+      {state, dry_runs} = execute_generation(state, kbi, blocks_mutations, balances, false)
+
+      assert [{ct_pk, account_pk, 0}, {ct_pk, account_pk, 1}] == Enum.sort(dry_runs)
+
+      assert {:ok, Model.aex9_event_balance(txi: ^txi0, amount: 60)} =
+               State.get(state, Model.Aex9EventBalance, {ct_pk, account_pk})
+    end
+  end
+
+  # executes the micro blocks' mutations like db sync, with or without the last
+  # refresh blocks, and returns the state and the dry-runs {contract_pk, account_pk, mbi}.
+  # A balance of :error fails its dry-run.
+  defp execute_generation(state, kbi, blocks_mutations, balances, last_refresh_blocks?) do
+    test_pid = self()
+    next_height = kbi + 1
+    kb_hash = :crypto.strong_rand_bytes(32)
+    # new hashes on every run, so that no run gets the cached balances of another
+    next_hashes = Map.new(0..2, &{&1, :crypto.strong_rand_bytes(32)})
+    mbis = Map.new(next_hashes, fn {mbi, next_hash} -> {next_hash, mbi} end)
+
+    with_mocks [
+      {AeMdw.Node.Db, [:passthrough],
+       [
+         get_key_block_hash: fn ^next_height -> kb_hash end,
+         get_next_hash: fn ^kb_hash, mbi -> Map.fetch!(next_hashes, mbi) end,
+         aex9_balance: fn ct_pk, account_pk, {:micro, ^kbi, next_hash} = height_hash ->
+           mbi = Map.fetch!(mbis, next_hash)
+           send(test_pid, {:dry_run, {ct_pk, account_pk, mbi}})
+
+           case balances |> Map.fetch!(ct_pk) |> Map.fetch!(mbi) |> Map.get(account_pk) do
+             :error -> {:error, :dry_run_error}
+             amount -> {:ok, {amount, height_hash}}
+           end
+         end,
+         aex9_balances: fn ct_pk, {:micro, ^kbi, next_hash} ->
+           amounts = balances |> Map.fetch!(ct_pk) |> Map.fetch!(Map.fetch!(mbis, next_hash))
+
+           {:ok,
+            Map.new(amounts, fn {account_pk, amount} -> {{:address, account_pk}, amount} end)}
+         end
+       ]}
+    ] do
+      state =
+        if last_refresh_blocks? do
+          last_refresh_blocks =
+            blocks_mutations
+            |> Enum.map(fn {block_index, mutations} ->
+              {block_index,
+               Enum.flat_map(mutations, &List.wrap(ContractCallMutation.call_rec(&1)))}
+            end)
+            |> Aex9Balances.last_refresh_blocks()
+
+          DbContract.put_aex9_last_refresh_blocks(state, last_refresh_blocks)
+        else
+          state
+        end
+
+      state =
+        blocks_mutations
+        |> Enum.flat_map(&elem(&1, 1))
+        |> Enum.reduce(state, &Mutation.execute/2)
+
+      {state, received_dry_runs()}
+    end
+  end
+
+  defp all_records(state, table) do
+    state
+    |> Collection.stream(table, :forward, nil, nil)
+    |> Enum.map(&State.fetch!(state, table, &1))
+  end
+
   defp put_contracts(types) do
     Enum.map(types, fn type ->
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -1942,10 +2205,17 @@ defmodule AeMdw.Db.ContractCallMutationTest do
        ]}
     ] do
       if Keyword.get(opts, :prefetch?, false) do
-        _keys = Aex9Balances.prefetch_balances([{block_index, [call_rec]}], 4)
+        {_keys, []} =
+          [{block_index, [call_rec]}]
+          |> Aex9Balances.last_refresh_blocks()
+          |> Aex9Balances.prefetch_balances(4)
+
         # only the dry-runs of the execution count
         received_dry_runs()
       end
+
+      last_refresh_blocks = Keyword.get(opts, :last_refresh_blocks, fn _block_index -> %{} end)
+      state = DbContract.put_aex9_last_refresh_blocks(state, last_refresh_blocks.(block_index))
 
       contract_pk
       |> ContractCallMutation.new(call_txi, fun_arg_res, call_rec)

@@ -4041,7 +4041,7 @@ All env vars are read once at node startup from `config/runtime.exs`. Changing a
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WEALTH_RANK_SIZE` | `200` | Number of accounts tracked in the wealth-rank index. |
-| `MDW_SYNC_CONCURRENCY` | `8` | Node calls (event replays, AEX-9 balance dry-runs) that sync runs at the same time, at most the number of schedulers by default. `1` runs them one by one. |
+| `MDW_SYNC_CONCURRENCY` | `8` | Node calls (event replays, AEX-9 balance dry-runs) that sync runs at the same time, at most the number of schedulers by default. `1` runs them one by one. At any value, db sync dry-runs an account's balance only for the last micro block of the generation with an event for it. |
 
 ### Database
 

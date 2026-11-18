@@ -146,35 +146,58 @@ defmodule AeMdw.Sync.ServerTest do
        contract_pk: contract_pk,
        from_pk: :crypto.strong_rand_bytes(32),
        to_pk: :crypto.strong_rand_bytes(32),
-       next_hash: :crypto.strong_rand_bytes(32)}
+       next_hashes: %{0 => :crypto.strong_rand_bytes(32), 1 => :crypto.strong_rand_bytes(32)}}
     end
 
     test "runs the balance dry-runs before the commit and drops them after it", ctx do
-      %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hash: next_hash} = ctx
+      %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hashes: next_hashes} = ctx
 
       with_mocks aex9_sync_mocks(ctx, fn _account_pk -> :ok end) do
         sync(db_sync_data())
       end
 
       assert [[{:ok, 10}, {:ok, 10}]] = received(:cached_at_commit)
-      assert Enum.sort([from_pk, to_pk]) == Enum.sort(received(:dry_run))
+      assert Enum.sort([{from_pk, 0}, {to_pk, 0}]) == Enum.sort(received(:dry_run))
 
       for account_pk <- [from_pk, to_pk] do
         assert :not_found =
-                 Aex9AccountBalancesCache.get(contract_pk, {1_000, 0}, next_hash, account_pk)
+                 Aex9AccountBalancesCache.get(contract_pk, {1_000, 0}, next_hashes[0], account_pk)
       end
     end
 
-    @tag :capture_log
-    test "leaves a dry-run that fails to the commit", %{to_pk: to_pk} = ctx do
-      with_mocks aex9_sync_mocks(ctx, fn
-                   ^to_pk -> raise "dry-run crashed"
-                   _account_pk -> :ok
-                 end) do
+    test "dry-runs a balance only in the last block that refreshes it", ctx do
+      %{from_pk: from_pk, to_pk: to_pk} = ctx
+      other_pk = :crypto.strong_rand_bytes(32)
+      transfers = [{0, from_pk, to_pk}, {1, from_pk, other_pk}]
+
+      with_mocks aex9_sync_mocks(ctx, fn _account_pk -> :ok end, transfers) do
         sync(db_sync_data())
       end
 
-      assert [[{:ok, 10}, :not_found]] = received(:cached_at_commit)
+      assert [[:not_found, {:ok, 10}, {:ok, 10}, {:ok, 10}]] = received(:cached_at_commit)
+      assert Enum.sort([{to_pk, 0}, {from_pk, 1}, {other_pk, 1}]) == Enum.sort(received(:dry_run))
+
+      assert [%{from_pk => {1_000, 1}, to_pk => {1_000, 0}, other_pk => {1_000, 1}}] ==
+               received(:last_refresh_blocks_at_commit)
+    end
+
+    @tag :capture_log
+    test "leaves a dry-run that fails to the commit, refreshing the account in every block",
+         ctx do
+      %{from_pk: from_pk, to_pk: to_pk} = ctx
+      transfers = [{0, from_pk, to_pk}, {1, from_pk, to_pk}]
+
+      dry_run_result = fn
+        ^to_pk -> raise "dry-run crashed"
+        _account_pk -> :ok
+      end
+
+      with_mocks aex9_sync_mocks(ctx, dry_run_result, transfers) do
+        sync(db_sync_data())
+      end
+
+      assert [[:not_found, :not_found, {:ok, 10}, :not_found]] = received(:cached_at_commit)
+      assert [%{from_pk => {1_000, 1}}] == received(:last_refresh_blocks_at_commit)
     end
 
     test "runs no dry-run before the commit with a concurrency of 1", ctx do
@@ -186,6 +209,21 @@ defmodule AeMdw.Sync.ServerTest do
 
       assert [[:not_found, :not_found]] = received(:cached_at_commit)
       assert [] == received(:dry_run)
+    end
+
+    test "gets the last refresh blocks with a concurrency of 1 too", ctx do
+      %{from_pk: from_pk, to_pk: to_pk} = ctx
+      Application.put_env(:ae_mdw, :sync_concurrency, 1)
+      transfers = [{0, from_pk, to_pk}, {1, to_pk, from_pk}]
+
+      with_mocks aex9_sync_mocks(ctx, fn _account_pk -> :ok end, transfers) do
+        sync(db_sync_data())
+      end
+
+      assert [] == received(:dry_run)
+
+      assert [%{from_pk => {1_000, 1}, to_pk => {1_000, 1}}] ==
+               received(:last_refresh_blocks_at_commit)
     end
   end
 
@@ -287,39 +325,64 @@ defmodule AeMdw.Sync.ServerTest do
     result
   end
 
-  # One generation with an aex9 transfer from from_pk to to_pk in its first
-  # micro block. The commit reports which balances are cached at that point.
-  defp aex9_sync_mocks(ctx, dry_run_result) do
-    %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hash: next_hash} = ctx
+  # One generation of two micro blocks with aex9 transfers {mbi, from_pk, to_pk},
+  # by default one from from_pk to to_pk in the first micro block. The commit
+  # reports which balances are cached and which last refresh blocks the state
+  # holds at that point.
+  defp aex9_sync_mocks(ctx, dry_run_result, transfers \\ nil) do
+    %{contract_pk: contract_pk, from_pk: from_pk, to_pk: to_pk, next_hashes: next_hashes} = ctx
+    transfers = transfers || [{0, from_pk, to_pk}]
+    accounts = transfers |> Enum.flat_map(fn {_mbi, from, to} -> [from, to] end) |> Enum.uniq()
+    mbis = Map.new(next_hashes, fn {mbi, next_hash} -> {next_hash, mbi} end)
     test_pid = self()
     kb_hash = :crypto.strong_rand_bytes(32)
     transfer_hash = :aec_hash.blake2b_256_hash("Transfer")
-    log = {contract_pk, [transfer_hash, from_pk, to_pk, <<5::256>>], ""}
-    call_rec = ContractCallFixtures.call_rec("logs", contract_pk, 1_000, nil, [log])
     fun_arg_res = %{arguments: [], function: "transfer", result: %{type: :unit, value: ""}}
-    call_mutation = ContractCallMutation.new(contract_pk, 1, fun_arg_res, call_rec)
+
+    calls =
+      transfers
+      |> Enum.with_index(1)
+      |> Enum.group_by(&elem(elem(&1, 0), 0), fn {{_mbi, from, to}, txi} ->
+        log = {contract_pk, [transfer_hash, from, to, <<5::256>>], ""}
+        call_rec = ContractCallFixtures.call_rec("logs", contract_pk, 1_000, nil, [log])
+
+        ContractCallMutation.new(contract_pk, txi, fun_arg_res, call_rec)
+      end)
 
     gen_mutations = fn gen ->
-      {height, [{block_index, micro_block, mutations} | blocks_mutations]} = gen_mutations(gen)
+      {height, blocks_mutations} = gen_mutations(gen)
 
-      {height, [{block_index, micro_block, [call_mutation | mutations]} | blocks_mutations]}
+      {height,
+       Enum.map(blocks_mutations, fn {{_height, mbi} = block_index, block, mutations} ->
+         {block_index, block, Map.get(calls, mbi, []) ++ mutations}
+       end)}
     end
 
-    on_commit = fn ->
+    on_commit = fn state ->
       cached =
-        Enum.map([from_pk, to_pk], fn account_pk ->
-          Aex9AccountBalancesCache.get(contract_pk, {1_000, 0}, next_hash, account_pk)
+        Enum.flat_map(transfers, fn {mbi, from, to} ->
+          Enum.map([from, to], fn account_pk ->
+            Aex9AccountBalancesCache.get(contract_pk, {1_000, mbi}, next_hashes[mbi], account_pk)
+          end)
         end)
 
+      last_refresh_blocks =
+        for account_pk <- accounts,
+            {:ok, block_index} <-
+              [State.cache_get(state, :aex9_last_refresh_blocks, {contract_pk, account_pk})],
+            into: %{},
+            do: {account_pk, block_index}
+
       send(test_pid, {:cached_at_commit, cached})
+      send(test_pid, {:last_refresh_blocks_at_commit, last_refresh_blocks})
     end
 
     [
       {Db, [:passthrough],
        get_key_block_hash: fn 1_001 -> kb_hash end,
-       get_next_hash: fn ^kb_hash, 0 -> next_hash end,
-       aex9_balance: fn ^contract_pk, account_pk, height_hash ->
-         send(test_pid, {:dry_run, account_pk})
+       get_next_hash: fn ^kb_hash, mbi -> Map.fetch!(next_hashes, mbi) end,
+       aex9_balance: fn ^contract_pk, account_pk, {_type, _height, next_hash} = height_hash ->
+         send(test_pid, {:dry_run, {account_pk, Map.fetch!(mbis, next_hash)}})
          :ok = dry_run_result.(account_pk)
          {:ok, {10, height_hash}}
        end}
@@ -327,7 +390,7 @@ defmodule AeMdw.Sync.ServerTest do
     ]
   end
 
-  defp sync_mocks(gens, gen_mutations \\ &gen_mutations/1, on_commit \\ fn -> :ok end) do
+  defp sync_mocks(gens, gen_mutations \\ &gen_mutations/1, on_commit \\ fn _state -> :ok end) do
     test_pid = self()
 
     [
@@ -344,7 +407,7 @@ defmodule AeMdw.Sync.ServerTest do
       {State, [:passthrough],
        create_mem_state: fn -> state_at(nil) end,
        commit_db: fn state, mutations, _clear_mem? ->
-         on_commit.()
+         on_commit.(state)
          send(test_pid, {:committed, mutations})
          state
        end,
