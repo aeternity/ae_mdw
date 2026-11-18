@@ -441,17 +441,6 @@ defmodule AeMdw.Db.Util do
     {type, :aec_headers.height(header)}
   end
 
-  @spec call_account_pk(state(), txi()) :: Db.pubkey()
-  def call_account_pk(state, call_txi) do
-    case read_node_tx_details(state, {call_txi, -1}) do
-      {tx, _inner_type, _tx_hash, :contract_call_tx, _block_hash} ->
-        tx |> :aect_call_tx.caller_id() |> :aeser_id.specialize(:account)
-
-      {tx, _inner_type, _tx_hash, :contract_create_tx, _block_hash} ->
-        tx |> :aect_create_tx.owner_id() |> :aeser_id.specialize(:account)
-    end
-  end
-
   @spec height_to_time(state(), height(), height(), time()) :: time()
   def height_to_time(state, height, last_height, last_micro_time) when height <= last_height do
     case State.get(state, Model.Block, {height, -1}) do
