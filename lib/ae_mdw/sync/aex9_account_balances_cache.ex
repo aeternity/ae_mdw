@@ -37,4 +37,11 @@ defmodule AeMdw.Sync.Aex9AccountBalancesCache do
     EtsCache.put(@table, {contract_pk, block_index, block_hash, account_pk}, amount)
     :ok
   end
+
+  @spec delete(NodeDb.pubkey(), Blocks.block_index(), Blocks.block_hash(), NodeDb.pubkey()) ::
+          :ok
+  def delete(contract_pk, block_index, block_hash, account_pk) do
+    EtsCache.del(@table, {contract_pk, block_index, block_hash, account_pk})
+    :ok
+  end
 end

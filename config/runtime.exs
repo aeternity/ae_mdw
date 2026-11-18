@@ -44,6 +44,16 @@ config :ae_mdw, AeMdw.Db.RocksDb,
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
 
+# Node calls that sync runs at the same time (event replays and aex9 balance dry-runs)
+sync_concurrency =
+  String.to_integer(
+    System.get_env("MDW_SYNC_CONCURRENCY", to_string(min(8, System.schedulers_online())))
+  )
+
+if sync_concurrency < 1, do: raise(ArgumentError, "MDW_SYNC_CONCURRENCY must be at least 1")
+
+config :ae_mdw, :sync_concurrency, sync_concurrency
+
 config :ae_mdw, AeMdwWeb.Websocket.Subscriptions,
   # 100k per connection lets a single service monitor 100k accounts without multiplexing
   max_subs_per_conn: String.to_integer(System.get_env("MAX_SUBS_PER_CONN", "100000")),

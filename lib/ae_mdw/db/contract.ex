@@ -280,13 +280,7 @@ defmodule AeMdw.Db.Contract do
         |> State.put(Model.IdxContractLog, m_idx_log)
         |> maybe_index_remote_log(contract_pk, txi, log)
 
-      aex9_contract_pk = which_aex9_contract_pubkey(contract_aex9?, contract_pk, addr)
-
-      event_type =
-        Map.get(Node.aexn_event_hash_types(), evt_hash) ||
-          Map.get(Node.dex_event_hash_types(), evt_hash)
-
-      event_type = maybe_fix_event_type_for_wae(event_type, contract_pk)
+      {event_type, aex9_contract_pk} = log_event(contract_aex9?, contract_pk, addr, evt_hash)
 
       cond do
         event_type == :pair_created ->
@@ -299,6 +293,42 @@ defmodule AeMdw.Db.Contract do
           write_aexn_records(state2, aex9_contract_pk, event_type, addr, txi, log_idx, args)
       end
     end)
+  end
+
+  # the {contract_pk, account_pk} pairs whose aex9 balance logs_write/5 refreshes
+  # with a dry-run, so that sync can run the dry-runs beforehand
+  @spec aex9_balance_accounts(Contract.call()) :: [{pubkey(), pubkey()}]
+  def aex9_balance_accounts(call_rec) do
+    contract_pk = :aect_call.contract_pubkey(call_rec)
+    logs = :aect_call.log(call_rec)
+    contract_aex9? = logs != [] and AexnContracts.aex9?(contract_pk)
+
+    Enum.flat_map(logs, fn
+      {addr, [evt_hash | args], _data} ->
+        {event_type, aex9_contract_pk} = log_event(contract_aex9?, contract_pk, addr, evt_hash)
+
+        case affected_pubkeys(event_type, args) do
+          [] ->
+            []
+
+          pubkeys ->
+            if aex9_emitter?(aex9_contract_pk, addr),
+              do: Enum.map(pubkeys, &{addr, &1}),
+              else: []
+        end
+
+      _log ->
+        []
+    end)
+  end
+
+  defp log_event(contract_aex9?, contract_pk, addr, evt_hash) do
+    event_type =
+      Map.get(Node.aexn_event_hash_types(), evt_hash) ||
+        Map.get(Node.dex_event_hash_types(), evt_hash)
+
+    {maybe_fix_event_type_for_wae(event_type, contract_pk),
+     which_aex9_contract_pubkey(contract_aex9?, contract_pk, addr)}
   end
 
   # dex logs are not counted as aex9 logs, even when an aex9 pair emits them
@@ -673,31 +703,22 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp write_aex9_records(state, event_type, contract_pk, txi, log_idx, args) do
-    case event_type do
-      :burn ->
-        state
-        |> burn_aex9_balance(contract_pk, txi, log_idx, args)
-        |> refresh_aex9_balances(contract_pk, txi, log_idx, affected_pubkeys(:burn, args))
-
-      :mint ->
-        state
-        |> mint_aex9_balance(contract_pk, txi, log_idx, args)
-        |> refresh_aex9_balances(contract_pk, txi, log_idx, affected_pubkeys(:mint, args))
-
-      :swap ->
-        state
-        |> burn_aex9_balance(contract_pk, txi, log_idx, args)
-        |> refresh_aex9_balances(contract_pk, txi, log_idx, affected_pubkeys(:burn, args))
-
-      :transfer ->
-        state
-        |> write_aexn_transfer(:aex9, contract_pk, txi, log_idx, args)
-        |> refresh_aex9_balances(contract_pk, txi, log_idx, affected_pubkeys(:transfer, args))
-
-      _other ->
-        state
-    end
+    state
+    |> write_aex9_event(event_type, contract_pk, txi, log_idx, args)
+    |> refresh_aex9_balances(contract_pk, txi, log_idx, affected_pubkeys(event_type, args))
   end
+
+  defp write_aex9_event(state, event_type, contract_pk, txi, log_idx, args)
+       when event_type in [:burn, :swap],
+       do: burn_aex9_balance(state, contract_pk, txi, log_idx, args)
+
+  defp write_aex9_event(state, :mint, contract_pk, txi, log_idx, args),
+    do: mint_aex9_balance(state, contract_pk, txi, log_idx, args)
+
+  defp write_aex9_event(state, :transfer, contract_pk, txi, log_idx, args),
+    do: write_aexn_transfer(state, :aex9, contract_pk, txi, log_idx, args)
+
+  defp write_aex9_event(state, _event_type, _contract_pk, _txi, _log_idx, _args), do: state
 
   # accounts whose real balance needs refreshing after this event - a
   # self-transfer only ever touches the one account
@@ -705,7 +726,10 @@ defmodule AeMdw.Db.Contract do
     if from_pk == to_pk, do: [from_pk], else: [from_pk, to_pk]
   end
 
-  defp affected_pubkeys(_event_type, [pk, _value]), do: [pk]
+  defp affected_pubkeys(event_type, [pk, _value])
+       when event_type in [:burn, :mint, :swap, :transfer],
+       do: [pk]
+
   defp affected_pubkeys(_event_type, _args), do: []
 
   # re-derives the real balance of each affected account via dry-run instead

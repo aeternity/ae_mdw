@@ -3,6 +3,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   alias AeMdw.Aex9
   alias AeMdw.Contract
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
@@ -10,6 +11,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Stats
+  alias AeMdw.Sync.Aex9Balances
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
@@ -1780,6 +1782,184 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
       assert -1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
+    end
+  end
+
+  describe "aex9_balance_accounts/1" do
+    @tag :capture_log
+    test "returns the accounts whose balance executing the call dry-runs" do
+      [ct_pk, remote_pk, plain_pk] = put_contracts([:aex9, :aex9, :plain])
+      [from_pk, to_pk, other_pk] = Enum.map(1..3, fn _i -> :crypto.strong_rand_bytes(32) end)
+      amount = <<1_000::256>>
+      transfer = aexn_event_hash(:transfer)
+
+      scenarios = [
+        {ct_pk, [{ct_pk, [transfer, from_pk, to_pk, amount], ""}],
+         [{ct_pk, from_pk}, {ct_pk, to_pk}]},
+        {ct_pk, [{ct_pk, [transfer, from_pk, from_pk, amount], ""}], [{ct_pk, from_pk}]},
+        {ct_pk, [{ct_pk, [transfer, from_pk, amount], ""}], [{ct_pk, from_pk}]},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:mint), to_pk, amount], ""}], [{ct_pk, to_pk}]},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:burn), from_pk, amount], ""}], [{ct_pk, from_pk}]},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:swap), from_pk, amount], ""}], [{ct_pk, from_pk}]},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:burn), from_pk, to_pk, amount], ""}], []},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:allowance), from_pk, to_pk, amount], ""}], []},
+        {ct_pk, [{ct_pk, [:crypto.strong_rand_bytes(32), from_pk, to_pk, amount], ""}], []},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:pair_created), from_pk, to_pk, other_pk], ""}], []},
+        {ct_pk, [{ct_pk, [aexn_event_hash(:swap_tokens), from_pk, to_pk], <<255>>}], []},
+        {ct_pk, [{remote_pk, [transfer, from_pk, to_pk, amount], ""}],
+         [{remote_pk, from_pk}, {remote_pk, to_pk}]},
+        {ct_pk, [{plain_pk, [transfer, from_pk, to_pk, amount], ""}], []},
+        {plain_pk,
+         [
+           {remote_pk, [aexn_event_hash(:mint), other_pk, amount], ""},
+           {plain_pk, [aexn_event_hash(:mint), other_pk, amount], ""}
+         ], [{remote_pk, other_pk}]},
+        {plain_pk, [{plain_pk, [transfer, from_pk, to_pk, amount], ""}], []},
+        {ct_pk,
+         [
+           {ct_pk, [transfer, from_pk, to_pk, amount], ""},
+           {ct_pk, [transfer, to_pk, other_pk, amount], ""},
+           {remote_pk, [aexn_event_hash(:burn), to_pk, amount], ""}
+         ], [{ct_pk, from_pk}, {ct_pk, to_pk}, {ct_pk, other_pk}, {remote_pk, to_pk}]}
+      ]
+
+      for {contract_pk, logs, expected} <- scenarios do
+        call_rec = call_rec("logs", contract_pk, 1, nil, logs)
+        expected = Enum.sort(expected)
+
+        assert expected ==
+                 call_rec |> DbContract.aex9_balance_accounts() |> Enum.uniq() |> Enum.sort(),
+               inspect(logs)
+
+        assert expected == dry_run_accounts(contract_pk, call_rec, [ct_pk, remote_pk, plain_pk]),
+               inspect(logs)
+      end
+    end
+
+    test "maps the WAE deposit and withdrawal like executing the call does" do
+      with_mocks [{:aec_governance, [:passthrough], get_network_id: fn -> "ae_mainnet" end}] do
+        wae_pk = Map.fetch!(Application.fetch_env!(:ae_mdw, :ae_token), "ae_mainnet")
+        [ct_pk] = put_contracts([:aex9])
+        put_aex9_type_info(wae_pk)
+        account_pk = :crypto.strong_rand_bytes(32)
+        deposit = :aec_hash.blake2b_256_hash("Deposit")
+        withdrawal = :aec_hash.blake2b_256_hash("Withdrawal")
+        amount = <<1_000::256>>
+
+        scenarios = [
+          {wae_pk, [{wae_pk, [deposit, account_pk, amount], ""}], [{wae_pk, account_pk}]},
+          {wae_pk, [{wae_pk, [withdrawal, account_pk, amount], ""}], [{wae_pk, account_pk}]},
+          {ct_pk, [{ct_pk, [deposit, account_pk, amount], ""}], []},
+          {ct_pk, [{wae_pk, [withdrawal, account_pk, amount], ""}], []}
+        ]
+
+        for {contract_pk, logs, expected} <- scenarios do
+          call_rec = call_rec("logs", contract_pk, 1, nil, logs)
+
+          assert expected == DbContract.aex9_balance_accounts(call_rec), inspect(logs)
+
+          assert expected == dry_run_accounts(contract_pk, call_rec, [ct_pk, wae_pk]),
+                 inspect(logs)
+        end
+      end
+    end
+
+    test "skips a log without topics" do
+      [ct_pk] = put_contracts([:aex9])
+      call_rec = call_rec("logs", ct_pk, 1, nil, [{ct_pk, [], ""}])
+
+      assert [] == DbContract.aex9_balance_accounts(call_rec)
+    end
+  end
+
+  describe "execute/2 after Aex9Balances.prefetch_balances/2" do
+    test "dry-runs none of the balances that the prefetch got" do
+      [ct_pk, remote_pk] = contract_pks = put_contracts([:aex9, :aex9])
+      [from_pk, to_pk] = Enum.map(1..2, fn _i -> :crypto.strong_rand_bytes(32) end)
+      amount = <<1_000::256>>
+
+      call_rec =
+        call_rec("logs", ct_pk, 1, nil, [
+          {ct_pk, [aexn_event_hash(:transfer), from_pk, to_pk, amount], ""},
+          {remote_pk, [aexn_event_hash(:burn), to_pk, amount], ""}
+        ])
+
+      assert Enum.sort([{ct_pk, from_pk}, {ct_pk, to_pk}, {remote_pk, to_pk}]) ==
+               dry_run_accounts(ct_pk, call_rec, contract_pks)
+
+      assert [] == dry_run_accounts(ct_pk, call_rec, contract_pks, prefetch?: true)
+    end
+  end
+
+  defp put_contracts(types) do
+    Enum.map(types, fn type ->
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      if type == :aex9,
+        do: put_aex9_type_info(contract_pk),
+        else: AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, %{}, nil, nil}, nil, nil})
+
+      contract_pk
+    end)
+  end
+
+  defp put_aex9_type_info(contract_pk) do
+    functions =
+      AeMdw.Node.aex9_signatures()
+      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, functions, nil, nil}, nil, nil})
+  end
+
+  # the {contract_pk, account_pk} pairs whose balance() executing the call dry-runs
+  defp dry_run_accounts(contract_pk, call_rec, contract_pks, opts \\ []) do
+    test_pid = self()
+    block_index = {kbi, mbi} = {Enum.random(100_000..999_999), 0}
+    next_height = kbi + 1
+    kb_hash = :crypto.strong_rand_bytes(32)
+    next_hash = :crypto.strong_rand_bytes(32)
+    call_txi = Enum.random(100_000_000..999_999_999)
+    fun_arg_res = %{arguments: [], function: "any", result: %{type: :unit, value: ""}}
+
+    state =
+      NullStore.new()
+      |> MemStore.new()
+      |> State.new()
+      |> State.put(Model.Tx, Model.tx(index: call_txi, block_index: block_index, time: 1))
+
+    state =
+      Enum.reduce(contract_pks, state, &State.cache_put(&2, :ct_create_sync_cache, &1, 1))
+
+    with_mocks [
+      {AeMdw.Node.Db, [:passthrough],
+       [
+         get_key_block_hash: fn ^next_height -> kb_hash end,
+         get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
+         aex9_balance: fn ct_pk, account_pk, height_hash ->
+           send(test_pid, {:dry_run, {ct_pk, account_pk}})
+           {:ok, {1, height_hash}}
+         end
+       ]}
+    ] do
+      if Keyword.get(opts, :prefetch?, false) do
+        _keys = Aex9Balances.prefetch_balances([{block_index, [call_rec]}], 4)
+        # only the dry-runs of the execution count
+        received_dry_runs()
+      end
+
+      contract_pk
+      |> ContractCallMutation.new(call_txi, fun_arg_res, call_rec)
+      |> ContractCallMutation.execute(state)
+    end
+
+    received_dry_runs() |> Enum.uniq() |> Enum.sort()
+  end
+
+  defp received_dry_runs do
+    receive do
+      {:dry_run, accounts} -> [accounts | received_dry_runs()]
+    after
+      0 -> []
     end
   end
 
