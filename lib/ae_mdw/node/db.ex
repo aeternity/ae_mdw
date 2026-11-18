@@ -9,6 +9,7 @@ defmodule AeMdw.Node.Db do
   alias AeMdw.DryRun.Runner
   alias AeMdw.Log
   alias AeMdw.Node
+  alias AeMdw.Txs
 
   require Logger
   require Model
@@ -317,16 +318,39 @@ defmodule AeMdw.Node.Db do
 
   @spec find_block_height(Blocks.block_hash()) :: {:ok, Blocks.height()} | :none | :error
   def find_block_height(block_hash) do
-    try do
+    safe_node_read(fn ->
       with {:value, header} <- :aec_db.find_header(block_hash) do
         {:ok, :aec_headers.height(header)}
       end
-    rescue
-      ArgumentError -> :error
-      UndefinedFunctionError -> :error
-    catch
-      :exit, _reason -> :error
-    end
+    end)
+  end
+
+  @spec find_block_height_time(Blocks.block_hash()) ::
+          {:ok, Blocks.height(), Blocks.time()} | :none | :error
+  def find_block_height_time(block_hash) do
+    safe_node_read(fn ->
+      with {:value, header} <- :aec_db.find_header(block_hash) do
+        {:ok, :aec_headers.height(header), :aec_headers.time_in_msecs(header)}
+      end
+    end)
+  end
+
+  @spec find_block_tx_hashes(Blocks.block_hash()) :: {:ok, [Txs.tx_hash()]} | :none | :error
+  def find_block_tx_hashes(block_hash) do
+    safe_node_read(fn ->
+      with {:value, tx_hashes} <- :aec_db.find_block_tx_hashes(block_hash) do
+        {:ok, tx_hashes}
+      end
+    end)
+  end
+
+  defp safe_node_read(read_fn) do
+    read_fn.()
+  rescue
+    ArgumentError -> :error
+    UndefinedFunctionError -> :error
+  catch
+    :exit, _reason -> :error
   end
 
   @spec get_block_time(Blocks.block_hash()) :: Blocks.time()
