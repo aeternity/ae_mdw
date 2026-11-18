@@ -1150,19 +1150,6 @@ defmodule AeMdw.Db.Model do
   @type id_fname_int_contract_call() ::
           record(:id_fname_int_contract_call, index: id_fname_int_contract_call_index())
 
-  # grp_id_fname_int_contract_call:
-  #    index: {create txi, id pk, fname, id pos, call txi, local idx}
-  @grp_id_fname_int_contract_call_defaults [
-    index: {-1, <<>>, "", -1, -1, -1},
-    unused: nil
-  ]
-  defrecord :grp_id_fname_int_contract_call, @grp_id_fname_int_contract_call_defaults
-
-  @type grp_id_fname_int_contract_call_index() ::
-          {txi(), pubkey(), fname(), non_neg_integer(), txi(), non_neg_integer()}
-  @type grp_id_fname_int_contract_call() ::
-          record(:grp_id_fname_int_contract_call, index: grp_id_fname_int_contract_call_index())
-
   # int_transfer_tx:
   #   index: {{height, -1 (generation related transfer OR >=0 {txi, idx} (tx related transfer)}, kind, target, ref txi}
   @int_transfer_tx_defaults [
@@ -1620,7 +1607,6 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IdIntContractCall,
       AeMdw.Db.Model.GrpIdIntContractCall,
       AeMdw.Db.Model.IdFnameIntContractCall,
-      AeMdw.Db.Model.GrpIdFnameIntContractCall,
       AeMdw.Db.Model.NftOwnership,
       AeMdw.Db.Model.NftOwnerToken,
       AeMdw.Db.Model.NftTokenOwner,
@@ -1759,7 +1745,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdIntContractCall), do: :id_int_contract_call
   def record(AeMdw.Db.Model.GrpIdIntContractCall), do: :grp_id_int_contract_call
   def record(AeMdw.Db.Model.IdFnameIntContractCall), do: :id_fname_int_contract_call
-  def record(AeMdw.Db.Model.GrpIdFnameIntContractCall), do: :grp_id_fname_int_contract_call
   def record(AeMdw.Db.Model.NftOwnership), do: :nft_ownership
   def record(AeMdw.Db.Model.NftOwnerToken), do: :nft_owner_token
   def record(AeMdw.Db.Model.NftTokenOwner), do: :nft_token_owner
