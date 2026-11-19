@@ -2,9 +2,11 @@ defmodule AeMdwWeb.TransferControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Db.HardforkPresets
+  alias AeMdw.Db.State
 
   setup_all _ do
     HardforkPresets.import_account_presets()
+    _state = State.commit_db(State.new(), [HardforkPresets.genesis_transfers_mutation()])
     :ok
   end
 
