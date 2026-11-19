@@ -253,15 +253,27 @@ defmodule AeMdw.Db.Sync.Block do
     statistics_mutations = Stats.micro_block_mutations(mb_time, type_counters)
     type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
+    next_txi = first_txi + length(mb_txs)
 
     mutations = [
       block_mutation,
       block_stats_mutation,
       type_counters_mutation,
-      statistics_mutations | txs_mutations
+      statistics_mutations,
+      time_mutations(mb_time, first_txi, next_txi) | txs_mutations
     ]
 
-    {mutations, first_txi + length(mb_txs)}
+    {mutations, next_txi}
+  end
+
+  # Model.Time readers only seek {time, -1} or {time, nil}, so they only ever land on a micro
+  # block's first or last txi.
+  defp time_mutations(_mb_time, txi, txi), do: []
+
+  defp time_mutations(mb_time, first_txi, next_txi) do
+    [first_txi, next_txi - 1]
+    |> Enum.uniq()
+    |> Enum.map(&WriteMutation.new(Model.Time, Model.time(index: {mb_time, &1})))
   end
 
   @spec last_synced_mbi(State.t(), Blocks.height()) :: {:ok, Blocks.mbi()} | :none

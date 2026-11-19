@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Sync.BlockTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.Sync.Transaction
+  alias AeMdw.Db.WriteMutation
 
   import AeMdwWeb.BlockchainSim,
     only: [with_blockchain: 3, with_blockchain: 4, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
@@ -78,6 +79,38 @@ defmodule AeMdw.Db.Sync.BlockTest do
         assert length(height_blocks) == 11
         assert mem2 = :ets.info(:sync_hashes, :memory)
         assert mem2 > mem1
+      end
+    end
+
+    test "writes Model.Time only for the first and last tx of each micro block" do
+      micro_blocks = [
+        mb0: [
+          tx0: spend_tx(:alice, :bob, 1),
+          tx1: spend_tx(:alice, :bob, 2),
+          tx2: spend_tx(:alice, :bob, 3)
+        ],
+        mb1: [tx3: spend_tx(:alice, :bob, 4)],
+        mb2: []
+      ]
+
+      with_blockchain %{alice: 1_000_000_000, bob: 1_000_000_000}, [{0, micro_blocks}] do
+        last_mb_hash = AeMdw.Validate.id!(blocks[:mb2].hash)
+
+        assert [{0, blocks_mutations}] =
+                 0 |> Block.blocks_mutations(0, 0, last_mb_hash, false) |> Enum.to_list()
+
+        time_keys =
+          for {_block_index, _block, mutations} <- blocks_mutations,
+              %WriteMutation{table: Model.Time, record: Model.time(index: key)} <-
+                List.flatten(mutations),
+              do: key
+
+        assert Enum.sort(time_keys) ==
+                 Enum.sort([
+                   {blocks[:mb0].time, 0},
+                   {blocks[:mb0].time, 2},
+                   {blocks[:mb1].time, 3}
+                 ])
       end
     end
 

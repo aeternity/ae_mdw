@@ -40,6 +40,7 @@ defmodule AeMdw.TxsTest do
 
       with_node_micro_block(mb_hash, @mb1_time, [tx12, tx13, tx14], fn ->
         assert {:ok, Model.tx(index: 14, id: ^tx14)} = Txs.tx_hash_to_tx(state, tx14)
+        assert {:ok, Model.tx(index: 13, id: ^tx13)} = Txs.tx_hash_to_tx(state, tx13)
         assert {:ok, Model.tx(index: 12, id: ^tx12)} = Txs.tx_hash_to_tx(state, tx12)
       end)
     end
@@ -124,13 +125,19 @@ defmodule AeMdw.TxsTest do
     end
   end
 
+  # Model.Time gets only the micro block's first and last txi, as the sync writes it
   defp put_micro_block_txs(store, block_index, mb_time, first_txi, tx_hashes) do
+    last_txi = first_txi + length(tx_hashes) - 1
+
+    store =
+      Enum.reduce(Enum.uniq([first_txi, last_txi]), store, fn txi, store ->
+        Store.put(store, Model.Time, Model.time(index: {mb_time, txi}))
+      end)
+
     tx_hashes
     |> Enum.with_index(first_txi)
     |> Enum.reduce(store, fn {tx_hash, txi}, store ->
-      store
-      |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: block_index))
-      |> Store.put(Model.Time, Model.time(index: {mb_time, txi}))
+      Store.put(store, Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: block_index))
     end)
   end
 

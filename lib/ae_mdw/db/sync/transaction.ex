@@ -103,7 +103,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       WriteMutation.new(Model.Tx, m_tx),
       WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
-      WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
       WriteFieldsMutation.new(type, tx, block_index, txi)
       | tx_mutations(tx_context)
     ]
