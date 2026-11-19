@@ -5,6 +5,7 @@ defmodule AeMdw.Accounts do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Node.Db
 
@@ -17,7 +18,7 @@ defmodule AeMdw.Accounts do
     |> case do
       :not_found ->
         state
-        |> State.put(
+        |> ObjectKeys.put(
           Model.AccountCreation,
           Model.account_creation(index: pubkey, creation_time: time)
         )

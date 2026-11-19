@@ -137,9 +137,9 @@ defmodule AeMdw.Db.StatsMutation do
           Model.total_stat(active_auctions: 0, active_names: 0, active_oracles: 0, contracts: 0)
       end
 
-    current_active_names = State.count_keys(state, Model.ActiveName)
+    current_active_names = ObjectKeys.count(state, Model.ActiveName)
     current_active_auctions = State.count_keys(state, Model.AuctionExpiration)
-    current_active_oracles = State.count_keys(state, Model.ActiveOracle)
+    current_active_oracles = ObjectKeys.count(state, Model.ActiveOracle)
     channels_opened = Channels.channels_opened_count(state, from_txi, next_txi)
     channels_closed = Channels.channels_closed_count(state, from_txi, next_txi)
 
@@ -172,7 +172,7 @@ defmodule AeMdw.Db.StatsMutation do
     locked_in_auctions = spent_in_auctions - refund_in_auctions
     locked_in_channels = height_int_amount(state, height, :lock_channel)
 
-    current_accounts = State.count_keys(state, Model.AccountCreation)
+    current_accounts = ObjectKeys.count(state, Model.AccountCreation)
 
     Model.delta_stat(
       index: height,
