@@ -23,11 +23,13 @@ defmodule AeMdw.Sync.MemStoreCreatorTest do
     {:ok, state: state}
   end
 
-  test "deletes a store once it has been retired for longer than the lifetime", %{state: state} do
+  test "deletes a committed store a lifetime after a newer store is committed", %{state: state} do
     {store1, state} = create(state)
+    set_global(store1)
+    state = commit(state, store1)
+
     {store2, state} = create(state)
     set_global(store2)
-
     state = commit(state, store2)
 
     assert alive?(store1)
@@ -37,36 +39,64 @@ defmodule AeMdw.Sync.MemStoreCreatorTest do
 
     refute alive?(store1)
     assert alive?(store2)
-    assert [%{store: ^store2}] = state.stores
+    assert [%{store: ^store2}] = state
   end
 
-  test "keeps the committed, previous committed, newest and global stores", %{state: state} do
+  test "keeps the committed, newest and global stores at a sweep", %{state: state} do
     {global, state} = create(state)
-    {prev_commited, state} = create(state)
     {unused, state} = create(state)
-    {commited, state} = create(state)
+    {committed, state} = create(state)
     {newest, state} = create(state)
     set_global(global)
 
-    state = state |> commit(prev_commited) |> commit(commited)
+    state = commit(state, committed)
     assert_receive :sweep, 2_000
     _state = sweep(state)
 
     refute alive?(unused)
-    assert Enum.all?([global, prev_commited, commited, newest], &alive?/1)
+    assert Enum.all?([global, committed, newest], &alive?/1)
   end
 
-  test "keeps a retired store that is the global store again", %{state: state} do
+  test "gives a new lifetime to a store that a sweep finds is the global store again",
+       %{state: state} do
     {store1, state} = create(state)
     {store2, state} = create(state)
     set_global(store2)
-
     state = commit(state, store2)
+
     set_global(store1)
     assert_receive :sweep, 2_000
-    _state = sweep(state)
-
+    state = sweep(state)
     assert alive?(store1)
+
+    set_global(store2)
+    state = commit(state, store2)
+    assert alive?(store1)
+
+    assert_receive :sweep, 2_000
+    _state = sweep(state)
+    refute alive?(store1)
+  end
+
+  test "gives a new lifetime to a store that a commit finds is the global store again",
+       %{state: state} do
+    {store1, state} = create(state)
+    {store2, state} = create(state)
+    set_global(store2)
+    state = commit(state, store2)
+
+    set_global(store1)
+    assert_receive :sweep, 2_000
+    state = commit(state, store2)
+    assert alive?(store1)
+
+    set_global(store2)
+    state = commit(state, store2)
+    assert alive?(store1)
+
+    assert_receive :sweep, 2_000
+    _state = sweep(state)
+    refute alive?(store1)
   end
 
   defp create(state) do
