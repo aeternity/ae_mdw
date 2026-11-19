@@ -4,7 +4,6 @@ defmodule AeMdw.Sync.Aex9Balances do
   """
 
   alias AeMdw.Db.Contract
-  alias AeMdw.Db.PurgeAex9StateMutation
   alias AeMdw.Log
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Sync.Aex9AccountBalancesCache
@@ -128,15 +127,6 @@ defmodule AeMdw.Sync.Aex9Balances do
     kind, reason ->
       Log.warn("[prefetch_balances] #{Exception.format_banner(kind, reason)}")
       []
-  end
-
-  @spec purge_mutation(pubkey(), balances()) :: nil | PurgeAex9StateMutation.t()
-  def purge_mutation(_pk, []), do: nil
-
-  def purge_mutation(contract_pk, purged_balances) do
-    accounts_list = Enum.map(purged_balances, fn {account_pk, _amount} -> account_pk end)
-
-    PurgeAex9StateMutation.new(contract_pk, accounts_list)
   end
 
   @spec type_height_hash(block_index()) :: NodeDb.height_hash()

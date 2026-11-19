@@ -143,15 +143,6 @@ defmodule AeMdw.Db.Contract do
 
   defp aex9_holder?(balance), do: is_integer(balance) and balance > 0
 
-  @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
-  def aex9_delete_presence(state, account_pk, contract_pk) do
-    if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
-      State.delete(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-    else
-      state
-    end
-  end
-
   @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
   def aex9_init_event_balances(state, contract_pk, balances, txi) do
     initial_sum =
