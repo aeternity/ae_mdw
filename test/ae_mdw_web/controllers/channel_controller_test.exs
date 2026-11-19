@@ -696,6 +696,62 @@ defmodule AeMdwWeb.ChannelControllerTest do
       end
     end
 
+    test "returns the updates within a generation range", %{conn: conn, store: store} do
+      channel_pk = :crypto.strong_rand_bytes(32)
+      channel_id = encode(:channel, channel_pk)
+      block_hash = :crypto.strong_rand_bytes(32)
+      updates = [{{30, 0}, {300, -1}}, {{20, 0}, {200, -1}}, {{10, 0}, {100, -1}}]
+      [enc_tx_hash200, enc_tx_hash300] = Enum.map([200, 300], &encode(:tx_hash, <<&1::256>>))
+
+      store =
+        Store.put(store, Model.ActiveChannel, Model.channel(index: channel_pk, updates: updates))
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn _state, {txi, -1} ->
+             {deposit_tx(channel_pk, txi), :channel_deposit_tx, <<txi::256>>, :channel_deposit_tx,
+              block_hash}
+           end
+         ]}
+      ] do
+        assert %{"data" => [%{"source_tx_hash" => ^enc_tx_hash200}], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/channels/#{channel_id}/updates", scope: "gen:15-25")
+                 |> json_response(200)
+
+        assert %{"data" => [%{"source_tx_hash" => ^enc_tx_hash200}], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/channels/#{channel_id}/updates", scope: "gen:20-30", limit: 1)
+                 |> json_response(200)
+
+        assert %{"data" => [%{"source_tx_hash" => ^enc_tx_hash300}], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{"data" => [], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/channels/#{channel_id}/updates", scope: "gen:31-39")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns error when the scope isn't a generation range", %{conn: conn, store: store} do
+      channel_pk = :crypto.strong_rand_bytes(32)
+      store = Store.put(store, Model.ActiveChannel, Model.channel(index: channel_pk))
+
+      assert %{"error" => "invalid scope: {:epoch, 1..2}"} =
+               conn
+               |> with_store(store)
+               |> get("/v3/channels/#{encode(:channel, channel_pk)}/updates", scope: "epoch:1-2")
+               |> json_response(400)
+    end
+
     test "returns error when channel is not found", %{conn: conn, store: store} do
       channel_pk = :crypto.strong_rand_bytes(32)
       encoded_channel_id = encode(:channel, channel_pk)
@@ -718,5 +774,23 @@ defmodule AeMdwWeb.ChannelControllerTest do
                |> get("/v3/channels/#{invalid_id}/updates")
                |> json_response(400)
     end
+  end
+
+  defp deposit_tx(channel_pk, nonce) do
+    {:ok, aetx} =
+      :aesc_deposit_tx.new(%{
+        channel_id: :aeser_id.create(:channel, channel_pk),
+        from_id: :aeser_id.create(:account, <<7::256>>),
+        amount: 1,
+        ttl: 11,
+        fee: 111,
+        state_hash: <<1::256>>,
+        round: 1,
+        nonce: nonce
+      })
+
+    {:channel_deposit_tx, tx} = :aetx.specialize_type(aetx)
+
+    tx
   end
 end
