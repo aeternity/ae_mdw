@@ -1,6 +1,6 @@
 defmodule AeMdw.Db.ChannelCloseMutation do
   @moduledoc """
-  Increases channels_closed stat and refund locked AE.
+  Increases channels_closed stat, refunds locked AE and adds the closing tx to the channel updates.
   """
 
   alias AeMdw.Blocks
@@ -28,9 +28,16 @@ defmodule AeMdw.Db.ChannelCloseMutation do
     }
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{channel_pk: channel_pk, released_amount: released_amount}, state) do
+  def execute(
+        %__MODULE__{
+          channel_pk: channel_pk,
+          bi_txi_idx: bi_txi_idx,
+          released_amount: released_amount
+        },
+        state
+      ) do
     channel =
-      Model.channel(active: active_height, amount: old_amount) =
+      Model.channel(active: active_height, amount: old_amount, updates: updates) =
       State.fetch!(state, Model.ActiveChannel, channel_pk)
 
     state
@@ -40,7 +47,10 @@ defmodule AeMdw.Db.ChannelCloseMutation do
     |> State.delete(Model.ActiveChannelActivation, {active_height, channel_pk})
     |> State.put(
       Model.InactiveChannel,
-      Model.channel(channel, amount: old_amount - released_amount)
+      Model.channel(channel,
+        amount: old_amount - released_amount,
+        updates: [bi_txi_idx | updates]
+      )
     )
     |> State.put(
       Model.InactiveChannelActivation,

@@ -536,6 +536,76 @@ defmodule AeMdwWeb.ChannelControllerTest do
       end
     end
 
+    test "returns a closed channel's node details from the update before its closing tx", %{
+      conn: conn,
+      store: store
+    } do
+      channel_pk = :crypto.strong_rand_bytes(32)
+      initiator_pk = TS.address(0)
+      responder_pk = TS.address(1)
+      deposit_block_hash = :crypto.strong_rand_bytes(32)
+      close_block_hash = :crypto.strong_rand_bytes(32)
+      close_tx_hash = :crypto.strong_rand_bytes(32)
+      enc_close_tx_hash = encode(:tx_hash, close_tx_hash)
+      channel_id = encode(:channel, channel_pk)
+
+      channel =
+        Model.channel(
+          index: channel_pk,
+          active: 1,
+          initiator: initiator_pk,
+          responder: responder_pk,
+          state_hash: <<1::256>>,
+          amount: 0,
+          updates: [{{600_010, 2}, {2_000, -1}}, {{600_000, 1}, {1_000, -1}}]
+        )
+
+      store =
+        store
+        |> Store.put(Model.InactiveChannel, channel)
+        |> Store.put(Model.Block, Model.block(index: {600_000, 1}, hash: deposit_block_hash))
+
+      with_mocks [
+        {AeMdw.Db.Util, [:passthrough],
+         [
+           read_node_tx_details: fn _state, {2_000, -1} ->
+             {:tx, :channel_close_mutual_tx, close_tx_hash, :channel_close_mutual_tx,
+              close_block_hash}
+           end,
+           block_time: fn ^close_block_hash -> 456 end
+         ]},
+        {:aec_chain, [:passthrough],
+         get_channel_at_hash: fn ^channel_pk, ^deposit_block_hash ->
+           {:ok,
+            {:channel, {:id, :channel, channel_pk}, {:id, :account, initiator_pk},
+             {:id, :account, responder_pk}, %{initiator: [], responder: []}, 8_000_000, 4_400_000,
+             4_600_000, 500_000, :basic, :basic,
+             <<13, 54, 141, 196, 223, 107, 172, 150, 198, 45, 62, 102, 159, 21, 123, 151, 241,
+               235, 20, 175, 223, 198, 242, 127, 137, 194, 129, 204, 227, 139, 197, 132>>, 1, 2,
+             3, 600_003, 3}}
+         end}
+      ] do
+        assert %{
+                 "channel" => ^channel_id,
+                 "active" => false,
+                 "amount" => 8_000_000,
+                 "last_updated_height" => 600_010,
+                 "last_updated_tx_hash" => ^enc_close_tx_hash,
+                 "last_updated_tx_type" => "ChannelCloseMutualTx",
+                 "last_updated_time" => 456,
+                 "updates_count" => 2,
+                 "initiator_amount" => 4_400_000,
+                 "responder_amount" => 4_600_000,
+                 "round" => 1,
+                 "locked_until" => 600_003
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/channels/#{channel_id}")
+                 |> json_response(200)
+      end
+    end
+
     test "returns error when channel does not exist", %{conn: conn, store: store} do
       channel_id = encode(:channel, :crypto.strong_rand_bytes(32))
       msg = "not found: #{channel_id}"
