@@ -7,6 +7,7 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
@@ -293,6 +294,7 @@ defmodule AeMdw.Aex9 do
           account_pk: account_pk,
           contract_pk: contract_pk,
           range: {first_gen, last_gen},
+          first_balance_gen: first_balance_gen(state, contract_pk),
           cursor: cursor
         })
 
@@ -312,6 +314,7 @@ defmodule AeMdw.Aex9 do
          account_pk: account_pk,
          contract_pk: contract_pk,
          range: {first_gen, last_gen},
+         first_balance_gen: first_balance_gen,
          cursor: cursor
        }) do
     fn direction ->
@@ -322,6 +325,7 @@ defmodule AeMdw.Aex9 do
         :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
         _dir -> first_gen..last_gen
       end
+      |> skip_gens_before(first_balance_gen)
       |> Stream.flat_map(fn gen ->
         type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
 
@@ -335,6 +339,24 @@ defmodule AeMdw.Aex9 do
       end)
     end
   end
+
+  # A key block holds the state from before its own generation's micro blocks,
+  # so the balance can be dry-run from the key block after the creation.
+  defp first_balance_gen(state, contract_pk) do
+    with {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, contract_pk}),
+         {:ok, Model.tx(block_index: {height, _mbi})} <- State.get(state, Model.Tx, txi) do
+      height + 1
+    else
+      _no_creation -> nil
+    end
+  end
+
+  defp skip_gens_before(gens, nil), do: gens
+
+  defp skip_gens_before(first..last//step, min_gen) when step > 0,
+    do: max(first, min_gen)..last//step
+
+  defp skip_gens_before(first..last//step, min_gen), do: first..max(last, min_gen)//step
 
   defp serialize_account_balance_cursor(cursor),
     do: cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false)
