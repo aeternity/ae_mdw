@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.BlockTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.IntTransfersMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.Sync.Transaction
@@ -128,6 +129,35 @@ defmodule AeMdw.Db.Sync.BlockTest do
         assert [] == received(:replayed)
       end
     end
+
+    test "returns the genesis accounts as accounts_roma transfers at height 0 only" do
+      with_blockchain %{alice: 1_000_000_000, bob: 1_000_000_000}, micro_blocks(2) do
+        last_mb_hash = AeMdw.Validate.id!(blocks[:mb1].hash)
+
+        assert [{0, gen0}, {1, gen1}] =
+                 0 |> Block.blocks_mutations(0, 0, last_mb_hash, false) |> Enum.to_list()
+
+        expected =
+          Enum.map(:aec_fork_block_settings.genesis_accounts(), fn {pk, amount} ->
+            {"accounts_roma", pk, amount}
+          end)
+
+        assert length(expected) == 716
+
+        assert [%IntTransfersMutation{height: 0, transfers: ^expected}] =
+                 int_transfers_mutations(gen0)
+
+        assert [] == int_transfers_mutations(gen1)
+      end
+    end
+  end
+
+  defp int_transfers_mutations(blocks_mutations) do
+    {{_height, -1}, _key_block, mutations} = List.last(blocks_mutations)
+
+    mutations
+    |> List.flatten()
+    |> Enum.filter(&match?(%IntTransfersMutation{}, &1))
   end
 
   # random amounts, so that no other test cached the same micro blocks
