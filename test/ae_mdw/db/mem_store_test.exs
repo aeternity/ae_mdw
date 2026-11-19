@@ -102,6 +102,10 @@ defmodule AeMdw.Db.MemStoreTest do
       Store.put(written, Model.Block, Model.block(index: {1, 0}))
       refute MemStore.pristine?(written)
 
+      hiding_db_key = MemStore.new(DbStore.new())
+      Store.delete(hiding_db_key, Model.Block, {1, 0})
+      refute MemStore.pristine?(hiding_db_key)
+
       deleted = MemStore.new(DbStore.new())
       MemStore.delete_store(deleted)
       refute MemStore.pristine?(deleted)

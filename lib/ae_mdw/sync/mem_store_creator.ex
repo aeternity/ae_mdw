@@ -13,16 +13,13 @@ defmodule AeMdw.Sync.MemStoreCreator do
 
   @typep seconds() :: integer()
   @typep entry() :: %{store: MemStore.t(), retired_at: seconds() | nil}
-  @typep state() :: %{commited: MemStore.t() | nil, stores: [entry()]}
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @impl true
-  @spec init(:ok) :: {:ok, state()}
-  def init(:ok) do
-    {:ok, %{commited: nil, stores: []}}
-  end
+  @spec init(:ok) :: {:ok, [entry()]}
+  def init(:ok), do: {:ok, []}
 
   @spec create() :: MemStore.t()
   def create do
@@ -40,62 +37,75 @@ defmodule AeMdw.Sync.MemStoreCreator do
   end
 
   @impl true
-  def handle_call({:create, fallback_store}, _from, %{stores: stores} = state) do
+  def handle_call({:create, fallback_store}, _from, stores) do
     sync_store = MemStore.new(fallback_store)
-    entry = %{store: sync_store, retired_at: nil}
 
-    {:reply, sync_store, %{state | stores: [entry | stores]}}
+    {:reply, sync_store, [%{store: sync_store, retired_at: nil} | stores]}
   end
 
+  # Only a commit retires stores: mem syncs run one at a time and commit when they end,
+  # so no other store is still syncing then.
   @impl true
-  def handle_cast({:commit, mem_store}, %{commited: prev_commited, stores: stores} = state) do
+  def handle_cast({:commit, mem_store}, stores) do
     now = now()
-    in_use = [prev_commited | in_use_stores(mem_store, stores)]
+    in_use = [mem_store | in_use_stores(stores)]
 
-    {stores, retired_count} =
-      Enum.map_reduce(stores, 0, fn %{store: store, retired_at: retired_at} = entry, count ->
-        cond do
-          store in in_use -> {%{entry | retired_at: nil}, count}
-          retired_at == nil -> {%{entry | retired_at: now}, count + 1}
-          true -> {entry, count}
-        end
+    {stores, retired?} =
+      Enum.map_reduce(stores, false, fn
+        %{store: store, retired_at: nil} = entry, retired? ->
+          if store in in_use, do: {entry, retired?}, else: {%{entry | retired_at: now}, true}
+
+        entry, retired? ->
+          {entry, retired?}
       end)
 
-    if retired_count > 0 do
+    if retired? do
       _ref = Process.send_after(self(), :sweep, (lifetime_secs() + 1) * 1_000)
       :ok
     end
 
-    {:noreply, delete_expired(%{state | commited: mem_store, stores: stores}, now)}
+    {:noreply, delete_expired(stores, in_use, now)}
   end
 
   @impl true
-  def handle_info(:sweep, state), do: {:noreply, delete_expired(state, now())}
+  def handle_info(:sweep, stores),
+    do: {:noreply, delete_expired(stores, in_use_stores(stores), now())}
 
-  # Endpoints may still read a retired store until `:memstore_lifetime_secs` after it
-  # was retired. The committed, newest and global stores are never deleted.
-  defp delete_expired(%{commited: commited, stores: stores} = state, now) do
-    in_use = in_use_stores(commited, stores)
+  def handle_info(_msg, stores), do: {:noreply, stores}
+
+  # Endpoints may read a retired store for `:memstore_lifetime_secs`. A retired store in
+  # use again is kept, and the next commit that finds it unused retires it anew.
+  defp delete_expired(stores, in_use, now) do
     lifetime_secs = lifetime_secs()
 
-    {expired, keep} =
-      Enum.split_with(stores, fn %{store: store, retired_at: retired_at} ->
-        retired_at != nil and now - retired_at > lifetime_secs and store not in in_use
-      end)
+    Enum.flat_map(stores, fn
+      %{retired_at: nil} = entry ->
+        [entry]
 
-    Enum.each(expired, fn %{store: store} -> MemStore.delete_store(store) end)
+      %{store: store, retired_at: retired_at} = entry ->
+        cond do
+          store in in_use ->
+            [%{entry | retired_at: nil}]
 
-    %{state | stores: keep}
+          now - retired_at > lifetime_secs ->
+            MemStore.delete_store(store)
+            []
+
+          true ->
+            [entry]
+        end
+    end)
   end
 
-  defp in_use_stores(commited, stores) do
+  # The newest store may still be syncing, and endpoints read the global one.
+  defp in_use_stores(stores) do
     newest =
       case stores do
         [%{store: store} | _older] -> store
         [] -> nil
       end
 
-    [commited, newest, State.current_mem_store()]
+    [newest, State.current_mem_store()]
   end
 
   defp now, do: System.monotonic_time(:second)

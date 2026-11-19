@@ -25,35 +25,38 @@ defmodule AeMdw.Db.StateTest do
   end
 
   describe "commit/3 when clearing the mem state" do
-    test "keeps an untouched mem state" do
-      mem_state = State.new(MemStore.new(DbStore.new()))
-      :persistent_term.put(:global_state, mem_state)
+    test "keeps the mem state that a read created" do
+      :persistent_term.erase(:global_state)
+      mem_state = State.mem_state()
 
       State.commit(State.new(), [], true)
 
-      assert mem_state == :persistent_term.get(:global_state, :none)
+      assert State.mem_state() == mem_state
     end
 
-    test "erases a mem state with records, stats, deleted tables or no db fallback" do
-      written =
-        DbStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> State.put(Model.Block, Model.block(index: {1, 0}))
-
-      with_stats = DbStore.new() |> MemStore.new() |> State.new() |> State.inc_stat(:accounts)
+    test "erases a mem state that doesn't read like a new one" do
+      new_state = fn -> State.new(MemStore.new(DbStore.new())) end
 
       deleted_store = MemStore.new(DbStore.new())
       MemStore.delete_store(deleted_store)
 
-      no_db_fallback = State.new(MemStore.new(NullStore.new()))
+      mem_states = [
+        records: State.put(new_state.(), Model.Block, Model.block(index: {1, 0})),
+        stats: State.inc_stat(new_state.(), :accounts),
+        cache: State.cache_put(new_state.(), :ct_create_sync_cache, <<1::256>>, 1),
+        jobs: State.enqueue(new_state.(), :update_tx_stats, [1], []),
+        deleted_tables: State.new(deleted_store),
+        no_db_fallback: State.new(MemStore.new(NullStore.new())),
+        db_store: State.new(),
+        nil: nil
+      ]
 
-      for mem_state <- [written, with_stats, State.new(deleted_store), no_db_fallback, nil] do
+      for {name, mem_state} <- mem_states do
         :persistent_term.put(:global_state, mem_state)
 
         State.commit(State.new(), [], true)
 
-        assert :none == :persistent_term.get(:global_state, :none)
+        assert :persistent_term.get(:global_state, :none) == :none, "#{inspect(name)} was kept"
       end
     end
   end
