@@ -231,6 +231,11 @@ defmodule AeMdw.Db.Util do
   end
 
   @spec read_node_tx(state(), Txs.txi_idx()) :: Node.tx()
+  def read_node_tx(state, {_txi, local_idx} = txi_idx) when local_idx >= 0 do
+    {_inner_type, tx} = read_int_call_tx(state, txi_idx)
+    tx
+  end
+
   def read_node_tx(state, txi_idx) do
     {tx, _inner_type, _tx_hash, _tx_type, _block_hash} = read_node_tx_details(state, txi_idx)
     tx
@@ -255,20 +260,20 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  def read_node_tx_details(state, {txi, local_idx}) do
+  def read_node_tx_details(state, {txi, _local_idx} = txi_idx) do
     Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-
-    Model.int_contract_call(tx: aetx) =
-      State.fetch!(state, Model.IntContractCall, {txi, local_idx})
-
+    {inner_type, tx} = read_int_call_tx(state, txi_idx)
     {block_hash, tx_type, _signed_tx, _tx_rec} = Db.get_tx_data(tx_hash)
-
-    {inner_type, tx} = :aetx.specialize_type(aetx)
 
     {tx, inner_type, tx_hash, tx_type, block_hash}
   end
 
   def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
+
+  defp read_int_call_tx(state, txi_idx) do
+    Model.int_contract_call(tx: aetx) = State.fetch!(state, Model.IntContractCall, txi_idx)
+    :aetx.specialize_type(aetx)
+  end
 
   # Nil-safe variant of read_node_tx_details/2. Used in GraphQL resolvers where the
   # MDW state may be sparse (e.g. in tests with synthetic fixtures that have no
