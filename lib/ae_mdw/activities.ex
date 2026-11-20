@@ -619,8 +619,35 @@ defmodule AeMdw.Activities do
          aexn_type,
          txi_scope,
          txi_cursor,
-         ownership_only?
+         false = _ownership_only?
+       ),
+       do:
+         build_aexn_transfers_stream(
+           state,
+           direction,
+           account_pk,
+           aexn_type,
+           txi_scope,
+           txi_cursor
+         )
+
+  defp build_aexn_transfers_stream(
+         state,
+         direction,
+         account_pk,
+         aexn_type,
+         txi_scope,
+         txi_cursor,
+         true = _ownership_only?
        ) do
+    state
+    |> owned_aexn_transfer_txis(direction, account_pk, aexn_type, txi_scope, txi_cursor)
+    |> Stream.flat_map(fn txi ->
+      build_aexn_transfers_stream(state, direction, account_pk, aexn_type, {txi, txi}, nil)
+    end)
+  end
+
+  defp build_aexn_transfers_stream(state, direction, account_pk, aexn_type, txi_scope, txi_cursor) do
     transfers_stream =
       state
       |> build_aexn_transfer_stream(
@@ -649,15 +676,99 @@ defmodule AeMdw.Activities do
         {txi, {:aexn, aexn_type, from_pk, account_pk, index, value}}
       end)
 
-    stream = Collection.merge([transfers_stream, rev_transfers_stream], direction)
+    Collection.merge([transfers_stream, rev_transfers_stream], direction)
+  end
 
-    if ownership_only? do
-      Stream.filter(stream, fn {txi, _locator} ->
-        # if owned by, only allow transactions in which the account of the contractcalltx = account_pk
-        account_pk == DbUtil.call_account_pk(state, txi)
-      end)
-    else
-      stream
+  # Owned transfers come from contract calls and creates made by the account, whoever paid for
+  # them. Their txis are joined with the account's caller and owner fields, so no tx is read.
+  defp owned_aexn_transfer_txis(state, direction, account_pk, aexn_type, txi_scope, txi_cursor) do
+    case txi_scope || all_txis_scope(state) do
+      {first_txi, last_txi} ->
+        {start_txi, stop_txi} =
+          if direction == :forward,
+            do: {max(first_txi, txi_cursor || first_txi), last_txi},
+            else: {min(last_txi, txi_cursor || last_txi), first_txi}
+
+        owner_seeks =
+          for field <- owner_fields() do
+            &seek_owner_txi(state, direction, field, account_pk, stop_txi, &1)
+          end
+
+        transfer_seeks =
+          for table <- [Model.AexnTransfer, Model.RevAexnTransfer] do
+            &seek_transfer_txi(state, table, direction, aexn_type, account_pk, &1)
+          end
+
+        Collection.intersect([owner_seeks, transfer_seeks], direction, start_txi, stop_txi)
+
+      nil ->
+        []
+    end
+  end
+
+  defp all_txis_scope(state) do
+    case DbUtil.last_txi(state) do
+      {:ok, last_txi} -> {0, last_txi}
+      :none -> nil
+    end
+  end
+
+  # Field positions of the caller of a contract call and the owner of a contract create, also
+  # when they are wrapped
+  defp owner_fields do
+    [contract_call_tx: :caller_id, contract_create_tx: :owner_id]
+    |> Enum.flat_map(fn {tx_type, field} ->
+      pos = tx_type |> Node.tx_ids() |> Map.fetch!(field)
+
+      Enum.map([tx_type | Txs.wrap_tx_types()], &{&1, Fields.field_pos_mask(&1, pos)})
+    end)
+    |> Enum.uniq()
+  end
+
+  defp seek_owner_txi(_state, direction, _field, _account_pk, stop_txi, txi)
+       when direction == :forward and txi > stop_txi
+       when direction == :backward and txi < stop_txi,
+       do: :none
+
+  defp seek_owner_txi(state, direction, {tx_type, pos} = field, account_pk, stop_txi, txi) do
+    seek_key =
+      if direction == :forward,
+        do: {tx_type, pos, account_pk, txi - 1},
+        else: {tx_type, pos, account_pk, txi + 1}
+
+    case State.next(state, Model.Field, direction, seek_key) do
+      {:ok, {^tx_type, ^pos, ^account_pk, owner_txi}} ->
+        if wraps_wrapper?(state, tx_type, owner_txi) do
+          next_txi = if direction == :forward, do: owner_txi + 1, else: owner_txi - 1
+          seek_owner_txi(state, direction, field, account_pk, stop_txi, next_txi)
+        else
+          {:ok, owner_txi}
+        end
+
+      _other ->
+        :none
+    end
+  end
+
+  # A wrapper around another wrapper indexes the inner wrapper's fields (e.g. the payer) instead
+  # of the contract call ones
+  defp wraps_wrapper?(state, tx_type, txi) do
+    tx_type in Txs.wrap_tx_types() and
+      Enum.any?(
+        Txs.wrap_tx_types() -- [tx_type],
+        &State.exists?(state, Model.InnerType, {&1, txi})
+      )
+  end
+
+  defp seek_transfer_txi(state, table, direction, aexn_type, account_pk, txi) do
+    seek_key =
+      if direction == :forward,
+        do: {aexn_type, account_pk, txi, @min_int, @min_bin, @min_int},
+        else: {aexn_type, account_pk, txi, @max_int, @max_bin, @max_int}
+
+    case State.next(state, table, direction, seek_key) do
+      {:ok, {^aexn_type, ^account_pk, transfer_txi, _log_idx, _pk, _value}} -> {:ok, transfer_txi}
+      _other -> :none
     end
   end
 

@@ -118,6 +118,108 @@ defmodule AeMdw.CollectionTest do
     end
   end
 
+  describe "intersect/4" do
+    test "returns the values every side holds, in both directions" do
+      odds = [1, 3, 5, 7, 9]
+      others = [2, 3, 4, 7, 8, 9]
+
+      assert [3, 7, 9] == intersect([[odds], [others]], :forward, 0, 100)
+      assert [9, 7, 3] == intersect([[odds], [others]], :backward, 100, 0)
+      assert [1, 3, 5, 7, 9] == intersect([[odds]], :forward, 0, 100)
+    end
+
+    test "returns the values all of three sides hold" do
+      sides = [[[1, 2, 3, 5, 8, 13]], [[2, 3, 5, 7, 11, 13]], [[1, 3, 5, 7, 9, 11, 13]]]
+
+      assert [3, 5, 13] == intersect(sides, :forward, 0, 100)
+      assert [13, 5, 3] == intersect(sides, :backward, 100, 0)
+    end
+
+    test "takes the union of the seek functions of a side" do
+      assert [3, 5, 7] == intersect([[[1, 5], [3, 7]], [[3, 4, 5, 6, 7]]], :forward, 0, 100)
+      assert [7, 5, 3] == intersect([[[1, 5], [3, 7]], [[3, 4, 5, 6, 7]]], :backward, 100, 0)
+    end
+
+    test "only returns the values from start to stop" do
+      assert [3, 7] == intersect([[[1, 3, 7, 9]], [[1, 3, 7, 9]]], :forward, 3, 8)
+      assert [7, 3] == intersect([[[1, 3, 7, 9]], [[1, 3, 7, 9]]], :backward, 7, 2)
+      assert [] == intersect([[[1, 3, 7, 9]], [[1, 3, 7, 9]]], :forward, 10, 20)
+    end
+
+    test "returns nothing when a side is empty" do
+      assert [] == intersect([[[]], [[1, 2, 3]]], :forward, 0, 100)
+      assert [] == intersect([[[1, 2, 3]], [[], []]], :backward, 100, 0)
+    end
+
+    test "jumps over the values the other side doesn't hold" do
+      seeks = :counters.new(1, [])
+
+      every_int = fn from ->
+        :counters.add(seeks, 1, 1)
+        {:ok, from}
+      end
+
+      assert [7, 999_999] ==
+               [[every_int], [seek([7, 999_999], :forward)]]
+               |> Collection.intersect(:forward, 0, 1_000_000)
+               |> Enum.to_list()
+
+      assert :counters.get(seeks, 1) < 10
+    end
+
+    test "seeks a function again only once its value is passed, and never once it is exhausted" do
+      seeks = :counters.new(2, [])
+
+      counted = fn index, values ->
+        seek_fn = seek(values, :forward)
+
+        fn from ->
+          :counters.add(seeks, index, 1)
+          seek_fn.(from)
+        end
+      end
+
+      every_int = fn from -> {:ok, from} end
+
+      assert [5, 10, 20, 50] ==
+               [[counted.(1, [50]), counted.(2, []), seek([5, 10, 20], :forward)], [every_int]]
+               |> Collection.intersect(:forward, 0, 100)
+               |> Enum.to_list()
+
+      assert :counters.get(seeks, 1) == 2
+      assert :counters.get(seeks, 2) == 1
+    end
+
+    test "stays lazy" do
+      evens = fn from -> {:ok, from + rem(from, 2)} end
+      threes = fn from -> {:ok, from + rem(3 - rem(from, 3), 3)} end
+
+      assert [0, 6, 12] ==
+               [[evens], [threes]]
+               |> Collection.intersect(:forward, 0, 1_000_000_000_000)
+               |> Enum.take(3)
+    end
+  end
+
+  defp intersect(sides, direction, start, stop) do
+    sides
+    |> Enum.map(fn side -> Enum.map(side, &seek(&1, direction)) end)
+    |> Collection.intersect(direction, start, stop)
+    |> Enum.to_list()
+  end
+
+  defp seek(values, :forward), do: fn from -> find_value(values, &(&1 >= from)) end
+
+  defp seek(values, :backward),
+    do: fn from -> values |> Enum.reverse() |> find_value(&(&1 <= from)) end
+
+  defp find_value(values, fun) do
+    case Enum.find(values, fun) do
+      nil -> :none
+      value -> {:ok, value}
+    end
+  end
+
   defp stream_keys(state, direction, boundary, cursor) do
     state
     |> Collection.stream(Model.Block, direction, boundary, cursor)

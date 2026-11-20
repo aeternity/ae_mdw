@@ -135,6 +135,33 @@ defmodule AeMdw.Db.RocksDbOptionsTest do
       end)
     end
 
+    test "drops a table of a previous release and keeps the other tables", %{config: config} do
+      dropped = Atom.to_charlist(Model.GrpIdFnameIntContractCall)
+      tx = Atom.to_charlist(Model.Tx)
+      data_dir = String.to_charlist(config[:data_dir])
+      old_names = Enum.map([:default | Model.tables()], &Atom.to_charlist/1) ++ [dropped]
+
+      {:ok, db_ref, cf_refs} =
+        :rocksdb.open_optimistic_transaction_db(
+          data_dir,
+          [create_if_missing: true, create_missing_column_families: true],
+          Enum.map(old_names, &{&1, []})
+        )
+
+      old_cfs = old_names |> Enum.zip(cf_refs) |> Map.new()
+      :ok = :rocksdb.put(db_ref, old_cfs[tx], "key", "value", [])
+      :ok = :rocksdb.put(db_ref, old_cfs[dropped], "key", "value", [])
+      :ok = :rocksdb.close(db_ref)
+
+      with_db(config, [], fn ->
+        assert {:ok, "value"} = RocksDb.get(Model.Tx, "key")
+      end)
+
+      assert {:ok, cf_names} = :rocksdb.list_column_families(data_dir, [])
+      assert tx in cf_names
+      refute dropped in cf_names
+    end
+
     test "fails on an unknown bloom filter table", %{config: config} do
       put_config(config, bloom_filter_tables: ["IdCount", "NoSuchTable"])
 

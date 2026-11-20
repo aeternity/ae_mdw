@@ -5,6 +5,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -42,7 +43,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           Model.PlainName,
           Model.plain_name(index: name_hash, value: plain_name)
         )
-        |> Store.put(Model.ActiveName, active_name)
+        |> put_counted(Model.ActiveName, active_name)
         |> Store.put(
           Model.ActiveNameActivation,
           Model.activation(index: {active_from, plain_name})
@@ -78,6 +79,8 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       assert State.exists?(state2, Model.InactiveNameExpiration, {update_height, plain_name})
       assert State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
       assert State.exists?(state2, Model.NameUpdate, {plain_name, active, {txi, -1}})
+      assert 0 == ObjectKeys.count(state2, Model.ActiveName)
+      assert 1 == ObjectKeys.count(state2, Model.InactiveName)
     end
 
     test "extends a name by a delta ttl > 0", %{store: store} do
@@ -107,7 +110,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           Model.PlainName,
           Model.plain_name(index: :aens_update_tx.name_hash(tx), value: plain_name)
         )
-        |> Store.put(Model.ActiveName, active_name)
+        |> put_counted(Model.ActiveName, active_name)
         |> Store.put(
           Model.ActiveNameActivation,
           Model.activation(index: {active_from, plain_name})
@@ -150,6 +153,8 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       refute State.exists?(state2, Model.InactiveNameExpiration, {update_height, plain_name})
       refute State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
       assert State.exists?(state2, Model.NameUpdate, {plain_name, active_from, {txi, -1}})
+      assert 1 == ObjectKeys.count(state2, Model.ActiveName)
+      assert 0 == ObjectKeys.count(state2, Model.InactiveName)
     end
   end
 end

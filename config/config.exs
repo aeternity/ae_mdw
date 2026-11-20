@@ -17,7 +17,8 @@ config :ae_mdw, AeMdw.Db.RocksDb,
     Model.RevAex9Transfer,
     Model.Aex9PairTransfer,
     Model.IdxAex9Transfer,
-    Model.IdxAex9AccountPresence
+    Model.IdxAex9AccountPresence,
+    Model.GrpIdFnameIntContractCall
   ]
 
 # Sync

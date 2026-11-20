@@ -19,6 +19,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Blocks
   alias AeMdw.Db.BlockStatisticsMutation
   alias AeMdw.Db.EpochMutation
+  alias AeMdw.Db.HardforkPresets
   alias AeMdw.Db.Model
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlockMutation
@@ -109,6 +110,9 @@ defmodule AeMdw.Db.Sync.Block do
           end)
         end
 
+      genesis_transfers_mutation =
+        if height == 0, do: HardforkPresets.genesis_transfers_mutation()
+
       block_rewards_mutation =
         if height >= AE.min_block_reward_height() and
              :aec_consensus_hc != :aec_consensus.get_genesis_consensus_module() do
@@ -129,6 +133,7 @@ defmodule AeMdw.Db.Sync.Block do
         [
           kb0_mutation,
           genesis_accounts_balances_mutation,
+          genesis_transfers_mutation,
           block_rewards_mutation,
           NamesExpirationMutation.new(height),
           OraclesExpirationMutation.new(height),

@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OracleExtendMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.OracleExtendMutation
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -25,7 +26,7 @@ defmodule AeMdw.Db.OracleExtendMutationTest do
 
       store =
         store
-        |> Store.put(Model.ActiveOracle, Model.oracle(index: pubkey, expire: old_expire))
+        |> put_counted(Model.ActiveOracle, Model.oracle(index: pubkey, expire: old_expire))
         |> Store.put(
           Model.ActiveOracleExpiration,
           Model.expiration(index: {old_expire, pubkey})
@@ -39,6 +40,8 @@ defmodule AeMdw.Db.OracleExtendMutationTest do
                Store.get(store, Model.ActiveOracleExpiration, {new_expire, pubkey})
 
       assert :not_found = Store.get(store, Model.ActiveOracleExpiration, {old_expire, pubkey})
+      assert 1 == ObjectKeys.count(State.new(store), Model.ActiveOracle)
+      assert 0 == ObjectKeys.count(State.new(store), Model.InactiveOracle)
     end
 
     test "do nothing when oracle is inactive", %{store: store} do

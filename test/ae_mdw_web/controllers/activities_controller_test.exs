@@ -1910,22 +1910,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       {:contract_call_tx, contract_call4_tx} = :aetx.specialize_type(contract_call4_aetx)
       contract_call4_signed_tx = :aetx_sign.new(contract_call4_aetx, [])
 
-      {:ok, contract_call5_aetx} =
-        :aect_call_tx.new(%{
-          caller_id: next_account_id,
-          nonce: 2,
-          contract_id: contract_id,
-          abi_version: 2,
-          fee: 1,
-          amount: 1,
-          gas: 1,
-          gas_price: 1,
-          call_data: ""
-        })
-
-      {:contract_call_tx, contract_call5_tx} = :aetx.specialize_type(contract_call5_aetx)
-      contract_call5_signed_tx = :aetx_sign.new(contract_call5_aetx, [])
-
       store =
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
@@ -1936,6 +1920,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
         )
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 4}))
         |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
         |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
         |> Store.put(
@@ -1979,7 +1964,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              "tx-hash1" -> {"", :contract_call_tx, contract_call1_signed_tx, contract_call1_tx}
              "tx-hash2" -> {"", :spend_tx, spend1_signed_tx, spend1_tx}
              "tx-hash4" -> {"", :contract_call_tx, contract_call4_signed_tx, contract_call4_tx}
-             "tx-hash5" -> {"", :contract_call_tx, contract_call5_signed_tx, contract_call5_tx}
            end,
            get_block_time: fn _block_hash ->
              456
@@ -2009,7 +1993,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
            end
          ]}
       ] do
-        assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
+        assert %{"prev" => nil, "data" => [tx1, tx2, tx3, tx4], "next" => _next_url} =
                  conn
                  |> with_store(store)
                  |> get("/v3/accounts/#{account}/activities", owned_only: 1, direction: "forward")
@@ -2032,10 +2016,231 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
+                 "type" => "ContractCallTxEvent",
+                 "payload" => %{"tx" => %{"aexn_type" => "aex9"}}
+               } = tx3
+
+        assert %{
+                 "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
                  "type" => "Aex9TransferEvent",
                  "payload" => %{"amount" => 1}
-               } = tx3
+               } = tx4
+      end
+    end
+
+    test "when ownership_only param given, it returns the aexn transfers of calls and creates made by the account",
+         %{conn: conn} do
+      account_pk = TS.address(0)
+      other_pk = TS.address(1)
+      contract_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+      inner_pos = Fields.field_pos_mask(:paying_for_tx, 1)
+      height = 398
+      mbi = 2
+
+      # {txi, fields, inner types, sender, recipient}
+      transfers = [
+        # paying_for paid by someone else around a call by the account
+        {1, [{:paying_for_tx, 1, other_pk}, {:paying_for_tx, inner_pos, account_pk}],
+         [:contract_call_tx], account_pk, other_pk},
+        # ga_meta around a call by the account, which receives the tokens
+        {2, [{:ga_meta_tx, 1, account_pk}, {:ga_meta_tx, inner_pos, account_pk}],
+         [:contract_call_tx], other_pk, account_pk},
+        # ga_meta around paying_for paid by the account for a call by someone else
+        {3,
+         [
+           {:ga_meta_tx, 1, account_pk},
+           {:ga_meta_tx, inner_pos, account_pk},
+           {:paying_for_tx, inner_pos, other_pk}
+         ], [:paying_for_tx, :contract_call_tx], account_pk, other_pk},
+        # call by someone else
+        {4, [{:contract_call_tx, 1, other_pk}], [], other_pk, account_pk},
+        # ga_meta around paying_for paid by someone else for a call by the account
+        {5, [{:ga_meta_tx, inner_pos, other_pk}, {:paying_for_tx, inner_pos, account_pk}],
+         [:paying_for_tx, :contract_call_tx], account_pk, other_pk},
+        # paying_for paid by the account around a call by someone else
+        {6, [{:paying_for_tx, 1, account_pk}, {:paying_for_tx, inner_pos, other_pk}],
+         [:contract_call_tx], account_pk, other_pk},
+        # contract created by the account, which mints to it
+        {7, [{:contract_create_tx, 1, account_pk}], [], contract_pk, account_pk},
+        # ga_meta around paying_for paid by the account for a call by the account
+        {8, [{:ga_meta_tx, inner_pos, account_pk}, {:paying_for_tx, inner_pos, account_pk}],
+         [:paying_for_tx, :contract_call_tx], account_pk, other_pk}
+      ]
+
+      store =
+        transfers
+        |> Enum.reduce(empty_store(), fn {txi, fields, inner_types, from_pk, to_pk}, store ->
+          store =
+            Enum.reduce(fields, store, fn {tx_type, pos, pk}, store ->
+              Store.put(store, Model.Field, Model.field(index: {tx_type, pos, pk, txi}))
+            end)
+
+          inner_types
+          |> Enum.reduce(store, fn inner_type, store ->
+            Store.put(store, Model.InnerType, Model.type(index: {inner_type, txi}))
+          end)
+          |> Store.put(
+            Model.AexnTransfer,
+            Model.aexn_transfer(
+              index: {:aex9, from_pk, txi, 0, to_pk, txi * 10},
+              contract_pk: contract_pk
+            )
+          )
+          |> Store.put(
+            Model.RevAexnTransfer,
+            Model.rev_aexn_transfer(index: {:aex9, to_pk, txi, 0, from_pk, txi * 10})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: txi, block_index: {height, mbi}, id: "tx-hash#{txi}")
+          )
+        end)
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: TS.key_block_hash(0)))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: TS.micro_block_hash(0)))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: {"AEXName", "AEX", 18})
+        )
+
+      amounts = fn activities ->
+        Enum.map(activities, fn %{"type" => "Aex9TransferEvent", "payload" => payload} ->
+          payload["amount"]
+        end)
+      end
+
+      with_mocks [{Db, [:passthrough], [get_block_time: fn _block_hash -> 456 end]}] do
+        assert %{"prev" => nil, "data" => page1, "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/activities",
+                   owned_only: true,
+                   type: "aex9",
+                   direction: "forward",
+                   limit: 3
+                 )
+                 |> json_response(200)
+
+        assert [10, 20, 50] == amounts.(page1)
+
+        assert %{"prev" => prev_url, "data" => page2, "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert [70, 80] == amounts.(page2)
+
+        assert %{"data" => ^page1} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
+
+        assert %{"prev" => nil, "data" => backward, "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/accounts/#{account}/activities", owned_only: true, type: "aex9")
+                 |> json_response(200)
+
+        assert [80, 70, 50, 20, 10] == amounts.(backward)
+      end
+    end
+
+    test "when ownership_only param given, it returns the aexn transfers of the account within the scope",
+         %{conn: conn} do
+      account_pk = TS.address(0)
+      other_pk = TS.address(1)
+      contract_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+
+      # a call by the account in each generation, with txi = height
+      store =
+        1..5
+        |> Enum.reduce(empty_store(), fn txi, store ->
+          store
+          |> Store.put(
+            Model.Block,
+            Model.block(index: {txi, -1}, tx_index: txi, hash: <<txi::256>>)
+          )
+          |> Store.put(Model.Block, Model.block(index: {txi, 0}, hash: <<100 + txi::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: txi, block_index: {txi, 0}, id: "tx-hash#{txi}"))
+          |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, txi}))
+          |> Store.put(
+            Model.AexnTransfer,
+            Model.aexn_transfer(
+              index: {:aex9, account_pk, txi, 0, other_pk, txi * 10},
+              contract_pk: contract_pk
+            )
+          )
+        end)
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: {"AEXName", "AEX", 18})
+        )
+
+      with_mocks [{Db, [:passthrough], [get_block_time: fn _block_hash -> 456 end]}] do
+        for {scope, amounts} <- [{"gen:2-4", [20, 30, 40]}, {"gen:4-2", [40, 30, 20]}] do
+          assert %{"data" => page1, "next" => next_url} =
+                   conn
+                   |> with_store(store)
+                   |> get("/v3/accounts/#{account}/activities",
+                     owned_only: true,
+                     type: "aex9",
+                     scope: scope,
+                     limit: 2
+                   )
+                   |> json_response(200)
+
+          assert %{"data" => page2, "next" => nil} =
+                   conn
+                   |> with_store(store)
+                   |> get(next_url)
+                   |> json_response(200)
+
+          assert amounts == Enum.map(page1 ++ page2, & &1["payload"]["amount"])
+        end
+      end
+    end
+
+    test "when ownership_only param given, it doesn't read the txs of aexn transfers made by others",
+         %{conn: conn} do
+      account_pk = TS.address(0)
+      other_pk = TS.address(1)
+      contract_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+
+      store =
+        1..50
+        |> Enum.reduce(empty_store(), fn txi, store ->
+          store
+          |> Store.put(
+            Model.AexnTransfer,
+            Model.aexn_transfer(
+              index: {:aex9, account_pk, txi, 0, other_pk, txi},
+              contract_pk: contract_pk
+            )
+          )
+          |> Store.put(Model.Tx, Model.tx(index: txi, block_index: {1, 0}, id: "tx-hash#{txi}"))
+        end)
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 51}))
+        |> Store.put(Model.Tx, Model.tx(index: 51, block_index: {1, 0}, id: "tx-hash51"))
+
+      with_mocks [{Db, [:passthrough], []}] do
+        for direction <- ~w(forward backward) do
+          assert %{"prev" => nil, "data" => [], "next" => nil} =
+                   conn
+                   |> with_store(store)
+                   |> get("/v3/accounts/#{account}/activities",
+                     owned_only: true,
+                     type: "aexn",
+                     direction: direction
+                   )
+                   |> json_response(200)
+        end
+
+        assert_not_called(Db.get_tx_data(:_))
       end
     end
 

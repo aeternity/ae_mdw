@@ -15,11 +15,11 @@ defmodule AeMdw.Db.HardforkPresetsTest do
   end
 
   describe "import_account_presets" do
-    test "on mainnet saves genesis, minerva, fortuna and lima migrated accounts" do
+    test "on mainnet saves minerva, fortuna and lima migrated accounts, but not genesis ones" do
       with_mocks [{:aec_governance, [:passthrough], get_network_id: fn -> "ae_mainnet" end}] do
         HardforkPresets.import_account_presets()
 
-        assert 716 ==
+        assert 0 ==
                  State.new()
                  |> Collection.stream(
                    Model.KindIntTransferTx,
@@ -71,11 +71,11 @@ defmodule AeMdw.Db.HardforkPresetsTest do
       end
     end
 
-    test "on testnet saves genesis, minerva, fortuna and lima migrated accounts" do
+    test "on testnet saves minerva, fortuna and lima migrated accounts, but not genesis ones" do
       with_mocks [{:aec_governance, [:passthrough], get_network_id: fn -> "ae_uat" end}] do
         HardforkPresets.import_account_presets()
 
-        assert 1 ==
+        assert 0 ==
                  State.new()
                  |> Collection.stream(
                    Model.KindIntTransferTx,

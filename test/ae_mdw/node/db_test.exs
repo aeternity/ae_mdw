@@ -47,4 +47,47 @@ defmodule AeMdw.Node.DbTest do
       end
     end
   end
+
+  describe "find_block_height_time/1" do
+    test "returns the height and time from the block header" do
+      mb_hash = :crypto.strong_rand_bytes(32)
+      unknown_hash = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {:aec_db, [],
+         [
+           find_header: fn
+             ^mb_hash -> {:value, :header}
+             ^unknown_hash -> :none
+           end
+         ]},
+        {:aec_headers, [], [height: fn :header -> 7 end, time_in_msecs: fn :header -> 123 end]}
+      ] do
+        assert {:ok, 7, 123} = Db.find_block_height_time(mb_hash)
+        assert :none = Db.find_block_height_time(unknown_hash)
+      end
+    end
+  end
+
+  describe "find_block_tx_hashes/1" do
+    test "returns the node's tx hashes of the block, or :error when the node db fails" do
+      [mb_hash, unknown_hash, failing_hash, tx_hash1, tx_hash2] =
+        for _i <- 1..5, do: :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {:aec_db, [],
+         [
+           find_block_tx_hashes: fn
+             ^mb_hash -> {:value, [tx_hash1, tx_hash2]}
+             ^unknown_hash -> :none
+             ^failing_hash -> exit(:no_transaction)
+           end
+         ]}
+      ] do
+        assert {:ok, [^tx_hash1, ^tx_hash2]} = Db.find_block_tx_hashes(mb_hash)
+        assert :none = Db.find_block_tx_hashes(unknown_hash)
+        assert :error = Db.find_block_tx_hashes(failing_hash)
+      end
+    end
+  end
 end

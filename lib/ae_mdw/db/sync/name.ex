@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
@@ -121,7 +122,7 @@ defmodule AeMdw.Db.Sync.Name do
         )
         |> State.put(Model.ActiveNameExpiration, new_m_name_exp)
         |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
-        |> State.put(Model.ActiveName, new_m_name)
+        |> ObjectKeys.put(Model.ActiveName, new_m_name)
 
       :expire ->
         new_m_name = Model.name(m_name, expire: height)
@@ -150,7 +151,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.delete(Model.ActiveNameOwner, {old_owner, plain_name})
     |> State.delete(Model.ActiveNameOwnerDeactivation, {old_owner, expire, plain_name})
     |> State.put(Model.ActiveNameOwner, m_owner)
-    |> State.put(Model.ActiveName, m_name)
+    |> ObjectKeys.put(Model.ActiveName, m_name)
     |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
     |> Names.increment_names_count(new_owner)
     |> Names.decrement_names_count(old_owner)
@@ -238,7 +239,7 @@ defmodule AeMdw.Db.Sync.Name do
     m_owner_deactivation = Model.owner_deactivation(index: {owner_pk, expire, plain_name})
 
     state
-    |> State.put(Model.ActiveName, m_name)
+    |> ObjectKeys.put(Model.ActiveName, m_name)
     |> State.put(Model.ActiveNameOwner, m_owner)
     |> State.put(Model.ActiveNameActivation, m_activation)
     |> State.put(Model.ActiveNameExpiration, m_expiration)
@@ -270,7 +271,7 @@ defmodule AeMdw.Db.Sync.Name do
 
     state
     |> delete_active(expiration, m_name)
-    |> State.put(Model.InactiveName, m_name)
+    |> ObjectKeys.put(Model.InactiveName, m_name)
     |> State.put(Model.InactiveNameExpiration, m_exp)
     |> State.put(Model.InactiveNameOwner, m_owner)
     |> State.put(Model.InactiveNameOwnerDeactivation, m_owner_deactivation)
@@ -286,7 +287,7 @@ defmodule AeMdw.Db.Sync.Name do
         prev_name = Model.previous_name(index: {plain_name, active}, name: name)
 
         state
-        |> State.delete(Model.InactiveName, plain_name)
+        |> ObjectKeys.delete(Model.InactiveName, plain_name)
         |> State.delete(Model.InactiveNameOwner, {owner_pk, plain_name})
         |> State.delete(Model.InactiveNameExpiration, {expire, plain_name})
         |> State.delete(Model.InactiveNameOwnerDeactivation, {owner_pk, expire, plain_name})
@@ -303,7 +304,7 @@ defmodule AeMdw.Db.Sync.Name do
          Model.name(index: plain_name, active: active_from, owner: owner_pk)
        ) do
     state
-    |> State.delete(Model.ActiveName, plain_name)
+    |> ObjectKeys.delete(Model.ActiveName, plain_name)
     |> State.delete(Model.ActiveNameOwner, {owner_pk, plain_name})
     |> State.delete(Model.ActiveNameActivation, {active_from, plain_name})
     |> State.delete(Model.ActiveNameExpiration, {expiration, plain_name})

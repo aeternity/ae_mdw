@@ -5,6 +5,7 @@ defmodule AeMdw.Db.StateTest do
   alias AeMdw.Database
   alias AeMdw.Sync.Aex9BalancesCache
   alias AeMdw.Db.AexnCreateContractMutation
+  alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
@@ -21,6 +22,43 @@ defmodule AeMdw.Db.StateTest do
   setup do
     global_state_ref = :persistent_term.get(:global_state, nil)
     on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
+  end
+
+  describe "commit/3 when clearing the mem state" do
+    test "keeps the mem state that a read created" do
+      :persistent_term.erase(:global_state)
+      mem_state = State.mem_state()
+
+      State.commit(State.new(), [], true)
+
+      assert State.mem_state() == mem_state
+    end
+
+    test "erases a mem state that doesn't read like a new one" do
+      new_state = fn -> State.new(MemStore.new(DbStore.new())) end
+
+      deleted_store = MemStore.new(DbStore.new())
+      MemStore.delete_store(deleted_store)
+
+      mem_states = [
+        records: State.put(new_state.(), Model.Block, Model.block(index: {1, 0})),
+        stats: State.inc_stat(new_state.(), :accounts),
+        cache: State.cache_put(new_state.(), :ct_create_sync_cache, <<1::256>>, 1),
+        jobs: State.enqueue(new_state.(), :update_tx_stats, [1], []),
+        deleted_tables: State.new(deleted_store),
+        no_db_fallback: State.new(MemStore.new(NullStore.new())),
+        db_store: State.new(),
+        nil: nil
+      ]
+
+      for {name, mem_state} <- mem_states do
+        :persistent_term.put(:global_state, mem_state)
+
+        State.commit(State.new(), [], true)
+
+        assert :persistent_term.get(:global_state, :none) == :none, "#{inspect(name)} was kept"
+      end
+    end
   end
 
   describe "commit_db" do

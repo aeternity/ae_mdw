@@ -76,16 +76,10 @@ defmodule AeMdw.Db.IntCallsMutation do
         m_id_fname_call =
           Model.id_fname_int_contract_call(index: {pk, fname, field_pos, call_txi, local_idx})
 
-        m_grp_id_fname_call =
-          Model.grp_id_fname_int_contract_call(
-            index: {create_txi, pk, fname, field_pos, call_txi, local_idx}
-          )
-
         state
         |> State.put(Model.IdIntContractCall, m_id_call)
         |> State.put(Model.GrpIdIntContractCall, m_grp_id_call)
         |> State.put(Model.IdFnameIntContractCall, m_id_fname_call)
-        |> State.put(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
       end)
     end)
   end

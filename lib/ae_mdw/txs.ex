@@ -428,10 +428,7 @@ defmodule AeMdw.Txs do
       end
 
     Enum.flat_map(intersection_of_tx_types, fn tx_type ->
-      {min_account_id, min_fields} =
-        Enum.min_by(ids_fields, fn {id, fields} ->
-          count_txs_for_account(state, id, fields, tx_type)
-        end)
+      {min_account_id, min_fields} = min_txs_account(state, ids_fields, tx_type)
 
       rest_accounts = Enum.reject(ids_fields, &match?({^min_account_id, ^min_fields}, &1))
 
@@ -447,6 +444,14 @@ defmodule AeMdw.Txs do
         |> Stream.map(extract_txi)
         |> Stream.filter(&all_accounts_have_tx?(state, tx_type, &1, rest_accounts))
       end)
+    end)
+  end
+
+  defp min_txs_account(_state, [id_fields], _tx_type), do: id_fields
+
+  defp min_txs_account(state, ids_fields, tx_type) do
+    Enum.min_by(ids_fields, fn {id, fields} ->
+      count_txs_for_account(state, id, fields, tx_type)
     end)
   end
 
@@ -574,21 +579,42 @@ defmodule AeMdw.Txs do
     encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
 
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
-         {:ok, mb_height} <- Db.find_block_height(mb_hash) do
-      state
-      |> Blocks.fetch_txis_from_gen(mb_height)
-      |> Stream.map(&State.fetch!(state, @table, &1))
-      |> Enum.find_value(
-        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
-        fn
-          Model.tx(id: ^tx_hash) = tx -> {:ok, tx}
-          _tx -> nil
-        end
-      )
+         {:ok, mb_height, mb_time} <- Db.find_block_height_time(mb_hash),
+         {:ok, tx} <- find_tx(state, tx_hash, mb_hash, mb_height, mb_time) do
+      {:ok, tx}
     else
-      _no_block_or_header ->
+      _no_block_or_tx ->
         {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)}
     end
+  end
+
+  defp find_tx(state, tx_hash, mb_hash, mb_height, mb_time) do
+    with :not_found <- micro_block_tx(state, tx_hash, mb_hash, mb_time) do
+      generation_tx(state, tx_hash, mb_height)
+    end
+  end
+
+  # The micro block's first txi (its first Model.Time entry) plus the tx's position in the node's
+  # tx list. Any mismatch, e.g. mdw still on another micro fork, falls back to the generation scan.
+  defp micro_block_tx(state, tx_hash, mb_hash, mb_time) do
+    with {:ok, {^mb_time, first_txi}} <- State.next(state, Model.Time, {mb_time, -1}),
+         {:ok, tx_hashes} <- Db.find_block_tx_hashes(mb_hash),
+         pos when is_integer(pos) <- Enum.find_index(tx_hashes, &(&1 == tx_hash)),
+         {:ok, Model.tx(id: ^tx_hash) = tx} <- State.get(state, @table, first_txi + pos) do
+      {:ok, tx}
+    else
+      _no_match -> :not_found
+    end
+  end
+
+  defp generation_tx(state, tx_hash, height) do
+    state
+    |> Blocks.fetch_txis_from_gen(height)
+    |> Stream.map(&State.fetch!(state, @table, &1))
+    |> Enum.find_value(:not_found, fn
+      Model.tx(id: ^tx_hash) = tx -> {:ok, tx}
+      _tx -> nil
+    end)
   end
 
   defp render(state, tx, opts) do

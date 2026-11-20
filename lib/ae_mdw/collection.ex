@@ -25,6 +25,12 @@ defmodule AeMdw.Collection do
 
   @type range() :: {:gen, Range.t()} | {:txi, Range.t()} | {:epoch, Range.t()} | nil
 
+  @typedoc """
+  Given an integer, returns the first one the source holds from it on, in the stream direction.
+  It may return `:none` instead of a value past the stop.
+  """
+  @type seek_fn() :: (integer() -> {:ok, integer()} | :none)
+
   @doc """
   Paginates a list or stream or records into a list of items and it's next cursor (if
   any).
@@ -119,6 +125,26 @@ defmodule AeMdw.Collection do
     |> Stream.uniq()
   end
 
+  @doc """
+  Streams the integers from `start` to `stop`, both included, that every side holds. A side is
+  the union of its seek functions. The sides jump to each other's next value, so sides that
+  seldom share one are joined without reading all of their values.
+  """
+  @spec intersect([[seek_fn()], ...], direction(), integer(), integer()) :: Enumerable.t()
+  def intersect(sides, direction, start, stop) do
+    sides = Enum.map(sides, fn seek_fns -> Enum.map(seek_fns, &{&1, nil}) end)
+
+    Stream.unfold({start, sides}, fn {from, sides} ->
+      case seek_common(sides, length(sides), 0, direction, from, stop) do
+        {:ok, value, sides} ->
+          {value, {if(direction == :forward, do: value + 1, else: value - 1), sides}}
+
+        :none ->
+          nil
+      end
+    end)
+  end
+
   @spec generate_key_boundary(tuple()) :: key_boundary()
   def generate_key_boundary(key) do
     key
@@ -211,6 +237,49 @@ defmodule AeMdw.Collection do
       Enumerable.reduce(rest_stream, {:halt, nil}, fn _key, nil -> {:cont, nil} end)
     end)
   end
+
+  defp seek_common([side | sides], sides_count, agreed, direction, from, stop) do
+    case seek_side(side, direction, from) do
+      {:ok, value, side} ->
+        agreed = if value == from, do: agreed + 1, else: 1
+        sides = sides ++ [side]
+
+        cond do
+          past?(value, stop, direction) -> :none
+          agreed == sides_count -> {:ok, value, sides}
+          true -> seek_common(sides, sides_count, agreed, direction, value, stop)
+        end
+
+      :none ->
+        :none
+    end
+  end
+
+  defp seek_side(side, direction, from) do
+    case Enum.flat_map(side, &cached_seek(&1, direction, from)) do
+      [] ->
+        :none
+
+      side ->
+        values = Enum.map(side, fn {_seek_fn, value} -> value end)
+        {:ok, if(direction == :forward, do: Enum.min(values), else: Enum.max(values)), side}
+    end
+  end
+
+  # A seek function returns its last value again until `from` passes it, and :none for good
+  defp cached_seek({seek_fn, last_value} = cached, direction, from) do
+    if last_value != nil and not past?(from, last_value, direction) do
+      [cached]
+    else
+      case seek_fn.(from) do
+        {:ok, value} -> [{seek_fn, value}]
+        :none -> []
+      end
+    end
+  end
+
+  defp past?(value, limit, :forward), do: value > limit
+  defp past?(value, limit, :backward), do: value < limit
 
   defp reverse_cursor(nil), do: nil
   defp reverse_cursor({cursor, is_reversed?}), do: {cursor, not is_reversed?}

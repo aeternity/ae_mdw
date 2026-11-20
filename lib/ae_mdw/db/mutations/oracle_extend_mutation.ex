@@ -7,6 +7,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -53,7 +54,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
         state
         |> State.delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
         |> State.put(Model.ActiveOracleExpiration, m_exp)
-        |> State.put(Model.ActiveOracle, m_oracle)
+        |> ObjectKeys.put(Model.ActiveOracle, m_oracle)
 
       :not_found ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")

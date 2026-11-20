@@ -5,6 +5,7 @@ defmodule AeMdw.Db.UtilTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Node.Db
 
   require Model
 
@@ -64,6 +65,36 @@ defmodule AeMdw.Db.UtilTest do
 
       assert {:ok, {@height, time}} = DbUtil.last_gen_and_time(state)
       assert time == @height * 180_000
+    end
+  end
+
+  describe "read_node_tx/2" do
+    test "reads an internal call tx without the outer tx" do
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, <<1::256>>),
+          recipient_id: :aeser_id.create(:account, <<2::256>>),
+          amount: 123,
+          fee: 0,
+          nonce: 0,
+          payload: <<>>
+        })
+
+      {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
+
+      state =
+        empty_store()
+        |> Store.put(
+          Model.IntContractCall,
+          Model.int_contract_call(index: {10, 0}, fname: "Chain.spend", tx: aetx)
+        )
+        |> State.new()
+
+      with_mock Db, [:passthrough], [] do
+        assert ^spend_tx = DbUtil.read_node_tx(state, {10, 0})
+
+        assert_not_called(Db.get_tx_data(:_))
+      end
     end
   end
 
