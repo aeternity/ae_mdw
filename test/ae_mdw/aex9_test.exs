@@ -134,4 +134,164 @@ defmodule AeMdw.Aex9Test do
       end
     end
   end
+
+  describe "fetch_balance_history" do
+    setup do
+      {:ok, contract_pk: :crypto.strong_rand_bytes(32), account_pk: :crypto.strong_rand_bytes(32)}
+    end
+
+    test "starts the dry-runs after the contract creation height", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, [first_item | _rest] = items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   nil,
+                   nil,
+                   {:forward, false, 10, false}
+                 )
+
+        assert [21, 22, 23] == Enum.map(items, & &1.height)
+
+        assert %{
+                 contract: encode_contract(contract_pk),
+                 account: encode_account(account_pk),
+                 amount: 210,
+                 height: 21
+               } == first_item
+
+        assert 21 == dry_run_gens() |> Enum.min()
+      end
+    end
+
+    test "stops the dry-runs after the contract creation height going backward", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        assert {:ok, {nil, items, {21, false}}} =
+                 Aex9.fetch_balance_history(
+                   state,
+                   contract_pk,
+                   account_pk,
+                   {:gen, 0..23},
+                   nil,
+                   {:backward, false, 2, false}
+                 )
+
+        assert [23, 22] == Enum.map(items, & &1.height)
+
+        assert {:ok, {{22, true}, [%{height: 21}], nil}} =
+                 Aex9.fetch_balance_history(
+                   state,
+                   contract_pk,
+                   account_pk,
+                   {:gen, 0..23},
+                   "21",
+                   {:backward, false, 2, true}
+                 )
+
+        assert 21 == dry_run_gens() |> Enum.min()
+      end
+    end
+
+    test "returns an empty page without dry-runs when the range ends at the creation height", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        for direction <- [:forward, :backward] do
+          assert {:ok, {nil, [], nil}} =
+                   Aex9.fetch_balance_history(
+                     history_state(contract_pk),
+                     contract_pk,
+                     account_pk,
+                     {:gen, 0..20},
+                     nil,
+                     {direction, false, 10, false}
+                   )
+        end
+
+        assert [] == dry_run_gens()
+      end
+    end
+
+    test "returns an empty page for a backward cursor before the creation", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {_prev_cursor, [], nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 0..23},
+                   "10",
+                   {:backward, false, 10, true}
+                 )
+
+        assert 21 == dry_run_gens() |> Enum.min()
+      end
+    end
+
+    test "scans the whole range when the contract creation is unknown", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = NullStore.new() |> MemStore.new() |> State.new()
+
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   state,
+                   contract_pk,
+                   account_pk,
+                   {:gen, 15..23},
+                   nil,
+                   {:forward, false, 10, false}
+                 )
+
+        assert [21, 22, 23] == Enum.map(items, & &1.height)
+        assert 15 == dry_run_gens() |> Enum.min()
+      end
+    end
+  end
+
+  # The contract is created in a micro block of generation 20, so its balance
+  # can be dry-run from key block 21 on.
+  defp history_state(contract_pk) do
+    NullStore.new()
+    |> MemStore.new()
+    |> Store.put(Model.Field, Model.field(index: {:contract_create_tx, nil, contract_pk, 200}))
+    |> Store.put(Model.Tx, Model.tx(index: 200, id: <<200::256>>, block_index: {20, 3}))
+    |> Store.put(Model.Block, Model.block(index: {23, -1}))
+    |> State.new()
+  end
+
+  defp history_mocks(contract_pk, account_pk) do
+    [
+      {AeMdw.Db.Util, [:passthrough], [height_hash: fn gen -> <<gen::256>> end]},
+      {AeMdw.Node.Db, [:passthrough],
+       [
+         aex9_balance: fn ^contract_pk, ^account_pk, {:key, gen, _hash} = height_hash ->
+           if gen > 20,
+             do: {:ok, {gen * 10, height_hash}},
+             else: {:error, :contract_does_not_exist}
+         end
+       ]}
+    ]
+  end
+
+  defp dry_run_gens do
+    for {_pid, {AeMdw.Node.Db, :aex9_balance, [_ct_pk, _acc_pk, {:key, gen, _hash}]}, _res} <-
+          call_history(AeMdw.Node.Db),
+        do: gen
+  end
 end
