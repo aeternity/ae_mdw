@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.NameTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
@@ -402,6 +403,31 @@ defmodule AeMdw.Db.Sync.NameTest do
 
       assert 0 == ObjectKeys.count(state, Model.ActiveName)
       assert 1 == ObjectKeys.count(state, Model.InactiveName)
+    end
+
+    test "deactivates a name extended over the fallback store" do
+      plain_name = new_name()
+      name_hash = :crypto.strong_rand_bytes(32)
+      m_name = Model.name(index: plain_name, active: 100, expire: 200, owner: TS.address(0))
+
+      %{store: fallback_store} =
+        empty_state()
+        |> Name.put_active(m_name)
+        |> State.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+
+      state =
+        fallback_store
+        |> MemStore.new()
+        |> State.new()
+        |> Name.update(name_hash, {:update_expiration, 300}, [], {1_000, -1}, {150, 0})
+        |> Name.revoke(plain_name, {1_001, -1}, {151, 0})
+
+      refute State.exists?(state, Model.ActiveName, plain_name)
+      assert {:ok, Model.name(expire: 300)} = State.get(state, Model.InactiveName, plain_name)
+      assert 0 == ObjectKeys.count(state, Model.ActiveName)
+
+      state2 = ObjectKeys.put(state, Model.ActiveName, m_name)
+      assert 1 == ObjectKeys.count(state2, Model.ActiveName)
     end
   end
 
