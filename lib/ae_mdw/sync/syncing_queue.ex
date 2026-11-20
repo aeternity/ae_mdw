@@ -4,12 +4,15 @@ defmodule AeMdw.Sync.SyncingQueue do
   begins.
   """
 
+  alias AeMdw.Log
   alias AeMdw.Sync.Server, as: SyncServer
   alias Task.Supervisor, as: TaskSupervisor
 
   use GenServer
 
   @type task_fn :: (-> :ok)
+
+  @retry_ms 10_000
 
   @spec start_link(term()) :: {:ok, pid()}
   def start_link(_opts) do
@@ -60,16 +63,27 @@ defmodule AeMdw.Sync.SyncingQueue do
   end
 
   @impl true
+  def handle_info({:DOWN, ref, :process, _pid, reason}, {queue, {ref, task_fn}})
+      when reason != :normal do
+    # the tasks queued after it, like starting the sync, depend on it
+    Log.error("[syncing_queue] task failed, retrying in #{@retry_ms}ms: #{inspect(reason)}")
+    Process.send_after(self(), :retry, @retry_ms)
+
+    {:noreply, {[task_fn | queue], :retrying}}
+  end
+
+  def handle_info(:retry, {queue, :retrying}), do: {:noreply, check_process({queue, nil})}
+
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp check_process({[task_fn | rest], nil}) do
-    ref =
+    %Task{ref: ref} =
       TaskSupervisor.async_nolink(SyncServer.task_supervisor(), fn ->
         task_fn.()
         complete()
       end)
 
-    {rest, ref}
+    {rest, {ref, task_fn}}
   end
 
   defp check_process(state), do: state

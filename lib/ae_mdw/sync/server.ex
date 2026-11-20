@@ -220,7 +220,8 @@ defmodule AeMdw.Sync.Server do
     new_state_data = %__MODULE__{
       state_data
       | mem_hash: State.height(new_db_state),
-        db_state: new_db_state
+        db_state: new_db_state,
+        restarts: 0
     }
 
     Process.demonitor(ref, [:flush])
@@ -229,7 +230,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
-    new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
+    new_state_data = %__MODULE__{state_data | mem_hash: mem_hash, restarts: 0}
     {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
@@ -457,8 +458,14 @@ defmodule AeMdw.Sync.Server do
           ]
         end)
 
-      gen_mutations ++
-        [{block_index, mblock, account_balances_mutations ++ account_statistics_mutations}]
+      # before the key block entry, so that its StatsMutation counts the new accounts
+      # in this generation rather than in the next one, which a restart would lose
+      {micro_blocks_mutations, key_block_mutations} =
+        Enum.split_with(gen_mutations, fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
+
+      micro_blocks_mutations ++
+        [{block_index, mblock, account_balances_mutations ++ account_statistics_mutations}] ++
+        key_block_mutations
     else
       gen_mutations
     end

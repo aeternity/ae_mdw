@@ -63,7 +63,7 @@ defmodule AeMdw.Sync.ServerTest do
              ]
     end
 
-    test "commits the account mutations with the rest of the generation" do
+    test "commits the account mutations of a generation before its key block mutations" do
       gens = [generation(1_000, 2)]
       pubkeys = [<<1::256>>, <<2::256>>]
       trees = state_trees_with_accounts(pubkeys)
@@ -82,11 +82,13 @@ defmodule AeMdw.Sync.ServerTest do
       assert [
                [
                  {:mutation, {1_000, 0}},
-                 {:mutation, {1_000, 1}},
-                 {:mutation, {1_000, -1}}
-                 | account_mutations
+                 {:mutation, {1_000, 1}}
+                 | account_and_key_block_mutations
                ]
              ] = received(:committed)
+
+      assert {:mutation, {1_000, -1}} = List.last(account_and_key_block_mutations)
+      account_mutations = Enum.drop(account_and_key_block_mutations, -1)
 
       assert %{
                UpdateBalanceAccountMutation => 2,
@@ -125,6 +127,14 @@ defmodule AeMdw.Sync.ServerTest do
       end
 
       refute Database.exists?(Model.Stat, key)
+    end
+
+    test "resets the restart count after a generation syncs" do
+      ref = make_ref()
+      state_data = %Server{db_sync_data() | restarts: 4}
+
+      assert {:next_state, :idle, %Server{restarts: 0}, _actions} =
+               Server.handle_event(:info, {ref, state_at(1_000)}, {:syncing_db, ref}, state_data)
     end
   end
 
