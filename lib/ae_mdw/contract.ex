@@ -548,20 +548,14 @@ defmodule AeMdw.Contract do
   end
 
   defp contract_init_args(contract_pk, tx_rec, block_hash) when is_binary(block_hash) do
-    height =
-      case :aec_chain.get_block(block_hash) do
-        {:ok, block} -> block |> :aec_blocks.to_header() |> :aec_headers.height()
-        _error -> nil
-      end
-
-    do_contract_init_args(contract_pk, tx_rec, :aect_create_tx, height)
+    do_contract_init_args(contract_pk, tx_rec, :aect_create_tx, block_hash)
   end
 
   defp contract_init_args(contract_pk, tx_rec, mod) when is_atom(mod) do
     do_contract_init_args(contract_pk, tx_rec, mod, nil)
   end
 
-  defp do_contract_init_args(contract_pk, tx_rec, mod, height) do
+  defp do_contract_init_args(contract_pk, tx_rec, mod, block_hash) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- get_info(contract_pk),
          call_data <- mod.call_data(tx_rec),
          {"init", args} <- decode_call_data(type_info, call_data) do
@@ -569,17 +563,26 @@ defmodule AeMdw.Contract do
     else
       {:error, reason} ->
         Log.warn(
-          "contract_init_args failed reason=#{inspect(reason)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)} (of ContractCreateTx)"
+          "contract_init_args failed reason=#{inspect(reason)} contract=#{encode_contract(contract_pk)} height=#{inspect(block_height(block_hash))} (of ContractCreateTx)"
         )
 
         nil
 
       other ->
         Log.warn(
-          "contract_init_args unexpected result=#{inspect(other)} contract=#{encode_contract(contract_pk)} height=#{inspect(height)}"
+          "contract_init_args unexpected result=#{inspect(other)} contract=#{encode_contract(contract_pk)} height=#{inspect(block_height(block_hash))}"
         )
 
         nil
+    end
+  end
+
+  defp block_height(nil), do: nil
+
+  defp block_height(block_hash) do
+    case :aec_chain.get_header(block_hash) do
+      {:ok, header} -> :aec_headers.height(header)
+      _error -> nil
     end
   end
 

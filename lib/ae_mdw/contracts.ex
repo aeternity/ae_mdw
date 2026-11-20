@@ -677,7 +677,7 @@ defmodule AeMdw.Contracts do
 
     v3? = Keyword.get(opts, :v3?, true)
 
-    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
+    Model.tx(id: call_tx_hash, block_index: {height, micro_index}, time: block_time) =
       State.fetch!(state, Model.Tx, call_txi)
 
     Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
@@ -695,7 +695,7 @@ defmodule AeMdw.Contracts do
       contract_id: encode_contract(ct_pk),
       call_txi: call_txi,
       call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
-      block_time: DBUtil.block_time(block_hash),
+      block_time: block_time,
       args: format_args(event_name, args, encode_args),
       data: maybe_encode_base64(data),
       event_hash: Base.hex_encode32(event_hash),

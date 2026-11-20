@@ -195,6 +195,18 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec get_signed_tx_data(binary()) :: {Node.tx_type(), Node.signed_tx(), Node.tx()} | nil
+  def get_signed_tx_data(<<_pk::256>> = tx_hash) do
+    case :aec_db.find_signed_tx(tx_hash) do
+      {:value, signed_tx} ->
+        {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+        {type, signed_tx, tx_rec}
+
+      :none ->
+        nil
+    end
+  end
+
   @spec get_tx(binary()) :: {Node.tx_type(), Node.tx()}
   def get_tx(<<_pk::256>> = tx_hash) do
     case :aec_db.find_tx_with_location(tx_hash) do

@@ -11,6 +11,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.DryRun.Contract
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
+  alias AeMdw.Validate
 
   import AeMdwWeb.BlockchainSim,
     only: [with_blockchain: 3, with_blockchain: 4, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
@@ -733,7 +734,7 @@ defmodule AeMdwWeb.TxControllerTest do
         %{txs: [signed_tx]} = blocks[:mb]
         account_pk = :aeser_id.specialize(accounts[:ga], :account)
         account_id = encode(:account_pubkey, account_pk)
-        mb_hash = :crypto.strong_rand_bytes(32)
+        mb_hash = Validate.id!(blocks[:mb].hash)
 
         store =
           store
@@ -978,7 +979,7 @@ defmodule AeMdwWeb.TxControllerTest do
         %{txs: [tx]} = blocks[:mb]
         {:id, :account, account_pk} = accounts[:pf]
         payer_id = encode(:account_pubkey, account_pk)
-        mb_hash = :crypto.strong_rand_bytes(32)
+        mb_hash = Validate.id!(blocks[:mb].hash)
 
         store =
           store
@@ -1063,8 +1064,8 @@ defmodule AeMdwWeb.TxControllerTest do
         %{txs: [tx2]} = blocks[:mb2]
         {:id, :account, account_pk} = accounts[:pf]
         payer_id = encode(:account_pubkey, account_pk)
-        mb_hash1 = :crypto.strong_rand_bytes(32)
-        mb_hash2 = :crypto.strong_rand_bytes(32)
+        mb_hash1 = Validate.id!(blocks[:mb].hash)
+        mb_hash2 = Validate.id!(blocks[:mb2].hash)
 
         store =
           store
@@ -1612,6 +1613,10 @@ defmodule AeMdwWeb.TxControllerTest do
                  {_mod, tx_rec} = :aetx.specialize_type(tx3)
                  {mb_hash, :channel_snapshot_solo_tx, :aetx_sign.new(tx3, []), tx_rec}
              end
+           end,
+           get_signed_tx_data: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
+             {_mb_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
            end
          ]},
         {:aec_db, [:passthrough],
@@ -1772,6 +1777,10 @@ defmodule AeMdwWeb.TxControllerTest do
                  {_mod, tx_rec} = :aetx.specialize_type(tx3)
                  {mb_hash, :channel_close_mutual_tx, :aetx_sign.new(tx3, []), tx_rec}
              end
+           end,
+           get_signed_tx_data: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
+             {_mb_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
            end
          ]},
         {:aec_db, [:passthrough],

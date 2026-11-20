@@ -81,16 +81,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       with_mocks [
         {Db, [],
          [
-           get_tx_data: fn _tx_hash ->
-             {"", :spend_tx, signed_tx, tx}
+           get_signed_tx_data: fn _tx_hash ->
+             {:spend_tx, signed_tx, tx}
            end,
            get_block_time: fn _block_hash ->
              456
            end
-         ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [serialize_for_client: fn :header, ^signed_tx -> %{"tx" => %{}} end]}
+         ]}
       ] do
         assert %{"prev" => nil, "data" => [tx3, tx2, tx1], "next" => _next_url} =
                  conn
@@ -161,20 +158,17 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       with_mocks [
         {Db, [],
          [
-           get_tx_data: fn
+           get_signed_tx_data: fn
              "hash1" ->
-               {"", :spend_tx, signed_tx, tx}
+               {:spend_tx, signed_tx, tx}
 
              "hash2" ->
-               {"", :spend_tx, signed_tx, tx}
+               {:spend_tx, signed_tx, tx}
            end,
            get_block_time: fn _block_hash ->
              456
            end
-         ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [serialize_for_client: fn :header, ^signed_tx -> %{"tx" => %{}} end]}
+         ]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2], "next" => next_url} =
                  conn
@@ -254,16 +248,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       with_mocks [
         {Db, [],
          [
-           get_tx_data: fn _tx_hash ->
-             {"", :spend_tx, signed_tx, tx}
+           get_signed_tx_data: fn _tx_hash ->
+             {:spend_tx, signed_tx, tx}
            end,
            get_block_time: fn _block_hash ->
              456
            end
-         ]},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [serialize_for_client: fn :header, ^signed_tx -> %{"tx" => %{}} end]}
+         ]}
       ] do
         assert %{"prev" => nil, "data" => [tx2, tx1], "next" => _next_url} =
                  conn
@@ -628,6 +619,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              "tx-hash1" -> {"", :contract_call_tx, contract_call1_signed_tx, contract_call1_tx}
              "tx-hash2" -> {"", :contract_call_tx, contract_call2_signed_tx, contract_call2_tx}
            end,
+           get_signed_tx_data: fn tx_hash ->
+             {_block_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
+           end,
            get_block_time: fn _block_hash ->
              456
            end
@@ -646,15 +641,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {Contract, [:passthrough],
          call_rec: fn _signed_tx, _contract_pk, _block_hash -> {:error, :nocallrec} end},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [
-           serialize_for_client: fn :header, signed_tx ->
-             aetx = :aetx_sign.tx(signed_tx)
-             {mod, tx_rec} = :aetx.specialize_callback(aetx)
-             %{"tx" => mod.for_client(tx_rec)}
-           end
-         ]}
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2], "next" => _next_url} =
                  conn
@@ -1965,6 +1952,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              "tx-hash2" -> {"", :spend_tx, spend1_signed_tx, spend1_tx}
              "tx-hash4" -> {"", :contract_call_tx, contract_call4_signed_tx, contract_call4_tx}
            end,
+           get_signed_tx_data: fn tx_hash ->
+             {_block_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
+           end,
            get_block_time: fn _block_hash ->
              456
            end
@@ -1983,15 +1974,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {Contract, [:passthrough],
          call_rec: fn _signed_tx, ^contract_pk, _block_hash -> {:error, :nocallrec} end},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [
-           serialize_for_client: fn :header, signed_tx ->
-             aetx = :aetx_sign.tx(signed_tx)
-             {mod, tx_rec} = :aetx.specialize_callback(aetx)
-             %{"tx" => mod.for_client(tx_rec)}
-           end
-         ]}
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2, tx3, tx4], "next" => _next_url} =
                  conn
@@ -2408,21 +2391,17 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              {"", tx_type, :aetx_sign.new(aetx, []), tx_rec}
            end,
+           get_signed_tx_data: fn tx_hash ->
+             {_block_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
+           end,
            get_block_time: fn _block_hash ->
              456
            end
          ]},
         {:aec_chain, [:passthrough],
          get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:error, :not_found} end},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [
-           serialize_for_client: fn :header, signed_tx ->
-             aetx = :aetx_sign.tx(signed_tx)
-             {mod, tx_rec} = :aetx.specialize_callback(aetx)
-             %{"tx" => mod.for_client(tx_rec)}
-           end
-         ]}
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
                  conn
@@ -2570,6 +2549,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              {"", tx_type, :aetx_sign.new(aetx, []), tx_rec}
            end,
+           get_signed_tx_data: fn tx_hash ->
+             {_block_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
+           end,
            get_block_time: fn _block_hash ->
              456
            end
@@ -2588,15 +2571,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {Contract, [:passthrough],
          call_rec: fn _signed_tx, ^account_pk, _block_hash -> {:error, :nocallrec} end},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [
-           serialize_for_client: fn :header, signed_tx ->
-             aetx = :aetx_sign.tx(signed_tx)
-             {mod, tx_rec} = :aetx.specialize_callback(aetx)
-             %{"tx" => mod.for_client(tx_rec)}
-           end
-         ]}
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx3], "next" => _next_url} =
                  conn
@@ -2672,6 +2647,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
            get_tx_data: fn ^tx_hash ->
              {"", :paying_for_tx, signed_paying_for_tx, paying_for_tx}
            end,
+           get_signed_tx_data: fn tx_hash ->
+             {_block_hash, tx_type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
+             {tx_type, signed_tx, tx_rec}
+           end,
            get_block_time: fn _block_hash ->
              456
            end
@@ -2680,15 +2659,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          get_ga_call: fn ^ga_pk, ^auth_id, _block_hash ->
            {:ok, :aega_call.new(ga_id, auth_id, 1, 2, 3, :ok, "")}
          end},
-        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [:passthrough],
-         [
-           serialize_for_client: fn :header, signed_tx ->
-             aetx = :aetx_sign.tx(signed_tx)
-             {mod, tx_rec} = :aetx.specialize_callback(aetx)
-             %{"tx" => mod.for_client(tx_rec)}
-           end
-         ]}
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]}
       ] do
         # PayingFor(GAMeta(Spend)) as indexed by the sync
         store =

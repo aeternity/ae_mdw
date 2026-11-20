@@ -206,6 +206,17 @@ defmodule AeMdwWeb.BlockchainSim do
           if tx, do: {block_hash, tx}
         end)
       end,
+      find_signed_tx: fn tx_hash ->
+        mock_blocks
+        |> Map.values()
+        |> Enum.filter(&(elem(&1, 0) == :mic_block))
+        |> Enum.flat_map(&:aec_blocks.txs/1)
+        |> Enum.find(&(:aetx_sign.hash(&1) == tx_hash))
+        |> case do
+          nil -> :none
+          signed_tx -> {:value, signed_tx}
+        end
+      end,
       get_block: fn hash ->
         {:value, block} = find_block(hash, mock_blocks)
 

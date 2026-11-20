@@ -37,8 +37,24 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
-  def to_raw_map(state, Model.tx(id: hash) = mdw_tx),
-    do: to_raw_map(state, mdw_tx, safe_get_tx_data(hash))
+  def to_raw_map(state, Model.tx(id: nil) = mdw_tx),
+    do: to_raw_map(state, mdw_tx, nil)
+
+  def to_raw_map(state, Model.tx(id: hash, block_index: block_index) = mdw_tx) do
+    tx_data =
+      case maybe_block_hash(state, block_index) do
+        nil ->
+          safe_get_tx_data(hash)
+
+        block_hash ->
+          case safe_get_signed_tx_data(hash) do
+            {tx_type, signed_tx, tx_rec} -> {block_hash, tx_type, signed_tx, tx_rec}
+            nil -> nil
+          end
+      end
+
+    to_raw_map(state, mdw_tx, tx_data)
+  end
 
   def to_raw_map(
         state,
@@ -223,11 +239,13 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-  defp safe_get_tx_data(nil), do: nil
+  defp safe_get_tx_data(hash), do: safe_node_read(fn -> AE.Db.get_tx_data(hash) end)
 
-  defp safe_get_tx_data(hash) do
+  defp safe_get_signed_tx_data(hash), do: safe_node_read(fn -> AE.Db.get_signed_tx_data(hash) end)
+
+  defp safe_node_read(read_fn) do
     try do
-      AE.Db.get_tx_data(hash)
+      read_fn.()
     rescue
       ArgumentError -> nil
       UndefinedFunctionError -> nil
@@ -274,8 +292,12 @@ defmodule AeMdw.Db.Format do
   def to_map(state, Model.tx(id: nil) = rec),
     do: to_map(state, rec, nil)
 
-  def to_map(state, Model.tx(id: hash) = rec),
-    do: to_map(state, rec, safe_get_tx_data(hash))
+  def to_map(state, Model.tx(id: hash, block_index: block_index) = rec) do
+    case maybe_block_hash(state, block_index) do
+      nil -> to_map(state, rec, safe_get_tx_data(hash))
+      block_hash -> signed_tx_to_map(state, rec, block_hash, safe_get_signed_tx_data(hash))
+    end
+  end
 
   def to_map(
         state,
@@ -297,26 +319,11 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_map(
-        state,
-        Model.tx(index: index, block_index: {_kb_index, mb_index}, time: mb_time),
-        {block_hash, type, signed_tx, tx_rec}
-      ) do
-    header = :aec_db.get_header(block_hash)
-
-    :aetx_sign.serialize_for_client(header, signed_tx)
-    |> put_in(["tx_index"], index)
-    |> put_in(["micro_index"], mb_index)
-    |> put_in(["micro_time"], mb_time)
-    |> update_in(["tx"], fn tx ->
-      tx = custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
-
-      if Map.has_key?(tx, "type") do
-        tx
-      else
-        Map.put(tx, "type", AE.tx_name(type))
-      end
-    end)
+  def to_map(state, Model.tx() = rec, {block_hash, _type, signed_tx, _tx_rec} = tx_data) do
+    block_hash
+    |> :aec_db.get_header()
+    |> :aetx_sign.serialize_for_client(signed_tx)
+    |> put_mdw_tx_fields(state, rec, tx_data)
   end
 
   def to_map(state, auction_bid, Model.AuctionBid),
@@ -410,6 +417,46 @@ defmodule AeMdw.Db.Format do
     to_map(state, bid, Model.AuctionBid)
     |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand(state, &1)) end)
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
+  end
+
+  # The node's serialize_for_client/2 takes only the height and hash from the block header,
+  # and mdw has both.
+  defp signed_tx_to_map(state, rec, _block_hash, nil), do: to_map(state, rec, nil)
+
+  defp signed_tx_to_map(
+         state,
+         Model.tx(block_index: {kb_index, _mb_index}) = rec,
+         block_hash,
+         {type, signed_tx, tx_rec}
+       ) do
+    signed_tx
+    |> :aetx_sign.serialize_for_client_pending()
+    |> Map.merge(%{
+      "block_height" => kb_index,
+      "block_hash" => Enc.encode(:micro_block_hash, block_hash)
+    })
+    |> put_mdw_tx_fields(state, rec, {block_hash, type, signed_tx, tx_rec})
+  end
+
+  defp put_mdw_tx_fields(
+         serialized_tx,
+         state,
+         Model.tx(index: index, block_index: {_kb_index, mb_index}, time: mb_time),
+         {block_hash, type, signed_tx, tx_rec}
+       ) do
+    serialized_tx
+    |> put_in(["tx_index"], index)
+    |> put_in(["micro_index"], mb_index)
+    |> put_in(["micro_time"], mb_time)
+    |> update_in(["tx"], fn tx ->
+      tx = custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
+
+      if Map.has_key?(tx, "type") do
+        tx
+      else
+        Map.put(tx, "type", AE.tx_name(type))
+      end
+    end)
   end
 
   defp custom_encode(state, :channel_close_mutual_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do

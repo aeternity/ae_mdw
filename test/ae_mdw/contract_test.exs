@@ -4,6 +4,7 @@ defmodule AeMdw.ContractTest do
   alias AeMdw.Contract
   alias AeMdw.EtsCache
 
+  import ExUnit.CaptureLog
   import Mock
 
   describe "call_tx_info/3" do
@@ -296,6 +297,49 @@ defmodule AeMdw.ContractTest do
                   function: "fulfill",
                   result: :invalid
                 }, ^call} = Contract.call_tx_info(call_tx, contract_pk, contract_pk, block_hash)
+      end
+    end
+  end
+
+  describe "get_init_call_details/2" do
+    test "reads the block header only for the height in the init args warning" do
+      block_hash = <<3::256>>
+
+      {:ok, aetx} =
+        :aect_create_tx.new(%{
+          owner_id: :aeser_id.create(:account, :crypto.strong_rand_bytes(32)),
+          nonce: 1,
+          code: "ok",
+          vm_version: 7,
+          abi_version: 3,
+          deposit: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1_000_000_000,
+          call_data: "ok",
+          fee: 1
+        })
+
+      {:contract_create_tx, tx_rec} = :aetx.specialize_type(aetx)
+      contract_pk = :aect_create_tx.contract_pubkey(tx_rec)
+
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         [
+           get_contract_with_code: fn ^contract_pk -> {:error, :contract_not_found} end,
+           get_contract_call: fn ^contract_pk, _call_id, ^block_hash -> {:error, :not_found} end,
+           get_header: fn ^block_hash -> {:ok, :header} end
+         ]},
+        {:aec_headers, [:passthrough], [height: fn :header -> 77 end]}
+      ] do
+        log =
+          capture_log(fn ->
+            assert %{"args" => nil} = Contract.get_init_call_details(tx_rec, block_hash)
+          end)
+
+        assert log =~ "contract_init_args failed reason=:contract_not_found"
+        assert log =~ "height=77"
+        assert_not_called(:aec_chain.get_block(:_))
       end
     end
   end
