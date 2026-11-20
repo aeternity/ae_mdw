@@ -42,6 +42,11 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       call_txi = 12_345_679
       amount1 = @amount1
       amount2 = @amount2
+      total = amount1 + amount2
+
+      on_exit(fn ->
+        delete_aex9_rows(contract_pk, [{@account_pk1, amount1}, {@account_pk2, amount2}])
+      end)
 
       with_mocks([
         {AeMdw.Node.Db, [:passthrough],
@@ -54,25 +59,27 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
          ]}
       ]) do
         assert :ok = UpdateAex9State.process([contract_pk, block_index, call_txi], fn -> :ok end)
-
-        state = State.new(AsyncStore.instance())
-
-        Enum.any?(1..10, fn _i ->
-          Process.sleep(100)
-
-          assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
-                   State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk1})
-        end)
-
-        assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
-                 State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk2})
-
-        assert Model.aex9_account_presence(txi: ^call_txi) =
-                 State.fetch!(state, Model.Aex9AccountPresence, {@account_pk1, contract_pk})
-
-        assert Model.aex9_account_presence(txi: ^call_txi) =
-                 State.fetch!(state, Model.Aex9AccountPresence, {@account_pk2, contract_pk})
       end
+
+      _state = State.commit(State.new(), [])
+      state = State.new()
+
+      assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk1})
+
+      assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk2})
+
+      assert Model.aex9_account_presence(txi: ^call_txi) =
+               State.fetch!(state, Model.Aex9AccountPresence, {@account_pk1, contract_pk})
+
+      assert Model.aex9_account_presence(txi: ^call_txi) =
+               State.fetch!(state, Model.Aex9AccountPresence, {@account_pk2, contract_pk})
+
+      assert Model.aex9_contract_balance(amount: ^total) =
+               State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+
+      assert 2 == Stats.fetch_aex9_holders_count(state, contract_pk)
     end
 
     test "creates empty balance when contract has no balance" do
@@ -123,6 +130,10 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         {:address, account_pk2} => amount2
       })
 
+      on_exit(fn ->
+        delete_aex9_rows(contract_pk, [{account_pk1, amount1}, {account_pk2, amount2}])
+      end)
+
       with_mocks([
         {AeMdw.Node.Db, [:passthrough],
          [
@@ -134,55 +145,68 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
          ]}
       ]) do
         assert :ok = UpdateAex9State.process([contract_pk, block_index, call_txi], fn -> :ok end)
-        state = State.new(AsyncStore.instance())
-
-        Enum.any?(1..10, fn _i ->
-          Process.sleep(100)
-
-          assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
-                   State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
-        end)
-
-        assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
-                 State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
-
-        refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, <<>>})
       end
+
+      _state = State.commit(State.new(), [])
+      state = State.new()
+
+      assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
+
+      assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+
+      refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, <<>>})
     end
 
-    test "recounts the holders on the database once the async store is written to it" do
+    test "keeps the balances events refreshed after the creation" do
       contract_pk = :crypto.strong_rand_bytes(32)
       creator_pk = :crypto.strong_rand_bytes(32)
       holder_pk = :crypto.strong_rand_bytes(32)
+      other_pk = :crypto.strong_rand_bytes(32)
       block_index = {kbi, mbi} = {Enum.random(1..999_999), 13}
       next_height = kbi + 1
       kb_hash = @kb_hash
       next_hash = @next_hash
       call_txi = 12_345_683
-      test_pid = self()
-      holders_key = Stats.aex9_holder_count_key(contract_pk)
 
-      # a mint after the creation already added a holder on the database
-      Database.dirty_write(
-        Model.Aex9EventBalance,
-        Model.aex9_event_balance(
-          index: {contract_pk, holder_pk},
-          txi: call_txi + 1,
-          log_idx: 0,
-          amount: 100
+      # since the creation the creator sent 300 to the holder, who also got 100 minted
+      events_balances = [{creator_pk, 700, call_txi + 1}, {holder_pk, 400, call_txi + 2}]
+
+      Enum.each(events_balances, fn {account_pk, amount, txi} ->
+        Database.dirty_write(
+          Model.Aex9EventBalance,
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk},
+            txi: txi,
+            log_idx: 0,
+            amount: amount
+          )
         )
+
+        Database.dirty_write(
+          Model.Aex9BalanceAccount,
+          Model.aex9_balance_account(index: {contract_pk, amount, account_pk}, txi: txi)
+        )
+      end)
+
+      Database.dirty_write(
+        Model.Aex9ContractBalance,
+        Model.aex9_contract_balance(index: contract_pk, amount: 1_100)
       )
 
-      Database.dirty_write(Model.Stat, Model.stat(index: holders_key, payload: 1))
+      Database.dirty_write(
+        Model.Stat,
+        Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 2)
+      )
 
       on_exit(fn ->
-        Database.dirty_delete(Model.Aex9EventBalance, {contract_pk, holder_pk})
-        Database.dirty_delete(Model.Aex9EventBalance, {contract_pk, creator_pk})
-        Database.dirty_delete(Model.Aex9BalanceAccount, {contract_pk, 1_000, creator_pk})
-        Database.dirty_delete(Model.Aex9AccountPresence, {creator_pk, contract_pk})
-        Database.dirty_delete(Model.Aex9InitialSupply, contract_pk)
-        Database.dirty_delete(Model.Aex9ContractBalance, contract_pk)
-        Database.dirty_delete(Model.Stat, holders_key)
+        delete_aex9_rows(contract_pk, [
+          {creator_pk, 700},
+          {creator_pk, 1_000},
+          {holder_pk, 400},
+          {other_pk, 50}
+        ])
       end)
 
       with_mocks([
@@ -191,24 +215,38 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            get_key_block_hash: fn ^next_height -> kb_hash end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_hash} ->
-             {:ok, %{{:address, creator_pk} => 1_000}}
+             {:ok, %{{:address, creator_pk} => 1_000, {:address, other_pk} => 50}}
            end
          ]}
       ]) do
-        UpdateAex9State.process([contract_pk, block_index, call_txi], fn ->
-          send(test_pid, :written)
-        end)
-
-        assert_receive :written
+        assert :ok = UpdateAex9State.process([contract_pk, block_index, call_txi], fn -> :ok end)
       end
 
-      # the async store only counts the creator, it can't see the mint
-      assert {:ok, Model.stat(payload: 1)} =
-               State.get(State.new(AsyncStore.instance()), Model.Stat, holders_key)
-
       _state = State.commit(State.new(), [])
+      state = State.new()
 
-      assert 2 == Stats.fetch_aex9_holders_count(State.new(), contract_pk)
+      creator_txi = call_txi + 1
+
+      assert Model.aex9_event_balance(txi: ^creator_txi, amount: 700) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, creator_pk})
+
+      assert Model.aex9_event_balance(amount: 400) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, holder_pk})
+
+      assert Model.aex9_event_balance(txi: ^call_txi, log_idx: -1, amount: 50) =
+               State.fetch!(state, Model.Aex9EventBalance, {contract_pk, other_pk})
+
+      refute State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, 1_000, creator_pk})
+      assert State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, 700, creator_pk})
+      assert State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, 50, other_pk})
+
+      assert Model.aex9_contract_balance(amount: 1_150) =
+               State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+
+      assert Model.aex9_initial_supply(amount: 1_050) =
+               State.fetch!(state, Model.Aex9InitialSupply, contract_pk)
+
+      assert 3 == Stats.fetch_aex9_holders_count(state, contract_pk)
     end
 
     test "discards a task for not present contract" do
@@ -236,5 +274,17 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         assert_receive ^unique_msg
       end
     end
+  end
+
+  defp delete_aex9_rows(contract_pk, balances) do
+    Enum.each(balances, fn {account_pk, amount} ->
+      Database.dirty_delete(Model.Aex9EventBalance, {contract_pk, account_pk})
+      Database.dirty_delete(Model.Aex9BalanceAccount, {contract_pk, amount, account_pk})
+      Database.dirty_delete(Model.Aex9AccountPresence, {account_pk, contract_pk})
+    end)
+
+    Database.dirty_delete(Model.Aex9InitialSupply, contract_pk)
+    Database.dirty_delete(Model.Aex9ContractBalance, contract_pk)
+    Database.dirty_delete(Model.Stat, Stats.aex9_holder_count_key(contract_pk))
   end
 end

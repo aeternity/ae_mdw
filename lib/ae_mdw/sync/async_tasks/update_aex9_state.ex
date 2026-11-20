@@ -5,7 +5,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   @behaviour AeMdw.Sync.AsyncTasks.Work
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.RecountAex9HoldersMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.UpdateAex9StateMutation
   alias AeMdw.Sync.Aex9Balances
@@ -25,17 +24,10 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
     {time_delta, :ok} =
       :timer.tc(fn ->
         case Aex9Balances.get_balances(contract_pk, block_index) do
-          {:ok, balances, purge_balances} ->
-            write_mutation = mutation(contract_pk, call_txi, balances)
-            delete_mutation = Aex9Balances.purge_mutation(contract_pk, purge_balances)
+          {:ok, balances, _purged_balances} ->
+            {async_mutations, flush_mutations} = mutations(contract_pk, call_txi, balances)
 
-            # the holders counted on the async store start from zero and would
-            # overwrite the ones events added to the database in the meantime
-            AsyncStoreServer.write_mutations(
-              [delete_mutation, write_mutation],
-              done_fn,
-              [RecountAex9HoldersMutation.new(contract_pk)]
-            )
+            AsyncStoreServer.write_mutations(async_mutations, done_fn, flush_mutations)
 
           {:error, _reason} ->
             done_fn.()
@@ -51,12 +43,16 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
     :ok
   end
 
-  defp mutation(contract_pk, call_txi, balances) do
-    if balances == [] do
-      m_empty_balance = Model.aex9_event_balance(index: {contract_pk, <<>>})
-      WriteMutation.new(Model.Aex9EventBalance, m_empty_balance)
-    else
-      UpdateAex9StateMutation.new(contract_pk, call_txi, balances)
-    end
+  defp mutations(contract_pk, _call_txi, []) do
+    m_empty_balance = Model.aex9_event_balance(index: {contract_pk, <<>>})
+
+    {[WriteMutation.new(Model.Aex9EventBalance, m_empty_balance)], []}
+  end
+
+  # written on the database state: on AsyncStore, which doesn't read through to
+  # the database, the balances events refreshed since the creation and the
+  # contract's total would be overwritten
+  defp mutations(contract_pk, call_txi, balances) do
+    {[], [UpdateAex9StateMutation.new(contract_pk, call_txi, balances)]}
   end
 end
