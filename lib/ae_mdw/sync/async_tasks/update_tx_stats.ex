@@ -70,8 +70,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
          txs_count_48hs <- tx_index_24hs_ago - tx_index_48hs_ago,
          trend <- Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2),
          average_tx_fees_24hs when average_tx_fees_24hs > 0 <-
-           average_tx_fees(tx_index_24hs_ago, last_tx_index),
-         average_tx_fees_48hs <- average_tx_fees(tx_index_48hs_ago, tx_index_24hs_ago),
+           average_tx_fees(state, tx_index_24hs_ago, last_tx_index),
+         average_tx_fees_48hs <- average_tx_fees(state, tx_index_48hs_ago, tx_index_24hs_ago),
          fee_trend <-
            Float.round((average_tx_fees_24hs - average_tx_fees_48hs) / average_tx_fees_24hs, 2) do
       {started_at,
@@ -83,16 +83,27 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStats do
     end
   end
 
-  defp average_tx_fees(start_txi, end_txi) do
+  # The txs of the last generations are only in the mem state, after the ones in the db.
+  defp average_tx_fees(state, start_txi, end_txi) do
     txs_count = end_txi - start_txi + 1
 
     if txs_count != 0 do
-      Model.Tx
-      |> RocksDbCF.stream(key_boundary: {start_txi, end_txi})
-      |> Enum.reduce(0, fn Model.tx(fee: fee), acc ->
-        acc + fee
-      end)
-      |> then(&(&1 / txs_count))
+      {db_fees, last_db_txi} =
+        Model.Tx
+        |> RocksDbCF.stream(key_boundary: {start_txi, end_txi})
+        |> Enum.reduce({0, start_txi - 1}, fn Model.tx(index: txi, fee: fee), {acc, _txi} ->
+          {acc + fee, txi}
+        end)
+
+      mem_fees =
+        Enum.reduce((last_db_txi + 1)..end_txi//1, 0, fn txi, acc ->
+          case State.get(state, Model.Tx, txi) do
+            {:ok, Model.tx(fee: fee)} -> acc + fee
+            :not_found -> acc
+          end
+        end)
+
+      (db_fees + mem_fees) / txs_count
     else
       0
     end
