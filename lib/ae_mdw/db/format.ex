@@ -153,7 +153,17 @@ defmodule AeMdw.Db.Format do
 
     txi = tx.tx_index
     fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, txi)
-    call_info = format_call_info(signed_tx, contract_or_name_pk, block_hash, txi)
+
+    call_info =
+      format_call_info(
+        state,
+        tx_rec,
+        signed_tx,
+        {contract_or_name_pk, contract_pk},
+        block_hash,
+        txi
+      )
+
     call_details = Map.merge(call_info, fun_arg_res)
     update_in(tx, [:tx], &Map.merge(&1, call_details))
   end
@@ -249,7 +259,26 @@ defmodule AeMdw.Db.Format do
     end)
   end
 
-  defp format_call_info(signed_tx, contract_pk, block_hash, txi) do
+  defp format_call_info(
+         state,
+         tx_rec,
+         signed_tx,
+         {contract_or_name_pk, contract_pk},
+         block_hash,
+         txi
+       ) do
+    case DbContract.call_info(state, contract_pk, txi) do
+      {:ok, call_info} ->
+        # a call from a tx has an account caller, see aeprimop:get_call_env_specific/6
+        caller_id = :aeser_id.create(:account, :aect_call_tx.caller_pubkey(tx_rec))
+        Map.put(call_info, "caller_id", Enc.encode(:id_hash, caller_id))
+
+      :not_found ->
+        node_call_info(signed_tx, contract_or_name_pk, block_hash, txi)
+    end
+  end
+
+  defp node_call_info(signed_tx, contract_pk, block_hash, txi) do
     case Contract.call_rec(signed_tx, contract_pk, block_hash) do
       {:ok, call_rec} ->
         call_rec
@@ -534,8 +563,8 @@ defmodule AeMdw.Db.Format do
       |> encode_raw_values()
 
     call_details =
-      signed_tx
-      |> format_call_info(contract_or_name_pk, block_hash, txi)
+      state
+      |> format_call_info(tx_rec, signed_tx, {contract_or_name_pk, contract_pk}, block_hash, txi)
       |> Map.merge(fun_arg_res)
 
     aexn_type = DbContract.get_aexn_type(state, contract_pk)
