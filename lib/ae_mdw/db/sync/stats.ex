@@ -147,8 +147,11 @@ defmodule AeMdw.Db.Sync.Stats do
       txs_statistics =
         generate_tx_statistics(:transactions, intervals, type_counts, total_count)
 
+      # the total count query reads only daily cumulative counts
+      [{:day, _day_start} = day_interval | _week_and_month] = intervals
+
       total_txs_statistics =
-        generate_tx_statistics(:total_transactions, intervals, type_counts, total_count)
+        generate_tx_statistics(:total_transactions, [day_interval], type_counts, total_count)
 
       [
         StatisticsMutation.new(mb_statistics ++ txs_statistics),
