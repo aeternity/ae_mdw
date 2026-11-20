@@ -18,13 +18,12 @@ defmodule AeMdw.Migrations.IndexMinersByRewardTest do
     {:ok, migration: migration}
   end
 
+  setup {AeMdw.TestUtil, :restore_global_state}
+
   setup do
-    global_state = :persistent_term.get(:global_state, nil)
     pks = Enum.map(1..3, fn _i -> :crypto.strong_rand_bytes(32) end)
 
     on_exit(fn ->
-      :persistent_term.put(:global_state, global_state)
-
       Enum.each(pks, &Database.dirty_delete(Model.Miner, &1))
       Enum.each(reward_keys(pks), &Database.dirty_delete(Model.RewardMiner, &1))
     end)
