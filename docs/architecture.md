@@ -195,8 +195,13 @@ defrecord :time,
 Stored in table `Model.Time`.
 
 The time (in milliseconds) marks when the whole micro block is added to the
-DB. Since there can be many transactions in one micro block, the transaction
-index is used in the key to keep uniqueness of the time entry.
+DB. All transactions of a micro block share this time and have consecutive
+indexes, so only the first and the last transaction index of each micro block
+are stored (a single one for a micro block with one transaction). Databases
+synced by older versions also have an entry for every transaction in between.
+Lookups seek `{time, -1}` for the first transaction at or after a time and
+`{time, nil}` for the last one at or before it, and both always land on a
+stored entry.
 
 ##### Specialized index - type
 

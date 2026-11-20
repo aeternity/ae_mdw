@@ -174,6 +174,8 @@ defmodule AeMdw.Db.Model do
 
   # txs time index :
   #     index = {mb_time_msecs (0..), tx_index = (0...)},
+  # Only the first and last tx_index of a micro block are kept (older syncs wrote every tx), so
+  # seek with {time, -1}, {time, nil} or nil only.
   @time_defaults [index: {-1, -1}, unused: nil]
   defrecord :time, @time_defaults
 
