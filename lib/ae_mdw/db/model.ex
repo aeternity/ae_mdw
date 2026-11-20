@@ -122,6 +122,7 @@ defmodule AeMdw.Db.Model do
             creation_time: non_neg_integer()
           )
 
+  # first activity time of an account per UTC day (older data may hold more per day)
   @account_activity_defaults [index: nil]
   defrecord :account_activity, @account_activity_defaults
 

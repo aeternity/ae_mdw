@@ -5,6 +5,7 @@ defmodule AeMdw.Accounts do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Node.Db
 
@@ -17,7 +18,7 @@ defmodule AeMdw.Accounts do
     |> case do
       :not_found ->
         state
-        |> State.put(
+        |> ObjectKeys.put(
           Model.AccountCreation,
           Model.account_creation(index: pubkey, creation_time: time)
         )
@@ -36,22 +37,20 @@ defmodule AeMdw.Accounts do
     [{:day, day_boundary} | week_and_month_boundaries] =
       SyncStats.key_boundaries_for_intervals(pubkey, initial_intervals)
 
-    # the day range lies within the week and month ranges
-    state =
-      if active_in?(state, day_boundary) do
-        state
-      else
-        week_and_month_boundaries
-        |> Enum.reject(fn {_interval_type, key_boundary} -> active_in?(state, key_boundary) end)
-        |> Enum.reduce(
-          increment_active_accounts(state, :day, initial_intervals),
-          fn {interval_type, _key_boundary}, state ->
-            increment_active_accounts(state, interval_type, initial_intervals)
-          end
-        )
-      end
-
-    State.put(state, Model.AccountActivity, Model.account_activity(index: {pubkey, time}))
+    # the day range lies within the week and month ranges, so one row per day is enough
+    if active_in?(state, day_boundary) do
+      state
+    else
+      week_and_month_boundaries
+      |> Enum.reject(fn {_interval_type, key_boundary} -> active_in?(state, key_boundary) end)
+      |> Enum.reduce(
+        increment_active_accounts(state, :day, initial_intervals),
+        fn {interval_type, _key_boundary}, state ->
+          increment_active_accounts(state, interval_type, initial_intervals)
+        end
+      )
+      |> State.put(Model.AccountActivity, Model.account_activity(index: {pubkey, time}))
+    end
   end
 
   # State.next/3 starts after the given key

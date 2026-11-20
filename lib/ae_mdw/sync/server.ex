@@ -38,6 +38,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.AccountActivityMutation
   alias AeMdw.Db.AccountCreationMutation
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
@@ -378,9 +379,15 @@ defmodule AeMdw.Sync.Server do
         gen_blocks = gen_blocks(height, blocks_mutations)
         blocks_mutations = maybe_add_accounts_balance_mutations(blocks_mutations)
 
-        {prefetch_ts, prefetched} =
-          :timer.tc(fn -> prefetch_aex9_balances(blocks_mutations, concurrency) end)
+        last_refresh_blocks =
+          blocks_mutations |> blocks_call_recs() |> Aex9Balances.last_refresh_blocks()
 
+        {prefetch_ts, {prefetched, failed}} =
+          :timer.tc(fn -> prefetch_aex9_balances(last_refresh_blocks, concurrency) end)
+
+        # an account whose last dry-run failed is refreshed in every block
+        last_refresh_blocks = Map.drop(last_refresh_blocks, failed)
+        state = DbContract.put_aex9_last_refresh_blocks(state, last_refresh_blocks)
         {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
         # a generation synced into the db isn't synced again
         :ok = Aex9Balances.delete_prefetched(prefetched)
@@ -405,11 +412,13 @@ defmodule AeMdw.Sync.Server do
 
   # The aex9 balance dry-runs of the generation, run concurrently before the
   # commit instead of one by one inside it. With 1 they stay inside it.
-  defp prefetch_aex9_balances(_blocks_mutations, 1), do: []
+  defp prefetch_aex9_balances(_last_refresh_blocks, 1), do: {[], []}
 
-  defp prefetch_aex9_balances(blocks_mutations, concurrency) do
-    blocks_mutations
-    |> Enum.flat_map(fn
+  defp prefetch_aex9_balances(last_refresh_blocks, concurrency),
+    do: Aex9Balances.prefetch_balances(last_refresh_blocks, concurrency)
+
+  defp blocks_call_recs(blocks_mutations) do
+    Enum.flat_map(blocks_mutations, fn
       {{_height, -1}, _block, _mutations} ->
         []
 
@@ -425,7 +434,6 @@ defmodule AeMdw.Sync.Server do
 
         if call_recs == [], do: [], else: [{block_index, call_recs}]
     end)
-    |> Aex9Balances.prefetch_balances(concurrency)
   end
 
   defp maybe_add_accounts_balance_mutations(gen_mutations) do

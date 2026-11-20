@@ -248,7 +248,7 @@ The following environment variables configure the middleware itself (not the und
 | `ENABLE_JSON_LOG` | `false` | Set to `true` to emit logs in JSON format |
 | `ENABLE_CONSOLE_LOG` | `false` | Set to `true` to also log to stdout |
 | `WEALTH_RANK_SIZE` | `200` | Number of top accounts tracked for the wealth rank endpoint |
-| `MDW_SYNC_CONCURRENCY` | `8` | Node calls that sync runs at the same time: replaying the micro blocks of a generation for their contract events, and the AEX-9 `balance` dry-runs of a generation before its database commit. Defaults to 8, or the number of schedulers when lower. More of them speed up catching up with the chain, at the cost of CPU that the node and the API share; `1` runs them one by one |
+| `MDW_SYNC_CONCURRENCY` | `8` | Node calls that sync runs at the same time: replaying the micro blocks of a generation for their contract events, and the AEX-9 `balance` dry-runs of a generation before its database commit. Defaults to 8, or the number of schedulers when lower. More of them speed up catching up with the chain, at the cost of CPU that the node and the API share; `1` runs them one by one. At any value, db sync dry-runs an account's balance only for the last micro block of the generation with an event for it |
 | `MAX_SUBS_PER_CONN` | `100000` | Maximum WebSocket subscriptions per connection. 100k covers monitoring 100k accounts on a single connection; ETS cost is ~15 MB at that size |
 | `MAX_WS_CONNECTIONS` | `1000` | Total simultaneous WebSocket connections across all clients |
 | `MAX_WS_CONNECTIONS_PER_IP` | `50` | Maximum simultaneous connections from a single IP. 50 accommodates services with many workers behind shared egress NAT |
