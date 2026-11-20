@@ -225,7 +225,7 @@ defmodule AeMdw.Db.Sync.Stats do
     ]
   end
 
-  @spec increment_statistics(State.t(), Stats.statistic_tag(), time(), pos_integer()) :: State.t()
+  @spec increment_statistics(State.t(), Stats.statistic_tag(), time(), integer()) :: State.t()
   def increment_statistics(state, key, time, increment) do
     time
     |> time_intervals()
