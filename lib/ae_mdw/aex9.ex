@@ -290,8 +290,7 @@ defmodule AeMdw.Aex9 do
         balance_history_streamer(%{
           account_pk: account_pk,
           contract_pk: contract_pk,
-          range: {first_gen, last_gen},
-          balance_gens: {first_balance_gen(state, contract_pk), top_gen},
+          range: {max(first_gen, first_balance_gen(state, contract_pk)), min(last_gen, top_gen)},
           cursor: cursor
         })
 
@@ -311,18 +310,11 @@ defmodule AeMdw.Aex9 do
          account_pk: account_pk,
          contract_pk: contract_pk,
          range: {first_gen, last_gen},
-         balance_gens: {min_gen, max_gen},
          cursor: cursor
        }) do
     fn direction ->
       direction
-      |> case do
-        :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
-        :backward when cursor == nil -> last_gen..first_gen
-        :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
-        _dir -> first_gen..last_gen
-      end
-      |> clamp_gens(min_gen, max_gen)
+      |> history_gens(first_gen, last_gen, cursor)
       |> Stream.flat_map(fn gen ->
         type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
 
@@ -362,13 +354,12 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  # Runs on the range picked from the cursor: clamping the scope up front would
-  # turn a scope past the top into a descending range.
-  defp clamp_gens(first..last//step, min_gen, max_gen) when step > 0,
-    do: max(first, min_gen)..min(last, max_gen)//step
+  # Like Collection.stream/5, a cursor outside the scope is moved to its edge.
+  defp history_gens(:forward, first_gen, last_gen, cursor),
+    do: max(first_gen, cursor || first_gen)..last_gen//1
 
-  defp clamp_gens(first..last//step, min_gen, max_gen),
-    do: min(first, max_gen)..max(last, min_gen)//step
+  defp history_gens(:backward, first_gen, last_gen, cursor),
+    do: min(last_gen, cursor || last_gen)..first_gen//-1
 
   defp serialize_account_balance_cursor(cursor),
     do: cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false)

@@ -362,6 +362,87 @@ defmodule AeMdw.Aex9Test do
       end
     end
 
+    test "goes backward from the scope end for a backward cursor above the scope", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 21..22},
+                   "23",
+                   {:backward, false, 10, true}
+                 )
+
+        assert [22, 21] == Enum.map(items, & &1.height)
+      end
+    end
+
+    test "starts at the scope start without a prev cursor for a forward cursor below the scope",
+         %{contract_pk: contract_pk, account_pk: account_pk} do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 22..23},
+                   "21",
+                   {:forward, false, 10, true}
+                 )
+
+        assert [22, 23] == Enum.map(items, & &1.height)
+      end
+    end
+
+    test "returns an empty page for a cursor past the scope end", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        # Collection.paginate skips the first row of the opposite stream, which
+        # is the scope's edge here, not the cursor.
+        for {range, cursor, direction, prev_cursor} <- [
+              {21..22, "23", :forward, {21, true}},
+              {22..23, "21", :backward, {23, true}}
+            ] do
+          assert {:ok, {^prev_cursor, [], nil}} =
+                   Aex9.fetch_balance_history(
+                     state,
+                     contract_pk,
+                     account_pk,
+                     {:gen, range},
+                     cursor,
+                     {direction, false, 10, true}
+                   )
+        end
+      end
+    end
+
+    test "keeps the page order of a reversed page with a cursor outside the scope", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 21..22},
+                   "23",
+                   {:forward, true, 10, true}
+                 )
+
+        assert [21, 22] == Enum.map(items, & &1.height)
+      end
+    end
+
     test "returns an empty page when no generation is indexed", %{
       contract_pk: contract_pk,
       account_pk: account_pk

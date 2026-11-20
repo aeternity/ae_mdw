@@ -1202,6 +1202,49 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                  |> json_response(400)
       end
     end
+
+    test "keeps the page order for a cursor outside the scope", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, functions, nil, nil}, nil, nil})
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, 200})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 200, id: <<200::256>>, block_index: {20, 3}))
+        |> Store.put(Model.Block, Model.block(index: {23, -1}))
+
+      path =
+        "/v3/aex9/#{encode_contract(contract_pk)}/balances/#{encode_account(account_pk)}/history"
+
+      with_mocks [
+        {AeMdw.Db.Util, [:passthrough], [height_hash: fn gen -> <<gen::256>> end]},
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn ^contract_pk, ^account_pk, {:key, gen, _hash} = height_hash ->
+             {:ok, {gen * 10, height_hash}}
+           end
+         ]}
+      ] do
+        for {params, heights} <- [
+              {[scope: "gen:22-21", cursor: 23], [22, 21]},
+              {[scope: "gen:21-22", cursor: 23, rev: 1], [21, 22]}
+            ] do
+          assert %{"data" => data, "prev" => nil, "next" => nil} =
+                   conn |> with_store(store) |> get(path, params) |> json_response(200)
+
+          assert ^heights = Enum.map(data, & &1["height"])
+        end
+      end
+    end
   end
 
   describe "aex9_account_balances" do
