@@ -177,6 +177,21 @@ defmodule AeMdw.Db.Sync.Stats do
     end)
   end
 
+  @doc """
+  Adds up the increments of each statistic, sorted by statistic index.
+  """
+  @spec sum_statistics([[{Model.statistic_index(), integer()}]]) ::
+          [{Model.statistic_index(), integer()}]
+  def sum_statistics(statistics_lists) do
+    statistics_lists
+    |> Enum.reduce(%{}, fn statistics, sums ->
+      Enum.reduce(statistics, sums, fn {index, increment}, sums ->
+        Map.update(sums, index, increment, &(&1 + increment))
+      end)
+    end)
+    |> Enum.sort()
+  end
+
   @spec time_intervals(time()) :: intervals()
   def time_intervals(time) do
     seconds = div(time, 1_000)
