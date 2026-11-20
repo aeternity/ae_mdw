@@ -1182,6 +1182,28 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     end
   end
 
+  describe "aex9_token_balance_history" do
+    test "returns error for scopes that are not gen ranges", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {{:fcode, functions, nil, nil}, nil, nil})
+
+      contract_id = encode_contract(contract_pk)
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
+
+      for scope <- ["txi:1-2", "time:1700000000-1700001000", "epoch:1-2"] do
+        assert %{"error" => "invalid scope: only gen scopes are supported"} =
+                 conn
+                 |> get("/v3/aex9/#{contract_id}/balances/#{account_id}/history", scope: scope)
+                 |> json_response(400)
+      end
+    end
+  end
+
   describe "aex9_account_balances" do
     test "returns timeout", %{conn: conn, account_pk: account_pk} do
       with_mocks [
