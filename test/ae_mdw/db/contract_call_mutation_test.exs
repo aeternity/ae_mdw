@@ -55,10 +55,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
-  setup do
-    global_state_ref = :persistent_term.get(:global_state, nil)
-    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
-  end
+  setup {AeMdw.TestUtil, :restore_global_state}
 
   describe "calling a contract" do
     test "it create call contract mutation", %{store: store} do

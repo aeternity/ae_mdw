@@ -21,6 +21,22 @@ defmodule AeMdw.TestUtil do
   @spec empty_state() :: State.t()
   def empty_state, do: State.new(empty_store())
 
+  @doc """
+  Setup callback that puts the global mem state back when the test ends, erasing it
+  when there was none: `State.mem_state/0` returns any other value as the state.
+  """
+  @spec restore_global_state(map()) :: :ok
+  def restore_global_state(_context) do
+    global_state = :persistent_term.get(:global_state, :none)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      case global_state do
+        :none -> :persistent_term.erase(:global_state)
+        _state -> :persistent_term.put(:global_state, global_state)
+      end
+    end)
+  end
+
   Enum.each(AeMdw.Db.Model.tables(), fn table ->
     @spec all_keys(State.t(), unquote(table)) :: [key()]
   end)

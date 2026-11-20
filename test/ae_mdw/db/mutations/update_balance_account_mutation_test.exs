@@ -12,13 +12,7 @@ defmodule AeMdw.UpdateBalanceAccountMutationTest do
 
   @holders_count_key Stats.holders_count_key()
 
-  setup do
-    global_state_ref = :persistent_term.get(:global_state, nil)
-
-    on_exit(fn ->
-      :persistent_term.put(:global_state, global_state_ref)
-    end)
-  end
+  setup {TestUtil, :restore_global_state}
 
   test "Adds balances to wealth tables" do
     account_pk1 = :crypto.strong_rand_bytes(32)
