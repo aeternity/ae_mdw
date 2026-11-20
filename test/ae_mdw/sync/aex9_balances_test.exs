@@ -92,11 +92,46 @@ defmodule AeMdw.Sync.Aex9BalancesTest do
     end
   end
 
-  describe "prefetch_balances/2" do
-    test "caches the balances it gets, leaving out failed and cached ones" do
-      test_pid = self()
+  describe "last_refresh_blocks/1" do
+    test "keeps the last block that refreshes each account" do
       contract_pk = :crypto.strong_rand_bytes(32)
       put_aex9_type_info(contract_pk)
+      [from_pk, to_pk, mint_pk] = Enum.map(1..3, &<<&1::256>>)
+      kbi = Enum.random(100_000..999_999)
+
+      call_rec0 =
+        call_rec("logs", contract_pk, kbi, nil, [
+          {contract_pk, [aexn_event_hash(:transfer), from_pk, to_pk, <<1::256>>], ""}
+        ])
+
+      call_rec1 =
+        call_rec("logs", contract_pk, kbi, nil, [
+          {contract_pk, [aexn_event_hash(:mint), mint_pk, <<1::256>>], ""}
+        ])
+
+      call_rec2 =
+        call_rec("logs", contract_pk, kbi, nil, [
+          {contract_pk, [aexn_event_hash(:burn), from_pk, <<1::256>>], ""}
+        ])
+
+      blocks_call_recs = [
+        {{kbi, 0}, [call_rec0, call_rec1]},
+        {{kbi, 2}, [call_rec2]},
+        {{kbi, 1}, [call_rec1]}
+      ]
+
+      assert %{
+               {contract_pk, from_pk} => {kbi, 2},
+               {contract_pk, to_pk} => {kbi, 0},
+               {contract_pk, mint_pk} => {kbi, 1}
+             } == Aex9Balances.last_refresh_blocks(blocks_call_recs)
+    end
+  end
+
+  describe "prefetch_balances/2" do
+    test "caches the balances it gets and returns the accounts it failed on" do
+      test_pid = self()
+      contract_pk = :crypto.strong_rand_bytes(32)
       [from_pk, to_pk, cached_pk, error_pk, crash_pk] = Enum.map(1..5, &<<&1::256>>)
       kbi = Enum.random(100_000..999_999)
       next_height = kbi + 1
@@ -105,18 +140,13 @@ defmodule AeMdw.Sync.Aex9BalancesTest do
       next_hash1 = :crypto.strong_rand_bytes(32)
       Aex9AccountBalancesCache.put(contract_pk, {kbi, 0}, next_hash0, cached_pk, 7)
 
-      call_rec0 =
-        call_rec("logs", contract_pk, kbi, nil, [
-          {contract_pk, [aexn_event_hash(:transfer), from_pk, to_pk, <<1::256>>], ""},
-          {contract_pk, [aexn_event_hash(:mint), cached_pk, <<1::256>>], ""}
-        ])
-
-      call_rec1 =
-        call_rec("logs", contract_pk, kbi, nil, [
-          {contract_pk, [aexn_event_hash(:burn), error_pk, <<1::256>>], ""},
-          {contract_pk, [aexn_event_hash(:mint), crash_pk, <<1::256>>], ""},
-          {contract_pk, [aexn_event_hash(:mint), from_pk, <<1::256>>], ""}
-        ])
+      last_refresh_blocks = %{
+        {contract_pk, to_pk} => {kbi, 0},
+        {contract_pk, cached_pk} => {kbi, 0},
+        {contract_pk, error_pk} => {kbi, 1},
+        {contract_pk, crash_pk} => {kbi, 1},
+        {contract_pk, from_pk} => {kbi, 1}
+      }
 
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
@@ -137,23 +167,20 @@ defmodule AeMdw.Sync.Aex9BalancesTest do
            end
          ]}
       ] do
-        {keys, log} =
-          with_log(fn ->
-            Aex9Balances.prefetch_balances([{{kbi, 0}, [call_rec0]}, {{kbi, 1}, [call_rec1]}], 4)
-          end)
+        {{keys, failed}, log} =
+          with_log(fn -> Aex9Balances.prefetch_balances(last_refresh_blocks, 4) end)
 
         assert log =~ "[prefetch_balances] ** (RuntimeError) dry-run crashed"
+        assert Enum.sort(failed) == Enum.sort([{contract_pk, error_pk}, {contract_pk, crash_pk}])
 
         assert Enum.sort(keys) ==
                  Enum.sort([
-                   {contract_pk, {kbi, 0}, next_hash0, from_pk},
                    {contract_pk, {kbi, 0}, next_hash0, to_pk},
                    {contract_pk, {kbi, 1}, next_hash1, from_pk}
                  ])
 
         assert Enum.sort(received_dry_runs()) ==
                  Enum.sort([
-                   {from_pk, next_hash0},
                    {to_pk, next_hash0},
                    {error_pk, next_hash1},
                    {crash_pk, next_hash1},

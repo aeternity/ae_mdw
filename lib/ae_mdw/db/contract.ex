@@ -11,6 +11,9 @@ defmodule AeMdw.Db.Contract do
   `aex9_init_event_balances/4` is the one exception: it backfills the
   creation-time balances of contracts that fund accounts without emitting
   any log at all, and only fills in accounts no event has touched yet.
+
+  Db sync runs the dry-run only in the last block of the generation that
+  touches the account (see `put_aex9_last_refresh_blocks/2`).
   """
 
   alias AeMdw.AexnContracts
@@ -51,6 +54,7 @@ defmodule AeMdw.Db.Contract do
 
   @dex_factory_pubkeys Application.compile_env(:ae_mdw, :dex_factories)
   @ae_token_contract_pks Application.compile_env(:ae_mdw, :ae_token)
+  @last_refresh_blocks_cache :aex9_last_refresh_blocks
 
   @spec dex_factory_pubkey :: pubkey()
   def dex_factory_pubkey, do: Map.get(@dex_factory_pubkeys, :aec_governance.get_network_id())
@@ -142,15 +146,6 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp aex9_holder?(balance), do: is_integer(balance) and balance > 0
-
-  @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
-  def aex9_delete_presence(state, account_pk, contract_pk) do
-    if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
-      State.delete(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-    else
-      state
-    end
-  end
 
   @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
   def aex9_init_event_balances(state, contract_pk, balances, txi) do
@@ -296,7 +291,8 @@ defmodule AeMdw.Db.Contract do
   end
 
   # the {contract_pk, account_pk} pairs whose aex9 balance logs_write/5 refreshes
-  # with a dry-run, so that sync can run the dry-runs beforehand
+  # with a dry-run, so that db sync can plan the dry-runs. A pair listed here but
+  # not refreshed there loses its update.
   @spec aex9_balance_accounts(Contract.call()) :: [{pubkey(), pubkey()}]
   def aex9_balance_accounts(call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
@@ -319,6 +315,16 @@ defmodule AeMdw.Db.Contract do
 
       _log ->
         []
+    end)
+  end
+
+  # Db sync commits a whole generation at once, so only the last block in which
+  # the generation refreshes a balance needs its dry-run. KeyBlockMutation clears
+  # the state cache, and with it these entries, at the end of the generation.
+  @spec put_aex9_last_refresh_blocks(state(), Aex9Balances.last_refresh_blocks()) :: state()
+  def put_aex9_last_refresh_blocks(state, last_refresh_blocks) do
+    Enum.reduce(last_refresh_blocks, state, fn {account, block_index}, state ->
+      State.cache_put(state, @last_refresh_blocks_cache, account, block_index)
     end)
   end
 
@@ -346,7 +352,8 @@ defmodule AeMdw.Db.Contract do
         # the balance is always re-derived from a dry-run of the real chain
         # state, rather than accumulated from event arguments, so it can't
         # drift from reality regardless of how/where the token was created
-        # or how many events log the same underlying balance change
+        # or how many events log the same underlying balance change. Keep
+        # aex9_balance_accounts/1 in step with this branch.
         write_aex9_records(state, event_type, addr, txi, log_idx, args)
 
       State.exists?(state, Model.AexnContract, {:aex141, addr}) ->
@@ -739,6 +746,26 @@ defmodule AeMdw.Db.Contract do
 
   defp refresh_aex9_balances(state, contract_pk, txi, log_idx, affected_pubkeys) do
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+
+    case Enum.reject(affected_pubkeys, &refreshed_later?(state, contract_pk, &1, block_index)) do
+      [] ->
+        state
+
+      account_pks ->
+        do_refresh_aex9_balances(state, contract_pk, txi, log_idx, block_index, account_pks)
+    end
+  end
+
+  # Only an entry for a later block skips the refresh, so an account or a block
+  # that put_aex9_last_refresh_blocks/2 didn't get still refreshes.
+  defp refreshed_later?(state, contract_pk, account_pk, block_index) do
+    case State.cache_get(state, @last_refresh_blocks_cache, {contract_pk, account_pk}) do
+      {:ok, last_block_index} -> last_block_index > block_index
+      :not_found -> false
+    end
+  end
+
+  defp do_refresh_aex9_balances(state, contract_pk, txi, log_idx, block_index, affected_pubkeys) do
     {state, type_height_hash} = aex9_type_height_hash(state, block_index)
 
     case fetch_aex9_balances(contract_pk, affected_pubkeys, block_index, type_height_hash) do

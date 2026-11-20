@@ -26,6 +26,13 @@ defmodule AeMdw.Db.HardforkPresets do
     end
   end
 
+  @doc """
+  The genesis accounts as `accounts_roma` int transfers, which sync writes at height 0.
+  """
+  @spec genesis_transfers_mutation() :: IntTransfersMutation.t()
+  def genesis_transfers_mutation,
+    do: hardfork_mutation(:roma, &:aec_fork_block_settings.genesis_accounts/0)
+
   @spec hardfork_height(hardfork()) :: AeMdw.Blocks.height()
   def hardfork_height(:roma), do: 0
 
@@ -75,7 +82,6 @@ defmodule AeMdw.Db.HardforkPresets do
       State.commit(
         State.new(),
         [
-          hardfork_mutation(:roma, &:aec_fork_block_settings.genesis_accounts/0),
           hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0),
           hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0),
           hardfork_mutation(:lima, &Node.lima_accounts/0),

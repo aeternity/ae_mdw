@@ -12,7 +12,13 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
 
   require Model
 
-  @tables [Model.ActiveName, Model.InactiveName, Model.ActiveOracle, Model.InactiveOracle]
+  @tables [
+    Model.ActiveName,
+    Model.InactiveName,
+    Model.ActiveOracle,
+    Model.InactiveOracle,
+    Model.AccountCreation
+  ]
 
   describe "put/3 and delete/3" do
     test "count only keys that are added or removed" do
@@ -97,10 +103,16 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
         |> State.put(Model.ActiveName, Model.name(index: "a1.chain"))
         |> State.put(Model.ActiveName, Model.name(index: "a2.chain"))
         |> State.put(Model.InactiveOracle, Model.oracle(index: <<1::256>>))
+        |> State.put(Model.AccountCreation, Model.account_creation(index: <<1::256>>))
         |> ObjectKeys.recount_if_stale()
 
-      assert %{active_names: 2, inactive_names: 0, active_oracles: 0, inactive_oracles: 1} =
-               counts(state)
+      assert %{
+               active_names: 2,
+               inactive_names: 0,
+               active_oracles: 0,
+               inactive_oracles: 1,
+               accounts: 1
+             } = counts(state)
 
       state =
         state
@@ -125,6 +137,19 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
         |> ObjectKeys.recount_if_stale()
 
       assert %{active_names: 4} = counts(state)
+    end
+
+    test "recounts after a version that didn't count accounts" do
+      state =
+        empty_mem_state()
+        |> State.put(Model.DeltaStat, Model.delta_stat(index: 10))
+        |> State.put(Model.Tx, Model.tx(index: 99))
+        |> State.put(Model.Stat, Model.stat(index: :object_counts_at, payload: {10, 100}))
+        |> State.put(Model.AccountCreation, Model.account_creation(index: <<1::256>>))
+        |> State.put(Model.AccountCreation, Model.account_creation(index: <<2::256>>))
+        |> ObjectKeys.recount_if_stale()
+
+      assert %{accounts: 2} = counts(state)
     end
   end
 
@@ -188,14 +213,15 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
   defp state_store(%State{store: store}), do: store
 
   defp counts(state) do
-    [active_names, inactive_names, active_oracles, inactive_oracles] =
+    [active_names, inactive_names, active_oracles, inactive_oracles, accounts] =
       Enum.map(@tables, &ObjectKeys.count(state, &1))
 
     %{
       active_names: active_names,
       inactive_names: inactive_names,
       active_oracles: active_oracles,
-      inactive_oracles: inactive_oracles
+      inactive_oracles: inactive_oracles,
+      accounts: accounts
     }
   end
 end
