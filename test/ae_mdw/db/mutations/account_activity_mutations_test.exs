@@ -57,7 +57,36 @@ defmodule AeMdw.Db.Mutation.AccountActivityMutationTest do
     assert %{{:day, 0} => 1, {:week, 0} => 1, {:month, 0} => 1} ==
              active_accounts_counts(state)
 
-    assert 2 = state |> Collection.stream(Model.AccountActivity, nil) |> Enum.count()
+    assert [{<<1::256>>, 1}] =
+             state |> Collection.stream(Model.AccountActivity, nil) |> Enum.to_list()
+  end
+
+  test "account activity earlier on an already active day keeps the day's existing row" do
+    state =
+      Enum.reduce([2, 1], empty_state(), fn time, state ->
+        AccountActivityMutation.execute(AccountActivityMutation.new(<<1::256>>, time), state)
+      end)
+
+    assert %{{:day, 0} => 1, {:week, 0} => 1, {:month, 0} => 1} ==
+             active_accounts_counts(state)
+
+    assert [{<<1::256>>, 2}] =
+             state |> Collection.stream(Model.AccountActivity, nil) |> Enum.to_list()
+  end
+
+  test "account activity on a new day after a skipped same-day row counts only the new day" do
+    one_day_in_milliseconds = 1000 * 60 * 60 * 24
+
+    state =
+      Enum.reduce([1, 2, one_day_in_milliseconds + 1], empty_state(), fn time, state ->
+        AccountActivityMutation.execute(AccountActivityMutation.new(<<1::256>>, time), state)
+      end)
+
+    assert %{{:day, 0} => 1, {:day, 1} => 1, {:week, 0} => 1, {:month, 0} => 1} ==
+             active_accounts_counts(state)
+
+    assert [{<<1::256>>, 1}, {<<1::256>>, one_day_in_milliseconds + 1}] ==
+             state |> Collection.stream(Model.AccountActivity, nil) |> Enum.to_list()
   end
 
   test "account activity on a new month within the same week increases the day and month active accounts" do
