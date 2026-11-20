@@ -39,6 +39,8 @@ defmodule AeMdw.Channels do
 
   @states ~w(active inactive)
 
+  @closing_tx_types ~w(channel_close_mutual_tx channel_settle_tx)a
+
   @spec fetch_channels(state(), pagination(), range(), query(), cursor()) ::
           {:ok, {pagination_cursor(), [channel()], pagination_cursor()}}
           | {:error, Error.t()}
@@ -79,10 +81,11 @@ defmodule AeMdw.Channels do
   def fetch_channel_updates(state, channel_id, pagination, range, cursor) do
     with {:ok, channel_pk} <- Validate.id(channel_id, [:channel]),
          {:ok, Model.channel(updates: updates), _source} <- locate(state, channel_pk),
-         {:ok, cursor} <- deserialize_nested_cursor(cursor) do
+         {:ok, cursor} <- deserialize_nested_cursor(cursor),
+         {:ok, gen_scope} <- deserialize_nested_scope(range) do
       paginated_updates =
-        state
-        |> build_nested_filter(updates, range, cursor)
+        updates
+        |> build_nested_filter(gen_scope, cursor)
         |> Collection.paginate(
           pagination,
           &render_update(state, channel_id, &1),
@@ -144,22 +147,19 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp build_nested_filter(state, updates, range, cursor) do
-    updates = Enum.map(updates, fn {_bi, txi_idx} -> txi_idx end)
-
+  defp build_nested_filter(updates, gen_scope, cursor) do
     updates =
-      case range do
+      case gen_scope do
         nil ->
           updates
 
-        {:gen, first_gen..last_gen//_step} ->
-          first_txi = DbUtil.first_gen_to_txi(state, first_gen)
-          last_txi = DbUtil.last_gen_to_txi(state, last_gen)
-
+        {first_gen, last_gen} ->
           updates
-          |> Enum.drop_while(fn {txi, _idx} -> txi > last_txi end)
-          |> Enum.take_while(fn {txi, _idx} -> txi < first_txi end)
+          |> Enum.drop_while(fn {{height, _mbi}, _txi_idx} -> height > last_gen end)
+          |> Enum.take_while(fn {{height, _mbi}, _txi_idx} -> height >= first_gen end)
       end
+
+    updates = Enum.map(updates, fn {_bi, txi_idx} -> txi_idx end)
 
     fn direction ->
       updates =
@@ -197,9 +197,9 @@ defmodule AeMdw.Channels do
          is_active?,
          type_block_hash \\ nil
        ) do
-    {{last_updated_height, _mbi} = update_block_index, txi_idx} = last_updated_bi_txi_idx
+    {{last_updated_height, _mbi}, txi_idx} = last_updated_bi_txi_idx
 
-    {_update_aetx, _inner_tx_type, tx_hash, tx_type, update_block_hash} =
+    {_update_aetx, inner_tx_type, tx_hash, tx_type, update_block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
     channel = %{
@@ -215,8 +215,11 @@ defmodule AeMdw.Channels do
       active: is_active?
     }
 
+    {details_block_index, details_block_hash} =
+      node_details_block(state, updates, inner_tx_type, update_block_hash)
+
     block_hash =
-      get_oldest_block_hash(state, type_block_hash, update_block_hash, update_block_index)
+      get_oldest_block_hash(state, type_block_hash, details_block_hash, details_block_index)
 
     case :aec_chain.get_channel_at_hash(channel_pk, block_hash) do
       {:ok, node_channel} ->
@@ -231,6 +234,22 @@ defmodule AeMdw.Channels do
         Map.put(channel, :amount, amount)
     end
   end
+
+  # The node deletes a channel when closing it, so its last state is at the update before.
+  defp node_details_block(
+         state,
+         [_closing_update, {prev_block_index, _txi_idx} | _rest],
+         inner_tx_type,
+         _block_hash
+       )
+       when inner_tx_type in @closing_tx_types do
+    Model.block(hash: prev_block_hash) = State.fetch!(state, Model.Block, prev_block_index)
+
+    {prev_block_index, prev_block_hash}
+  end
+
+  defp node_details_block(_state, [{block_index, _txi_idx} | _rest], _inner_tx_type, block_hash),
+    do: {block_index, block_hash}
 
   defp render_update(state, channel_id, txi_idx) do
     {update_tx, inner_tx_type, tx_hash, tx_type, block_hash} =
@@ -281,6 +300,14 @@ defmodule AeMdw.Channels do
   defp deserialize_scope(nil), do: {:ok, nil}
 
   defp deserialize_scope(invalid_scope),
+    do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
+
+  defp deserialize_nested_scope(nil), do: {:ok, nil}
+
+  defp deserialize_nested_scope({:gen, first_gen..last_gen//_step}),
+    do: {:ok, {first_gen, last_gen}}
+
+  defp deserialize_nested_scope(invalid_scope),
     do: {:error, ErrInput.Scope.exception(value: invalid_scope)}
 
   # Gets from the oldest block state tree since some channels might be absent from newer blocks
