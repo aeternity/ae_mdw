@@ -10,7 +10,9 @@ defmodule AeMdw.Sync.ServerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.StatisticsMutation
   alias AeMdw.Db.Sync.Block
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.EtsCache
@@ -95,6 +97,44 @@ defmodule AeMdw.Sync.ServerTest do
                AccountCreationMutation => 2,
                AccountActivityMutation => 2
              } == Enum.frequencies_by(account_mutations, & &1.__struct__)
+    end
+
+    test "commits one update per statistic of a generation" do
+      gens = [generation(1_000, 2)]
+      micro_index = {{:blocks, :micro}, :day, 0}
+      total_index = {{:total_transactions, :all}, :day, 0}
+
+      gen_mutations = fn gen ->
+        {height, blocks_mutations} = gen_mutations(gen)
+
+        {height,
+         Enum.map(blocks_mutations, fn
+           {{_height, -1}, _key_block, _mutations} = key_block_mutations ->
+             key_block_mutations
+
+           {block_index, micro_block, mutations} ->
+             statistics_mutations = [
+               StatisticsMutation.new([{micro_index, 1}]),
+               TotalStatisticsMutation.new([{total_index, 2}])
+             ]
+
+             {block_index, micro_block, [mutations, statistics_mutations]}
+         end)}
+      end
+
+      with_mocks sync_mocks(gens, gen_mutations) do
+        sync(db_sync_data())
+      end
+
+      assert [
+               [
+                 {:mutation, {1_000, 0}},
+                 {:mutation, {1_000, 1}},
+                 {:mutation, {1_000, -1}},
+                 StatisticsMutation.new([{micro_index, 2}]),
+                 TotalStatisticsMutation.new([{total_index, 4}])
+               ]
+             ] == received(:committed)
     end
 
     @tag :capture_log
