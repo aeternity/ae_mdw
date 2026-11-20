@@ -112,6 +112,16 @@ defmodule AeMdw.Db.Util do
     end
   end
 
+  # Micro block indexes start at 0 without gaps, and a lone key block {height, -1} gives 0.
+  @spec micro_blocks_count(state(), height()) :: non_neg_integer()
+  def micro_blocks_count(state, height) do
+    case State.prev(state, Model.Block, {height + 1, -1}) do
+      {:ok, {^height, mbi}} -> mbi + 1
+      {:ok, _block_index} -> 0
+      :none -> 0
+    end
+  end
+
   @spec block_hash_to_bi(state(), Blocks.block_hash()) :: Blocks.block_index() | nil
   def block_hash_to_bi(state, block_hash) do
     with {:ok, node_block} <- :aec_chain.get_block(block_hash),

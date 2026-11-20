@@ -5,13 +5,11 @@ defmodule AeMdw.MinerStats.Facts do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Collection
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Node.Db
-  alias AeMdw.Util
 
   require Model
 
@@ -43,7 +41,7 @@ defmodule AeMdw.MinerStats.Facts do
          miner: :aec_headers.miner(header),
          beneficiary: :aec_headers.beneficiary(header),
          difficulty: :aec_headers.difficulty(header),
-         micro_blocks: micro_blocks_count(state, height),
+         micro_blocks: DbUtil.micro_blocks_count(state, height),
          txs: next_txi - first_txi,
          fees: fees(state, first_txi, next_txi),
          rewards: IntTransfer.sum_block_rewards_by_target(state, height, height)
@@ -72,12 +70,6 @@ defmodule AeMdw.MinerStats.Facts do
   end
 
   defp block_txi(state, height), do: DbUtil.block_txi(state, {height, -1})
-
-  defp micro_blocks_count(state, height) do
-    state
-    |> Collection.stream(Model.Block, :forward, {{height, 0}, {height, Util.max_int()}}, nil)
-    |> Enum.count()
-  end
 
   defp fees(state, first_txi, next_txi) do
     first_txi..(next_txi - 1)//1
