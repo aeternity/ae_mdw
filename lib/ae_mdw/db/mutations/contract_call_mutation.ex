@@ -62,7 +62,9 @@ defmodule AeMdw.Db.ContractCallMutation do
     state = DBContract.call_write(state, create_txi, txi, fun_arg_res)
 
     if call_rec != nil do
-      DBContract.logs_write(state, create_txi, txi, call_rec, false)
+      state
+      |> DBContract.logs_write(create_txi, txi, call_rec, false)
+      |> DBContract.call_info_write(txi, call_rec)
     else
       state
     end

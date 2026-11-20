@@ -634,6 +634,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {DbContract, [],
          [
+           call_info: fn _state, _contract_pk, _txi -> :not_found end,
            call_fun_arg_res: fn _state, _contract_pk, _txi ->
              %{
                function: "fun",
@@ -1971,6 +1972,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {DbContract, [],
          [
+           call_info: fn _state, _contract_pk, _txi -> :not_found end,
            call_fun_arg_res: fn _state, ^contract_pk, _txi ->
              %{
                function: "fun",
@@ -2576,6 +2578,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          ]},
         {DbContract, [],
          [
+           call_info: fn _state, _contract_pk, _txi -> :not_found end,
            call_fun_arg_res: fn _state, ^account_pk, _txi ->
              %{
                function: "fun",
