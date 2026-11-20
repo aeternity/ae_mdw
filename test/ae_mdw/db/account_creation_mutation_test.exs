@@ -4,7 +4,9 @@ defmodule AeMdw.Db.AccountCreationMutationTest do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.AccountCreationMutation
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -48,6 +50,20 @@ defmodule AeMdw.Db.AccountCreationMutationTest do
     state = AccountCreationMutation.execute(AccountCreationMutation.new(<<10::256>>, 1), state)
 
     assert State.get_stat(state, :accounts, 0) == 1
+  end
+
+  test "counts each new account once, on top of the fallback store's accounts" do
+    fallback_state =
+      AccountCreationMutation.execute(AccountCreationMutation.new(<<20::256>>, 1), empty_state())
+
+    state =
+      [<<20::256>>, <<21::256>>, <<21::256>>]
+      |> Enum.reduce(State.new(MemStore.new(fallback_state.store)), fn pubkey, state ->
+        AccountCreationMutation.execute(AccountCreationMutation.new(pubkey, 2), state)
+      end)
+
+    assert 1 == ObjectKeys.count(fallback_state, Model.AccountCreation)
+    assert 2 == ObjectKeys.count(state, Model.AccountCreation)
   end
 
   test "duplicate account does not increment :accounts stat" do

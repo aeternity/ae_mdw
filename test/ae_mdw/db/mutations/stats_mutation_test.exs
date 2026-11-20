@@ -328,7 +328,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       key_hash = <<height::256>>
       mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false, 123)
 
-      # Seed 3 AccountCreation records so count_keys returns 3.
+      # Seed 3 AccountCreation records so the accounts count is 3.
       # TotalStat for the previous block already has accounts: 1, so delta = 3 - 1 = 2.
       state =
         NullStore.new()
@@ -337,15 +337,15 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.put(Model.DeltaStat, Model.delta_stat(index: height - 1))
         |> State.put(Model.TotalStat, Model.total_stat(index: height, accounts: 1))
         |> State.put(Model.TotalStat, Model.total_stat(index: height - 1, accounts: 1))
-        |> State.put(
+        |> ObjectKeys.put(
           Model.AccountCreation,
           Model.account_creation(index: <<1::256>>, creation_time: 1)
         )
-        |> State.put(
+        |> ObjectKeys.put(
           Model.AccountCreation,
           Model.account_creation(index: <<2::256>>, creation_time: 2)
         )
-        |> State.put(
+        |> ObjectKeys.put(
           Model.AccountCreation,
           Model.account_creation(index: <<3::256>>, creation_time: 3)
         )
@@ -361,6 +361,41 @@ defmodule AeMdw.Db.StatsMutationTest do
 
         assert Model.delta_stat(m_delta, :accounts) == 2
         assert Model.total_stat(m_total, :accounts) == 1 + 2
+      end
+    end
+
+    test "with all_cached? = false, uses the kept counts instead of counting the tables" do
+      height = 160
+      key_hash = <<height::256>>
+      mutation = StatsMutation.new(height, key_hash, 0, 0, 0, false, 123)
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(
+          Model.TotalStat,
+          Model.total_stat(index: height, active_names: 1, active_oracles: 1, accounts: 1)
+        )
+        |> ObjectKeys.put(Model.ActiveName, Model.name(index: "a1.chain"))
+        |> ObjectKeys.put(Model.ActiveName, Model.name(index: "a2.chain"))
+        |> ObjectKeys.put(Model.ActiveOracle, Model.oracle(index: <<1::256>>))
+        |> ObjectKeys.put(Model.ActiveOracle, Model.oracle(index: <<2::256>>))
+        |> ObjectKeys.put(Model.AccountCreation, Model.account_creation(index: <<1::256>>))
+        |> ObjectKeys.put(Model.AccountCreation, Model.account_creation(index: <<2::256>>))
+        # not counted, so a scan of the tables would give other deltas
+        |> State.put(Model.ActiveName, Model.name(index: "a3.chain"))
+        |> State.put(Model.ActiveOracle, Model.oracle(index: <<3::256>>))
+        |> State.put(Model.AccountCreation, Model.account_creation(index: <<3::256>>))
+
+      with_mocks [
+        {:aec_db, [:passthrough], [get_block: fn ^key_hash -> :block end]},
+        {:aec_blocks, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        state = StatsMutation.execute(mutation, state)
+
+        assert Model.delta_stat(names_activated: 1, oracles_registered: 1, accounts: 1) =
+                 State.fetch!(state, Model.DeltaStat, height)
       end
     end
 

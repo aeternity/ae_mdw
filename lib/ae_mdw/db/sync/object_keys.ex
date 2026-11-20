@@ -1,10 +1,10 @@
 defmodule AeMdw.Db.Sync.ObjectKeys do
   @moduledoc """
-  Counts active and inactive names and oracles, and contracts.
+  Counts active and inactive names and oracles, accounts and contracts.
 
-  Writes to the name and oracle tables go through put/3 and delete/3, which keep
-  each table's count in Model.Stat. The counts are recounted at startup when the
-  last synced generation didn't record them.
+  Writes to the name, oracle and account creation tables go through put/3 and
+  delete/3, which keep each table's count in Model.Stat. The counts are
+  recounted at startup when the last synced generation didn't record them.
   """
 
   alias AeMdw.Blocks
@@ -21,16 +21,24 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   require Model
 
   @type table() ::
-          Model.ActiveName | Model.InactiveName | Model.ActiveOracle | Model.InactiveOracle
+          Model.ActiveName
+          | Model.InactiveName
+          | Model.ActiveOracle
+          | Model.InactiveOracle
+          | Model.AccountCreation
 
   @count_keys %{
     Model.ActiveName => :active_names_count,
     Model.InactiveName => :inactive_names_count,
     Model.ActiveOracle => :active_oracles_count,
-    Model.InactiveOracle => :inactive_oracles_count
+    Model.InactiveOracle => :inactive_oracles_count,
+    Model.AccountCreation => :accounts_count
   }
 
+  # The stamp lists the counted tables, so a start after a version that counted
+  # other tables recounts.
   @counted_at_key :object_counts_at
+  @counted_keys @count_keys |> Map.values() |> Enum.sort()
 
   @spec load() :: :ok
   def load do
@@ -64,7 +72,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
             end)
           end)
 
-        Log.info("[object_keys] recounted names and oracles in #{div(time, 1_000)}ms")
+        Log.info("[object_keys] recounted names, oracles and accounts in #{div(time, 1_000)}ms")
 
         State.put(state, Model.Stat, Model.stat(index: @counted_at_key, payload: counted_at))
     end
@@ -79,10 +87,11 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
       State.put(
         state,
         Model.Stat,
-        Model.stat(index: @counted_at_key, payload: {height, next_txi})
+        Model.stat(index: @counted_at_key, payload: counted_at(height, next_txi))
       )
 
-  @spec put(State.t(), table(), Model.name() | Model.oracle()) :: State.t()
+  @spec put(State.t(), table(), Model.name() | Model.oracle() | Model.account_creation()) ::
+          State.t()
   def put(state, table, record) do
     if State.exists?(state, table, elem(record, 1)) do
       State.put(state, table, record)
@@ -146,8 +155,10 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
         :none -> 0
       end
 
-    {State.height(state), next_txi}
+    counted_at(State.height(state), next_txi)
   end
+
+  defp counted_at(height, next_txi), do: {height, next_txi, @counted_keys}
 
   defp db_contracts_count() do
     db_state = State.new()
