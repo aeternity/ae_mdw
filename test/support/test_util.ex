@@ -22,8 +22,12 @@ defmodule AeMdw.TestUtil do
   def empty_state, do: State.new(empty_store())
 
   @doc """
-  Setup callback that puts the global mem state back when the test ends, erasing it
-  when there was none: `State.mem_state/0` returns any other value as the state.
+  Setup callback that restores the previous `:global_state` binding when the test ends,
+  or erases the key if it was absent. Writes to the ETS tables it references persist.
+
+  Tables of a state the test publishes must outlive this cleanup and any reader still
+  running, such as the telemetry status poll. A test process's own tables are gone
+  by the time `on_exit` runs.
   """
   @spec restore_global_state(map()) :: :ok
   def restore_global_state(_context) do
