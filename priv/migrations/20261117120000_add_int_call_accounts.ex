@@ -167,7 +167,7 @@ defmodule AeMdw.Migrations.AddIntCallAccounts do
 
         # sync recounts a generation that an older version left half-synced
         if stats? and height <= synced_height do
-          # at height, as AddAccountsToStats did; sync would count it at height + 1
+          # at height, as sync does since #2270 and AddAccountsToStats did
           State.update!(state, Model.DeltaStat, height, fn delta_stat ->
             accounts = Model.delta_stat(delta_stat, :accounts)
             Model.delta_stat(delta_stat, accounts: accounts + 1)
