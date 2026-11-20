@@ -68,6 +68,22 @@ defmodule AeMdw.Db.UtilTest do
     end
   end
 
+  describe "micro_blocks_count/2" do
+    test "counts the micro blocks of a generation" do
+      state =
+        [{99, -1..0}, {100, -1..2}, {101, -1..-1}, {102, -1..0}]
+        |> Enum.flat_map(fn {height, mbis} -> Enum.map(mbis, &{height, &1}) end)
+        |> Enum.reduce(empty_store(), &Store.put(&2, Model.Block, Model.block(index: &1)))
+        |> State.new()
+
+      assert 3 = DbUtil.micro_blocks_count(state, 100)
+      assert 0 = DbUtil.micro_blocks_count(state, 101)
+      assert 1 = DbUtil.micro_blocks_count(state, 102)
+      assert 0 = DbUtil.micro_blocks_count(state, 103)
+      assert 0 = DbUtil.micro_blocks_count(State.new(empty_store()), 100)
+    end
+  end
+
   describe "time_to_txi/3" do
     test "finds the same txis with every tx, only the micro block boundaries, or a mix of both" do
       # {mb_time, first_txi, last_txi}, the last two micro blocks share a time
