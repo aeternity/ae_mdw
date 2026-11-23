@@ -4,6 +4,7 @@ defmodule AeMdwWeb.DexControllerTest do
 
   import Mock
 
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Util.Encoding
@@ -151,24 +152,8 @@ defmodule AeMdwWeb.DexControllerTest do
         Model.dex_pair(index: @pair1_pk, token1_pk: @token_pks[1], token2_pk: @token_pks[2])
       )
       |> Store.put(
-        Model.DexTokenSymbol,
-        Model.dex_token_symbol(index: "TK1", pair_create_txi_idx: {@pair1_txi, -1})
-      )
-      |> Store.put(
-        Model.DexTokenSymbol,
-        Model.dex_token_symbol(index: "TK2", pair_create_txi_idx: {@pair1_txi, -1})
-      )
-      |> Store.put(
         Model.DexPair,
         Model.dex_pair(index: @pair2_pk, token1_pk: @token_pks[3], token2_pk: @token_pks[4])
-      )
-      |> Store.put(
-        Model.DexTokenSymbol,
-        Model.dex_token_symbol(index: "TK3", pair_create_txi_idx: {@pair2_txi, -1})
-      )
-      |> Store.put(
-        Model.DexTokenSymbol,
-        Model.dex_token_symbol(index: "TK4", pair_create_txi_idx: {@pair2_txi, -1})
       )
 
     {:ok, store: store}
@@ -675,6 +660,68 @@ defmodule AeMdwWeb.DexControllerTest do
                conn |> with_store(store) |> get(prev_swaps) |> json_response(200)
     end
 
+    test "gets SwapTokens from a caller on every pair with the token symbol", %{
+      conn: conn,
+      store: store
+    } do
+      caller_id = encode_account(@account1_pk)
+      # a MemStore over the shared one, so the extra pairs don't leak into other tests
+      store = store |> MemStore.new() |> add_symbol_pairs()
+      path = "/v3/accounts/#{caller_id}/dex/swaps"
+
+      # pairs in create txi order, newest first
+      tk1_swaps =
+        Enum.map(1_000_090..1_000_086//-1, &{&1, "TK1", "TK4"}) ++
+          Enum.map(1_000_085..1_000_081//-1, &{&1, "TK1", "TK3"}) ++
+          Enum.map(1_000_020..1_000_001//-1, &{&1, "TK1", "TK2"})
+
+      tk3_swaps =
+        Enum.map(1_000_085..1_000_081//-1, &{&1, "TK1", "TK3"}) ++
+          Enum.map(1_000_040..1_000_021//-1, &{&1, "TK3", "TK4"})
+
+      assert ^tk1_swaps = fetch_all_swaps(conn, store, "#{path}?token_symbol=TK1&limit=7")
+
+      assert Enum.reverse(tk1_swaps) ==
+               fetch_all_swaps(conn, store, "#{path}?token_symbol=TK1&limit=7&direction=forward")
+
+      assert ^tk3_swaps = fetch_all_swaps(conn, store, "#{path}?token_symbol=TK3&limit=7")
+
+      assert %{"data" => page1, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get(path, token_symbol: "TK1", limit: 7)
+               |> json_response(200)
+
+      assert %{"prev" => prev} = conn |> with_store(store) |> get(next) |> json_response(200)
+      assert %{"data" => ^page1} = conn |> with_store(store) |> get(prev) |> json_response(200)
+    end
+
+    test "gets scoped SwapTokens from a caller on a token symbol", %{conn: conn, store: store} do
+      caller_id = encode_account(@account1_pk)
+
+      # gens 200_003..200_005 hold txis 1_000_003..1_000_005
+      assert [
+               {1_000_003, "TK1", "TK2"},
+               {1_000_004, "TK1", "TK2"},
+               {1_000_005, "TK1", "TK2"}
+             ] =
+               fetch_all_swaps(
+                 conn,
+                 store,
+                 "/v3/accounts/#{caller_id}/dex/swaps?token_symbol=TK1&scope=gen:200003-200005"
+               )
+    end
+
+    test "returns bad request when no pair has the token symbol", %{conn: conn, store: store} do
+      caller_id = encode_account(@account1_pk)
+
+      assert %{"error" => "not AEX9 contract: TK9"} =
+               conn
+               |> with_store(store)
+               |> get("/v3/accounts/#{caller_id}/dex/swaps", token_symbol: "TK9")
+               |> json_response(400)
+    end
+
     test "returns empty list when no transfer exists", %{conn: conn, store: store} do
       account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
@@ -835,6 +882,76 @@ defmodule AeMdwWeb.DexControllerTest do
       }
   end
 
+  defp fetch_all_swaps(conn, store, path) do
+    %{"data" => swaps, "next" => next} =
+      conn |> with_store(store) |> get(path) |> json_response(200)
+
+    swaps =
+      Enum.map(swaps, fn %{"tx_hash" => tx_hash, "from_token" => from, "to_token" => to} ->
+        <<txi::256>> = Validate.id!(tx_hash)
+        {txi, from, to}
+      end)
+
+    if next, do: swaps ++ fetch_all_swaps(conn, store, next), else: swaps
+  end
+
+  # Adds a second TK1/TK3 pair and a pair of another token also named TK1, with
+  # account1 swaps on both.
+  defp add_symbol_pairs(store) do
+    token5_pk = :crypto.strong_rand_bytes(32)
+
+    store =
+      Store.put(
+        store,
+        Model.AexnContract,
+        Model.aexn_contract(index: {:aex9, token5_pk}, meta_info: {"TOKEN5", "TK1", 18})
+      )
+
+    [
+      {300_001, @token_pks[1], @token_pks[3], 1_000_081..1_000_085},
+      {300_002, token5_pk, @token_pks[4], 1_000_086..1_000_090}
+    ]
+    |> Enum.reduce(store, fn {pair_txi, token1_pk, token2_pk, txis}, store ->
+      pair_pk = :crypto.strong_rand_bytes(32)
+
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, pair_pk, pair_txi})
+        )
+        |> Store.put(
+          Model.RevOrigin,
+          Model.rev_origin(index: {{pair_txi, -1}, :contract_create_tx}, pubkey: pair_pk)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: pair_txi, id: <<pair_txi::256>>, block_index: {pair_txi, -1})
+        )
+        |> Store.put(
+          Model.DexPair,
+          Model.dex_pair(index: pair_pk, token1_pk: token1_pk, token2_pk: token2_pk)
+        )
+
+      Enum.reduce(txis, store, fn txi, store ->
+        store
+        |> Store.put(
+          Model.DexAccountSwapTokens,
+          Model.dex_account_swap_tokens(
+            index: {@account1_pk, pair_txi, txi, 0},
+            to: @account1_pk,
+            amounts: [1, 2, 3, 4]
+          )
+        )
+        |> Store.put(
+          Model.ContractLog,
+          Model.contract_log(index: {pair_txi, txi, 0}, args: [@account1_pk, @account1_pk])
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: {txi, 0}))
+      end)
+    end)
+  end
+
   defp add_supporting_dex_data(store, txi, token1_symbol, token2_symbol) do
     block_index_number = 900_000 + txi
     block_index = {block_index_number, 0}
@@ -881,14 +998,6 @@ defmodule AeMdwWeb.DexControllerTest do
     |> Store.put(
       Model.DexPair,
       Model.dex_pair(index: pair_pk, token1_pk: token1_pk, token2_pk: token2_pk)
-    )
-    |> Store.put(
-      Model.DexTokenSymbol,
-      Model.dex_token_symbol(index: "TOKEN1", pair_create_txi_idx: {txi, -1})
-    )
-    |> Store.put(
-      Model.DexTokenSymbol,
-      Model.dex_token_symbol(index: "TOKEN2", pair_create_txi_idx: {txi, -1})
     )
   end
 end

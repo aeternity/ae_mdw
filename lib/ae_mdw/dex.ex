@@ -51,6 +51,12 @@ defmodule AeMdw.Dex do
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, cursor} <- deserialize_account_swaps_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+      cursor =
+        case cursor do
+          nil -> nil
+          {_account_pk, create_txi, txi, log_idx} -> {account_pk, create_txi, txi, log_idx}
+        end
+
       state
       |> build_account_swaps_streamer(account_pk, filters, scope, cursor)
       |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
@@ -63,7 +69,7 @@ defmodule AeMdw.Dex do
   def fetch_contract_swaps(state, contract_id, pagination, _scope, cursor) do
     with {:ok, token_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, cursor} <- deserialize_contract_swaps_cursor(cursor) do
-      create_txis = get_pair_create_txis(state, token_pk)
+      create_txis = get_pair_create_txis(state, &pair_has_contract?(&1, token_pk))
 
       state
       |> build_contract_swaps_streamer(create_txis, cursor)
@@ -152,27 +158,30 @@ defmodule AeMdw.Dex do
   defp build_account_swaps_streamer(
          state,
          account_pk,
-         %{pair_create_txi_idx: {pair_create_txi, _idx}},
+         %{pair_create_txis: create_txis},
          scope,
          cursor
        ) do
-    key_boundary =
+    {first_txi, last_txi} =
       if scope do
         first_txi..last_txi//_step = range_to_txi(state, scope)
-
-        {
-          {account_pk, pair_create_txi, first_txi, nil},
-          {account_pk, pair_create_txi, last_txi, nil}
-        }
+        {first_txi, last_txi}
       else
-        {
-          {account_pk, pair_create_txi, Util.min_int(), nil},
-          {account_pk, pair_create_txi, Util.max_int(), nil}
-        }
+        {Util.min_int(), Util.max_int()}
       end
 
+    # keys start with the pair create_txi, so walking the pairs in order keeps the key order
     fn direction ->
-      Collection.stream(state, @account_swaps_table, direction, key_boundary, cursor)
+      create_txis
+      |> Enum.sort(if direction == :forward, do: :asc, else: :desc)
+      |> Stream.flat_map(fn create_txi ->
+        key_boundary = {
+          {account_pk, create_txi, first_txi, Util.min_int()},
+          {account_pk, create_txi, last_txi, nil}
+        }
+
+        Collection.stream(state, @account_swaps_table, direction, key_boundary, cursor)
+      end)
     end
   end
 
@@ -190,12 +199,6 @@ defmodule AeMdw.Dex do
           {account_pk, Util.min_int(), nil, nil},
           {account_pk, Util.max_int(), nil, nil}
         }
-      end
-
-    cursor =
-      case cursor do
-        nil -> nil
-        {_account_pk, create_txi, txi, log_idx} -> {account_pk, create_txi, txi, log_idx}
       end
 
     fn direction ->
@@ -390,12 +393,9 @@ defmodule AeMdw.Dex do
   end
 
   defp convert_param(state, {"token_symbol", token_symbol}) when is_binary(token_symbol) do
-    case State.get(state, Model.DexTokenSymbol, token_symbol) do
-      :not_found ->
-        {:error, ErrInput.NotAex9.exception(value: token_symbol)}
-
-      {:ok, Model.dex_token_symbol(pair_create_txi_idx: pair_create_txi_idx)} ->
-        {:ok, {:pair_create_txi_idx, pair_create_txi_idx}}
+    case get_pair_create_txis(state, &pair_has_symbol?(state, &1, token_symbol)) do
+      [] -> {:error, ErrInput.NotAex9.exception(value: token_symbol)}
+      create_txis -> {:ok, {:pair_create_txis, create_txis}}
     end
   end
 
@@ -432,13 +432,11 @@ defmodule AeMdw.Dex do
     first_txi..last_txi
   end
 
-  defp get_pair_create_txis(state, token_pk) do
+  defp get_pair_create_txis(state, pair_filter) do
     state
     |> Collection.stream(Model.DexPair, nil)
     |> Stream.map(&State.fetch!(state, Model.DexPair, &1))
-    |> Stream.filter(fn Model.dex_pair(index: pair_pk, token1_pk: token1_pk, token2_pk: token2_pk) ->
-      token_pk in [pair_pk, token1_pk, token2_pk]
-    end)
+    |> Stream.filter(pair_filter)
     |> Stream.map(fn Model.dex_pair(index: pair_pk) ->
       pair_pk
     end)
@@ -448,5 +446,26 @@ defmodule AeMdw.Dex do
         :not_found -> create_txis
       end
     end)
+    |> Enum.uniq()
+  end
+
+  defp pair_has_contract?(
+         Model.dex_pair(index: pair_pk, token1_pk: token1_pk, token2_pk: token2_pk),
+         contract_pk
+       ),
+       do: contract_pk in [pair_pk, token1_pk, token2_pk]
+
+  defp pair_has_symbol?(
+         state,
+         Model.dex_pair(token1_pk: token1_pk, token2_pk: token2_pk),
+         symbol
+       ),
+       do: token_symbol?(state, token1_pk, symbol) or token_symbol?(state, token2_pk, symbol)
+
+  defp token_symbol?(state, token_pk, symbol) do
+    match?(
+      {:ok, Model.aexn_contract(meta_info: {_name, ^symbol, _decimals})},
+      State.get(state, Model.AexnContract, {:aex9, token_pk})
+    )
   end
 end
