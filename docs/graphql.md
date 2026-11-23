@@ -193,9 +193,9 @@ height-scoped pagination (transactions, transfers, block-level queries).
 
 | Query | Required args | Optional args | Description |
 |-------|---------------|---------------|-------------|
-| `swaps` | — | `tokenSymbol`, pagination | All DEX swaps |
+| `swaps` | — | pagination | All DEX swaps |
 | `accountSwaps` | `accountId` | `tokenSymbol`, pagination | Swaps for a specific account |
-| `contractSwaps` | `contractId` | `tokenSymbol`, pagination | Swaps for a specific DEX contract |
+| `contractSwaps` | `contractId` | pagination | Swaps for a specific DEX contract |
 
 ### Transfers
 
