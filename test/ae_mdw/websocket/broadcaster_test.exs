@@ -1,8 +1,11 @@
 defmodule AeMdw.Websocket.BroadcasterTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Db.DbStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.TestUtil
   alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
   alias Support.WsClient
@@ -20,7 +23,10 @@ defmodule AeMdw.Websocket.BroadcasterTest do
         client
       end
 
-    [clients: clients]
+    # Owned by the module process, so the tables outlive a test's on_exit.
+    v2_state = State.new(MemStore.new(DbStore.new()))
+
+    [clients: clients, v2_state: v2_state]
   end
 
   describe "broadcast_key_block" do
@@ -43,14 +49,16 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end
     end
 
-    test "broadcasts node and mdw keyblock for v2" do
+    test "broadcasts node and mdw keyblock for v2", %{v2_state: v2_state} = context do
+      TestUtil.restore_global_state(context)
+
       with_blockchain %{}, kb0: [], kb1: [], kb2: [] do
         %{hash: kb_hash0, height: 0} = blocks[:kb0]
         %{hash: kb_hash1, height: 1} = blocks[:kb1]
         %{hash: kb_hash2, height: 2} = blocks[:kb2]
 
         state =
-          State.mem_state()
+          v2_state
           |> State.put(
             Model.Block,
             Model.block(index: {0, -1}, hash: Validate.id!(kb_hash0), tx_index: 0)

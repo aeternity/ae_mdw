@@ -18,10 +18,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
   require Model
 
-  setup do
-    global_state_ref = :persistent_term.get(:global_state, nil)
-    on_exit(fn -> :persistent_term.put(:global_state, global_state_ref) end)
-  end
+  setup {AeMdw.TestUtil, :restore_global_state}
 
   describe "execute" do
     test "creates contract having aex9 log" do

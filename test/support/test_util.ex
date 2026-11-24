@@ -21,6 +21,26 @@ defmodule AeMdw.TestUtil do
   @spec empty_state() :: State.t()
   def empty_state, do: State.new(empty_store())
 
+  @doc """
+  Setup callback that restores the previous `:global_state` binding when the test ends,
+  or erases the key if it was absent. Writes to the ETS tables it references persist.
+
+  Tables of a state the test publishes must outlive this cleanup and any reader still
+  running, such as the telemetry status poll. A test process's own tables are gone
+  by the time `on_exit` runs.
+  """
+  @spec restore_global_state(map()) :: :ok
+  def restore_global_state(_context) do
+    global_state = :persistent_term.get(:global_state, :none)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      case global_state do
+        :none -> :persistent_term.erase(:global_state)
+        _state -> :persistent_term.put(:global_state, global_state)
+      end
+    end)
+  end
+
   Enum.each(AeMdw.Db.Model.tables(), fn table ->
     @spec all_keys(State.t(), unquote(table)) :: [key()]
   end)
