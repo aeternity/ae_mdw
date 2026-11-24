@@ -115,10 +115,10 @@ defmodule AeMdwWeb.AexnTokenController do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
-      fn -> Aex9.fetch_account_balances(state, account_pk, cursor, pagination) end
-      |> Task.async()
-      |> Task.yield(@endpoint_timeout)
-      |> case do
+      task =
+        Task.async(fn -> Aex9.fetch_account_balances(state, account_pk, cursor, pagination) end)
+
+      case Task.yield(task, @endpoint_timeout) || Task.shutdown(task) do
         {:ok, {:ok, {prev_cursor, account_balances, next_cursor}}} ->
           Util.render(conn, {prev_cursor, account_balances, next_cursor})
 

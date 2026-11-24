@@ -1183,12 +1183,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_account_balances" do
-    test "returns timeout", %{conn: conn, account_pk: account_pk} do
+    test "returns timeout and stops the dry-runs", %{conn: conn, account_pk: account_pk} do
+      test_pid = self()
+
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
          [
            aex9_balance: fn <<contract_pk::256>>, ^account_pk, _type_hash ->
              Process.sleep(1_000)
+             send(test_pid, :dry_run_done)
              {:ok, {contract_pk, <<1::256>>}}
            end
          ]}
@@ -1199,6 +1202,46 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                  conn
                  |> get("/v3/accounts/#{account_id}/aex9/balances")
                  |> json_response(503)
+
+        refute_receive :dry_run_done, 1_000
+      end
+    end
+
+    test "runs the dry-runs of a page concurrently, in page order", %{
+      conn: conn,
+      account_pk: account_pk
+    } do
+      # 1: dry-runs running, 2: most seen running at once
+      running = :atomics.new(2, [])
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn <<contract_pk::256>>, ^account_pk, _type_hash ->
+             put_max(running, 2, :atomics.add_get(running, 1, 1))
+             # finish out of page order, 300 ms in all, so a serial page
+             # still beats the 500 ms test endpoint timeout
+             Process.sleep(20 + rem(contract_pk, 5) * 5)
+             :atomics.sub(running, 1, 1)
+             {:ok, {contract_pk, <<1::256>>}}
+           end
+         ]}
+      ] do
+        account_id = encode_account(account_pk)
+
+        assert %{"data" => balances} =
+                 conn
+                 |> get("/v3/accounts/#{account_id}/aex9/balances")
+                 |> json_response(200)
+
+        assert Enum.map(balances, &Validate.id!(&1["contract_id"])) ==
+                 Enum.map(230..221//-1, &<<&1::256>>)
+
+        assert Enum.all?(balances, fn %{"contract_id" => contract_id, "amount" => amount} ->
+                 Validate.id!(contract_id) == <<amount::256>>
+               end)
+
+        assert :atomics.get(running, 2) == min(8, System.schedulers_online())
       end
     end
 
@@ -1267,5 +1310,12 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                |> get("/v3/accounts/#{account_id}/aex9/balances")
                |> json_response(400)
     end
+  end
+
+  defp put_max(atomics, index, value) do
+    current = :atomics.get(atomics, index)
+
+    if value > current and :atomics.compare_exchange(atomics, index, current, value) != :ok,
+      do: put_max(atomics, index, value)
   end
 end
