@@ -352,7 +352,7 @@ defmodule AeMdwWeb.BlockControllerTest do
          [
            prev_block_type: fn :header -> :key end,
            get_reverse_micro_hashes: fn ^decoded_hash -> [] end,
-           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+           find_block_height_time: fn ^decoded_hash -> {:ok, kbi, 0} end
          ]}
       ] do
         assert %{
@@ -407,7 +407,7 @@ defmodule AeMdwWeb.BlockControllerTest do
          [
            prev_block_type: fn :header -> :key end,
            get_reverse_micro_hashes: fn ^decoded_hash -> [] end,
-           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+           find_block_height_time: fn ^decoded_hash -> {:ok, kbi, 0} end
          ]}
       ] do
         assert %{
@@ -454,6 +454,47 @@ defmodule AeMdwWeb.BlockControllerTest do
                    |> get("/v3/micro-blocks/#{mb_hash}")
                    |> json_response(200)
         end
+      end
+    end
+
+    test "it finds the index through the block time, without walking the node headers", %{
+      conn: conn,
+      store: store
+    } do
+      with_blockchain %{alice: 10_000, bob: 20_000},
+                      [
+                        kb1: [
+                          mb1: [t1: spend_tx(:alice, :bob, 1_000)],
+                          mb2: [t2: spend_tx(:bob, :alice, 1_000)],
+                          mb3: [t3: spend_tx(:alice, :bob, 1_000)]
+                        ]
+                      ],
+                      [{AeMdw.Node.Db, [:passthrough], get_reverse_micro_hashes: fn _ -> [] end}] do
+        %{hash: kb_hash, height: kbi} = blocks[:kb1]
+        %{hash: mb_hash, time: mb_time} = blocks[:mb3]
+        mb_hashes = for name <- [:mb1, :mb2, :mb3], do: blocks[name].hash
+
+        # Mock micro blocks can share a millisecond, so only mb3 gets a Model.Time row.
+        store =
+          [kb_hash | mb_hashes]
+          |> Enum.with_index(-1)
+          |> Enum.reduce(store, fn {hash, mbi}, store ->
+            Store.put(
+              store,
+              Model.Block,
+              Model.block(index: {kbi, mbi}, hash: Validate.id!(hash), tx_index: max(mbi, 0))
+            )
+          end)
+          |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {kbi, 2}))
+          |> Store.put(Model.Time, Model.time(index: {mb_time, 2}))
+
+        assert %{"hash" => ^mb_hash, "micro_block_index" => 2} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/micro-blocks/#{mb_hash}")
+                 |> json_response(200)
+
+        assert_not_called(AeMdw.Node.Db.get_reverse_micro_hashes(:_))
       end
     end
 

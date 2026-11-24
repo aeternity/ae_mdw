@@ -208,7 +208,8 @@ defmodule AeMdw.Db.Util do
       {:ok, kbi}
     else
       :error ->
-        with {:ok, height, _hash} <- extract_block_height(state, hash_or_kbi, :key_block_hash) do
+        with {:ok, height, _hash, _time} <-
+               extract_block_height(state, hash_or_kbi, :key_block_hash) do
           {:ok, height}
         end
 
@@ -220,15 +221,29 @@ defmodule AeMdw.Db.Util do
   @spec micro_block_height_index(state(), binary()) ::
           {:ok, Blocks.height(), Blocks.mbi()} | {:error, Error.t()}
   def micro_block_height_index(state, mb_hash) do
-    with {:ok, height, decoded_hash} <- extract_block_height(state, mb_hash, :micro_block_hash) do
-      mbi =
-        decoded_hash
-        |> Db.get_reverse_micro_hashes()
-        |> Enum.count()
-
-      {:ok, height, mbi}
+    with {:ok, height, decoded_hash, mb_time} <-
+           extract_block_height(state, mb_hash, :micro_block_hash) do
+      {:ok, height, micro_block_index(state, decoded_hash, height, mb_time)}
     end
   end
+
+  # Only the scan fallback (tests) finds a block without its header time.
+  defp micro_block_index(_state, mb_hash, _height, nil), do: count_prev_micro_blocks(mb_hash)
+
+  # The first tx's Model.Time row leads to the index. Empty micro blocks, shared times and
+  # micro forks fail a match and walk the node headers instead.
+  defp micro_block_index(state, mb_hash, height, mb_time) do
+    with {:ok, {^mb_time, txi}} <- State.next(state, Model.Time, {mb_time, -1}),
+         {:ok, Model.tx(block_index: {^height, mbi})} <- State.get(state, Model.Tx, txi),
+         {:ok, Model.block(hash: ^mb_hash)} <- State.get(state, Model.Block, {height, mbi}) do
+      mbi
+    else
+      _no_match -> count_prev_micro_blocks(mb_hash)
+    end
+  end
+
+  defp count_prev_micro_blocks(mb_hash),
+    do: mb_hash |> Db.get_reverse_micro_hashes() |> Enum.count()
 
   @spec read_node_tx(state(), Txs.txi_idx()) :: Node.tx()
   def read_node_tx(state, {_txi, local_idx} = txi_idx) when local_idx >= 0 do
@@ -370,8 +385,8 @@ defmodule AeMdw.Db.Util do
 
   defp extract_block_height(state, encoded_hash, type) do
     with {:ok, hash} <- Validate.hash(encoded_hash, type),
-         {:ok, height} <- find_block_height(state, hash, type) do
-      {:ok, height, hash}
+         {:ok, height, time} <- find_block_height(state, hash, type) do
+      {:ok, height, hash, time}
     else
       {:error, reason} -> {:error, reason}
       _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: encoded_hash)}
@@ -380,12 +395,12 @@ defmodule AeMdw.Db.Util do
 
   defp find_block_height(state, hash, type) do
     with {:ok, last_gen} <- last_gen(state),
-         {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
-      {:ok, height}
+         {:ok, height, time} when height <= last_gen <- node_block_height(hash, type) do
+      {:ok, height, time}
     else
       # Block is in the node DB but beyond MDW's current indexed height –
       # not yet visible to the middleware, treat as not-found without scanning.
-      {:ok, _height_beyond_mdw} ->
+      {:ok, _height_beyond_mdw, _time} ->
         :error
 
       # Block missing (:none) or node DB temporarily unavailable (:error, e.g.
@@ -403,6 +418,13 @@ defmodule AeMdw.Db.Util do
         end
     end
   end
+
+  # Micro block lookups also need the block time, read from the same header.
+  defp node_block_height(hash, :key_block_hash) do
+    with {:ok, height} <- Node.Db.find_block_height(hash), do: {:ok, height, nil}
+  end
+
+  defp node_block_height(hash, :micro_block_hash), do: Node.Db.find_block_height_time(hash)
 
   # Whether to fall back to scanning the MDW Block index when the node DB does
   # not resolve a hash. Disabled by default (production); enabled in test config
@@ -430,7 +452,7 @@ defmodule AeMdw.Db.Util do
              matches_type? and
                match?({:ok, Model.block(hash: ^hash)}, State.get(state, Model.Block, block_index))
            end) do
-      {:ok, elem(block_index, 0)}
+      {:ok, elem(block_index, 0), nil}
     else
       _not_found -> :error
     end
