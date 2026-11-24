@@ -35,7 +35,7 @@ defmodule AeMdw.Aex9 do
   @typep balances_cursor() :: binary()
   @typep account_balance_cursor() :: binary()
   @typep history_cursor() :: binary()
-  @typep range() :: {:gen, Range.t()}
+  @typep range() :: {:gen | :txi | :epoch, Range.t()} | nil
   @typep order_by() :: :pubkey | :amount
   @typep query() :: map()
 
@@ -282,19 +282,15 @@ defmodule AeMdw.Aex9 do
           {:ok, {history_cursor() | nil, [aex9_balance_history_item()], history_cursor() | nil}}
           | {:error, Error.t()}
   def fetch_balance_history(state, contract_pk, account_pk, range, cursor, pagination) do
-    with {:ok, cursor} <- deserialize_history_cursor(cursor) do
-      {first_gen, last_gen} =
-        case range do
-          {:gen, first..last//_step} -> {first, last}
-          nil -> {0, DbUtil.last_gen!(state)}
-        end
+    top_gen = last_indexed_gen(state)
 
+    with {:ok, cursor} <- deserialize_history_cursor(cursor),
+         {:ok, {first_gen, last_gen}} <- history_range(range, top_gen) do
       streamer =
         balance_history_streamer(%{
           account_pk: account_pk,
           contract_pk: contract_pk,
-          range: {first_gen, last_gen},
-          first_balance_gen: first_balance_gen(state, contract_pk),
+          range: {max(first_gen, first_balance_gen(state, contract_pk)), min(last_gen, top_gen)},
           cursor: cursor
         })
 
@@ -314,18 +310,11 @@ defmodule AeMdw.Aex9 do
          account_pk: account_pk,
          contract_pk: contract_pk,
          range: {first_gen, last_gen},
-         first_balance_gen: first_balance_gen,
          cursor: cursor
        }) do
     fn direction ->
       direction
-      |> case do
-        :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
-        :backward when cursor == nil -> last_gen..first_gen
-        :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
-        _dir -> first_gen..last_gen
-      end
-      |> skip_gens_before(first_balance_gen)
+      |> history_gens(first_gen, last_gen, cursor)
       |> Stream.flat_map(fn gen ->
         type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
 
@@ -347,16 +336,30 @@ defmodule AeMdw.Aex9 do
          {:ok, Model.tx(block_index: {height, _mbi})} <- State.get(state, Model.Tx, txi) do
       height + 1
     else
-      _no_creation -> nil
+      _no_creation -> 0
     end
   end
 
-  defp skip_gens_before(gens, nil), do: gens
+  defp history_range(nil, top_gen), do: {:ok, {0, top_gen}}
+  defp history_range({:gen, first..last//_step}, _top_gen), do: {:ok, {first, last}}
 
-  defp skip_gens_before(first..last//step, min_gen) when step > 0,
-    do: max(first, min_gen)..last//step
+  defp history_range(_scope, _top_gen),
+    do: {:error, ErrInput.Scope.exception(value: "only gen scopes are supported")}
 
-  defp skip_gens_before(first..last//step, min_gen), do: first..max(last, min_gen)//step
+  # Gens past this one may have no key block to dry-run on yet.
+  defp last_indexed_gen(state) do
+    case DbUtil.last_gen(state) do
+      {:ok, gen} -> gen
+      :none -> -1
+    end
+  end
+
+  # Like Collection.stream/5, a cursor outside the scope is moved to its edge.
+  defp history_gens(:forward, first_gen, last_gen, cursor),
+    do: max(first_gen, cursor || first_gen)..last_gen//1
+
+  defp history_gens(:backward, first_gen, last_gen, cursor),
+    do: min(last_gen, cursor || last_gen)..first_gen//-1
 
   defp serialize_account_balance_cursor(cursor),
     do: cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false)
