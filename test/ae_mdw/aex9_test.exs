@@ -10,6 +10,7 @@ defmodule AeMdw.Aex9Test do
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.UpdateAex9StateMutation
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode: 2]
@@ -246,11 +247,9 @@ defmodule AeMdw.Aex9Test do
       account_pk: account_pk
     } do
       with_mocks history_mocks(contract_pk, account_pk) do
-        state = NullStore.new() |> MemStore.new() |> State.new()
-
         assert {:ok, {nil, items, nil}} =
                  Aex9.fetch_balance_history(
-                   state,
+                   blocks_state(),
                    contract_pk,
                    account_pk,
                    {:gen, 15..23},
@@ -262,6 +261,235 @@ defmodule AeMdw.Aex9Test do
         assert 15 == dry_run_gens() |> Enum.min()
       end
     end
+
+    test "never dry-runs below gen 0 when the contract creation is unknown", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, [], nil}} =
+                 Aex9.fetch_balance_history(
+                   blocks_state(),
+                   contract_pk,
+                   account_pk,
+                   {:gen, -5..2},
+                   nil,
+                   {:forward, false, 10, false}
+                 )
+
+        assert [0, 1, 2] == dry_run_gens()
+      end
+    end
+
+    test "stops at the last indexed gen when the scope goes past it", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        for range <- [0..30, 21..999_999_999],
+            {direction, heights} <- [forward: [21, 22, 23], backward: [23, 22, 21]] do
+          assert {:ok, {nil, items, nil}} =
+                   Aex9.fetch_balance_history(
+                     state,
+                     contract_pk,
+                     account_pk,
+                     {:gen, range},
+                     nil,
+                     {direction, false, 10, false}
+                   )
+
+          assert heights == Enum.map(items, & &1.height)
+        end
+
+        assert 23 == dry_run_gens() |> Enum.max()
+      end
+    end
+
+    test "returns an empty page when the whole scope is past the last indexed gen", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        for range <- [25..25, 25..30], direction <- [:forward, :backward] do
+          assert {:ok, {nil, [], nil}} =
+                   Aex9.fetch_balance_history(
+                     state,
+                     contract_pk,
+                     account_pk,
+                     {:gen, range},
+                     nil,
+                     {direction, false, 10, false}
+                   )
+        end
+
+        assert [] == dry_run_gens()
+      end
+    end
+
+    test "keeps the cursor direction for a cursor past the last indexed gen", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        assert {:ok, {_prev_cursor, [], nil}} =
+                 Aex9.fetch_balance_history(
+                   state,
+                   contract_pk,
+                   account_pk,
+                   {:gen, 0..30},
+                   "25",
+                   {:forward, false, 10, true}
+                 )
+
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   state,
+                   contract_pk,
+                   account_pk,
+                   {:gen, 0..30},
+                   "25",
+                   {:backward, false, 10, true}
+                 )
+
+        assert [23, 22, 21] == Enum.map(items, & &1.height)
+        assert 23 == dry_run_gens() |> Enum.max()
+      end
+    end
+
+    test "goes backward from the scope end for a backward cursor above the scope", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 21..22},
+                   "23",
+                   {:backward, false, 10, true}
+                 )
+
+        assert [22, 21] == Enum.map(items, & &1.height)
+      end
+    end
+
+    test "starts at the scope start without a prev cursor for a forward cursor below the scope",
+         %{contract_pk: contract_pk, account_pk: account_pk} do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 22..23},
+                   "21",
+                   {:forward, false, 10, true}
+                 )
+
+        assert [22, 23] == Enum.map(items, & &1.height)
+      end
+    end
+
+    test "returns an empty page for a cursor past the scope end", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = history_state(contract_pk)
+
+        # Collection.paginate skips the first row of the opposite stream, which
+        # is the scope's edge here, not the cursor.
+        for {range, cursor, direction, prev_cursor} <- [
+              {21..22, "23", :forward, {21, true}},
+              {22..23, "21", :backward, {23, true}}
+            ] do
+          assert {:ok, {^prev_cursor, [], nil}} =
+                   Aex9.fetch_balance_history(
+                     state,
+                     contract_pk,
+                     account_pk,
+                     {:gen, range},
+                     cursor,
+                     {direction, false, 10, true}
+                   )
+        end
+      end
+    end
+
+    test "keeps the page order of a reversed page with a cursor outside the scope", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   {:gen, 21..22},
+                   "23",
+                   {:forward, true, 10, true}
+                 )
+
+        assert [21, 22] == Enum.map(items, & &1.height)
+      end
+    end
+
+    test "returns an empty page when no generation is indexed", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        state = NullStore.new() |> MemStore.new() |> State.new()
+
+        for range <- [nil, {:gen, 0..10}], direction <- [:forward, :backward] do
+          assert {:ok, {nil, [], nil}} =
+                   Aex9.fetch_balance_history(
+                     state,
+                     contract_pk,
+                     account_pk,
+                     range,
+                     nil,
+                     {direction, false, 10, false}
+                   )
+        end
+
+        assert [] == dry_run_gens()
+      end
+    end
+
+    test "rejects scopes that are not gen ranges", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks history_mocks(contract_pk, account_pk) do
+        for scope <- [{:txi, 1..2}, {:epoch, 1..2}] do
+          assert {:error,
+                  %ErrInput{
+                    reason: ErrInput.Scope,
+                    message: "invalid scope: only gen scopes are supported"
+                  }} =
+                   Aex9.fetch_balance_history(
+                     history_state(contract_pk),
+                     contract_pk,
+                     account_pk,
+                     scope,
+                     nil,
+                     {:backward, false, 10, false}
+                   )
+        end
+
+        assert [] == dry_run_gens()
+      end
+    end
   end
 
   # The contract is created in a micro block of generation 20, so its balance
@@ -271,6 +499,13 @@ defmodule AeMdw.Aex9Test do
     |> MemStore.new()
     |> Store.put(Model.Field, Model.field(index: {:contract_create_tx, nil, contract_pk, 200}))
     |> Store.put(Model.Tx, Model.tx(index: 200, id: <<200::256>>, block_index: {20, 3}))
+    |> Store.put(Model.Block, Model.block(index: {23, -1}))
+    |> State.new()
+  end
+
+  defp blocks_state do
+    NullStore.new()
+    |> MemStore.new()
     |> Store.put(Model.Block, Model.block(index: {23, -1}))
     |> State.new()
   end

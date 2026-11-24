@@ -91,6 +91,35 @@ defmodule AeMdw.Db.MemStoreTest do
       assert [{3, 0}, {2, 0}] =
                mem_store2 |> Store.stream(Model.Block, :backward, {5, 0}) |> Enum.to_list()
     end
+
+    test "a key rewritten over the fallback stays hidden once deleted" do
+      fallback_store =
+        Enum.reduce(1..3, MemStore.new(NullStore.new()), fn mbi, store ->
+          Store.put(store, Model.Block, Model.block(index: {mbi, 0}, hash: :fallback))
+        end)
+
+      mem_store =
+        fallback_store
+        |> MemStore.new()
+        |> Store.put(Model.Block, Model.block(index: {2, 0}, hash: :mem))
+        |> Store.delete(Model.Block, {2, 0})
+
+      assert :not_found = Store.get(mem_store, Model.Block, {2, 0})
+      assert 2 = Store.count_keys(mem_store, Model.Block)
+      assert {:ok, {3, 0}} = Store.next(mem_store, Model.Block, {1, 0})
+      assert {:ok, {1, 0}} = Store.prev(mem_store, Model.Block, {3, 0})
+
+      assert [{1, 0}, {3, 0}] =
+               mem_store |> Store.stream(Model.Block, :forward, nil) |> Enum.to_list()
+
+      assert [{3, 0}, {1, 0}] =
+               mem_store |> Store.stream(Model.Block, :backward, nil) |> Enum.to_list()
+
+      mem_store2 = Store.put(mem_store, Model.Block, Model.block(index: {2, 0}, hash: :mem2))
+
+      assert {:ok, Model.block(hash: :mem2)} = Store.get(mem_store2, Model.Block, {2, 0})
+      assert 3 = Store.count_keys(mem_store2, Model.Block)
+    end
   end
 
   describe "pristine?/1" do

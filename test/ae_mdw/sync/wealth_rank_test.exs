@@ -12,7 +12,7 @@ defmodule AeMdw.Sync.WealthRankTest do
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
 
-      state = State.mem_state()
+      state = TestUtil.empty_state()
 
       state =
         TestUtil.update_balances(state, [{account_pk, amount}])
@@ -28,7 +28,7 @@ defmodule AeMdw.Sync.WealthRankTest do
       amount12 = Enum.random(100_000_000..999_999_999)
       amount21 = Enum.random(100_000_000..999_999_999)
 
-      state = State.mem_state()
+      state = TestUtil.empty_state()
 
       state =
         TestUtil.update_balances(state, [

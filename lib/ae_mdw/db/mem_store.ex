@@ -72,15 +72,12 @@ defmodule AeMdw.Db.MemStore do
 
   @spec delete(t(), table(), key()) :: t()
   def delete(%__MODULE__{tables: tables} = store, table_name, key) do
-    table = get_table(tables, table_name)
+    table =
+      tables
+      |> get_table(table_name)
+      |> SortedTable.insert(key, :deleted)
 
-    table2 =
-      case SortedTable.lookup(table, key) do
-        {:ok, {:added, _record}} -> SortedTable.delete(table, key)
-        _deleted_or_not_found -> SortedTable.insert(table, key, :deleted)
-      end
-
-    %__MODULE__{store | tables: Map.put(tables, table_name, table2)}
+    %__MODULE__{store | tables: Map.put(tables, table_name, table)}
   end
 
   @spec count_keys(t(), table()) :: non_neg_integer()
