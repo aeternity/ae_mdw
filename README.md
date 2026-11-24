@@ -2270,9 +2270,11 @@ A running contract can call other functions during execution. These calls are re
 
 The query accepts following filters:
 
-- `fname` - The prefix of the name of the function
+- `function` - The prefix of the name of the function
 - `contract` - The contract for the calls
 - ID field - Any field belonging to the contract call transaction
+
+`function` can't be combined with an ID field.
 
 #### Using contract id
 
