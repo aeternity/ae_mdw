@@ -19,13 +19,10 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateTxStatsTest do
   @t12 @started_at - 12 * @hour
   @t1 @started_at - @hour
 
-  setup do
-    global_state_ref = :persistent_term.get(:global_state, nil)
+  setup {AeMdw.TestUtil, :restore_global_state}
 
-    on_exit(fn ->
-      :persistent_term.put(:global_state, global_state_ref)
-      AsyncStore.delete(AsyncStore.instance(), Model.Stat, :tx_stats)
-    end)
+  setup do
+    on_exit(fn -> AsyncStore.delete(AsyncStore.instance(), Model.Stat, :tx_stats) end)
   end
 
   test "averages the fees of the txs that are only in the mem state" do
