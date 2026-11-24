@@ -801,12 +801,11 @@ defmodule AeMdw.Names do
 
   defp deserialize_name_cursor(nil), do: nil
 
+  # "" sorts before every name, so a backward page would start empty.
+  defp deserialize_name_cursor(""), do: nil
+
   defp deserialize_name_cursor(cursor_bin) do
-    if Regex.match?(~r/\A[-\w\.]+\z/, cursor_bin) do
-      cursor_bin
-    else
-      nil
-    end
+    if String.valid?(cursor_bin), do: cursor_bin
   end
 
   defp serialize_height_cursor({{height, name}, _tab}),
