@@ -377,6 +377,53 @@ defmodule AeMdw.Db.Contract do
   defp aex9_emitter?(addr, addr), do: true
   defp aex9_emitter?(_aex9_contract_pk, addr), do: AexnContracts.aex9?(addr)
 
+  @spec call_info_write(state(), txi(), Contract.call()) :: state()
+  def call_info_write(state, txi, call_rec) do
+    m_call_info =
+      Model.contract_call_info(
+        index: txi,
+        gas_used: :aect_call.gas_used(call_rec),
+        return_type: :aect_call.return_type(call_rec),
+        logs_count: length(:aect_call.log(call_rec))
+      )
+
+    State.put(state, Model.ContractCallInfo, m_call_info)
+  end
+
+  # gas_used, return_type and log of the call object, as Format renders them from the node
+  @spec call_info(State.t(), pubkey(), txi()) :: {:ok, map()} | :not_found
+  def call_info(state, contract_pk, call_txi) do
+    with {:ok, Model.contract_call_info(gas_used: gas, return_type: type, logs_count: count)} <-
+           State.get(state, Model.ContractCallInfo, call_txi),
+         create_txi = Origin.tx_index!(state, {:contract, contract_pk}),
+         {:ok, logs} <- call_logs(state, create_txi, call_txi, contract_pk, count) do
+      {:ok, %{"gas_used" => gas, "return_type" => Atom.to_string(type), "log" => logs}}
+    end
+  end
+
+  # logs_write indexes the logs in reverse. A remote log row with the same key, from a contract
+  # created in the same tx, replaces the call's own row and loses its address.
+  defp call_logs(state, create_txi, call_txi, contract_pk, logs_count) do
+    Enum.reduce_while(0..(logs_count - 1)//1, {:ok, []}, fn log_idx, {:ok, logs} ->
+      case State.get(state, Model.ContractLog, {create_txi, call_txi, log_idx}) do
+        {:ok, Model.contract_log(ext_contract: {:parent_contract_pk, _pk})} ->
+          {:halt, :not_found}
+
+        {:ok, Model.contract_log(ext_contract: ext_pk, args: args, data: data, hash: evt_hash)} ->
+          log = %{
+            "address" => encode_contract(ext_pk || contract_pk),
+            "topics" => for(<<topic::256>> <- [evt_hash | args], do: to_string(topic)),
+            "data" => :aeser_api_encoder.encode(:contract_bytearray, data)
+          }
+
+          {:cont, {:ok, [log | logs]}}
+
+        :not_found ->
+          {:halt, :not_found}
+      end
+    end)
+  end
+
   @spec call_fun_arg_res(State.t(), pubkey(), txi()) :: Contract.fun_arg_res()
   def call_fun_arg_res(state, contract_pk, call_txi) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})

@@ -847,6 +847,23 @@ defmodule AeMdw.Db.Model do
             return: term()
           )
 
+  # contract call info, the call object fields mdw doesn't keep elsewhere:
+  #     index: call txi
+  #     gas_used: non_neg_integer()
+  #     return_type: :ok | :error | :revert
+  #     logs_count: the call's ContractLog rows
+  @contract_call_info_defaults [index: -1, gas_used: 0, return_type: :ok, logs_count: 0]
+  defrecord :contract_call_info, @contract_call_info_defaults
+
+  @type contract_call_info_index() :: txi()
+  @type contract_call_info() ::
+          record(:contract_call_info,
+            index: contract_call_info_index(),
+            gas_used: non_neg_integer(),
+            return_type: :ok | :error | :revert,
+            logs_count: non_neg_integer()
+          )
+
   # entity:
   #     index: {name, call txi, create txi}
   @entity_defaults [index: {"", -1, -1}]
@@ -1592,6 +1609,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnContractToTransfer,
       AeMdw.Db.Model.Aex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
+      AeMdw.Db.Model.ContractCallInfo,
       AeMdw.Db.Model.ActiveEntity,
       AeMdw.Db.Model.ActiveEntityArgs,
       AeMdw.Db.Model.ContractEntity,
@@ -1733,6 +1751,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnContractToTransfer), do: :aexn_contract_to_transfer
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
+  def record(AeMdw.Db.Model.ContractCallInfo), do: :contract_call_info
   def record(AeMdw.Db.Model.ActiveEntity), do: :entity
   def record(AeMdw.Db.Model.ActiveEntityArgs), do: :entity_args
   def record(AeMdw.Db.Model.ContractEntity), do: :contract_entity
