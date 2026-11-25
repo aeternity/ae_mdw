@@ -218,7 +218,7 @@ defmodule AeMdw.Blocks do
         nil
 
       {:ok, Model.block(hash: hash, tx_index: first_tx_index)} ->
-        mbi_count = micro_blocks_count(state, gen)
+        mbi_count = DbUtil.micro_blocks_count(state, gen)
         txs_count = key_block_transactions_count(state, gen, first_tx_index)
         block_reward = key_block_reward(state, gen)
 
@@ -226,14 +226,6 @@ defmodule AeMdw.Blocks do
 
       :not_found ->
         nil
-    end
-  end
-
-  defp micro_blocks_count(state, gen) do
-    case State.prev(state, @table, {gen + 1, -1}) do
-      {:ok, {^gen, mbi}} -> mbi + 1
-      {:ok, _block_index} -> 0
-      :none -> 0
     end
   end
 
