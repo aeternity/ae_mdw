@@ -5,6 +5,8 @@ defmodule AeMdw.Db.StatisticsMutation do
 
   alias AeMdw.Db.State
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.Sync.Stats
 
   require Model
 
@@ -18,6 +20,26 @@ defmodule AeMdw.Db.StatisticsMutation do
 
   @spec new(statistics()) :: t()
   def new(statistics), do: %__MODULE__{statistics: statistics}
+
+  @doc """
+  Replaces the statistics mutations of a flat list with one at the end that
+  updates each statistic once.
+  """
+  @spec merge([Mutation.t()]) :: [Mutation.t()]
+  def merge(mutations) do
+    case Enum.split_with(mutations, &is_struct(&1, __MODULE__)) do
+      {[], _other_mutations} ->
+        mutations
+
+      {statistics_mutations, other_mutations} ->
+        statistics =
+          statistics_mutations
+          |> Enum.map(fn %__MODULE__{statistics: statistics} -> statistics end)
+          |> Stats.sum_statistics()
+
+        other_mutations ++ [new(statistics)]
+    end
+  end
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{statistics: statistics}, state) do

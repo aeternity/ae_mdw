@@ -1,11 +1,16 @@
 defmodule AeMdw.Db.TotalStatisticsMutationTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Collection
   alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.Sync.Stats
+  alias AeMdw.Node
 
   require Model
 
@@ -98,5 +103,59 @@ defmodule AeMdw.Db.TotalStatisticsMutationTest do
       assert {:ok, Model.statistic(count: 2)} =
                State.get(new_state, Model.Statistic, spend_day_index)
     end
+  end
+
+  describe "merge/1" do
+    test "returns the mutations as they are when none of them updates total statistics" do
+      mutations = [StatisticsMutation.new([{{{:blocks, :micro}, :day, 1}, 1}]), nil]
+
+      assert mutations == TotalStatisticsMutation.merge(mutations)
+    end
+
+    test "writes the same counts as the micro block mutations of a generation crossing midnight" do
+      # over 32 statistics in the merged mutation, so that a map no longer keeps them sorted
+      type_counts = Node.tx_types() |> Enum.take(17) |> Map.new(&{&1, 1})
+      midnight = 20_000 * 86_400_000
+      previous_day_index = {{:total_transactions, :all}, :day, 19_998}
+      day_index = {{:total_transactions, :all}, :day, 19_999}
+      next_day_index = {{:total_transactions, :all}, :day, 20_000}
+
+      mutations =
+        -2..2
+        |> Enum.map(&Stats.micro_block_mutations(midnight + &1 * 3_000, type_counts))
+        |> List.flatten()
+
+      merged_mutations =
+        mutations
+        |> StatisticsMutation.merge()
+        |> TotalStatisticsMutation.merge()
+
+      # a MemStore is mutable, so each run gets its own
+      execute = fn mutations ->
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.put(Model.Statistic, Model.statistic(index: previous_day_index, count: 100))
+
+        Enum.reduce(mutations, state, &Mutation.execute/2)
+      end
+
+      merged_state = execute.(merged_mutations)
+
+      assert {:ok, Model.statistic(count: 134)} =
+               State.get(merged_state, Model.Statistic, day_index)
+
+      assert {:ok, Model.statistic(count: 185)} =
+               State.get(merged_state, Model.Statistic, next_day_index)
+
+      assert statistics(merged_state) == statistics(execute.(mutations))
+    end
+  end
+
+  defp statistics(state) do
+    state
+    |> Collection.stream(Model.Statistic, :forward, nil, nil)
+    |> Enum.map(&State.fetch!(state, Model.Statistic, &1))
   end
 end

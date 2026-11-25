@@ -43,6 +43,8 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
   alias AeMdw.Db.RollbackMutation
+  alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Sync.Aex9Balances
@@ -403,9 +405,15 @@ defmodule AeMdw.Sync.Server do
   end
 
   # One transaction per generation, so the synced height (DeltaStat) is never
-  # committed without the generation's account mutations.
+  # committed without the generation's account mutations. The statistics are
+  # updated once per generation instead of once per micro block.
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
-    mutations = Enum.flat_map(blocks_mutations, fn {_bi, _block, mutations} -> mutations end)
+    mutations =
+      blocks_mutations
+      |> Enum.flat_map(fn {_bi, _block, mutations} -> mutations end)
+      |> List.flatten()
+      |> StatisticsMutation.merge()
+      |> TotalStatisticsMutation.merge()
 
     State.commit_db(state, mutations, clear_mem?)
   end
