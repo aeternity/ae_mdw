@@ -141,6 +141,7 @@ defmodule AeMdw.Contracts do
   def fetch_contract_calls(state, contract_id, pagination, range, query, cursor) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)),
+         :ok <- validate_calls_filters(filters),
          {:ok, cursor} <- deserialize_calls_cursor(cursor),
          {:ok, create_txi} <- create_txi(state, contract_pk) do
       scope = deserialize_scope(state, range)
@@ -161,7 +162,8 @@ defmodule AeMdw.Contracts do
           {:ok, {cursor(), [call()], cursor()}} | {:error, Error.t()}
   def fetch_calls(state, pagination, range, query, cursor, opts) do
     with {:ok, cursor} <- deserialize_calls_cursor(cursor),
-         {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+         {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)),
+         :ok <- validate_calls_filters(filters) do
       scope = deserialize_scope(state, range)
 
       filters
@@ -332,6 +334,13 @@ defmodule AeMdw.Contracts do
       end)
     end
   end
+
+  # No index covers function name and id together.
+  defp validate_calls_filters(%{fname: _fname, type_pos: _type_pos}) do
+    {:error, ErrInput.Query.exception(value: "can't combine `function` with ID field filters")}
+  end
+
+  defp validate_calls_filters(_filters), do: :ok
 
   defp build_calls_pagination(
          %{create_txi: create_txi, fname: fname_prefix},

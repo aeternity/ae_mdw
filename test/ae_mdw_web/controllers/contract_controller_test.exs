@@ -1994,6 +1994,29 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert %{"data" => ^calls} =
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
+
+    test "returns 400 when function is combined with an id filter", %{
+      conn: conn,
+      contract_pk: contract_pk,
+      store: store
+    } do
+      contract_id = encode_contract(contract_pk)
+      recipient_id = encode_account(<<@first_call_txi::256>>)
+      error_msg = "invalid query: can't combine `function` with ID field filters"
+
+      for {path, params} <- [
+            {"/v2/contracts/calls", []},
+            {"/v3/contracts/calls", []},
+            {"/v3/contracts/calls", [contract: contract_id]},
+            {"/v3/contracts/#{contract_id}/calls", []}
+          ] do
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> with_store(store)
+                 |> get(path, [function: @call_function, recipient_id: recipient_id] ++ params)
+                 |> json_response(400)
+      end
+    end
   end
 
   describe "contracts" do
