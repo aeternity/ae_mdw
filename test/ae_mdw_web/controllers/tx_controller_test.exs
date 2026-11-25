@@ -2119,7 +2119,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, height} end
+           find_block_height_time: fn ^mb_hash -> {:ok, height, 0} end
          ]}
       ] do
         assert %{"data" => 3} =
@@ -2160,7 +2160,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, height} end
+           find_block_height_time: fn ^mb_hash -> {:ok, height, 0} end
          ]}
       ] do
         assert %{"data" => 2} =
@@ -2188,7 +2188,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, 999_999} end
+           find_block_height_time: fn ^mb_hash -> {:ok, 999_999, 0} end
          ]}
       ] do
         assert %{"error" => ^error_msg} =
@@ -2269,7 +2269,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, height} end
+           find_block_height_time: fn ^mb_hash -> {:ok, height, 0} end
          ]},
         {Format, [],
          [
@@ -2314,7 +2314,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, height} end
+           find_block_height_time: fn ^mb_hash -> {:ok, height, 0} end
          ]},
         {Format, [],
          [
@@ -2356,7 +2356,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, height} end
+           find_block_height_time: fn ^mb_hash -> {:ok, height, 0} end
          ]},
         {Format, [],
          [
@@ -2412,7 +2412,7 @@ defmodule AeMdwWeb.TxControllerTest do
         {Db, [],
          [
            get_reverse_micro_hashes: fn ^mb_hash -> [] end,
-           find_block_height: fn ^mb_hash -> {:ok, 999_999} end
+           find_block_height_time: fn ^mb_hash -> {:ok, 999_999, 0} end
          ]}
       ] do
         assert %{"error" => ^error_msg} =

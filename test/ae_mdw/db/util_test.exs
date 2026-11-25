@@ -153,6 +153,95 @@ defmodule AeMdw.Db.UtilTest do
     end
   end
 
+  describe "micro_block_height_index/2" do
+    test "reads the index from the first tx's rows without walking the node headers" do
+      with_mocks [
+        {Db, [],
+         find_block_height_time: fn
+           <<0::256>> -> {:ok, @height, 1_000}
+           <<2::256>> -> {:ok, @height, 3_000}
+         end,
+         get_reverse_micro_hashes: fn _hash -> [] end}
+      ] do
+        state = micro_blocks_state()
+
+        assert {:ok, @height, 0} = DbUtil.micro_block_height_index(state, encode_mb(0))
+        assert {:ok, @height, 2} = DbUtil.micro_block_height_index(state, encode_mb(2))
+
+        assert_not_called(Db.get_reverse_micro_hashes(:_))
+      end
+    end
+
+    test "walks the node headers when the rows don't lead to the block" do
+      with_mocks [
+        {Db, [],
+         find_block_height_time: fn
+           # the empty micro block
+           <<1::256>> -> {:ok, @height, 2_000}
+           # a micro fork: mdw holds another block with this time
+           <<9::256>> -> {:ok, @height, 3_000}
+           # a block of the previous generation has the same time
+           <<10::256>> -> {:ok, @height + 1, 1_000}
+           # missing from the node, so the test-only Model.Block scan finds it without a time
+           <<2::256>> -> :none
+         end,
+         get_reverse_micro_hashes: fn
+           <<1::256>> -> [<<0::256>>]
+           <<9::256>> -> [<<8::256>>, <<7::256>>, <<6::256>>]
+           <<10::256>> -> []
+           <<2::256>> -> [<<1::256>>, <<0::256>>]
+         end}
+      ] do
+        state = micro_blocks_state()
+
+        assert {:ok, @height, 1} = DbUtil.micro_block_height_index(state, encode_mb(1))
+        assert {:ok, @height, 3} = DbUtil.micro_block_height_index(state, encode_mb(9))
+        assert DbUtil.micro_block_height_index(state, encode_mb(10)) == {:ok, @height + 1, 0}
+        assert {:ok, @height, 2} = DbUtil.micro_block_height_index(state, encode_mb(2))
+      end
+    end
+  end
+
+  # Generation @height: mbi 0 holds txs 0..1 at time 1_000, mbi 1 is empty at 2_000 and mbi 2
+  # holds txs 2..4 at 3_000. Generation @height + 1: mbi 0 holds tx 5, also at 1_000.
+  defp micro_blocks_state do
+    blocks = [
+      {{@height, -1}, nil, 0},
+      {{@height, 0}, <<0::256>>, 0},
+      {{@height, 1}, <<1::256>>, 2},
+      {{@height, 2}, <<2::256>>, 2},
+      {{@height + 1, -1}, nil, 5},
+      {{@height + 1, 0}, <<10::256>>, 5}
+    ]
+
+    txs = [
+      {0, {@height, 0}},
+      {1, {@height, 0}},
+      {2, {@height, 2}},
+      {3, {@height, 2}},
+      {4, {@height, 2}},
+      {5, {@height + 1, 0}}
+    ]
+
+    times = [{1_000, 0}, {1_000, 1}, {3_000, 2}, {3_000, 4}, {1_000, 5}]
+
+    store =
+      Enum.reduce(blocks, empty_store(), fn {index, hash, txi}, store ->
+        Store.put(store, Model.Block, Model.block(index: index, hash: hash, tx_index: txi))
+      end)
+
+    store =
+      Enum.reduce(txs, store, fn {txi, block_index}, store ->
+        Store.put(store, Model.Tx, Model.tx(index: txi, block_index: block_index))
+      end)
+
+    times
+    |> Enum.reduce(store, &Store.put(&2, Model.Time, Model.time(index: &1)))
+    |> State.new()
+  end
+
+  defp encode_mb(n), do: :aeser_api_encoder.encode(:micro_block_hash, <<n::256>>)
+
   defp block_store do
     Store.put(empty_store(), Model.Block, Model.block(index: {@height, 0}))
   end
