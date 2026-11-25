@@ -216,7 +216,7 @@ defmodule AeMdw.AuctionBids do
   defp deserialize_exp_cursor(nil), do: {:ok, nil}
 
   defp deserialize_exp_cursor(cursor_bin) do
-    with [_match0, exp_height, name] <- Regex.run(~r/\A(\d+)-([\w\.]+)\z/, cursor_bin),
+    with [_match0, exp_height, name] <- Regex.run(~r/\A(\d+)-([A-Za-z0-9+\/]+)\z/, cursor_bin),
          {:ok, decoded_name} <- Base.decode64(name, padding: false) do
       {:ok, {String.to_integer(exp_height), decoded_name}}
     else

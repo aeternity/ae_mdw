@@ -1290,6 +1290,52 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "it pages through non-ascii names", %{conn: conn, store: store} do
+      # The cursors hold the base64 of the names, which has a + for 갾 and a / for 갿.
+      names = ["a.chain", "갾.chain", "갿.chain"]
+      key_hash = <<0::256>>
+
+      store =
+        names
+        |> Enum.with_index(1)
+        |> Enum.reduce(store, fn {plain_name, expire_height}, store ->
+          auction =
+            Model.auction_bid(
+              index: plain_name,
+              start_height: 0,
+              block_index_txi_idx: {{0, 1}, {0, -1}},
+              expire_height: expire_height
+            )
+
+          store
+          |> Store.put(Model.AuctionBid, auction)
+          |> Store.put(
+            Model.AuctionExpiration,
+            Model.expiration(index: {expire_height, plain_name})
+          )
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, expire_height, {4, -1}})
+          )
+        end)
+        |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [], [fetch!: fn _state, _txi -> %{"tx" => %{"account_id" => <<>>}} end]},
+        {Db, [], [proto_vsn: fn _height -> 1 end]},
+        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        pages =
+          conn
+          |> with_store(store)
+          |> walk_pages("/v3/names/auctions?direction=forward&limit=1")
+
+        assert ^names = Enum.flat_map(pages, &Enum.map(&1, fn %{"name" => n} -> n end))
+      end
+    end
+
     test "renders empty result when no blocks", %{conn: conn, store: store} do
       with_mocks [
         {:aec_db, [], [get_header: fn _id -> :header end]},
@@ -1697,6 +1743,40 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "it pages through non-ascii names when by=name", %{conn: conn, store: store} do
+      {store, plain_names} = utf8_names_store(store)
+
+      with_utf8_names_mocks(fn ->
+        for direction <- ["backward", "forward"] do
+          pages =
+            conn
+            |> with_store(store)
+            |> walk_pages(
+              "/v3/names?" <> URI.encode_query(by: "name", direction: direction, limit: 2)
+            )
+
+          expected = Enum.sort(plain_names, if(direction == "forward", do: :asc, else: :desc))
+
+          assert ^expected = Enum.flat_map(pages, &Enum.map(&1, fn %{"name" => n} -> n end))
+        end
+      end)
+    end
+
+    test "it ignores an empty cursor when by=name", %{conn: conn, store: store} do
+      {store, plain_names} = utf8_names_store(store)
+      expected = plain_names |> Enum.sort(:desc) |> Enum.take(2)
+
+      with_utf8_names_mocks(fn ->
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names", by: "name", direction: "backward", cursor: "", limit: 2)
+                 |> json_response(200)
+
+        assert ^expected = Enum.map(names, fn %{"name" => name} -> name end)
+      end)
+    end
+
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
@@ -1719,6 +1799,22 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn |> get("/v3/names?owned_by=#{owned_by}") |> json_response(400)
+    end
+  end
+
+  describe "search" do
+    test "it pages through non-ascii names", %{conn: conn, store: store} do
+      {store, plain_names} = utf8_names_store(store)
+
+      with_utf8_names_mocks(fn ->
+        pages =
+          conn
+          |> with_store(store)
+          |> walk_pages("/v2/names/search?" <> URI.encode_query(direction: "backward", limit: 2))
+
+        assert Enum.sort(plain_names, :desc) ==
+                 Enum.flat_map(pages, &Enum.map(&1, fn %{"payload" => %{"name" => n}} -> n end))
+      end)
     end
   end
 
@@ -4183,5 +4279,62 @@ defmodule AeMdwWeb.NameControllerTest do
       Model.NameUpdate,
       Model.name_update(index: {plain_name, active_height, claim_txi_idx3})
     )
+  end
+
+  # Thai and Hindi names have combining marks, which a unicode \w doesn't match.
+  defp utf8_names_store(store) do
+    active_names = ["a.chain", "승리.chain", "สวัสดี.chain", "龙鳞.chain"]
+    inactive_names = ["z.chain", "भाग्य.chain"]
+    m_name = Model.name(active: 1, expire: 1, revoke: nil, owner: <<0::256>>, auction_timeout: 1)
+
+    store =
+      store
+      |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: <<0::256>>))
+      |> Store.put(Model.Block, Model.block(index: {2, -1}, hash: <<0::256>>))
+
+    store =
+      Enum.reduce(
+        active_names,
+        store,
+        &Store.put(&2, Model.ActiveName, Model.name(m_name, index: &1))
+      )
+
+    store =
+      Enum.reduce(
+        inactive_names,
+        store,
+        &Store.put(&2, Model.InactiveName, Model.name(m_name, index: &1))
+      )
+
+    {store, active_names ++ inactive_names}
+  end
+
+  defp with_utf8_names_mocks(fun) do
+    with_mocks [
+      {Name, [:passthrough],
+       [
+         pointers: fn _state, _mname -> %{} end,
+         pointers_v3: fn _state, _mname -> [] end,
+         ownership: fn _state, _mname -> %{current: nil, original: nil} end
+       ]},
+      {:aec_db, [:passthrough], [get_header: fn _hash -> :block end]},
+      {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> 123 end]}
+    ] do
+      fun.()
+    end
+  end
+
+  # Follows the next links, at most 10 pages, so a cursor that is ignored fails instead of looping.
+  defp walk_pages(conn, path) do
+    path
+    |> Stream.unfold(fn
+      nil ->
+        nil
+
+      path ->
+        %{"data" => data, "next" => next} = conn |> get(path) |> json_response(200)
+        {data, next}
+    end)
+    |> Enum.take(10)
   end
 end
