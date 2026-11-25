@@ -219,6 +219,15 @@ To restart the container, run the following command:
 docker start ae_mdw
 ```
 
+To inspect the running middleware, run a command or an interactive shell inside the container:
+
+```
+docker exec ae_mdw bin/ae_mdw rpc 'IO.inspect(node())'
+docker exec -it ae_mdw bin/ae_mdw remote
+```
+
+The Erlang distribution that these use only listens on the container's loopback interface, so they can't be run from another container or machine.
+
 ## Customizing Configuration
 
 Edit the configuration file `docker/aeternity.yaml` to specify network settings:
