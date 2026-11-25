@@ -159,6 +159,13 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/DirectionParam'
+        - description: Only swaps on pairs with a token of this symbol
+          in: query
+          name: token_symbol
+          required: false
+          schema:
+            type: string
+            example: WAE
         - in: path
           name: accountId
           required: true
