@@ -85,29 +85,7 @@ defmodule AeMdw.Aex9Test do
            end
          ]}
       ] do
-        store =
-          NullStore.new()
-          |> MemStore.new()
-          |> Store.put(
-            Model.AexnContract,
-            Model.aexn_contract(
-              index: {:aex9, contract_pk},
-              txi_idx: {100, -1},
-              meta_info: {"name", "symbol", 18}
-            )
-          )
-          |> Store.put(
-            Model.Aex9AccountPresence,
-            Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: 100)
-          )
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: 100, id: <<101::256>>, block_index: {11, 0})
-          )
-          |> Store.put(
-            Model.Block,
-            Model.block(index: {11, 0}, hash: <<111::256>>)
-          )
+        store = account_balance_store(contract_pk, account_pk)
 
         assert {:ok,
                 {nil,
@@ -132,6 +110,40 @@ defmodule AeMdw.Aex9Test do
                    nil,
                    {:forward, false, 10, false}
                  )
+      end
+    end
+
+    test "raises a failed balance dry-run in the caller" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      state = State.new(account_balance_store(contract_pk, account_pk))
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _height_hash, "balance", _args ->
+             {:error, :dry_run_error}
+           end
+         ]}
+      ] do
+        assert_raise MatchError, fn ->
+          Aex9.fetch_account_balances(state, account_pk, nil, {:forward, false, 10, false})
+        end
+      end
+    end
+
+    test "raises in the caller what a balance dry-run raises" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      state = State.new(account_balance_store(contract_pk, account_pk))
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [call_contract: fn ^contract_pk, _height_hash, "balance", _args -> {:ok, :no_option} end]}
+      ] do
+        assert_raise CaseClauseError, fn ->
+          Aex9.fetch_account_balances(state, account_pk, nil, {:forward, false, 10, false})
+        end
       end
     end
   end
@@ -528,5 +540,30 @@ defmodule AeMdw.Aex9Test do
     for {_pid, {AeMdw.Node.Db, :aex9_balance, [_ct_pk, _acc_pk, {:key, gen, _hash}]}, _res} <-
           call_history(AeMdw.Node.Db),
         do: gen
+  end
+
+  defp account_balance_store(contract_pk, account_pk) do
+    NullStore.new()
+    |> MemStore.new()
+    |> Store.put(
+      Model.AexnContract,
+      Model.aexn_contract(
+        index: {:aex9, contract_pk},
+        txi_idx: {100, -1},
+        meta_info: {"name", "symbol", 18}
+      )
+    )
+    |> Store.put(
+      Model.Aex9AccountPresence,
+      Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: 100)
+    )
+    |> Store.put(
+      Model.Tx,
+      Model.tx(index: 100, id: <<101::256>>, block_index: {11, 0})
+    )
+    |> Store.put(
+      Model.Block,
+      Model.block(index: {11, 0}, hash: <<111::256>>)
+    )
   end
 end

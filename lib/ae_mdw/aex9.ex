@@ -41,6 +41,8 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
+  @account_balances_concurrency 8
+
   @spec invalid_number_of_holders_reason() :: String.t()
   def invalid_number_of_holders_reason() do
     "Invalid number of holders"
@@ -253,7 +255,7 @@ defmodule AeMdw.Aex9 do
       type_height_hash = Db.top_height_hash(true)
       scope = {{account_pk, <<>>}, {account_pk, Util.max_256bit_bin()}}
 
-      paginated_account_balances =
+      {prev_cursor, keys, next_cursor} =
         fn direction ->
           state
           |> Collection.stream(Model.Aex9AccountPresence, direction, scope, cursor)
@@ -261,15 +263,37 @@ defmodule AeMdw.Aex9 do
             State.exists?(state, Model.AexnInvalidContract, {:aex9, contract_pk})
           end)
         end
-        |> Collection.paginate(
-          pagination,
-          &render_account_balance(state, type_height_hash, &1),
-          &serialize_account_balance_cursor/1
-        )
+        |> Collection.paginate(pagination, & &1, &serialize_account_balance_cursor/1)
 
-      {:ok, paginated_account_balances}
+      {:ok, {prev_cursor, render_account_balances(state, type_height_hash, keys), next_cursor}}
     end
   end
+
+  # The dry-runs run concurrently. Their results are matched here, in the
+  # caller, so a failed one raises here, not in a linked task.
+  defp render_account_balances(state, type_height_hash, keys) do
+    keys
+    |> Task.async_stream(
+      fn {account_pk, contract_pk} ->
+        try do
+          {:ok, Db.aex9_balance(contract_pk, account_pk, type_height_hash)}
+        catch
+          kind, reason -> {:caught, kind, reason, __STACKTRACE__}
+        end
+      end,
+      ordered: true,
+      timeout: :infinity,
+      max_concurrency: min(@account_balances_concurrency, System.schedulers_online())
+    )
+    |> Enum.zip_with(keys, fn {:ok, result}, key ->
+      render_account_balance(state, unwrap_caught(result), key)
+    end)
+  end
+
+  defp unwrap_caught({:ok, result}), do: result
+
+  defp unwrap_caught({:caught, kind, reason, stacktrace}),
+    do: :erlang.raise(kind, reason, stacktrace)
 
   @spec fetch_balance_history(
           State.t(),
@@ -401,8 +425,8 @@ defmodule AeMdw.Aex9 do
     |> Map.put(:height, gen)
   end
 
-  defp render_account_balance(state, type_height_hash, {account_pk, contract_pk}) do
-    {:ok, {amount, _height_hash}} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
+  defp render_account_balance(state, balance_result, {account_pk, contract_pk}) do
+    {:ok, {amount, _height_hash}} = balance_result
 
     Model.aexn_contract(txi_idx: {create_txi, _idx}, meta_info: {name, symbol, dec}) =
       State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
