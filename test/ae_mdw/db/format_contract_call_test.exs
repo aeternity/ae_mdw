@@ -81,6 +81,7 @@ defmodule AeMdw.Db.FormatContractCallTest do
     {:ok,
      state: state,
      m_tx: m_tx,
+     signed_tx: signed_tx,
      caller_pk: caller_pk,
      contract_pk: contract_pk,
      call_rec: call_rec,
@@ -183,6 +184,84 @@ defmodule AeMdw.Db.FormatContractCallTest do
     end
   end
 
+  test "renders a call wrapped in paying_for or ga_meta from mdw rows as from the node", %{
+    state: state,
+    signed_tx: call_signed_tx,
+    caller_pk: caller_pk,
+    contract_pk: contract_pk,
+    call_rec: call_rec,
+    block: {mb_hash, _header} = block
+  } do
+    {:ok, paying_for_aetx} =
+      :aec_paying_for_tx.new(%{
+        payer_id: :aeser_id.create(:account, :crypto.strong_rand_bytes(32)),
+        nonce: 1,
+        fee: 100,
+        tx: call_signed_tx
+      })
+
+    {:ok, ga_meta_aetx} =
+      :aega_meta_tx.new(%{
+        ga_id: :aeser_id.create(:account, caller_pk),
+        auth_data: <<1::256>>,
+        abi_version: 3,
+        gas: 20_000,
+        gas_price: 1_000_000_000,
+        fee: 100,
+        tx: call_signed_tx
+      })
+
+    wrappers = [{paying_for_aetx, @call_txi + 1}, {ga_meta_aetx, @call_txi + 2}]
+
+    for {wrapper_aetx, call_txi} <- wrappers do
+      signed_tx = :aetx_sign.new(wrapper_aetx, [])
+      {state, m_tx} = put_call(state, call_txi, signed_tx, contract_pk, call_rec)
+
+      chain_mocks = [get_ga_call: fn ^caller_pk, _auth_id, ^mb_hash -> {:error, :not_found} end]
+
+      with_mocks node_mocks(signed_tx, contract_pk, block, call_rec, chain_mocks) do
+        from_mdw = Format.to_map(state, m_tx)
+        assert_not_called(:aec_chain.get_contract_call(:_, :_, :_))
+
+        state = State.delete(state, Model.ContractCallInfo, call_txi)
+
+        assert from_mdw == Format.to_map(state, m_tx)
+        assert_called(:aec_chain.get_contract_call(:_, :_, :_))
+
+        assert %{"tx" => %{"tx" => %{"tx" => %{"gas_used" => 1_234, "log" => [_, _, _]}}}} =
+                 from_mdw
+      end
+    end
+  end
+
+  test "renders a reverted or failed call from mdw rows as from the node", %{
+    state: state,
+    signed_tx: signed_tx,
+    contract_pk: contract_pk,
+    call_rec: call_rec,
+    block: block
+  } do
+    for {return_type, call_txi} <- [revert: @call_txi + 1, error: @call_txi + 2] do
+      call_rec = :aect_call.set_return_type(return_type, :aect_call.set_log([], call_rec))
+      {state, m_tx} = put_call(state, call_txi, signed_tx, contract_pk, call_rec)
+
+      with_mocks node_mocks(signed_tx, contract_pk, block, call_rec) do
+        from_mdw = Format.to_map(state, m_tx)
+        raw_from_mdw = Format.to_raw_map(state, m_tx)
+        assert_not_called(:aec_chain.get_contract_call(:_, :_, :_))
+
+        state = State.delete(state, Model.ContractCallInfo, call_txi)
+
+        assert from_mdw == Format.to_map(state, m_tx)
+        assert raw_from_mdw == Format.to_raw_map(state, m_tx)
+        assert_called(:aec_chain.get_contract_call(:_, :_, :_))
+
+        expected_type = Atom.to_string(return_type)
+        assert %{"tx" => %{"return_type" => ^expected_type, "log" => []}} = from_mdw
+      end
+    end
+  end
+
   defp put_call(state, call_txi, signed_tx, contract_pk, call_rec) do
     m_tx =
       Model.tx(
@@ -198,7 +277,7 @@ defmodule AeMdw.Db.FormatContractCallTest do
     {Mutation.execute(mutation, State.put(state, Model.Tx, m_tx)), m_tx}
   end
 
-  defp node_mocks(signed_tx, contract_or_name_pk, {mb_hash, header}, call_rec) do
+  defp node_mocks(signed_tx, contract_or_name_pk, {mb_hash, header}, call_rec, chain_mocks \\ []) do
     tx_hash = :aetx_sign.hash(signed_tx)
 
     [
@@ -211,7 +290,8 @@ defmodule AeMdw.Db.FormatContractCallTest do
        ]},
       {:aec_chain, [:passthrough],
        [
-         get_contract_call: fn ^contract_or_name_pk, _call_id, ^mb_hash -> {:ok, call_rec} end
+         {:get_contract_call, fn ^contract_or_name_pk, _call_id, ^mb_hash -> {:ok, call_rec} end}
+         | chain_mocks
        ]}
     ]
   end

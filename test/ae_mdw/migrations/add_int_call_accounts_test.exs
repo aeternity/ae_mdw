@@ -206,6 +206,38 @@ defmodule AeMdw.Migrations.AddIntCallAccountsTest do
     assert_migrated(ctx, {[6, 1], [100, 106, 107]})
   end
 
+  test "resumes the total stats after a crash in their walk, adding each delta once", ctx do
+    # two rows more than a chunk, as the walk starts at @height2
+    extra_heights = (@height3 + 1)..(@height3 + 1_000)
+
+    for height <- extra_heights do
+      Database.dirty_write(Model.TotalStat, Model.total_stat(index: height, accounts: 200))
+    end
+
+    on_exit(fn -> Enum.each(extra_heights, &Database.dirty_delete(Model.TotalStat, &1)) end)
+
+    # the first chunk ends at @height3 + 998, the crash hits the second row of the next one
+    next_height = @height3 + 999
+
+    assert_raise RuntimeError, fn ->
+      run_migration(ctx, {:crash_total_stat, next_height + 1})
+    end
+
+    state = State.new()
+
+    assert {:ok, Model.stat(payload: ^next_height)} =
+             State.get(state, Model.Stat, @total_stats_cursor_key)
+
+    assert [201, 200, 200] ==
+             Enum.map((next_height - 1)..(next_height + 1), &total_accounts(state, &1))
+
+    assert {:ok, _count} = run_migration(ctx)
+
+    assert_migrated(ctx, {[6, 1], [100, 106, 107]})
+    state = State.new()
+    assert [201] == extra_heights |> Enum.map(&total_accounts(state, &1)) |> Enum.uniq()
+  end
+
   test "adds the remaining creations without adding to the total stats again", ctx do
     # as left by a crash after the total stats and a first chunk of creations
     for {height, accounts} <- [{@height2, 106}, {@height3, 107}] do
@@ -291,13 +323,24 @@ defmodule AeMdw.Migrations.AddIntCallAccountsTest do
       end
 
     crash_mocks =
-      if node_state == :crash do
-        [
-          {UpdateBalanceAccountMutation, [:passthrough],
-           execute: fn _mutation, _state -> raise "balance write failed" end}
-        ]
-      else
-        []
+      case node_state do
+        :crash ->
+          [
+            {UpdateBalanceAccountMutation, [:passthrough],
+             execute: fn _mutation, _state -> raise "balance write failed" end}
+          ]
+
+        {:crash_total_stat, crash_height} ->
+          [
+            {State, [:passthrough],
+             update!: fn
+               _state, Model.TotalStat, ^crash_height, _fun -> raise "total stat write failed"
+               state, table, key, fun -> :meck.passthrough([state, table, key, fun])
+             end}
+          ]
+
+        _no_crash ->
+          []
       end
 
     with_mocks [
@@ -356,6 +399,9 @@ defmodule AeMdw.Migrations.AddIntCallAccountsTest do
       assert :not_found = State.get(state, table, pubkey)
     end
   end
+
+  defp total_accounts(state, height),
+    do: state |> State.fetch!(Model.TotalStat, height) |> Model.total_stat(:accounts)
 
   defp write_total_stats_cursor(next_height) do
     Database.dirty_write(
