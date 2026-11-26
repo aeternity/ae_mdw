@@ -398,6 +398,83 @@ defmodule AeMdw.Sync.ServerTest do
     end
   end
 
+  describe "mem sync after a fork" do
+    setup do
+      :persistent_term.put(:global_state, state_at(1_000))
+      :ok
+    end
+
+    test "rebuilds the overlay from the db height when the chain left the synced block" do
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         find_common_ancestor: fn <<2::256>>, <<1::256>> -> {:ok, <<3::256>>} end}
+        | sync_mocks([])
+      ] do
+        assert <<1::256>> = sync(%Server{mem_sync_data() | mem_hash: <<2::256>>})
+        assert_called(State.create_mem_state())
+        assert_called(Block.blocks_mutations(999, -1, 0, <<1::256>>, true))
+      end
+    end
+
+    test "rebuilds the overlay when the synced block is unknown" do
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         find_common_ancestor: fn _hash1, _hash2 -> raise ArgumentError end}
+        | sync_mocks([])
+      ] do
+        assert <<1::256>> = sync(%Server{mem_sync_data() | mem_hash: <<2::256>>})
+        assert_called(Block.blocks_mutations(999, -1, 0, <<1::256>>, true))
+      end
+    end
+  end
+
+  describe "a failed sync" do
+    @describetag :capture_log
+
+    test "goes back to idle and counts the restart" do
+      for syncing <- [:syncing_db, :syncing_mem] do
+        ref = make_ref()
+        down = {:DOWN, ref, :process, self(), :boom}
+
+        assert {:next_state, :idle, %Server{restarts: 3}, [{:next_event, :internal, :check_sync}]} =
+                 Server.handle_event(:info, down, {syncing, ref}, %Server{
+                   db_sync_data()
+                   | restarts: 2
+                 })
+      end
+    end
+
+    test "stops the sync after too many restarts" do
+      ref = make_ref()
+      state_data = %Server{db_sync_data() | restarts: 5}
+      :persistent_term.put({Server, :syncing?}, true)
+
+      assert {:next_state, :stopped, ^state_data} =
+               Server.handle_event(
+                 :info,
+                 {:DOWN, ref, :process, self(), :boom},
+                 {:syncing_db, ref},
+                 state_data
+               )
+
+      refute Server.syncing?()
+    end
+
+    test "ignores a sync task that ends normally" do
+      down = {:DOWN, make_ref(), :process, self(), :normal}
+
+      assert :keep_state_and_data = Server.handle_event(:info, down, :idle, db_sync_data())
+    end
+
+    test "syncs again once restarted" do
+      assert {:next_state, :idle, %Server{restarts: 0}, [{:next_event, :internal, :check_sync}]} =
+               Server.handle_event(:cast, :restart_sync, :stopped, %Server{
+                 db_sync_data()
+                 | restarts: 5
+               })
+    end
+  end
+
   defp db_sync_data do
     %Server{
       chain_height: 1_011,
