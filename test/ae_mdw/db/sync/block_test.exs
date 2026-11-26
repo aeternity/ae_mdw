@@ -1,11 +1,15 @@
 defmodule AeMdw.Db.Sync.BlockTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.EpochMutation
   alias AeMdw.Db.IntTransfersMutation
+  alias AeMdw.Db.LeaderMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteMutation
+  alias AeMdw.Node.Db
+  alias AeMdw.Sync.Hyperchain
 
   import AeMdwWeb.BlockchainSim,
     only: [with_blockchain: 3, with_blockchain: 4, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
@@ -183,6 +187,47 @@ defmodule AeMdw.Db.Sync.BlockTest do
         assert [] == int_transfers_mutations(gen1)
       end
     end
+
+    # the blocks come from the walk of other chains, the hyperchain one isn't simulated
+    test "gives every generation of a hyperchain its epoch and leader mutations" do
+      with_blockchain %{alice: 1_000_000_000, bob: 1_000_000_000}, micro_blocks(2) do
+        last_mb_hash = AeMdw.Validate.id!(blocks[:mb1].hash)
+        blocks_per_height = Db.get_blocks_per_height(0, last_mb_hash)
+
+        with_mocks [
+          {Hyperchain, [:passthrough], hyperchain?: fn -> true end},
+          {Db, [:passthrough],
+           get_blocks_per_height: fn 0, ^last_mb_hash -> blocks_per_height end}
+        ] do
+          gens = 0 |> Block.blocks_mutations(0, 0, last_mb_hash, false) |> Enum.to_list()
+
+          assert [0, 1] == Enum.map(gens, &elem(&1, 0))
+
+          for {height, blocks_mutations} <- gens do
+            assert [EpochMutation.new(height), LeaderMutation.new(height)] ==
+                     hyperchain_mutations(blocks_mutations)
+          end
+        end
+      end
+    end
+
+    test "gives the generations of other chains no hyperchain mutations" do
+      with_blockchain %{alice: 1_000_000_000, bob: 1_000_000_000}, micro_blocks(2) do
+        last_mb_hash = AeMdw.Validate.id!(blocks[:mb1].hash)
+
+        assert [{0, gen0}, {1, gen1}] =
+                 0 |> Block.blocks_mutations(0, 0, last_mb_hash, false) |> Enum.to_list()
+
+        assert [] == hyperchain_mutations(gen0)
+        assert [] == hyperchain_mutations(gen1)
+      end
+    end
+  end
+
+  defp hyperchain_mutations(blocks_mutations) do
+    blocks_mutations
+    |> Enum.flat_map(fn {_block_index, _block, mutations} -> List.flatten(mutations) end)
+    |> Enum.filter(&(match?(%EpochMutation{}, &1) or match?(%LeaderMutation{}, &1)))
   end
 
   defp int_transfers_mutations(blocks_mutations) do
