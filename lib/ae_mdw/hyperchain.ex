@@ -54,7 +54,7 @@ defmodule AeMdw.Hyperchain do
           Collection.range(),
           Collection.cursor()
         ) ::
-          {:ok, {Collection.cursor(), [Hyperchain.leader()], Collection.cursor()}}
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_epochs(state, pagination, scope, cursor) do
     with {:ok, scope} <- deserialize_epoch_scope(scope) do
       cursor = deserialize_numeric_cursor(cursor)
@@ -73,16 +73,8 @@ defmodule AeMdw.Hyperchain do
 
   @spec fetch_epoch_top(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_epoch_top(state) do
-    current_height = State.height(state)
-
-    current_height
-    |> Hyperchain.epoch_info_at_height()
-    |> case do
-      {:ok, %{epoch: epoch}} ->
-        {:ok, render_epoch_info(state, epoch)}
-
-      error when error in [:not_found, :error] ->
-        {:error, ErrInput.NotFound.exception(value: "epoch at height #{current_height}")}
+    with {:ok, epoch} <- current_epoch(state) do
+      {:ok, render_epoch_info(state, epoch)}
     end
   end
 
@@ -92,7 +84,7 @@ defmodule AeMdw.Hyperchain do
           Collection.range(),
           Collection.cursor()
         ) ::
-          {:ok, {Collection.cursor(), [Hyperchain.leader()], Collection.cursor()}}
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_leaders_schedule(state, pagination, scope, cursor) do
     with {:ok, scope} <- deserialize_leaders_scope(scope) do
       cursor = deserialize_numeric_cursor(cursor)
@@ -109,7 +101,8 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
-  @spec fetch_leaders_schedule_at_height(State.t(), Blocks.height()) :: Hyperchain.leader()
+  @spec fetch_leaders_schedule_at_height(State.t(), Blocks.height()) ::
+          {:ok, map()} | {:error, Error.t()}
   def fetch_leaders_schedule_at_height(state, height) do
     case State.get(state, Model.HyperchainLeaderAtHeight, height) do
       {:ok, Model.hyperchain_leader_at_height(index: ^height) = leader} ->
@@ -150,32 +143,36 @@ defmodule AeMdw.Hyperchain do
         ) ::
           {:ok, {Collection.cursor(), [validator()], Collection.cursor()}} | {:error, term()}
   def fetch_validators_top(state, pagination, cursor) do
-    with current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+    with {:ok, epoch} <- current_epoch(state) do
       scope = {:epoch, epoch..epoch}
       fetch_validators(state, pagination, scope, cursor)
     end
   end
 
-  @spec fetch_validator(State.t(), term()) :: {:ok, validator()}
+  @spec fetch_validator(State.t(), term()) :: {:ok, validator()} | {:error, Error.t()}
   def fetch_validator(state, validator_id) do
-    with {:ok, pubkey} <- Encoding.safe_decode(:account_pubkey, validator_id),
-         current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height),
-         {:ok, validator} <- State.get(state, Model.Validator, {pubkey, epoch}) do
-      {:ok, render_validator(state, validator)}
+    with {:ok, pubkey} <- decode_validator(validator_id),
+         {:ok, epoch} <- current_epoch(state) do
+      case State.get(state, Model.Validator, {pubkey, epoch}) do
+        {:ok, validator} ->
+          {:ok, render_validator(state, validator)}
+
+        :not_found ->
+          {:error, ErrInput.NotFound.exception(value: "validator in epoch #{epoch}")}
+      end
     end
   end
 
   @spec fetch_delegates(
           State.t(),
-          Db.pubkey(),
+          String.t(),
           Collection.pagination(),
           Collection.range(),
           Collection.cursor()
-        ) :: {:ok, {Collection.cursor(), [Db.pubkey()], Collection.cursor()}}
+        ) ::
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_delegates(state, validator_id, pagination, scope, cursor) do
-    with {:ok, pubkey} <- Encoding.safe_decode(:account_pubkey, validator_id),
+    with {:ok, pubkey} <- decode_validator(validator_id),
          {:ok, scope} <- deserialize_validator_delegates_scope(scope) do
       cursor =
         deserialize_validator_delegates_cursor(cursor)
@@ -211,16 +208,31 @@ defmodule AeMdw.Hyperchain do
 
   @spec fetch_delegates_top(
           State.t(),
-          Db.pubkey(),
+          String.t(),
           Collection.pagination(),
           Collection.cursor()
-        ) :: {:ok, {Collection.cursor(), [Db.pubkey()], Collection.cursor()}}
-
+        ) ::
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_delegates_top(state, validator_id, pagination, cursor) do
-    with current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+    with {:ok, epoch} <- current_epoch(state) do
       scope = {:epoch, epoch..epoch}
       fetch_delegates(state, validator_id, pagination, scope, cursor)
+    end
+  end
+
+  defp current_epoch(state) do
+    height = State.height(state)
+
+    case Hyperchain.epoch_info_at_height(height) do
+      {:ok, %{epoch: epoch}} -> {:ok, epoch}
+      _error -> {:error, ErrInput.NotFound.exception(value: "epoch at height #{height}")}
+    end
+  end
+
+  defp decode_validator(validator_id) do
+    case Encoding.safe_decode(:account_pubkey, validator_id) do
+      {:ok, pubkey} -> {:ok, pubkey}
+      _error -> {:error, ErrInput.Id.exception(value: validator_id)}
     end
   end
 
@@ -385,6 +397,9 @@ defmodule AeMdw.Hyperchain do
           {:error, error} ->
             {:error, ErrInput.Scope.exception(value: error)}
         end
+
+      _otherwise ->
+        {:error, ErrInput.Scope.exception(value: "invalid gen or epoch scope")}
     end
   end
 
