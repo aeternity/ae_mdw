@@ -3,7 +3,6 @@ defmodule AeMdw.Contract do
   AE smart contracts type (signatures) and previous calls information based on direct chain info.
   """
 
-  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Blocks
   alias AeMdw.Db.Name
   alias AeMdw.EtsCache
@@ -488,25 +487,21 @@ defmodule AeMdw.Contract do
       node = :aec_chain_state.wrap_block(micro_block)
       time = :aec_block_insertion.node_time(node)
       prev_hash = :aec_block_insertion.node_prev_hash(node)
-
-      prev_key_hash =
-        if Hyperchain.hyperchain?() do
-          {:ok, hash} =
-            :aec_chain_state.get_key_block_hash_at_height(height)
-
-          hash
-        else
-          :aec_block_insertion.node_prev_key_hash(node)
-        end
+      prev_key_hash = :aec_block_insertion.node_prev_key_hash(node)
 
       {:value, prev_key_header} = :aec_db.find_header(prev_key_hash)
 
       {:value, trees_in, _difficulty, _fork_id, _fees, _fraud} =
         :aec_db.find_block_state_and_data(prev_hash, true)
 
-      trees_in = Node.state_pre_transform_micro_node(consensus, height, node, trees_in)
+      prev_node = pre_transform_prev_node(consensus, node, prev_hash)
+      trees_in = Node.state_pre_transform_micro_node(consensus, height, prev_node, trees_in)
 
-      env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
+      # as the node does, since a hyperchain micro block is one height above its key block
+      env =
+        prev_key_header
+        |> :aetx_env.tx_env_from_key_header(prev_key_hash, time, prev_hash)
+        |> :aetx_env.set_height(height)
 
       {:ok, _sigs, _trees, events} =
         :aec_block_micro_candidate.apply_block_txs_strict(txs_taken, trees_in, env)
@@ -516,6 +511,12 @@ defmodule AeMdw.Contract do
       []
     end
   end
+
+  # only the hyperchain consensus reads the block before the micro block
+  defp pre_transform_prev_node(:aec_consensus_hc, _node, prev_hash),
+    do: prev_hash |> :aec_db.get_block() |> :aec_chain_state.wrap_block()
+
+  defp pre_transform_prev_node(_consensus, node, _prev_hash), do: node
 
   defp txs_until_last_contract_tx(mb_txs) do
     {tx_pos, last_ct_tx_pos} =

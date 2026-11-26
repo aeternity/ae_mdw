@@ -376,4 +376,91 @@ defmodule AeMdw.ContractTest do
       end
     end
   end
+
+  describe "get_grouped_events/1" do
+    setup do
+      {:ok, call_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: :aeser_id.create(:account, <<2::256>>),
+          nonce: 1,
+          contract_id: :aeser_id.create(:contract, <<1::256>>),
+          abi_version: 3,
+          fee: 0,
+          amount: 0,
+          gas: 0,
+          gas_price: 0,
+          call_data: <<>>
+        })
+
+      zero = <<0::256>>
+      target = :aec_consensus_bitcoin_ng.default_target()
+
+      key_block =
+        :aec_blocks.new_key(7, zero, zero, zero, target, 0, 1_000, :default, 6, zero, <<9::256>>)
+
+      {:ok, kb_hash} = key_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+      test_pid = self()
+
+      mocks = [
+        {:aec_db, [:passthrough],
+         find_header: fn ^kb_hash -> {:value, :aec_blocks.to_header(key_block)} end,
+         find_block_state_and_data: fn ^kb_hash, true -> {:value, :trees, 0, 0, 0, 0} end,
+         get_block: fn ^kb_hash -> key_block end},
+        {AeMdw.Node, [:passthrough],
+         state_pre_transform_micro_node: fn _consensus, _height, prev_node, :trees ->
+           send(test_pid, {:pre_transform_node, prev_node})
+           :trees
+         end},
+        {:aec_block_micro_candidate, [],
+         apply_block_txs_strict: fn _txs, :trees, env ->
+           send(test_pid, {:env, env})
+           {:ok, [], :trees, %{}}
+         end}
+      ]
+
+      micro_block = fn height ->
+        txs = [:aetx_sign.new(call_aetx, [])]
+        :aec_blocks.new_micro(height, kb_hash, kb_hash, zero, zero, txs, 2_000, :no_fraud, 6)
+      end
+
+      %{mocks: mocks, key_block: key_block, kb_hash: kb_hash, micro_block: micro_block}
+    end
+
+    test "replays a hyperchain micro block on its key block's env, at its own height", ctx do
+      %{mocks: mocks, key_block: key_block, kb_hash: kb_hash} = ctx
+
+      with_mocks [
+        {AeMdw.Sync.Hyperchain, [:passthrough], hyperchain?: fn -> true end},
+        {:aec_headers, [:passthrough], consensus_module: fn _header -> :aec_consensus_hc end}
+        | mocks
+      ] do
+        assert %{} == Contract.get_grouped_events(ctx.micro_block.(8))
+      end
+
+      assert_received {:env, env}
+      assert {kb_hash, <<9::256>>, 8, 2_000} == env_fields(env)
+      assert_received {:pre_transform_node, prev_node}
+      assert :aec_chain_state.wrap_block(key_block) == prev_node
+    end
+
+    test "replays a micro block on its key block's env", ctx do
+      %{mocks: mocks, kb_hash: kb_hash} = ctx
+      micro_block = ctx.micro_block.(7)
+
+      with_mocks mocks do
+        assert %{} == Contract.get_grouped_events(micro_block)
+        assert_not_called(:aec_db.get_block(:_))
+      end
+
+      assert_received {:env, env}
+      assert {kb_hash, <<9::256>>, 7, 2_000} == env_fields(env)
+      assert_received {:pre_transform_node, prev_node}
+      assert :aec_chain_state.wrap_block(micro_block) == prev_node
+    end
+  end
+
+  defp env_fields(env) do
+    {:aetx_env.key_hash(env), :aetx_env.beneficiary(env), :aetx_env.height(env),
+     :aetx_env.time_in_msecs(env)}
+  end
 end
