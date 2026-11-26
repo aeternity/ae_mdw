@@ -49,9 +49,9 @@ defmodule AeMdwWeb.HyperchainControllerTest do
     /v3/hyperchain/validators/:id/delegates/top
   )
 
-  # Tags: `top` (default 11) is the chain's last height, `synced?: false` leaves mdw
-  # empty, `hyperchain?: false` doesn't fake a hyperchain node and
-  # `drop_config` removes a section of the node config.
+  # Tags: `top` (default 11) is the chain's last height, `synced` the heights mdw
+  # has synced (default all), `hyperchain?: false` doesn't fake a hyperchain node
+  # and `drop_config` removes a section of the node config.
   setup %{conn: conn, store: store} = ctx do
     if Map.get(ctx, :hyperchain?, true) do
       config = Map.drop(HyperchainSim.default_config(), List.wrap(ctx[:drop_config]))
@@ -59,7 +59,7 @@ defmodule AeMdwWeb.HyperchainControllerTest do
       modules = HyperchainSim.mock!(sim)
       on_exit(fn -> HyperchainSim.unmock(modules) end)
 
-      store = if Map.get(ctx, :synced?, true), do: sync(store, 0..sim.top), else: store
+      store = sync(store, Map.get(ctx, :synced, 0..sim.top))
 
       {:ok, conn: with_store(conn, store), store: store}
     else
@@ -207,7 +207,7 @@ defmodule AeMdwWeb.HyperchainControllerTest do
       assert enc(@carol) == leader
     end
 
-    @tag synced?: false
+    @tag synced: []
     test "answers 404 before the first generation is synced", %{conn: conn} do
       assert %{"error" => "not found: epoch at height -1"} ==
                conn |> get("/v3/hyperchain/epochs/top") |> json_response(404)
@@ -251,9 +251,33 @@ defmodule AeMdwWeb.HyperchainControllerTest do
                conn |> walk("/v3/hyperchain/schedule", scope: "epoch:3") |> heights()
     end
 
+    test "scopes the schedule to synced epochs without asking the node", %{conn: conn} do
+      contract_calls = fn ->
+        :meck.num_calls(:aec_consensus_hc, :call_consensus_contract_result, :_)
+      end
+
+      calls = contract_calls.()
+
+      assert [1, 2, 3, 4, 5, 6, 7, 8] ==
+               conn |> walk("/v3/hyperchain/schedule", scope: "epoch:1-2") |> heights()
+
+      assert calls == contract_calls.()
+    end
+
+    @tag synced: 0..7
+    test "scopes the schedule to epochs that only the node has reached", %{conn: conn} do
+      assert [5, 6, 7, 8] ==
+               conn |> walk("/v3/hyperchain/schedule", scope: "epoch:2-3") |> heights()
+    end
+
     test "answers 400 for an epoch the chain hasn't reached", %{conn: conn} do
       assert %{"error" => "invalid scope" <> _rest} =
                conn |> get("/v3/hyperchain/schedule", scope: "epoch:9") |> json_response(400)
+    end
+
+    test "answers 400 for epoch 0, as epochs start at 1", %{conn: conn} do
+      assert %{"error" => "invalid scope" <> _rest} =
+               conn |> get("/v3/hyperchain/schedule", scope: "epoch:0") |> json_response(400)
     end
 
     test "answers 400 for a scope of transactions", %{conn: conn} do
@@ -382,7 +406,7 @@ defmodule AeMdwWeb.HyperchainControllerTest do
                conn |> walk("/v3/hyperchain/validators/top", []) |> stakes() |> sorted()
     end
 
-    @tag synced?: false
+    @tag synced: []
     test "answers 404 before the first generation is synced", %{conn: conn} do
       assert %{"error" => "not found" <> _rest} =
                conn |> get("/v3/hyperchain/validators/top") |> json_response(404)

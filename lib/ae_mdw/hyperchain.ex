@@ -86,7 +86,7 @@ defmodule AeMdw.Hyperchain do
         ) ::
           {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_leaders_schedule(state, pagination, scope, cursor) do
-    with {:ok, scope} <- deserialize_leaders_scope(scope) do
+    with {:ok, scope} <- deserialize_leaders_scope(state, scope) do
       cursor = deserialize_numeric_cursor(cursor)
 
       fn direction ->
@@ -382,7 +382,7 @@ defmodule AeMdw.Hyperchain do
     }
   end
 
-  defp deserialize_leaders_scope(scope) do
+  defp deserialize_leaders_scope(state, scope) do
     case scope do
       nil ->
         {:ok, nil}
@@ -391,10 +391,9 @@ defmodule AeMdw.Hyperchain do
         {:ok, {first_gen, last_gen}}
 
       {:epoch, first_epoch..last_epoch//_step} ->
-        with {:ok, first_gen} <- Node.epoch_start_height(first_epoch),
-             {:ok, last_gen} <- Node.epoch_start_height(last_epoch),
-             {:ok, epoch_length} <- Node.epoch_length(last_gen) do
-          {:ok, {first_gen, last_gen + epoch_length - 1}}
+        with {:ok, {first_gen, _last_gen}} <- epoch_heights(state, first_epoch),
+             {:ok, {_first_gen, last_gen}} <- epoch_heights(state, last_epoch) do
+          {:ok, {first_gen, last_gen}}
         else
           {:error, error} ->
             {:error, ErrInput.Scope.exception(value: error)}
@@ -402,6 +401,31 @@ defmodule AeMdw.Hyperchain do
 
       _otherwise ->
         {:error, ErrInput.Scope.exception(value: "invalid gen or epoch scope")}
+    end
+  end
+
+  # mdw indexes every epoch up to its last one, only later ones need the node
+  defp epoch_heights(state, epoch) do
+    case State.get(state, Model.EpochInfo, epoch) do
+      {:ok, Model.epoch_info(first: first, last: last)} ->
+        {:ok, {first, last}}
+
+      :not_found ->
+        if epoch > last_indexed_epoch(state) do
+          with {:ok, first} <- Node.epoch_start_height(epoch),
+               {:ok, length} <- Node.epoch_length(first) do
+            {:ok, {first, first + length - 1}}
+          end
+        else
+          {:error, "no epoch #{epoch}"}
+        end
+    end
+  end
+
+  defp last_indexed_epoch(state) do
+    case State.prev(state, Model.EpochInfo, nil) do
+      {:ok, epoch} -> epoch
+      :none -> 0
     end
   end
 
