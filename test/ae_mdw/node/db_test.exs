@@ -24,6 +24,96 @@ defmodule AeMdw.Node.DbTest do
     end
   end
 
+  describe "get_blocks_per_height/2 on a hyperchain" do
+    # Like on a hyperchain, a micro block takes the height of the key block that
+    # closes its generation: kb0 <- mb1 <- kb1 <- mb2a <- mb2b <- kb2 <- mb3 (top).
+    setup do
+      kb0 = {:key, 0, <<100::256>>, nil}
+      mb1 = {:micro, 1, <<1::256>>, <<100::256>>}
+      kb1 = {:key, 1, <<101::256>>, <<100::256>>}
+      mb2a = {:micro, 2, <<2::256>>, <<101::256>>}
+      mb2b = {:micro, 2, <<3::256>>, <<101::256>>}
+      kb2 = {:key, 2, <<102::256>>, <<101::256>>}
+      mb3 = {:micro, 3, <<4::256>>, <<102::256>>}
+
+      headers = Map.new([kb0, mb1, kb1, mb2a, mb2b, kb2, mb3], &{elem(&1, 2), &1})
+      generations = %{kb0 => [], kb1 => [mb1], kb2 => [mb2a, mb2b]}
+
+      mocks = [
+        {AeMdw.Sync.Hyperchain, [:passthrough], hyperchain?: fn -> true end},
+        {:aec_db, [:passthrough],
+         get_header: &Map.fetch!(headers, &1), get_block: &Map.fetch!(headers, &1)},
+        {:aec_headers, [:passthrough],
+         type: &elem(&1, 0), hash_header: &{:ok, elem(&1, 2)}, prev_key_hash: &elem(&1, 3)},
+        {:aec_blocks, [:passthrough],
+         to_header: & &1, height: &elem(&1, 1), prev_key_hash: &elem(&1, 3)},
+        {:aec_chain, [:passthrough],
+         genesis_block: fn -> kb0 end,
+         get_key_header_by_height: fn height ->
+           {:ok, Enum.find([kb0, kb1, kb2], &(elem(&1, 1) == height))}
+         end,
+         get_generation_by_hash: fn hash, :backward ->
+           key_block = Map.fetch!(headers, hash)
+           {:ok, %{key_block: key_block, micro_blocks: Map.fetch!(generations, key_block)}}
+         end}
+      ]
+
+      %{mocks: mocks, kb0: kb0, mb1: mb1, kb1: kb1, mb2a: mb2a, mb2b: mb2b, kb2: kb2, mb3: mb3}
+    end
+
+    test "with a micro block on top, ends at the key block before it", ctx do
+      %{mb1: mb1, kb1: kb1, mb2a: mb2a, mb2b: mb2b, kb2: kb2, mb3: mb3} = ctx
+
+      with_mocks ctx.mocks do
+        assert [{^kb1, [^mb1], kb2_hash}, {^kb2, [^mb2a, ^mb2b], nil}] =
+                 Db.get_blocks_per_height(1, elem(mb3, 2))
+
+        assert kb2_hash == elem(kb2, 2)
+      end
+    end
+
+    test "with a key block on top, ends at its generation", ctx do
+      %{mb1: mb1, kb1: kb1, mb2a: mb2a, mb2b: mb2b, kb2: kb2} = ctx
+
+      with_mocks ctx.mocks do
+        assert [{^kb1, [^mb1], kb2_hash}, {^kb2, [^mb2a, ^mb2b], nil}] =
+                 Db.get_blocks_per_height(1, elem(kb2, 2))
+
+        assert kb2_hash == elem(kb2, 2)
+      end
+    end
+
+    test "up to a height, ends with the key block after it", ctx do
+      %{mb1: mb1, kb1: kb1, kb2: kb2} = ctx
+
+      with_mocks ctx.mocks do
+        assert [{^kb1, [^mb1], kb2_hash}] = Db.get_blocks_per_height(1, 1)
+        assert kb2_hash == elem(kb2, 2)
+      end
+    end
+
+    test "from below the genesis height, stops at the genesis block", ctx do
+      %{kb0: kb0, kb1: kb1, kb2: kb2, mb3: mb3} = ctx
+
+      with_mocks ctx.mocks do
+        assert [{^kb0, [], kb1_hash}, {^kb1, _mbs1, _kb2_hash}, {^kb2, _mbs2, nil}] =
+                 Db.get_blocks_per_height(-1, elem(mb3, 2))
+
+        assert kb1_hash == elem(kb1, 2)
+        assert_not_called(:aec_chain.get_generation_by_hash(nil, :_))
+      end
+    end
+
+    test "doesn't read the generation below from_height", ctx do
+      %{kb1: kb1, kb2: kb2, mb3: mb3} = ctx
+
+      with_mocks ctx.mocks do
+        assert [{^kb2, [_mb2a, _mb2b], nil}] = Db.get_blocks_per_height(2, elem(mb3, 2))
+        assert_not_called(:aec_chain.get_generation_by_hash(elem(kb1, 2), :_))
+      end
+    end
+  end
+
   describe "get_next_hash/2" do
     test "returns the block after the micro block reading headers only" do
       [kb_hash, mb_hash0, mb_hash1, mb_hash2, next_kb_hash] =

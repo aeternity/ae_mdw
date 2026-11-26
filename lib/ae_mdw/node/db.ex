@@ -85,42 +85,47 @@ defmodule AeMdw.Node.Db do
     |> Enum.reverse()
   end
 
+  # A hyperchain generation is a key block and the micro blocks before it.
   defp get_blocks_per_height_hyperchain(from_height, to_height) when is_integer(to_height) do
-    {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
-    {:ok, last_kb_hash} = :aec_headers.hash_header(header)
+    {:ok, next_kb_header} = :aec_chain.get_key_header_by_height(to_height + 1)
+    {:ok, next_kb_hash} = :aec_headers.hash_header(next_kb_header)
 
-    get_blocks_per_height_hyperchain(from_height, last_kb_hash)
+    hyperchain_generations(from_height, :aec_headers.prev_key_hash(next_kb_header), next_kb_hash)
   end
 
-  defp get_blocks_per_height_hyperchain(from_height, last_kb_hash) when is_binary(last_kb_hash) do
-    {:ok, root_hash} =
-      :aec_chain.genesis_block()
-      |> :aec_blocks.to_header()
-      |> :aec_headers.hash_header()
+  # the micro blocks after the top key block wait for the key block closing them
+  defp get_blocks_per_height_hyperchain(from_height, top_hash) when is_binary(top_hash) do
+    top_header = :aec_db.get_header(top_hash)
 
-    last_kb_hash
+    kb_hash =
+      case :aec_headers.type(top_header) do
+        :key -> top_hash
+        :micro -> :aec_headers.prev_key_hash(top_header)
+      end
+
+    hyperchain_generations(from_height, kb_hash, nil)
+  end
+
+  defp hyperchain_generations(from_height, kb_hash, next_kb_hash) do
+    {kb_hash, next_kb_hash}
     |> Stream.unfold(fn
       :done ->
         nil
 
-      ^root_hash ->
-        nil
+      {kb_hash, next_kb_hash} ->
+        {:ok, %{key_block: key_block, micro_blocks: micro_blocks}} =
+          :aec_chain.get_generation_by_hash(kb_hash, :backward)
 
-      last_kb_hash ->
-        prev_key_hash =
-          last_kb_hash
-          |> :aec_db.get_block()
-          |> :aec_blocks.prev_key_hash()
-
-        {:ok, %{key_block: prev_key_block, micro_blocks: micro_blocks}} =
-          :aec_chain.get_generation_by_hash(prev_key_hash, :backward)
+        height = :aec_blocks.height(key_block)
 
         next_acc =
-          if :aec_blocks.height(prev_key_block) > from_height, do: prev_key_hash, else: :done
+          if height > max(from_height, 0),
+            do: {:aec_blocks.prev_key_hash(key_block), kb_hash},
+            else: :done
 
-        {{prev_key_block, micro_blocks, last_kb_hash}, next_acc}
+        {{key_block, micro_blocks, next_kb_hash}, next_acc}
     end)
-    |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
+    |> Enum.take_while(fn {key_block, _micro_blocks, _next_kb_hash} ->
       :aec_blocks.height(key_block) >= from_height
     end)
     |> Enum.reverse()
