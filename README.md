@@ -134,6 +134,8 @@ mix credo                                                                     # 
 mix dialyzer                                                                  # Run `dialyzer` tool
 ```
 
+On a dev build, `ENABLE_ROLLBACK=true` turns on `GET /debug/rollback`, which empties the middleware database and syncs it again from genesis. It has no authentication and deletes everything in one transaction, so only use it on small local networks.
+
 ## Hosted Infrastructure
 
 We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ , all examples here are based on it.
