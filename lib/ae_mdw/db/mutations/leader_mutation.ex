@@ -62,28 +62,16 @@ defmodule AeMdw.Db.LeaderMutation do
     not State.exists?(state, Model.HyperchainLeaderAtHeight, height)
   end
 
+  # the EpochMutation puts the leaders as validators, with their stakes
   defp put_new_leaders(state, height) do
     height
-    |> Hyperchain.epoch_info_at_height()
-    |> case do
-      {:ok, %{epoch: epoch, first: _start_height}} ->
-        height
-        |> Hyperchain.leaders_for_epoch_at_height()
-        |> Enum.reduce(state, fn {leader, height}, state ->
-          state
-          |> State.put(
-            Model.HyperchainLeaderAtHeight,
-            Model.hyperchain_leader_at_height(index: height, leader: leader)
-          )
-          |> State.put(
-            Model.Validator,
-            Model.validator(index: {leader, epoch})
-          )
-          |> State.put(
-            Model.RevValidator,
-            Model.rev_validator(index: {epoch, leader})
-          )
-        end)
-    end
+    |> Hyperchain.leaders_for_epoch_at_height()
+    |> Enum.reduce(state, fn {leader, height}, state ->
+      State.put(
+        state,
+        Model.HyperchainLeaderAtHeight,
+        Model.hyperchain_leader_at_height(index: height, leader: leader)
+      )
+    end)
   end
 end
