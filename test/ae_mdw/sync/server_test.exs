@@ -10,6 +10,7 @@ defmodule AeMdw.Sync.ServerTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
+  alias AeMdw.Db.RollbackMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.StatisticsMutation
   alias AeMdw.Db.StatsMutation
@@ -425,6 +426,35 @@ defmodule AeMdw.Sync.ServerTest do
         assert <<1::256>> = sync(%Server{mem_sync_data() | mem_hash: <<2::256>>})
         assert_called(Block.blocks_mutations(999, -1, 0, <<1::256>>, true))
       end
+    end
+  end
+
+  describe "rollback" do
+    test "commits the rollback and syncs again from the first generation" do
+      with_mocks sync_mocks([generation(1_000, 1)]) do
+        assert {:keep_state, %Server{rollback?: true} = state_data, _actions} =
+                 Server.handle_event(:cast, :rollback, :idle, db_sync_data())
+
+        {:next_state, {:syncing_db, ref}, state_data} =
+          Server.handle_event(:internal, :check_sync, :idle, state_data)
+
+        assert_receive {^ref, _state}, 1_000
+        assert_called(State.commit_db(:_, [%RollbackMutation{}], true))
+
+        {:next_state, :idle, state_data, _actions} =
+          Server.handle_event(:info, {ref, state_at(nil)}, {:syncing_db, ref}, state_data)
+
+        sync(state_data)
+        assert_called(Block.blocks_mutations(0, 0, 0, 5, false))
+      end
+    end
+
+    test "waits for the chain height before syncing" do
+      assert :keep_state_and_data =
+               Server.handle_event(:internal, :check_sync, :idle, %Server{
+                 db_sync_data()
+                 | chain_height: nil
+               })
     end
   end
 

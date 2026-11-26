@@ -66,7 +66,7 @@ defmodule AeMdw.Sync.Server do
            | {:syncing_db, reference()}
            | {:syncing_mem, reference()}
   @typep state_data() :: %__MODULE__{
-           chain_height: height(),
+           chain_height: height() | nil,
            chain_hash: hash(),
            db_state: State.t(),
            mem_hash: height(),
@@ -159,15 +159,12 @@ defmodule AeMdw.Sync.Server do
       ) do
     ref = spawn_db_rollback(db_state)
 
-    state_data = %__MODULE__{
-      state
-      | rollback?: false,
-        chain_height: nil,
-        mem_hash: nil
-    }
-
-    {:next_state, {:syncing_db, ref}, state_data}
+    {:next_state, {:syncing_db, ref}, %__MODULE__{state | rollback?: false, mem_hash: nil}}
   end
+
+  # nothing to sync to before the first new height
+  def handle_event(:internal, :check_sync, :idle, %__MODULE__{chain_height: nil}),
+    do: :keep_state_and_data
 
   def handle_event(
         :internal,
@@ -307,9 +304,7 @@ defmodule AeMdw.Sync.Server do
 
   defp spawn_db_rollback(db_state) do
     spawn_task(fn ->
-      gens_mutations = [RollbackMutation.new()]
-
-      new_state = exec_db_mutations(gens_mutations, db_state, true)
+      new_state = State.commit_db(db_state, [RollbackMutation.new()], true)
 
       Status.set_gens_per_min(0)
 
