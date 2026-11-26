@@ -136,7 +136,9 @@ schemas:
         type: integer
         example: 10
       seed:
+        description: Parent chain hash the leaders are drawn from, null until the chain records it
         type: string
+        nullable: true
         example: "kh_1111111111111111111111111111111111111111111111111"
       last_pin_height:
         type: integer

@@ -344,13 +344,17 @@ defmodule AeMdw.Hyperchain do
       first: first,
       last: last,
       length: length,
-      seed: seed,
+      seed: encode_seed(seed),
       last_pin_height: last_pin_height,
       last_leader: Encoding.encode_account(last_leader),
       epoch_start_time: epoch_start_time,
       validators: validators
     }
   end
+
+  # a parent chain key block hash, unknown until the chain records it
+  defp encode_seed(:undefined), do: nil
+  defp encode_seed(seed), do: Encoding.encode(:key_block_hash, seed)
 
   defp render_validator_delegate(state, {leader, epoch, delegate}) do
     Model.delegate(index: {^leader, ^epoch, ^delegate}, stake: stake) =
