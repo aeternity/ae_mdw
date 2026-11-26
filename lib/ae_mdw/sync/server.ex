@@ -445,46 +445,84 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp maybe_add_accounts_balance_mutations(gen_mutations) do
-    accounts_set =
-      Enum.reduce(gen_mutations, MapSet.new(), fn
-        {{_height, -1}, _block, _mutations}, set ->
-          set
-
-        {_block_index, mblock, mutations}, set ->
-          MapSet.union(set, WealthRankAccounts.micro_block_accounts(mblock, mutations))
-      end)
+    accounts_set = gen_accounts(gen_mutations)
 
     if MapSet.size(accounts_set) > 0 do
       {block_index, mb_hash, mblock} = last_microblock(gen_mutations)
 
-      account_balances_mutations =
-        mb_hash
-        |> get_balances_from_node(accounts_set)
-        |> Enum.reduce([], fn {account_pk, balance}, acc ->
-          [UpdateBalanceAccountMutation.new(account_pk, balance) | acc]
-        end)
+      mutations =
+        account_balances_mutations(mb_hash, accounts_set) ++
+          account_statistics_mutations(mb_hash, accounts_set)
 
-      time = Db.get_block_time(mb_hash)
-
-      account_statistics_mutations =
-        Enum.flat_map(accounts_set, fn pubkey ->
-          [
-            AccountCreationMutation.new(pubkey, time),
-            AccountActivityMutation.new(pubkey, time)
-          ]
-        end)
-
-      # before the key block entry, so that its StatsMutation counts the new accounts
-      # in this generation rather than in the next one, which a restart would lose
-      {micro_blocks_mutations, key_block_mutations} =
-        Enum.split_with(gen_mutations, fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
-
-      micro_blocks_mutations ++
-        [{block_index, mblock, account_balances_mutations ++ account_statistics_mutations}] ++
-        key_block_mutations
+      before_key_block(gen_mutations, {block_index, mblock, mutations})
     else
       gen_mutations
     end
+  end
+
+  # Each generation's account statistics go before its own key block entry. The
+  # balances are read once, at the last micro block of the batch.
+  defp add_gens_accounts_mutations(per_gen_blocks_mutations) do
+    {blocks_mutations, accounts_set} =
+      Enum.flat_map_reduce(per_gen_blocks_mutations, MapSet.new(), fn gen_mutations, all_set ->
+        accounts_set = gen_accounts(gen_mutations)
+
+        if MapSet.size(accounts_set) > 0 do
+          {block_index, mb_hash, mblock} = last_microblock(gen_mutations)
+          entry = {block_index, mblock, account_statistics_mutations(mb_hash, accounts_set)}
+
+          {before_key_block(gen_mutations, entry), MapSet.union(all_set, accounts_set)}
+        else
+          {gen_mutations, all_set}
+        end
+      end)
+
+    if MapSet.size(accounts_set) > 0 do
+      {block_index, mb_hash, mblock} = last_microblock(blocks_mutations)
+
+      blocks_mutations ++
+        [{block_index, mblock, account_balances_mutations(mb_hash, accounts_set)}]
+    else
+      blocks_mutations
+    end
+  end
+
+  defp gen_accounts(gen_mutations) do
+    Enum.reduce(gen_mutations, MapSet.new(), fn
+      {{_height, -1}, _block, _mutations}, set ->
+        set
+
+      {_block_index, mblock, mutations}, set ->
+        MapSet.union(set, WealthRankAccounts.micro_block_accounts(mblock, mutations))
+    end)
+  end
+
+  defp account_balances_mutations(mb_hash, accounts_set) do
+    mb_hash
+    |> get_balances_from_node(accounts_set)
+    |> Enum.reduce([], fn {account_pk, balance}, acc ->
+      [UpdateBalanceAccountMutation.new(account_pk, balance) | acc]
+    end)
+  end
+
+  defp account_statistics_mutations(mb_hash, accounts_set) do
+    time = Db.get_block_time(mb_hash)
+
+    Enum.flat_map(accounts_set, fn pubkey ->
+      [
+        AccountCreationMutation.new(pubkey, time),
+        AccountActivityMutation.new(pubkey, time)
+      ]
+    end)
+  end
+
+  # so that the key block's StatsMutation counts the new accounts in this
+  # generation rather than in the next one, which a restart would lose
+  defp before_key_block(gen_mutations, accounts_entry) do
+    {micro_blocks_mutations, key_block_mutations} =
+      Enum.split_with(gen_mutations, fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
+
+    micro_blocks_mutations ++ [accounts_entry] ++ key_block_mutations
   end
 
   defp get_balances_from_node(block_hash, account_set) do
@@ -562,20 +600,18 @@ defmodule AeMdw.Sync.Server do
 
     gens_in_batch = length(gens_blocks)
 
-    blocks_mutations =
-      per_gen_blocks_mutations
-      |> List.flatten()
-      |> maybe_add_accounts_balance_mutations()
+    blocks_mutations = add_gens_accounts_mutations(per_gen_blocks_mutations)
 
     # An empty batch (no blocks to apply - e.g. a resume/extension check that
     # turns out to have nothing new past the already-synced height) is a
     # legitimate no-op, not an error - List.last/1 would return nil and crash
     # the match below if this weren't guarded.
-    case List.last(blocks_mutations) do
+    case List.last(gens_blocks) do
       nil ->
         state
 
-      {{height, _mbi}, _block, _mutations} ->
+      {key_block, _micro_blocks} ->
+        height = :aec_blocks.height(key_block)
         Log.info("[sync_mem] exec until height=#{height}")
 
         {ts, new_state} =
