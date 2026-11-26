@@ -58,8 +58,10 @@ defmodule AeMdw.Db.LeaderMutation do
     end
   end
 
+  # The key block at an epoch's last height already holds the next epoch, so its
+  # leaders are put there, together with its EpochInfo.
   defp new_epoch?(state, height) do
-    not State.exists?(state, Model.HyperchainLeaderAtHeight, height)
+    not State.exists?(state, Model.HyperchainLeaderAtHeight, height + 1)
   end
 
   # the EpochMutation puts the leaders as validators, with their stakes

@@ -302,8 +302,8 @@ defmodule AeMdwWeb.HyperchainControllerTest do
              ]) == sorted(stakes(validators))
     end
 
-    @tag top: 9
-    test "returns the stakes of the leaders from the first height of their epoch on",
+    @tag top: 8
+    test "returns the stakes of the leaders of an epoch from the height that indexes them on",
          %{conn: conn} do
       assert sorted([{3, enc(@bob), 3_000}, {3, enc(@carol), 500}]) ==
                conn |> walk("/v3/hyperchain/validators", scope: "epoch:3") |> stakes() |> sorted()
@@ -460,6 +460,24 @@ defmodule AeMdwWeb.HyperchainControllerTest do
                  |> json_response(400),
                path
       end
+    end
+  end
+
+  describe "at the last height of an epoch" do
+    @describetag top: 8
+
+    test "returns the next epoch as the top one, as the chain already holds it", %{conn: conn} do
+      assert %{"epoch" => 3, "first" => 9, "last" => 14, "last_leader" => leader} =
+               conn |> get("/v3/hyperchain/epochs/top") |> json_response(200)
+
+      assert enc(@bob) == leader
+      assert [3, 2, 1] == conn |> walk("/v3/hyperchain/epochs", []) |> epochs()
+      assert [3, 3] == conn |> walk("/v3/hyperchain/validators/top", []) |> epochs()
+    end
+
+    test "lists the leaders of the next epoch", %{conn: conn} do
+      assert Enum.to_list(14..1//-1) ==
+               conn |> walk("/v3/hyperchain/schedule", limit: 100) |> heights()
     end
   end
 
