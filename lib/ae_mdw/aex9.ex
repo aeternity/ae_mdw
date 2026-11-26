@@ -13,6 +13,7 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
+  alias AeMdw.Sync.Hyperchain
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -354,11 +355,13 @@ defmodule AeMdw.Aex9 do
   end
 
   # A key block holds the state from before its own generation's micro blocks,
-  # so the balance can be dry-run from the key block after the creation.
+  # so the balance can be dry-run from the key block after the creation. On a
+  # hyperchain the micro blocks come before their key block, so the creation
+  # generation's own key block already holds the contract.
   defp first_balance_gen(state, contract_pk) do
     with {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, contract_pk}),
          {:ok, Model.tx(block_index: {height, _mbi})} <- State.get(state, Model.Tx, txi) do
-      height + 1
+      if Hyperchain.hyperchain?(), do: height, else: height + 1
     else
       _no_creation -> 0
     end

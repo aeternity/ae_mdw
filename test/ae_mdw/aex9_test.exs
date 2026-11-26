@@ -12,6 +12,7 @@ defmodule AeMdw.Aex9Test do
   alias AeMdw.Db.UpdateAex9StateMutation
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
+  alias AeMdw.Sync.Hyperchain
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode: 2]
 
@@ -178,6 +179,29 @@ defmodule AeMdw.Aex9Test do
                } == first_item
 
         assert 21 == dry_run_gens() |> Enum.min()
+      end
+    end
+
+    test "starts the dry-runs at the contract creation height on a hyperchain", %{
+      contract_pk: contract_pk,
+      account_pk: account_pk
+    } do
+      with_mocks [
+        {Hyperchain, [:passthrough], hyperchain?: fn -> true end}
+        | history_mocks(contract_pk, account_pk, 20)
+      ] do
+        assert {:ok, {nil, items, nil}} =
+                 Aex9.fetch_balance_history(
+                   history_state(contract_pk),
+                   contract_pk,
+                   account_pk,
+                   nil,
+                   nil,
+                   {:forward, false, 10, false}
+                 )
+
+        assert [20, 21, 22, 23] == Enum.map(items, & &1.height)
+        assert 20 == dry_run_gens() |> Enum.min()
       end
     end
 
@@ -505,7 +529,7 @@ defmodule AeMdw.Aex9Test do
   end
 
   # The contract is created in a micro block of generation 20, so its balance
-  # can be dry-run from key block 21 on.
+  # can be dry-run from key block 21 on (20 on a hyperchain).
   defp history_state(contract_pk) do
     NullStore.new()
     |> MemStore.new()
@@ -522,13 +546,13 @@ defmodule AeMdw.Aex9Test do
     |> State.new()
   end
 
-  defp history_mocks(contract_pk, account_pk) do
+  defp history_mocks(contract_pk, account_pk, first_balance_gen \\ 21) do
     [
       {AeMdw.Db.Util, [:passthrough], [height_hash: fn gen -> <<gen::256>> end]},
       {AeMdw.Node.Db, [:passthrough],
        [
          aex9_balance: fn ^contract_pk, ^account_pk, {:key, gen, _hash} = height_hash ->
-           if gen > 20,
+           if gen >= first_balance_gen,
              do: {:ok, {gen * 10, height_hash}},
              else: {:error, :contract_does_not_exist}
          end
