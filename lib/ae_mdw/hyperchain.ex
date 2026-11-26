@@ -389,9 +389,9 @@ defmodule AeMdw.Hyperchain do
         {:ok, {first_gen, last_gen}}
 
       {:epoch, first_epoch..last_epoch//_step} ->
-        with {:ok, epoch_length} <- Node.epoch_length(last_epoch),
-             {:ok, first_gen} <- Node.epoch_start_height(first_epoch),
-             {:ok, last_gen} <- Node.epoch_start_height(last_epoch) do
+        with {:ok, first_gen} <- Node.epoch_start_height(first_epoch),
+             {:ok, last_gen} <- Node.epoch_start_height(last_epoch),
+             {:ok, epoch_length} <- Node.epoch_length(last_gen) do
           {:ok, {first_gen, last_gen + epoch_length - 1}}
         else
           {:error, error} ->

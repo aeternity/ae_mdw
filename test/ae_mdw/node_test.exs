@@ -28,12 +28,12 @@ defmodule AeMdw.NodeTest do
   describe "epoch_length/1" do
     test "does not keep returning an earlier error" do
       with_mocks [
-        {:aec_chain_hc, [], [epoch_length: fn _epoch -> {:error, :chain_too_short} end]}
+        {:aec_chain_hc, [], [epoch_length: fn _height -> {:error, :chain_too_short} end]}
       ] do
         assert {:error, :chain_too_short} = Node.epoch_length(42)
       end
 
-      with_mocks [{:aec_chain_hc, [], [epoch_length: fn _epoch -> {:ok, 10} end]}] do
+      with_mocks [{:aec_chain_hc, [], [epoch_length: fn _height -> {:ok, 10} end]}] do
         assert {:ok, 10} = Node.epoch_length(42)
       end
     end
