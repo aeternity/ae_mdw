@@ -85,6 +85,17 @@ defmodule AeMdw.HyperchainSim do
               "staking_contract" => contract_id,
               "parent_chain" => %{
                 "consensus" => %{"network_id" => "hc_parent", "type" => "AE2AE"},
+                "polling" => %{
+                  "nodes" => [
+                    "http://parent-user:parent-password@parent-node:3013",
+                    "http://other-parent-node:3013",
+                    "http://parent-user:12#secret@hash-node:3013",
+                    "http://parent-user:/secret@slash-node:3013",
+                    "http://parent-user:12?secret@query-node:3013",
+                    "parent-user:secret@bare-node:3013",
+                    "http://parent-user:sec@ret@at-node:3013"
+                  ]
+                },
                 "start_height" => 10
               },
               "pinners" => [

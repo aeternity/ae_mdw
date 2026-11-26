@@ -115,6 +115,21 @@ defmodule AeMdwWeb.HyperchainControllerTest do
       refute body =~ "stakers"
     end
 
+    test "never returns the user and password of the parent chain nodes", %{conn: conn} do
+      assert %{"consensus" => [%{"parent_chain" => %{"polling" => %{"nodes" => nodes}}}]} =
+               conn |> get("/v3/hyperchain/config") |> json_response(200)
+
+      assert [
+               "http://parent-node:3013",
+               "http://other-parent-node:3013",
+               "http://hash-node:3013",
+               "http://slash-node:3013",
+               "http://query-node:3013",
+               "bare-node:3013",
+               "http://at-node:3013"
+             ] == nodes
+    end
+
     @tag drop_config: "fork_management"
     test "answers 422 when the node config lacks a section", %{conn: conn} do
       assert %{"error" => "Unable to parse aeternity.yaml config file"} ==

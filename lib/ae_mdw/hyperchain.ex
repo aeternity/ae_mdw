@@ -32,7 +32,10 @@ defmodule AeMdw.Hyperchain do
       cleaned_consensus =
         consensus
         |> Enum.map(fn {k, %{"config" => v}} ->
-          v |> Map.drop(["pinners", "stakers"]) |> Map.put("consensus_key", k)
+          v
+          |> Map.drop(["pinners", "stakers"])
+          |> hide_parent_node_credentials()
+          |> Map.put("consensus_key", k)
         end)
 
       config = %{
@@ -47,6 +50,20 @@ defmodule AeMdw.Hyperchain do
         :error
     end
   end
+
+  # the node urls can hold the user and password of the parent chain API
+  defp hide_parent_node_credentials(
+         %{"parent_chain" => %{"polling" => %{"nodes" => nodes}}} = config
+       ) do
+    put_in(config, ["parent_chain", "polling", "nodes"], Enum.map(nodes, &hide_credentials/1))
+  end
+
+  defp hide_parent_node_credentials(config), do: config
+
+  # Cuts up to the last @ instead of parsing: the node also takes passwords with
+  # an unencoded # / ? and urls without a scheme.
+  defp hide_credentials(url),
+    do: Regex.replace(~r{^((?:[a-z][a-z0-9+.-]*:)?//)?.*@}is, url, "\\1")
 
   @spec fetch_epochs(
           State.t(),
