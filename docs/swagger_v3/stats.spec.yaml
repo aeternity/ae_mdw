@@ -244,6 +244,9 @@ schemas:
       miners_count:
         description: The number of miners
         type: integer
+      validators_count:
+        description: The number of validators of the current epoch, only on a hyperchain
+        type: integer
       fees_trend:
         description: The fees trend
         type: number
