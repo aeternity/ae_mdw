@@ -166,6 +166,20 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
+  @spec validators_count(State.t()) :: non_neg_integer()
+  def validators_count(state) do
+    epoch = last_indexed_epoch(state)
+
+    state
+    |> Collection.stream(
+      Model.RevValidator,
+      :forward,
+      Collection.generate_key_boundary({epoch, Collection.binary()}),
+      nil
+    )
+    |> Enum.count()
+  end
+
   @spec fetch_validator(State.t(), term()) :: {:ok, validator()} | {:error, Error.t()}
   def fetch_validator(state, validator_id) do
     with {:ok, pubkey} <- decode_validator(validator_id),

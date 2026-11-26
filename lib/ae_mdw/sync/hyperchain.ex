@@ -62,12 +62,6 @@ defmodule AeMdw.Sync.Hyperchain do
     Enum.with_index(schedule, first)
   end
 
-  @spec validators_at_height(Blocks.height()) :: [term()]
-  def validators_at_height(height) do
-    {:ok, %{validators: validators}} = epoch_info_at_height(height)
-    validators
-  end
-
   @spec get_delegates(Blocks.height(), Db.pubkey()) :: {:ok, map()} | {:error, term()} | :error
   def get_delegates(height, pubkey) do
     with {:ok, kb_hash} <- :aec_chain_state.get_key_block_hash_at_height(height),

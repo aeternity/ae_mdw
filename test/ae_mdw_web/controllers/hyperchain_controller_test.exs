@@ -6,6 +6,7 @@ defmodule AeMdwWeb.HyperchainControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
   alias AeMdw.HyperchainSim
+  alias AeMdw.Stats
 
   require Model
 
@@ -502,6 +503,23 @@ defmodule AeMdwWeb.HyperchainControllerTest do
     end
   end
 
+  describe "GET /v3/stats" do
+    test "counts the validators of the current epoch", %{conn: conn, store: store} do
+      assert %{"validators_count" => 2} = get_stats(conn, store)
+    end
+
+    @tag synced: 0..5
+    test "counts the validators of the epoch at the synced height", %{conn: conn, store: store} do
+      assert %{"validators_count" => 3} = get_stats(conn, store)
+    end
+
+    @tag synced: []
+    test "counts no validators before the first generation is synced",
+         %{conn: conn, store: store} do
+      assert %{"validators_count" => 0} = get_stats(conn, store)
+    end
+  end
+
   describe "at the last height of an epoch" do
     @describetag top: 8
 
@@ -545,6 +563,20 @@ defmodule AeMdwWeb.HyperchainControllerTest do
       end)
 
     change_store(store, mutations)
+  end
+
+  defp get_stats(conn, store) do
+    store =
+      change_store(store, [
+        WriteMutation.new(
+          Model.Stat,
+          Model.stat(index: Stats.max_tps_key(), payload: {0, <<0::256>>})
+        ),
+        WriteMutation.new(Model.Stat, Model.stat(index: Stats.holders_count_key(), payload: 0)),
+        WriteMutation.new(Model.Block, Model.block(index: {1, -1}, hash: <<0::256>>))
+      ])
+
+    conn |> with_store(store) |> get("/v3/stats") |> json_response(200)
   end
 
   # every item of every page, following the next links

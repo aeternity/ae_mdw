@@ -12,11 +12,12 @@ defmodule AeMdw.Stats do
   alias AeMdw.Database
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Hyperchain
   alias AeMdw.Node.Db
   alias AeMdw.Node
   alias AeMdw.Util
   alias AeMdw.Validate
-  alias AeMdw.Sync.Hyperchain
+  alias AeMdw.Sync.Hyperchain, as: SyncHyperchain
 
   require Model
 
@@ -165,11 +166,8 @@ defmodule AeMdw.Stats do
         }
 
       stats =
-        if Hyperchain.hyperchain?() do
-          validators_count =
-            state |> State.height() |> Hyperchain.validators_at_height() |> length()
-
-          Map.put(stats, :validators_count, validators_count)
+        if SyncHyperchain.hyperchain?() do
+          Map.put(stats, :validators_count, Hyperchain.validators_count(state))
         else
           Model.stat(payload: miners_count) =
             State.fetch!(state, Model.Stat, @miners_count_stat_key)
