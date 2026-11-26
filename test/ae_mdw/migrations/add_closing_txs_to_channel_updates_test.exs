@@ -6,6 +6,7 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdatesTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Migrations.AddClosingTxsToChannelUpdates
+  alias AeMdw.Node.Db, as: NodeDb
 
   import Mock
 
@@ -78,7 +79,63 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdatesTest do
              State.get(state, Model.InactiveChannel, done_pk)
   end
 
+  test "adds a closing tx behind two wrappers" do
+    txi = Enum.random(900_000_000..999_000_000)
+    tx_hash = <<txi::256>>
+    channel_pk = :crypto.strong_rand_bytes(32)
+    update = {{100, 0}, {txi - 1, -1}}
+
+    rows = [
+      {Model.InnerType, Model.type(index: {:channel_close_mutual_tx, txi})},
+      {Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: {110, 0})},
+      {Model.InactiveChannel, Model.channel(index: channel_pk, updates: [update])}
+    ]
+
+    Enum.each(rows, fn {table, record} -> Database.dirty_write(table, record) end)
+
+    on_exit(fn ->
+      Enum.each(rows, fn {table, record} -> Database.dirty_delete(table, elem(record, 1)) end)
+    end)
+
+    {:ok, paying_for_aetx} =
+      :aec_paying_for_tx.new(%{
+        payer_id: :aeser_id.create(:account, <<2::256>>),
+        nonce: 1,
+        fee: 2,
+        tx: :aetx_sign.new(close_mutual_aetx(channel_pk), [])
+      })
+
+    {:ok, ga_meta_aetx} =
+      :aega_meta_tx.new(%{
+        ga_id: :aeser_id.create(:account, <<3::256>>),
+        auth_data: "auth-data",
+        abi_version: 1,
+        gas: 2,
+        gas_price: 3,
+        fee: 4,
+        tx: :aetx_sign.new(paying_for_aetx, [])
+      })
+
+    {:ga_meta_tx, ga_meta_tx} = :aetx.specialize_type(ga_meta_aetx)
+
+    with_mocks [
+      {NodeDb, [:passthrough],
+       get_tx_data: fn ^tx_hash -> {<<0::256>>, :ga_meta_tx, :signed_tx, ga_meta_tx} end}
+    ] do
+      assert {:ok, 1} = AddClosingTxsToChannelUpdates.run(State.new(), false)
+    end
+
+    assert {:ok, Model.channel(updates: [{{110, 0}, {^txi, -1}}, ^update])} =
+             State.get(State.new(), Model.InactiveChannel, channel_pk)
+  end
+
   defp close_mutual_tx(channel_pk) do
+    {:channel_close_mutual_tx, tx} = channel_pk |> close_mutual_aetx() |> :aetx.specialize_type()
+
+    tx
+  end
+
+  defp close_mutual_aetx(channel_pk) do
     {:ok, aetx} =
       :aesc_close_mutual_tx.new(%{
         channel_id: :aeser_id.create(:channel, channel_pk),
@@ -90,9 +147,7 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdatesTest do
         nonce: 5
       })
 
-    {:channel_close_mutual_tx, tx} = :aetx.specialize_type(aetx)
-
-    tx
+    aetx
   end
 
   defp settle_tx(channel_pk) do

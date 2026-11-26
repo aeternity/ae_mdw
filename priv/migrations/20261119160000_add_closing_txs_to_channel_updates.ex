@@ -7,6 +7,7 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdates do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Util
 
@@ -38,6 +39,7 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdates do
     {tx, tx_type, _tx_hash, _wrapper_type, _block_hash} =
       DbUtil.read_node_tx_details(state, {txi, -1})
 
+    {tx_type, tx} = unwrap(tx_type, tx)
     channel_pk = channel_pubkey(tx_type, tx)
     Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
 
@@ -53,6 +55,16 @@ defmodule AeMdw.Migrations.AddClosingTxsToChannelUpdates do
         0
     end
   end
+
+  # read_node_tx_details/2 unwraps one wrapper only
+  defp unwrap(tx_type, tx) when tx_type in [:ga_meta_tx, :paying_for_tx] do
+    {inner_type, inner_tx} =
+      tx_type |> InnerTx.signed_tx(tx) |> :aetx_sign.tx() |> :aetx.specialize_type()
+
+    unwrap(inner_type, inner_tx)
+  end
+
+  defp unwrap(tx_type, tx), do: {tx_type, tx}
 
   defp channel_pubkey(:channel_close_mutual_tx, tx), do: :aesc_close_mutual_tx.channel_pubkey(tx)
   defp channel_pubkey(:channel_settle_tx, tx), do: :aesc_settle_tx.channel_pubkey(tx)
