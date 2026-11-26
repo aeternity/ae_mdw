@@ -261,7 +261,9 @@ defmodule AeMdw.Hyperchain do
       state
       |> Collection.stream(
         Model.LeaderPinInfo,
-        Collection.generate_key_boundary({pubkey, Collection.integer()})
+        :forward,
+        Collection.generate_key_boundary({pubkey, Collection.integer()}),
+        nil
       )
       |> Enum.into(%{}, fn key ->
         Model.leader_pin_info(index: {^pubkey, epoch}, reward: reward) =
