@@ -3,6 +3,8 @@ on:
     branches:
       - master
 name: release-please
+permissions:
+  contents: read
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -10,16 +12,17 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: version
         run: bash .github/scripts/release_as.sh >> "$GITHUB_OUTPUT"
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{secrets.BOT_GITHUB_TOKEN}}
           skip-github-pull-request: ${{ steps.version.outputs.release-as != '' }}
       # the action ignores release-as with a manifest config, the CLI doesn't
       - if: steps.version.outputs.release-as != ''
         run: >-
-          npx --yes release-please@17 release-pr
+          npx --yes release-please@17.11.2 release-pr
           --token="$TOKEN"
           --repo-url="$GITHUB_REPOSITORY"
           --release-as="$RELEASE_AS"
