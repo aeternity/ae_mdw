@@ -1,5 +1,67 @@
 # Changelog
 
+## [1.112.0](https://github.com/aeternity/ae_mdw/compare/v1.111.0...v1.112.0) (2026-11-27)
+
+
+### Bug Fixes
+
+* accept non-ASCII name cursors ([#2281](https://github.com/aeternity/ae_mdw/issues/2281)) ([de54a94](https://github.com/aeternity/ae_mdw/commit/de54a94f7ef287cce050aa46547c7aac0a21cdfd))
+* commit each mem generation's accounts before its own key block ([#2288](https://github.com/aeternity/ae_mdw/issues/2288)) ([eac3171](https://github.com/aeternity/ae_mdw/commit/eac3171209c13f2c7866ed892a0cc2c6459b8b4b))
+* count the fees of mem-state txs in the 24h tx stats ([#2274](https://github.com/aeternity/ae_mdw/issues/2274)) ([d1e2360](https://github.com/aeternity/ae_mdw/commit/d1e236030e4c2a7e1e1de86e3209bcc8cd5afc66))
+* include the closing txs in channel updates and filter them by generation ([#2265](https://github.com/aeternity/ae_mdw/issues/2265)) ([19ad499](https://github.com/aeternity/ae_mdw/commit/19ad4993973257f7f854dc32578bf6189f11db0c))
+* include the creation generation in aex9 balance history on hyperchains ([#2289](https://github.com/aeternity/ae_mdw/issues/2289)) ([0feb0c2](https://github.com/aeternity/ae_mdw/commit/0feb0c2ca9936666bd6d7c6ba46329b2d7a2cd1b))
+* index accounts reached only through internal call spends ([#2250](https://github.com/aeternity/ae_mdw/issues/2250)) ([0373ffd](https://github.com/aeternity/ae_mdw/commit/0373ffd4d70feb4f0558599af48ec8f476af2190))
+* join owned_only aexn activities on the caller fields ([#2252](https://github.com/aeternity/ae_mdw/issues/2252)) ([af8c052](https://github.com/aeternity/ae_mdw/commit/af8c052017275e9d98174687c1a341a16869e6db))
+* keep aex9 balance history order for cursors outside the scope ([#2276](https://github.com/aeternity/ae_mdw/issues/2276)) ([1f129aa](https://github.com/aeternity/ae_mdw/commit/1f129aadb9f7492434c883343dc860bf3ff5561c))
+* keep deleted keys hidden in the mem store ([#2272](https://github.com/aeternity/ae_mdw/issues/2272)) ([142d3b1](https://github.com/aeternity/ae_mdw/commit/142d3b17b884e666b42e7292fb60cea2b136ac5e))
+* keep sync stats and startup safe across restarts ([#2270](https://github.com/aeternity/ae_mdw/issues/2270)) ([aa8b1c3](https://github.com/aeternity/ae_mdw/commit/aa8b1c34391d51d18a9c2948d6f1fb44282e3234))
+* listen on loopback only for the Erlang distribution ([#2284](https://github.com/aeternity/ae_mdw/issues/2284)) ([68e75fd](https://github.com/aeternity/ae_mdw/commit/68e75fd57ea97ae3b89c8f4d36a633e348a834aa))
+* recompute the aex9 event supply from the stored balances ([#2263](https://github.com/aeternity/ae_mdw/issues/2263)) ([5b2222d](https://github.com/aeternity/ae_mdw/commit/5b2222db709d46213414dcc180f1baee64a3b808))
+* reject function filter combined with id filters on contract calls ([#2280](https://github.com/aeternity/ae_mdw/issues/2280)) ([b613f70](https://github.com/aeternity/ae_mdw/commit/b613f70cebf395d9ba1e6858968d1b7ceedd446c))
+* retire the previous committed mem store and renew a reused one ([#2260](https://github.com/aeternity/ae_mdw/issues/2260)) ([65c840f](https://github.com/aeternity/ae_mdw/commit/65c840fdc2fd5adc4b982da3ffd3deb70af6c94e))
+* search every pair of a token symbol in account dex swaps ([#2279](https://github.com/aeternity/ae_mdw/issues/2279)) ([2b48cb3](https://github.com/aeternity/ae_mdw/commit/2b48cb3e2c6fb14204cdf7a0e1f67b06a2540510))
+* stop leaking mem store ETS tables during db catch-up ([#2248](https://github.com/aeternity/ae_mdw/issues/2248)) ([228690d](https://github.com/aeternity/ae_mdw/commit/228690d060e6e4c55ffbc07c3d406a3a287ef665))
+* unwrap nested wrappers in the channel closing txs migration ([#2290](https://github.com/aeternity/ae_mdw/issues/2290)) ([859c794](https://github.com/aeternity/ae_mdw/commit/859c794c825d094c63c88202f784f348632db16c))
+* write genesis accounts as accounts_roma transfers on every network ([#2261](https://github.com/aeternity/ae_mdw/issues/2261)) ([d29ec1b](https://github.com/aeternity/ae_mdw/commit/d29ec1b3714463ca8bfc5c513787a3993dbc4c23))
+
+
+### Performance Improvements
+
+* count accounts in Model.Stat instead of scanning them on mem sync resume ([#2266](https://github.com/aeternity/ae_mdw/issues/2266)) ([688542c](https://github.com/aeternity/ae_mdw/commit/688542c5c365177a6b989adcf830c36d58ad98d5))
+* count micro blocks with one lookup in miner stats ([#2278](https://github.com/aeternity/ae_mdw/issues/2278)) ([0f1b33d](https://github.com/aeternity/ae_mdw/commit/0f1b33d7253777965b347964b48806ad6d162211))
+* drop the unused grp_id_fname_int_contract_call table ([#2254](https://github.com/aeternity/ae_mdw/issues/2254)) ([969a439](https://github.com/aeternity/ae_mdw/commit/969a439b032dfb44be94b6ecc5cd2007ab95b9ff))
+* dry-run each aex9 balance once per generation in db sync ([#2251](https://github.com/aeternity/ae_mdw/issues/2251)) ([46909cf](https://github.com/aeternity/ae_mdw/commit/46909cfc01e972061b6ef246c55368c1916307fd))
+* find a tx by hash from its micro block instead of scanning the generation ([#2253](https://github.com/aeternity/ae_mdw/issues/2253)) ([c23b80a](https://github.com/aeternity/ae_mdw/commit/c23b80ab853f5c3c67032f20e9500df01d02e487))
+* keep name and oracle counts in Model.Stat instead of loading their keys at boot ([#2255](https://github.com/aeternity/ae_mdw/issues/2255)) ([7a1b8b7](https://github.com/aeternity/ae_mdw/commit/7a1b8b7302fb3ac44794535d542d82e15297b5d5))
+* look up a micro block's index through Model.Time ([#2283](https://github.com/aeternity/ae_mdw/issues/2283)) ([ce39e2a](https://github.com/aeternity/ae_mdw/commit/ce39e2a548da24001ac9a5bab2e008e0a48bbdcf))
+* read internal call txs from IntContractCall only in read_node_tx ([#2262](https://github.com/aeternity/ae_mdw/issues/2262)) ([4bdf571](https://github.com/aeternity/ae_mdw/commit/4bdf571f90f54402c235f022d9f2eab997b9e91e))
+* render contract call results from mdw rows instead of the node ([#2275](https://github.com/aeternity/ae_mdw/issues/2275)) ([f7a8628](https://github.com/aeternity/ae_mdw/commit/f7a86288e64296e7c5db9c5a9bb6b0ba6f4c3954))
+* run the dry-runs of an account's aex9 balances page concurrently ([#2282](https://github.com/aeternity/ae_mdw/issues/2282)) ([8168dfa](https://github.com/aeternity/ae_mdw/commit/8168dfa3a69ffa205a88e7675fc3c3d646f140a9))
+* run the node calls of sync concurrently ([#2249](https://github.com/aeternity/ae_mdw/issues/2249)) ([7d0d433](https://github.com/aeternity/ae_mdw/commit/7d0d43309a584e162a5dd8592f8f2d6383678caf))
+* skip the IdCount lookups when filtering transactions by a single id ([#2259](https://github.com/aeternity/ae_mdw/issues/2259)) ([5366905](https://github.com/aeternity/ae_mdw/commit/536690568175753366fe6e531909792fe08c20a9))
+* start aex9 balance history after the contract creation ([#2269](https://github.com/aeternity/ae_mdw/issues/2269)) ([822fc47](https://github.com/aeternity/ae_mdw/commit/822fc47bfb568f8603388c18ac8d29fb0e1e3021))
+* store one account activity row per account and day ([#2264](https://github.com/aeternity/ae_mdw/issues/2264)) ([677f8db](https://github.com/aeternity/ae_mdw/commit/677f8db134ef5bf83563d623074f10e23292aad4))
+* update each statistic once per generation in the db sync ([#2277](https://github.com/aeternity/ae_mdw/issues/2277)) ([4dc7936](https://github.com/aeternity/ae_mdw/commit/4dc79361a02b4668dcbb08f58baa0cd87af00047))
+* write only daily cumulative transaction counts ([#2268](https://github.com/aeternity/ae_mdw/issues/2268)) ([b680fb2](https://github.com/aeternity/ae_mdw/commit/b680fb22a68cf734f1eece15a0a11c10e6015206))
+* write only the first and last tx of a micro block to Model.Time ([#2267](https://github.com/aeternity/ae_mdw/issues/2267)) ([be7f3ae](https://github.com/aeternity/ae_mdw/commit/be7f3aea5f10bd3b5721ab70299f9e1005d9f803))
+
+
+### CI / CD
+
+* bump the minor version for perf changes in release-please ([#2257](https://github.com/aeternity/ae_mdw/issues/2257)) ([409c4c9](https://github.com/aeternity/ae_mdw/commit/409c4c937e90461ffbdafd6f9bb547c19a7edc58))
+* pin release-please and drop the workflow token's write access ([#2287](https://github.com/aeternity/ae_mdw/issues/2287)) ([ad19275](https://github.com/aeternity/ae_mdw/commit/ad1927509a4036bcca07f4d4f97efec24452cc2c))
+
+
+### Testing
+
+* cover wrapped, reverted and failed call renders and the int-call cursor ([#2291](https://github.com/aeternity/ae_mdw/issues/2291)) ([403ac81](https://github.com/aeternity/ae_mdw/commit/403ac8167a761b31f1f472ad84fc098894de4c86))
+* erase the global mem state on exit when a test started without one ([#2271](https://github.com/aeternity/ae_mdw/issues/2271)) ([0ea6825](https://github.com/aeternity/ae_mdw/commit/0ea68254b5108ebf9b2642ea12345269cc77e4f7))
+
+
+### Miscellaneous
+
+* **deps:** bump ws from 8.20.0 to 8.23.0 in /node_sdk ([#2258](https://github.com/aeternity/ae_mdw/issues/2258)) ([2541e8c](https://github.com/aeternity/ae_mdw/commit/2541e8ce48c7aab78ecc7831f84fc3cecfd3801a))
+
 ## [1.111.0](https://github.com/aeternity/ae_mdw/compare/v1.110.0...v1.111.0) (2026-11-16)
 
 
