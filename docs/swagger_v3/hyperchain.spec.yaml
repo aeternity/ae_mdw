@@ -136,14 +136,13 @@ schemas:
         type: integer
         example: 10
       seed:
+        description: Parent chain hash the leaders are drawn from, null until the chain records it
         type: string
+        nullable: true
         example: "kh_1111111111111111111111111111111111111111111111111"
       last_pin_height:
         type: integer
         example: 10
-      parent_block_hash:
-        type: string
-        example: "kh_1111111111111111111111111111111111111111111111111"
       last_leader:
         type: string
         example: "ak_1111111111111111111111111111111111111111111111111"
@@ -168,7 +167,6 @@ schemas:
       - length
       - seed
       - last_pin_height
-      - parent_block_hash
       - last_leader
       - epoch_start_time
       - validators

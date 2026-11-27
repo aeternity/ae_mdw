@@ -365,10 +365,11 @@ defmodule AeMdw.Node do
     |> MapSet.new()
   end
 
-  # Not memoized: the epoch comes from the request; a past-the-top error would stay cached.
-  @spec epoch_length(epoch()) :: {:ok, non_neg_integer()} | {:error, atom()}
-  def epoch_length(epoch) do
-    :aec_chain_hc.epoch_length(epoch)
+  # The length of the epoch holding the height. Not memoized: the height comes from the
+  # request; a past-the-top error would stay cached.
+  @spec epoch_length(height()) :: {:ok, non_neg_integer()} | {:error, atom()}
+  def epoch_length(height) do
+    :aec_chain_hc.epoch_length(height)
   end
 
   defp map_by_function_hash(signatures) do

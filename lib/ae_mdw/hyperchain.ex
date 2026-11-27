@@ -32,7 +32,10 @@ defmodule AeMdw.Hyperchain do
       cleaned_consensus =
         consensus
         |> Enum.map(fn {k, %{"config" => v}} ->
-          v |> Map.drop(["pinners", "stakers"]) |> Map.put("consensus_key", k)
+          v
+          |> Map.drop(["pinners", "stakers"])
+          |> hide_parent_node_credentials()
+          |> Map.put("consensus_key", k)
         end)
 
       config = %{
@@ -48,13 +51,27 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
+  # the node urls can hold the user and password of the parent chain API
+  defp hide_parent_node_credentials(
+         %{"parent_chain" => %{"polling" => %{"nodes" => nodes}}} = config
+       ) do
+    put_in(config, ["parent_chain", "polling", "nodes"], Enum.map(nodes, &hide_credentials/1))
+  end
+
+  defp hide_parent_node_credentials(config), do: config
+
+  # Cuts up to the last @ instead of parsing: the node also takes passwords with
+  # an unencoded # / ? and urls without a scheme.
+  defp hide_credentials(url),
+    do: Regex.replace(~r{^((?:[a-z][a-z0-9+.-]*:)?//)?.*@}is, url, "\\1")
+
   @spec fetch_epochs(
           State.t(),
           Collection.pagination(),
           Collection.range(),
           Collection.cursor()
         ) ::
-          {:ok, {Collection.cursor(), [Hyperchain.leader()], Collection.cursor()}}
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_epochs(state, pagination, scope, cursor) do
     with {:ok, scope} <- deserialize_epoch_scope(scope) do
       cursor = deserialize_numeric_cursor(cursor)
@@ -73,16 +90,8 @@ defmodule AeMdw.Hyperchain do
 
   @spec fetch_epoch_top(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_epoch_top(state) do
-    current_height = State.height(state)
-
-    current_height
-    |> Hyperchain.epoch_info_at_height()
-    |> case do
-      {:ok, %{epoch: epoch}} ->
-        {:ok, render_epoch_info(state, epoch)}
-
-      error when error in [:not_found, :error] ->
-        {:error, ErrInput.NotFound.exception(value: "epoch at height #{current_height}")}
+    with {:ok, epoch} <- current_epoch(state) do
+      {:ok, render_epoch_info(state, epoch)}
     end
   end
 
@@ -92,9 +101,9 @@ defmodule AeMdw.Hyperchain do
           Collection.range(),
           Collection.cursor()
         ) ::
-          {:ok, {Collection.cursor(), [Hyperchain.leader()], Collection.cursor()}}
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_leaders_schedule(state, pagination, scope, cursor) do
-    with {:ok, scope} <- deserialize_leaders_scope(scope) do
+    with {:ok, scope} <- deserialize_leaders_scope(state, scope) do
       cursor = deserialize_numeric_cursor(cursor)
 
       fn direction ->
@@ -109,7 +118,8 @@ defmodule AeMdw.Hyperchain do
     end
   end
 
-  @spec fetch_leaders_schedule_at_height(State.t(), Blocks.height()) :: Hyperchain.leader()
+  @spec fetch_leaders_schedule_at_height(State.t(), Blocks.height()) ::
+          {:ok, map()} | {:error, Error.t()}
   def fetch_leaders_schedule_at_height(state, height) do
     case State.get(state, Model.HyperchainLeaderAtHeight, height) do
       {:ok, Model.hyperchain_leader_at_height(index: ^height) = leader} ->
@@ -150,32 +160,50 @@ defmodule AeMdw.Hyperchain do
         ) ::
           {:ok, {Collection.cursor(), [validator()], Collection.cursor()}} | {:error, term()}
   def fetch_validators_top(state, pagination, cursor) do
-    with current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+    with {:ok, epoch} <- current_epoch(state) do
       scope = {:epoch, epoch..epoch}
       fetch_validators(state, pagination, scope, cursor)
     end
   end
 
-  @spec fetch_validator(State.t(), term()) :: {:ok, validator()}
+  @spec validators_count(State.t()) :: non_neg_integer()
+  def validators_count(state) do
+    epoch = last_indexed_epoch(state)
+
+    state
+    |> Collection.stream(
+      Model.RevValidator,
+      :forward,
+      Collection.generate_key_boundary({epoch, Collection.binary()}),
+      nil
+    )
+    |> Enum.count()
+  end
+
+  @spec fetch_validator(State.t(), term()) :: {:ok, validator()} | {:error, Error.t()}
   def fetch_validator(state, validator_id) do
-    with {:ok, pubkey} <- Encoding.safe_decode(:account_pubkey, validator_id),
-         current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height),
-         {:ok, validator} <- State.get(state, Model.Validator, {pubkey, epoch}) do
-      {:ok, render_validator(state, validator)}
+    with {:ok, pubkey} <- decode_validator(validator_id),
+         {:ok, epoch} <- current_epoch(state) do
+      case State.get(state, Model.Validator, {pubkey, epoch}) do
+        {:ok, validator} ->
+          {:ok, render_validator(state, validator)}
+
+        :not_found ->
+          {:error, ErrInput.NotFound.exception(value: "validator in epoch #{epoch}")}
+      end
     end
   end
 
   @spec fetch_delegates(
           State.t(),
-          Db.pubkey(),
+          String.t(),
           Collection.pagination(),
           Collection.range(),
           Collection.cursor()
-        ) :: {:ok, {Collection.cursor(), [Db.pubkey()], Collection.cursor()}}
+        ) ::
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_delegates(state, validator_id, pagination, scope, cursor) do
-    with {:ok, pubkey} <- Encoding.safe_decode(:account_pubkey, validator_id),
+    with {:ok, pubkey} <- decode_validator(validator_id),
          {:ok, scope} <- deserialize_validator_delegates_scope(scope) do
       cursor =
         deserialize_validator_delegates_cursor(cursor)
@@ -211,16 +239,31 @@ defmodule AeMdw.Hyperchain do
 
   @spec fetch_delegates_top(
           State.t(),
-          Db.pubkey(),
+          String.t(),
           Collection.pagination(),
           Collection.cursor()
-        ) :: {:ok, {Collection.cursor(), [Db.pubkey()], Collection.cursor()}}
-
+        ) ::
+          {:ok, {Collection.cursor(), [map()], Collection.cursor()}} | {:error, Error.t()}
   def fetch_delegates_top(state, validator_id, pagination, cursor) do
-    with current_height <- State.height(state),
-         {:ok, %{epoch: epoch}} <- Hyperchain.epoch_info_at_height(current_height) do
+    with {:ok, epoch} <- current_epoch(state) do
       scope = {:epoch, epoch..epoch}
       fetch_delegates(state, validator_id, pagination, scope, cursor)
+    end
+  end
+
+  defp current_epoch(state) do
+    height = State.height(state)
+
+    case Hyperchain.epoch_info_at_height(height) do
+      {:ok, %{epoch: epoch}} -> {:ok, epoch}
+      _error -> {:error, ErrInput.NotFound.exception(value: "epoch at height #{height}")}
+    end
+  end
+
+  defp decode_validator(validator_id) do
+    case Encoding.safe_decode(:account_pubkey, validator_id) do
+      {:ok, pubkey} -> {:ok, pubkey}
+      _error -> {:error, ErrInput.Id.exception(value: validator_id)}
     end
   end
 
@@ -249,7 +292,9 @@ defmodule AeMdw.Hyperchain do
       state
       |> Collection.stream(
         Model.LeaderPinInfo,
-        Collection.generate_key_boundary({pubkey, Collection.integer()})
+        :forward,
+        Collection.generate_key_boundary({pubkey, Collection.integer()}),
+        nil
       )
       |> Enum.into(%{}, fn key ->
         Model.leader_pin_info(index: {^pubkey, epoch}, reward: reward) =
@@ -344,13 +389,17 @@ defmodule AeMdw.Hyperchain do
       first: first,
       last: last,
       length: length,
-      seed: seed,
+      seed: encode_seed(seed),
       last_pin_height: last_pin_height,
       last_leader: Encoding.encode_account(last_leader),
       epoch_start_time: epoch_start_time,
       validators: validators
     }
   end
+
+  # a parent chain key block hash, unknown until the chain records it
+  defp encode_seed(:undefined), do: nil
+  defp encode_seed(seed), do: Encoding.encode(:key_block_hash, seed)
 
   defp render_validator_delegate(state, {leader, epoch, delegate}) do
     Model.delegate(index: {^leader, ^epoch, ^delegate}, stake: stake) =
@@ -364,7 +413,7 @@ defmodule AeMdw.Hyperchain do
     }
   end
 
-  defp deserialize_leaders_scope(scope) do
+  defp deserialize_leaders_scope(state, scope) do
     case scope do
       nil ->
         {:ok, nil}
@@ -373,14 +422,41 @@ defmodule AeMdw.Hyperchain do
         {:ok, {first_gen, last_gen}}
 
       {:epoch, first_epoch..last_epoch//_step} ->
-        with {:ok, epoch_length} <- Node.epoch_length(last_epoch),
-             {:ok, first_gen} <- Node.epoch_start_height(first_epoch),
-             {:ok, last_gen} <- Node.epoch_start_height(last_epoch) do
-          {:ok, {first_gen, last_gen + epoch_length - 1}}
+        with {:ok, {first_gen, _last_gen}} <- epoch_heights(state, first_epoch),
+             {:ok, {_first_gen, last_gen}} <- epoch_heights(state, last_epoch) do
+          {:ok, {first_gen, last_gen}}
         else
           {:error, error} ->
             {:error, ErrInput.Scope.exception(value: error)}
         end
+
+      _otherwise ->
+        {:error, ErrInput.Scope.exception(value: "invalid gen or epoch scope")}
+    end
+  end
+
+  # mdw indexes every epoch up to its last one, only later ones need the node
+  defp epoch_heights(state, epoch) do
+    case State.get(state, Model.EpochInfo, epoch) do
+      {:ok, Model.epoch_info(first: first, last: last)} ->
+        {:ok, {first, last}}
+
+      :not_found ->
+        if epoch > last_indexed_epoch(state) do
+          with {:ok, first} <- Node.epoch_start_height(epoch),
+               {:ok, length} <- Node.epoch_length(first) do
+            {:ok, {first, first + length - 1}}
+          end
+        else
+          {:error, "no epoch #{epoch}"}
+        end
+    end
+  end
+
+  defp last_indexed_epoch(state) do
+    case State.prev(state, Model.EpochInfo, nil) do
+      {:ok, epoch} -> epoch
+      :none -> 0
     end
   end
 

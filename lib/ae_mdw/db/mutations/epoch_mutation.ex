@@ -33,8 +33,16 @@ defmodule AeMdw.Db.EpochMutation do
     end
   end
 
+  # The key block at a height holds the epoch of the next height, and an epoch
+  # doesn't change once it starts, so the node is read once per epoch.
   defp new_epoch?(state, height) do
-    not State.exists?(state, Model.EpochInfo, height)
+    with {:ok, epoch} <- State.prev(state, Model.EpochInfo, nil),
+         {:ok, Model.epoch_info(first: first, last: last)} <-
+           State.get(state, Model.EpochInfo, epoch) do
+      (height + 1) not in first..last
+    else
+      _none -> true
+    end
   end
 
   defp put_new_epoch_info(state, height) do
