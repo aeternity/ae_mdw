@@ -1,9 +1,11 @@
 defmodule AeMdwWeb.HyperchainControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Collection
   alias AeMdw.Db.EpochMutation
   alias AeMdw.Db.LeaderMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
   alias AeMdw.HyperchainSim
   alias AeMdw.Stats
@@ -547,6 +549,23 @@ defmodule AeMdwWeb.HyperchainControllerTest do
       resynced_conn = with_store(conn, sync(store, 5..11))
 
       assert synced == Enum.map(paths, &walk(resynced_conn, &1, limit: 100))
+    end
+
+    @tag synced: []
+    test "reads each epoch from the node once", %{store: store} do
+      store = change_store(store, Enum.map(0..11, &EpochMutation.new/1))
+
+      assert 3 ==
+               :meck.num_calls(:aec_consensus_hc, :call_consensus_contract_result, [
+                 :election,
+                 :_,
+                 :_,
+                 ~c"epoch_info_epoch",
+                 :_
+               ])
+
+      assert [1, 2, 3] ==
+               store |> State.new() |> Collection.stream(Model.EpochInfo, nil) |> Enum.to_list()
     end
   end
 
