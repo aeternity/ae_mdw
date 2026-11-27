@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.RollbackMutation do
   @moduledoc """
-  Clears the DB entirely.
+  Clears the DB, except for the applied migrations, which would otherwise run
+  again on the synced data at the next start.
   """
 
   alias AeMdw.Collection
@@ -17,8 +18,9 @@ defmodule AeMdw.Db.RollbackMutation do
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{}, state) do
-    Model.tables()
-    |> Enum.reduce(state, fn table_name, state ->
+    tables = Model.tables() -- [Model.Migrations]
+
+    Enum.reduce(tables, state, fn table_name, state ->
       state
       |> Collection.stream(table_name, nil)
       |> Enum.reduce(state, fn key, state ->

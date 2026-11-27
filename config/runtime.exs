@@ -212,4 +212,5 @@ if env in [:test, :prod] do
   end
 end
 
-config :ae_mdw, enable_rollback: env == :dev
+config :ae_mdw,
+  enable_rollback: env == :dev and System.get_env("ENABLE_ROLLBACK") in ["true", "1"]

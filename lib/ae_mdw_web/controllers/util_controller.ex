@@ -33,7 +33,7 @@ defmodule AeMdwWeb.UtilController do
 
   @spec rollback(Conn.t(), map()) :: Conn.t()
   def rollback(conn, _params) do
-    if Application.fetch_env!(:ae_mdw, :enable_rollback?) do
+    if Application.fetch_env!(:ae_mdw, :enable_rollback) do
       Server.rollback()
 
       format_json(conn, %{})
