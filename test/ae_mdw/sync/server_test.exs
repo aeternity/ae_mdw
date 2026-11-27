@@ -6,11 +6,13 @@ defmodule AeMdw.Sync.ServerTest do
   alias AeMdw.Db.AccountCreationMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.DeleteKeysMutation
+  alias AeMdw.Db.KeyBlockMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.TotalStatisticsMutation
   alias AeMdw.Db.UpdateBalanceAccountMutation
@@ -302,6 +304,57 @@ defmodule AeMdw.Sync.ServerTest do
       assert received(:built) == []
       assert received(:broadcast) == []
     end
+
+    test "commits each generation's account statistics before its key block and the balances last" do
+      gens = [generation(999, 1), generation(1_000, 2)]
+      [pk1, pk2] = pubkeys = [<<999::256>>, <<1_000::256>>]
+
+      with_mocks accounts_mocks(gens) ++ sync_mocks(gens) do
+        assert <<1::256>> = sync(mem_sync_data())
+      end
+
+      assert [mutations] = received(:committed)
+      {gens_mutations, balances_mutations} = mutations |> List.flatten() |> Enum.split(-2)
+
+      assert [
+               {:mutation, {999, 0}},
+               AccountCreationMutation.new(pk1, 999),
+               AccountActivityMutation.new(pk1, 999),
+               {:mutation, {999, -1}},
+               {:mutation, {1_000, 0}},
+               {:mutation, {1_000, 1}},
+               AccountCreationMutation.new(pk2, 1_000),
+               AccountActivityMutation.new(pk2, 1_000),
+               {:mutation, {1_000, -1}}
+             ] == gens_mutations
+
+      assert Enum.sort(Enum.map(pubkeys, &UpdateBalanceAccountMutation.new(&1, 10))) ==
+               Enum.sort(balances_mutations)
+    end
+
+    test "counts each generation's new accounts in its own stats, at its own time" do
+      gens = [generation(999, 1), generation(1_000, 2)]
+      # the totals that generation 999 adds to
+      created = State.put(state_at(nil), Model.TotalStat, Model.total_stat(index: 999))
+
+      # without the State mock of sync_mocks/2, so that the mutations are committed
+      mocks =
+        [{State, [:passthrough], create_mem_state: fn -> created end} | accounts_mocks(gens)] ++
+          List.keydelete(sync_mocks(gens, &stats_mutations/1), State, 0)
+
+      with_mocks mocks do
+        assert <<1::256>> = sync(mem_sync_data())
+      end
+
+      state = State.mem_state()
+
+      for height <- [999, 1_000] do
+        assert {:ok, Model.delta_stat(accounts: 1)} = State.get(state, Model.DeltaStat, height)
+
+        assert {:ok, Model.account_creation(creation_time: ^height)} =
+                 State.get(state, Model.AccountCreation, <<height::256>>)
+      end
+    end
   end
 
   describe "mem sync on top of the synced overlay" do
@@ -461,7 +514,10 @@ defmodule AeMdw.Sync.ServerTest do
          send(test_pid, {:committed, mutations})
          state
        end,
-       commit_mem: fn state, _mutations -> state end},
+       commit_mem: fn state, mutations ->
+         send(test_pid, {:committed, mutations})
+         state
+       end},
       {MemStoreCreator, [:passthrough], commit: fn _store -> :ok end},
       {Broadcaster, [:passthrough],
        broadcast_key_block: fn block, version, source, mbs_count, txs_count ->
@@ -520,6 +576,54 @@ defmodule AeMdw.Sync.ServerTest do
       end)
 
     :aec_trees.set_accounts(trees, accounts_tree)
+  end
+
+  # A micro block's account is the one whose pubkey is its height. The node has the
+  # times (the height) only of each generation's last micro block, and the balances
+  # (10) only at the last one of all.
+  defp accounts_mocks(gens) do
+    last_micro_blocks =
+      Enum.map(gens, fn {_key_block, micro_blocks} -> List.last(micro_blocks) end)
+
+    times = Map.new(last_micro_blocks, &{micro_block_hash(&1), :aec_blocks.height(&1)})
+    last_mb_hash = last_micro_blocks |> List.last() |> micro_block_hash()
+    trees = last_micro_blocks |> Enum.map(&account_pk/1) |> state_trees_with_accounts()
+
+    [
+      {WealthRankAccounts, [],
+       micro_block_accounts: fn micro_block, _mutations ->
+         MapSet.new([account_pk(micro_block)])
+       end},
+      {:aec_db, [:passthrough],
+       find_block_state_partial: fn ^last_mb_hash, true, [:accounts] -> {:value, trees} end},
+      {Db, [:passthrough], get_block_time: &Map.fetch!(times, &1)}
+    ]
+  end
+
+  defp account_pk(micro_block), do: <<:aec_blocks.height(micro_block)::256>>
+
+  # The key block counts the generation's new accounts and clears the counts, like the
+  # real key block mutations.
+  defp stats_mutations({key_block, micro_blocks}) do
+    height = :aec_blocks.height(key_block)
+    next_key_block = Model.block(index: {height + 1, -1}, hash: <<height + 1::256>>, tx_index: 0)
+
+    mbs_mutations =
+      micro_blocks
+      |> Enum.with_index()
+      |> Enum.map(fn {micro_block, mbi} -> {{height, mbi}, micro_block, []} end)
+
+    kb_mutations = [
+      StatsMutation.new(height, <<height::256>>, 0, 0, 0, true, 0),
+      KeyBlockMutation.new(next_key_block)
+    ]
+
+    {height, mbs_mutations ++ [{{height, -1}, key_block, kb_mutations}]}
+  end
+
+  defp micro_block_hash(micro_block) do
+    {:ok, hash} = micro_block |> :aec_blocks.to_micro_header() |> :aec_headers.hash_header()
+    hash
   end
 
   defp gen_mutations({key_block, micro_blocks}) do
